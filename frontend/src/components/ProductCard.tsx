@@ -6,13 +6,19 @@ interface ProductCardProps {
   onClick: () => void;
   inWishlist?: boolean;
   onWishlistClick?: (e: React.MouseEvent) => void;
+  compact?: boolean;
 }
 
-export function ProductCard({ product, onClick, inWishlist, onWishlistClick }: ProductCardProps) {
+export function ProductCard({ product, onClick, inWishlist, onWishlistClick, compact }: ProductCardProps) {
   const { formatPrice } = useSettings();
+  const cardStyle = compact ? { ...styles.card, ...styles.cardCompact } : styles.card;
+  const nameStyle = compact ? { ...styles.name, ...styles.nameCompact } : styles.name;
+  const priceStyle = compact ? { ...styles.price, ...styles.priceCompact } : styles.price;
+  const imageWrapStyle = compact ? { ...styles.imageWrap, ...styles.imageWrapCompact } : styles.imageWrap;
+  const wishlistBtnStyle = compact ? { ...styles.wishlistBtn, ...styles.wishlistBtnCompact } : styles.wishlistBtn;
   return (
-    <button onClick={onClick} style={styles.card}>
-      <div style={styles.imageWrap}>
+    <button onClick={onClick} style={cardStyle}>
+      <div style={imageWrapStyle}>
         <img
           src={product.image_url || "https://via.placeholder.com/200"}
           alt={product.name}
@@ -21,15 +27,15 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick }: P
         {onWishlistClick && (
           <button
             onClick={onWishlistClick}
-            style={{ ...styles.wishlistBtn, color: inWishlist ? "var(--accent)" : "#fff" }}
+            style={{ ...wishlistBtnStyle, color: inWishlist ? "var(--accent)" : "#fff" }}
             aria-label={inWishlist ? "Убрать из избранного" : "В избранное"}
           >
             {inWishlist ? "♥" : "♡"}
           </button>
         )}
       </div>
-      <p style={styles.name}>{product.name}</p>
-      <p style={styles.price}>{formatPrice(product.price)}</p>
+      <p style={nameStyle}>{product.name}</p>
+      <p style={priceStyle}>{formatPrice(product.price)}</p>
     </button>
   );
 }
@@ -82,4 +88,9 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--accent)",
     fontWeight: 700,
   },
+  cardCompact: { borderRadius: 10 },
+  imageWrapCompact: {},
+  wishlistBtnCompact: { top: 8, right: 8, width: 30, height: 30, fontSize: 15 },
+  nameCompact: { padding: "10px 10px 2px", fontSize: 12 },
+  priceCompact: { padding: "0 10px 10px", fontSize: 13 },
 };

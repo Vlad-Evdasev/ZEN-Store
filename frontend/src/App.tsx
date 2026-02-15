@@ -142,7 +142,7 @@ function App() {
         >
           ☰
         </button>
-        <button onClick={openCatalog} style={styles.logo}>
+        <button onClick={openCatalog} style={styles.logo} aria-label="На главную">
           ZΞN
         </button>
         <div style={styles.headerActions}>
@@ -296,6 +296,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
+    position: "relative",
     padding: "12px 16px",
     paddingLeft: "max(16px, env(safe-area-inset-left))",
     paddingRight: "max(16px, env(safe-area-inset-right))",
@@ -350,6 +351,9 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
   },
   logo: {
+    position: "absolute",
+    left: "50%",
+    transform: "translateX(-50%)",
     fontFamily: "Unbounded, sans-serif",
     fontSize: 24,
     fontWeight: 700,

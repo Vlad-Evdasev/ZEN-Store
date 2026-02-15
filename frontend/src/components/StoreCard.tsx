@@ -36,7 +36,7 @@ const styles: Record<string, React.CSSProperties> = {
   card: {
     flexShrink: 0,
     display: "block",
-    width: 140,
+    width: 210,
     background: "var(--surface)",
     border: "1px solid var(--border)",
     borderRadius: 12,

@@ -63,6 +63,14 @@ button:active {
   outline: none;
 }
 
+/* Кнопки категорий: убрать рамку при focus после отмены выбора (тёмная тема) */
+.catalog-tab-btn:focus,
+.catalog-tab-btn:focus-visible,
+.catalog-tab-btn:active {
+  outline: none;
+  box-shadow: none;
+}
+
 @keyframes zen-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }

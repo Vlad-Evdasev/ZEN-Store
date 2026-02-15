@@ -228,11 +228,13 @@ export function Catalog({
             <button
               key={cat}
               type="button"
+              className="catalog-tab-btn"
               onClick={() => handleCategoryClick(cat)}
               style={{
                 ...styles.tab,
                 ...(isSelected ? styles.tabActive : {}),
                 outline: "none",
+                boxShadow: "none",
                 WebkitTapHighlightColor: "transparent",
               }}
             >
@@ -252,6 +254,7 @@ export function Catalog({
             <ProductCard
               key={p.id}
               product={p}
+              compact
               onClick={() => onProductClick(p.id)}
               inWishlist={wishlistIds.has(p.id)}
               onWishlistClick={(e) => {
@@ -323,6 +326,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 13,
     fontFamily: "inherit",
     cursor: "pointer",
+    boxShadow: "none",
   },
   tabActive: {
     background: "var(--accent)",

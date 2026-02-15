@@ -8,9 +8,12 @@ export const bot = new Bot(token);
 const WEB_APP_URL = process.env.WEB_APP_URL || "https://your-mini-app-url.vercel.app";
 const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID ? parseInt(process.env.ADMIN_CHAT_ID, 10) : null;
 
+if (!ADMIN_CHAT_ID) {
+  console.warn("[ZEN] ADMIN_CHAT_ID не задан. Добавь переменную ADMIN_CHAT_ID (твой Telegram ID) в Railway → Variables → Redeploy.");
+}
+
 export async function notifyAdminNewOrder(orderId: number, userId: string, userName: string, userPhone: string, total: number, itemsCount: number) {
   if (!ADMIN_CHAT_ID) {
-    console.warn("[ZEN] ADMIN_CHAT_ID не задан — уведомления о заказах отключены. Добавь ADMIN_CHAT_ID в Railway.");
     return;
   }
   const text = [

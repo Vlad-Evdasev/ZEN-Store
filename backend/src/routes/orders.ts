@@ -27,7 +27,9 @@ ordersRouter.post("/:userId", async (req, res) => {
 
   db.prepare("DELETE FROM cart_items WHERE user_id = ?").run(userId);
 
-  notifyAdminNewOrder(row.id, userId, user_name || "", user_phone || "", total, itemsCount).catch(() => {});
+  notifyAdminNewOrder(row.id, userId, user_name || "", user_phone || "", total, itemsCount).catch((err) => {
+    console.error("[ZEN] Ошибка отправки уведомления о заказе:", err);
+  });
 
   res.status(201).json({ ok: true, orderId: row.id });
 });
