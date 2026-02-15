@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTelegram } from "./hooks/useTelegram";
 import { Catalog } from "./pages/Catalog";
 import { Cart } from "./pages/Cart";
 import { ProductPage } from "./pages/ProductPage";
 import { Checkout } from "./pages/Checkout";
+import { LoadingScreen } from "./components/LoadingScreen";
 
 type Page = "catalog" | "cart" | "product" | "checkout";
 
@@ -11,6 +12,12 @@ function App() {
   const { userId } = useTelegram();
   const [page, setPage] = useState<Page>("catalog");
   const [productId, setProductId] = useState<number | null>(null);
+  const [initialLoad, setInitialLoad] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setInitialLoad(false), 800);
+    return () => clearTimeout(t);
+  }, []);
 
   const openProduct = (id: number) => {
     setProductId(id);
@@ -23,6 +30,10 @@ function App() {
     setProductId(null);
   };
   const openCheckout = () => setPage("checkout");
+
+  if (initialLoad) {
+    return <LoadingScreen />;
+  }
 
   return (
     <div style={styles.app}>

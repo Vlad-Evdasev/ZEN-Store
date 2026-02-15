@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getProducts, type Product } from "../api";
 import { ProductCard } from "../components/ProductCard";
+import { LoadingScreen } from "../components/LoadingScreen";
 
 interface CatalogProps {
   onProductClick: (id: number) => void;
@@ -18,11 +19,7 @@ export function Catalog({ onProductClick }: CatalogProps) {
   }, []);
 
   if (loading) {
-    return (
-      <div style={styles.loading}>
-        <p>Загрузка...</p>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return (
@@ -39,10 +36,5 @@ const styles: Record<string, React.CSSProperties> = {
     display: "grid",
     gridTemplateColumns: "repeat(2, 1fr)",
     gap: 16,
-  },
-  loading: {
-    textAlign: "center",
-    padding: 48,
-    color: "var(--muted)",
   },
 };
