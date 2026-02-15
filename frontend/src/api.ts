@@ -1,5 +1,14 @@
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
+export async function checkApiHealth(): Promise<{ ok: boolean; url: string; error?: string }> {
+  try {
+    const res = await fetch(`${API_URL}/api/health`);
+    return { ok: res.ok, url: API_URL };
+  } catch (e) {
+    return { ok: false, url: API_URL, error: e instanceof Error ? e.message : "Ошибка" };
+  }
+}
+
 export interface Product {
   id: number;
   store_id?: number;
@@ -73,9 +82,14 @@ export async function createProduct(
     body: JSON.stringify(data),
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    const msg = (err as { error?: string })?.error || res.statusText || "Failed to create product";
-    throw new Error(msg);
+    let msg = "";
+    try {
+      const err = await res.json();
+      msg = (err as { error?: string }).error || res.statusText;
+    } catch {
+      msg = await res.text().catch(() => res.statusText) || `HTTP ${res.status}`;
+    }
+    throw new Error(msg || `HTTP ${res.status}`);
   }
   return res.json();
 }

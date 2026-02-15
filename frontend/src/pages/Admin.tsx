@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { createProduct, getProducts, getStores, verifyAdmin, type Product, type Store } from "../api";
+import { createProduct, getProducts, getStores, verifyAdmin, checkApiHealth, type Product, type Store } from "../api";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
@@ -19,6 +19,7 @@ export function Admin() {
   const [sizes, setSizes] = useState("S,M,L,XL");
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
+  const [apiStatus, setApiStatus] = useState<{ ok: boolean; url: string; error?: string } | null>(null);
 
   const refresh = () => {
     getProducts().then(setProducts).catch(console.error);
@@ -95,7 +96,7 @@ export function Admin() {
       refresh();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Не удалось добавить";
-      setMessage("Ошибка: " + msg);
+      setMessage("Ошибка: " + msg + (msg.includes("fetch") ? " Проверь VITE_API_URL на Vercel." : ""));
     } finally {
       setSubmitting(false);
     }
@@ -227,9 +228,21 @@ export function Admin() {
         ))}
       </div>
 
-      <p style={styles.apiHint}>
-        API: {API_URL}
-      </p>
+      <div style={styles.apiSection}>
+        <button
+          type="button"
+          onClick={() => checkApiHealth().then(setApiStatus)}
+          style={styles.checkBtn}
+        >
+          Проверить API
+        </button>
+        {apiStatus && (
+          <p style={{ ...styles.apiHint, color: apiStatus.ok ? "var(--accent)" : "#e63950" }}>
+            {apiStatus.ok ? `✓ API доступен (${apiStatus.url})` : `✗ Ошибка: ${apiStatus.error} | URL: ${apiStatus.url}`}
+          </p>
+        )}
+        <p style={styles.apiHint}>API: {API_URL}</p>
+      </div>
     </div>
   );
 }
@@ -349,8 +362,19 @@ const styles: Record<string, React.CSSProperties> = {
   },
   productName: { fontWeight: 600 },
   productPrice: { fontSize: 14, color: "var(--accent)" },
+  apiSection: { marginTop: 24 },
+  checkBtn: {
+    padding: "8px 14px",
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: 8,
+    color: "var(--text)",
+    fontSize: 13,
+    cursor: "pointer",
+    marginBottom: 8,
+  },
   apiHint: {
-    marginTop: 24,
+    marginTop: 4,
     fontSize: 12,
     color: "var(--muted)",
   },
