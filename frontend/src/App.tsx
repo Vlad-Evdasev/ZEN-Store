@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { useTelegram } from "./hooks/useTelegram";
+import { useWishlist } from "./hooks/useWishlist";
 import { getProducts, type Product } from "./api";
 import { Catalog } from "./pages/Catalog";
 import { Cart } from "./pages/Cart";
 import { ProductPage } from "./pages/ProductPage";
 import { Checkout } from "./pages/Checkout";
 import { LoadingScreen } from "./components/LoadingScreen";
+import { Footer } from "./components/Footer";
 
 type Page = "catalog" | "cart" | "product" | "checkout";
 
@@ -13,6 +15,7 @@ const STORE_LOAD_TIME_MS = 2000;
 
 function App() {
   const { userId } = useTelegram();
+  const { wishlistIds, toggleWishlist, hasInWishlist } = useWishlist(userId);
   const [page, setPage] = useState<Page>("catalog");
   const [productId, setProductId] = useState<number | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -59,15 +62,31 @@ function App() {
         <button onClick={openCatalog} style={styles.logo}>
           ZΞN
         </button>
-        <button onClick={openCart} style={styles.cartBtn}>
-          🛒 Корзина
-        </button>
+        <div style={styles.headerActions}>
+          <button onClick={openCart} style={styles.headerBtn}>
+            Корзина
+          </button>
+        </div>
       </header>
 
       <main style={styles.main}>
-        {page === "catalog" && <Catalog products={products} onProductClick={openProduct} />}
+        {page === "catalog" && (
+          <Catalog
+            products={products}
+            onProductClick={openProduct}
+            wishlistIds={wishlistIds}
+            onToggleWishlist={toggleWishlist}
+          />
+        )}
         {page === "product" && productId && (
-          <ProductPage productId={productId} onBack={openCatalog} onCart={openCart} userId={userId} />
+          <ProductPage
+            product={products.find((p) => p.id === productId)}
+            onBack={openCatalog}
+            onCart={openCart}
+            userId={userId}
+            inWishlist={hasInWishlist(productId)}
+            onToggleWishlist={() => toggleWishlist(productId)}
+          />
         )}
         {page === "cart" && (
           <Cart userId={userId} onBack={openCatalog} onCheckout={openCheckout} />
@@ -76,6 +95,8 @@ function App() {
           <Checkout userId={userId} onBack={openCart} onDone={openCatalog} />
         )}
       </main>
+
+      <Footer />
     </div>
   );
 }
@@ -99,21 +120,27 @@ const styles: Record<string, React.CSSProperties> = {
   },
   logo: {
     fontFamily: "Unbounded, sans-serif",
-    fontSize: 22,
-    fontWeight: 600,
+    fontSize: 24,
+    fontWeight: 700,
     color: "var(--text)",
     background: "none",
     border: "none",
     cursor: "pointer",
+    letterSpacing: "-0.02em",
   },
-  cartBtn: {
-    padding: "8px 14px",
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
+  headerActions: {
+    display: "flex",
+    gap: 8,
+  },
+  headerBtn: {
+    padding: "10px 16px",
+    background: "var(--accent)",
+    border: "none",
     borderRadius: 8,
-    color: "var(--text)",
+    color: "#ffffff",
     fontFamily: "inherit",
     fontSize: 13,
+    fontWeight: 600,
     cursor: "pointer",
   },
   main: {

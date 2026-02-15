@@ -3,9 +3,11 @@ import type { Product } from "../api";
 interface ProductCardProps {
   product: Product;
   onClick: () => void;
+  inWishlist?: boolean;
+  onWishlistClick?: (e: React.MouseEvent) => void;
 }
 
-export function ProductCard({ product, onClick }: ProductCardProps) {
+export function ProductCard({ product, onClick, inWishlist, onWishlistClick }: ProductCardProps) {
   return (
     <button onClick={onClick} style={styles.card}>
       <div style={styles.imageWrap}>
@@ -14,6 +16,15 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
           alt={product.name}
           style={styles.image}
         />
+        {onWishlistClick && (
+          <button
+            onClick={onWishlistClick}
+            style={{ ...styles.wishlistBtn, color: inWishlist ? "var(--accent)" : "#fff" }}
+            aria-label={inWishlist ? "Убрать из избранного" : "В избранное"}
+          >
+            {inWishlist ? "♥" : "♡"}
+          </button>
+        )}
       </div>
       <p style={styles.name}>{product.name}</p>
       <p style={styles.price}>{product.price.toLocaleString("ru-RU")} ₽</p>
@@ -32,8 +43,10 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: "left",
     cursor: "pointer",
     padding: 0,
+    transition: "border-color 0.2s, transform 0.15s",
   },
   imageWrap: {
+    position: "relative",
     aspectRatio: "1",
     overflow: "hidden",
     background: "var(--bg)",
@@ -43,16 +56,28 @@ const styles: Record<string, React.CSSProperties> = {
     height: "100%",
     objectFit: "cover",
   },
+  wishlistBtn: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    width: 36,
+    height: 36,
+    borderRadius: "50%",
+    background: "rgba(0,0,0,0.5)",
+    border: "none",
+    fontSize: 18,
+    cursor: "pointer",
+  },
   name: {
-    padding: "12px 12px 4px",
+    padding: "14px 14px 4px",
     fontSize: 14,
-    fontWeight: 500,
+    fontWeight: 600,
     color: "var(--text)",
   },
   price: {
-    padding: "0 12px 12px",
-    fontSize: 14,
+    padding: "0 14px 14px",
+    fontSize: 15,
     color: "var(--accent)",
-    fontWeight: 600,
+    fontWeight: 700,
   },
 };

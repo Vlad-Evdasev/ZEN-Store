@@ -12,6 +12,7 @@ export function Cart({ userId, onBack, onCheckout }: CartProps) {
   const [loading, setLoading] = useState(true);
 
   const refresh = () => {
+    setLoading(true);
     getCart(userId).then(setItems).catch(console.error).finally(() => setLoading(false));
   };
 
@@ -137,11 +138,11 @@ const styles: Record<string, React.CSSProperties> = {
   },
   checkout: {
     width: "100%",
-    padding: 14,
+    padding: 16,
     background: "var(--accent)",
     border: "none",
     borderRadius: 10,
-    color: "var(--bg)",
+    color: "#fff",
     fontFamily: "inherit",
     fontSize: 15,
     fontWeight: 600,

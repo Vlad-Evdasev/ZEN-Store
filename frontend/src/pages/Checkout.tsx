@@ -140,11 +140,11 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: 8,
   },
   submit: {
-    padding: 14,
+    padding: 16,
     background: "var(--accent)",
     border: "none",
     borderRadius: 10,
-    color: "var(--bg)",
+    color: "#fff",
     fontFamily: "inherit",
     fontSize: 15,
     fontWeight: 600,

@@ -1,30 +1,41 @@
-import { useEffect, useState } from "react";
-import { getProducts, addToCart, type Product } from "../api";
+import { useState, useEffect } from "react";
+import { addToCart, type Product } from "../api";
 
 interface ProductPageProps {
-  productId: number;
+  product: Product | undefined;
   onBack: () => void;
   onCart: () => void;
   userId: string;
+  inWishlist: boolean;
+  onToggleWishlist: () => void;
 }
 
-export function ProductPage({ productId, onBack, onCart, userId }: ProductPageProps) {
-  const [product, setProduct] = useState<Product | null>(null);
+export function ProductPage({
+  product,
+  onBack,
+  onCart,
+  userId,
+  inWishlist,
+  onToggleWishlist,
+}: ProductPageProps) {
   const [size, setSize] = useState<string>("");
-  const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
 
+  const sizes = product ? product.sizes.split(",").map((s) => s.trim()) : [];
   useEffect(() => {
-    getProducts().then((list) => {
-      const p = list.find((x) => x.id === productId) ?? null;
-      setProduct(p);
-      if (p) setSize(p.sizes.split(",")[0]?.trim() || "");
-      setLoading(false);
-    });
-  }, [productId]);
+    if (product && sizes.length) setSize(sizes[0]);
+  }, [product?.id]);
+
+  if (!product) {
+    return (
+      <div style={styles.loading}>
+        <p>Загрузка...</p>
+      </div>
+    );
+  }
 
   const handleAdd = async () => {
-    if (!product || !size) return;
+    if (!size) return;
     setAdding(true);
     try {
       await addToCart(userId, product.id, size);
@@ -36,21 +47,19 @@ export function ProductPage({ productId, onBack, onCart, userId }: ProductPagePr
     }
   };
 
-  if (loading || !product) {
-    return (
-      <div style={styles.loading}>
-        <p>Загрузка...</p>
-      </div>
-    );
-  }
-
-  const sizes = product.sizes.split(",").map((s) => s.trim());
-
   return (
     <div style={styles.wrap}>
-      <button onClick={onBack} style={styles.back}>
-        ← Назад
-      </button>
+      <div style={styles.topBar}>
+        <button onClick={onBack} style={styles.back}>
+          ← Назад
+        </button>
+        <button
+          onClick={onToggleWishlist}
+          style={{ ...styles.wishlistBtn, color: inWishlist ? "var(--accent)" : "var(--muted)" }}
+        >
+          {inWishlist ? "♥" : "♡"}
+        </button>
+      </div>
 
       <div style={styles.imageWrap}>
         <img
@@ -83,11 +92,7 @@ export function ProductPage({ productId, onBack, onCart, userId }: ProductPagePr
 
       <div style={styles.footer}>
         <span style={styles.price}>{product.price.toLocaleString("ru-RU")} ₽</span>
-        <button
-          onClick={handleAdd}
-          disabled={adding}
-          style={styles.addBtn}
-        >
+        <button onClick={handleAdd} disabled={adding} style={styles.addBtn}>
           {adding ? "..." : "В корзину"}
         </button>
       </div>
@@ -96,7 +101,13 @@ export function ProductPage({ productId, onBack, onCart, userId }: ProductPagePr
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  wrap: { maxWidth: 420, margin: "0 auto" },
+  wrap: { maxWidth: 420, margin: "0 auto", paddingBottom: 24 },
+  topBar: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
   back: {
     background: "none",
     border: "none",
@@ -104,33 +115,41 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "inherit",
     fontSize: 14,
     cursor: "pointer",
-    marginBottom: 16,
+  },
+  wishlistBtn: {
+    background: "none",
+    border: "none",
+    fontSize: 24,
+    cursor: "pointer",
   },
   imageWrap: {
     borderRadius: 12,
     overflow: "hidden",
     background: "var(--surface)",
     aspectRatio: "1",
-    marginBottom: 20,
+    marginBottom: 24,
   },
   image: { width: "100%", height: "100%", objectFit: "cover" },
   title: {
     fontFamily: "Unbounded, sans-serif",
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 600,
     marginBottom: 8,
+    letterSpacing: "-0.02em",
   },
   desc: {
     color: "var(--muted)",
     fontSize: 14,
-    lineHeight: 1.5,
+    lineHeight: 1.6,
     marginBottom: 24,
   },
   sizeSection: { marginBottom: 24 },
   label: {
     fontSize: 12,
     color: "var(--muted)",
-    marginBottom: 8,
+    marginBottom: 10,
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
   },
   sizes: {
     display: "flex",
@@ -138,18 +157,20 @@ const styles: Record<string, React.CSSProperties> = {
     flexWrap: "wrap",
   },
   sizeBtn: {
-    padding: "10px 16px",
+    padding: "12px 18px",
     background: "var(--surface)",
     border: "1px solid var(--border)",
     borderRadius: 8,
     color: "var(--text)",
     fontFamily: "inherit",
     fontSize: 14,
+    fontWeight: 500,
     cursor: "pointer",
   },
   sizeBtnActive: {
     borderColor: "var(--accent)",
     color: "var(--accent)",
+    background: "rgba(196, 30, 58, 0.1)",
   },
   footer: {
     display: "flex",
@@ -158,17 +179,17 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 16,
   },
   price: {
-    fontSize: 20,
-    fontWeight: 600,
+    fontSize: 22,
+    fontWeight: 700,
     color: "var(--accent)",
   },
   addBtn: {
     flex: 1,
-    padding: 14,
+    padding: 16,
     background: "var(--accent)",
     border: "none",
     borderRadius: 10,
-    color: "var(--bg)",
+    color: "#ffffff",
     fontFamily: "inherit",
     fontSize: 15,
     fontWeight: 600,
