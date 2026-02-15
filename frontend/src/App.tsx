@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useTelegram } from "./hooks/useTelegram";
 import { useWishlist } from "./hooks/useWishlist";
-import { getProducts, getStores, type Product, type Store } from "./api";
+import { getProducts, getStores, getCart, type Product, type Store } from "./api";
 import { Catalog } from "./pages/Catalog";
 import { Cart } from "./pages/Cart";
+import { Favorites } from "./pages/Favorites";
 import { ProductPage } from "./pages/ProductPage";
 import { Checkout } from "./pages/Checkout";
 import { Profile } from "./pages/Profile";
@@ -11,7 +12,7 @@ import { Reviews } from "./pages/Reviews";
 import { LoadingScreen } from "./components/LoadingScreen";
 import { Footer } from "./components/Footer";
 
-type Page = "catalog" | "cart" | "product" | "checkout" | "profile" | "reviews";
+type Page = "catalog" | "cart" | "product" | "checkout" | "profile" | "reviews" | "favorites";
 
 const STORE_LOAD_TIME_MS = 2000;
 
@@ -23,6 +24,7 @@ function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
   const [storeReady, setStoreReady] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -40,11 +42,15 @@ function App() {
       if (!cancelled) setStoreReady(true);
     }, STORE_LOAD_TIME_MS);
 
+    getCart(userId || "").then((items) => {
+      if (!cancelled) setCartCount(items.reduce((a, i) => a + i.quantity, 0));
+    }).catch(() => {});
+
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, []);
+  }, [userId]);
 
   const openProduct = (id: number) => {
     setProductId(id);
@@ -54,6 +60,13 @@ function App() {
   const openCart = () => setPage("cart");
   const openProfile = () => setPage("profile");
   const openReviews = () => setPage("reviews");
+  const openFavorites = () => setPage("favorites");
+
+  const refreshCartCount = () => {
+    getCart(userId || "").then((items) =>
+      setCartCount(items.reduce((a, i) => a + i.quantity, 0))
+    ).catch(() => {});
+  };
   const openCatalog = () => {
     setPage("catalog");
     setProductId(null);
@@ -74,11 +87,15 @@ function App() {
           <button onClick={openReviews} style={styles.headerLink}>
             Отзывы
           </button>
+          <button onClick={openFavorites} style={styles.headerLink}>
+            Избранное
+          </button>
           <button onClick={openProfile} style={styles.headerLink}>
             Профиль
           </button>
-          <button onClick={openCart} style={styles.headerBtn}>
-            Корзина
+          <button onClick={openCart} style={styles.headerBtnWrapper}>
+            <span>Корзина</span>
+            {cartCount > 0 && <span style={styles.cartBadge}>{cartCount}</span>}
           </button>
         </div>
       </header>
@@ -98,13 +115,19 @@ function App() {
             product={products.find((p) => p.id === productId)}
             onBack={openCatalog}
             onCart={openCart}
+            onAddedToCart={refreshCartCount}
             userId={userId}
             inWishlist={hasInWishlist(productId)}
             onToggleWishlist={() => toggleWishlist(productId)}
           />
         )}
         {page === "cart" && (
-          <Cart userId={userId} onBack={openCatalog} onCheckout={openCheckout} />
+          <Cart
+            userId={userId}
+            onBack={openCatalog}
+            onCheckout={openCheckout}
+            onCartChange={refreshCartCount}
+          />
         )}
         {page === "checkout" && (
           <Checkout userId={userId} onBack={openCart} onDone={openCatalog} />
@@ -114,12 +137,23 @@ function App() {
             userName={userName}
             firstName={firstName}
             onBack={openCatalog}
+            onOpenFavorites={openFavorites}
+            onOpenReviews={openReviews}
           />
         )}
         {page === "reviews" && (
           <Reviews
             userId={userId}
             firstName={firstName}
+            onBack={openCatalog}
+          />
+        )}
+        {page === "favorites" && (
+          <Favorites
+            products={products}
+            wishlistIds={wishlistIds}
+            onProductClick={openProduct}
+            onToggleWishlist={toggleWishlist}
             onBack={openCatalog}
           />
         )}
@@ -133,8 +167,9 @@ function App() {
 const styles: Record<string, React.CSSProperties> = {
   app: {
     minHeight: "100vh",
+    display: "flex",
+    flexDirection: "column",
     background: "var(--bg)",
-    paddingBottom: 24,
   },
   header: {
     display: "flex",
@@ -171,7 +206,8 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 13,
     cursor: "pointer",
   },
-  headerBtn: {
+  headerBtnWrapper: {
+    position: "relative",
     padding: "10px 16px",
     background: "var(--accent)",
     border: "none",
@@ -181,9 +217,26 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 13,
     fontWeight: 600,
     cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+  },
+  cartBadge: {
+    minWidth: 18,
+    height: 18,
+    padding: "0 5px",
+    borderRadius: 9,
+    background: "#fff",
+    color: "var(--accent)",
+    fontSize: 11,
+    fontWeight: 700,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
   main: {
     padding: 16,
+    flex: 1,
   },
 };
 

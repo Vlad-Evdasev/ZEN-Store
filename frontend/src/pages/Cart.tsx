@@ -5,15 +5,22 @@ interface CartProps {
   userId: string;
   onBack: () => void;
   onCheckout: () => void;
+  onCartChange?: () => void;
 }
 
-export function Cart({ userId, onBack, onCheckout }: CartProps) {
+export function Cart({ userId, onBack, onCheckout, onCartChange }: CartProps) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const refresh = () => {
     setLoading(true);
-    getCart(userId).then(setItems).catch(console.error).finally(() => setLoading(false));
+    getCart(userId)
+      .then((data) => {
+        setItems(data);
+        onCartChange?.();
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => {

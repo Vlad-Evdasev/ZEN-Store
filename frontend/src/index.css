@@ -51,3 +51,17 @@ button:focus-visible {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* Скрытие полос прокрутки */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes store-marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}

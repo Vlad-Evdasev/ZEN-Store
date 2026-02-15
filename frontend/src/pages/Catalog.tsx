@@ -30,6 +30,7 @@ export function Catalog({
 }: CatalogProps) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
+  const [marqueePaused, setMarqueePaused] = useState(false);
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
   const [selectedStoreCategory, setSelectedStoreCategory] = useState<string | null>(null);
 
@@ -80,39 +81,49 @@ export function Catalog({
   }, [products, selectedStoreId, selectedStoreCategory, category, search]);
 
   const handleStoreClick = (item: DisplayStore) => {
-    if (item.isReal) {
-      const newVal = selectedStoreId === item.id ? null : item.id;
-      setSelectedStoreId(newVal);
+    if (item.isReal && typeof item.id === "number") {
+      setSelectedStoreId(selectedStoreId === item.id ? null : item.id);
       setSelectedStoreCategory(null);
-    } else {
-      const newVal = selectedStoreCategory === item.category ? null : item.category;
-      setSelectedStoreCategory(newVal);
+    } else if (!item.isReal && item.category) {
+      setSelectedStoreCategory(selectedStoreCategory === item.category ? null : item.category);
       setSelectedStoreId(null);
     }
   };
 
   const isStoreSelected = (item: DisplayStore) => {
-    if (item.isReal) return selectedStoreId === item.id;
+    if (item.isReal && typeof item.id === "number") return selectedStoreId === item.id;
     return selectedStoreCategory === item.category;
   };
 
   return (
     <div style={styles.wrap}>
       {displayStores.length > 0 && (
-        <div style={styles.storesRow}>
-          {displayStores.map((s) => (
-            <StoreCard
-              key={String(s.id)}
-              store={{
-                id: typeof s.id === "number" ? s.id : 0,
-                name: s.name,
-                image_url: s.image,
-                description: s.desc,
-              }}
-              onClick={() => handleStoreClick(s)}
-              selected={isStoreSelected(s)}
-            />
-          ))}
+        <div
+          style={styles.storesRowWrap}
+          className="hide-scrollbar"
+          onMouseEnter={() => setMarqueePaused(true)}
+          onMouseLeave={() => setMarqueePaused(false)}
+        >
+          <div
+            style={{
+              ...styles.storesMarquee,
+              animationPlayState: marqueePaused ? "paused" : "running",
+            }}
+          >
+            {[...displayStores, ...displayStores].map((s, i) => (
+              <StoreCard
+                key={`${String(s.id)}-${i}`}
+                store={{
+                  id: typeof s.id === "number" ? s.id : 0,
+                  name: s.name,
+                  image_url: s.image,
+                  description: s.desc,
+                }}
+                onClick={() => handleStoreClick(s)}
+                selected={isStoreSelected(s)}
+              />
+            ))}
+          </div>
         </div>
       )}
 
@@ -126,7 +137,7 @@ export function Catalog({
         />
       </div>
 
-      <div style={styles.tabsWrap}>
+      <div style={styles.tabsWrap} className="hide-scrollbar">
         {CATEGORIES.map((cat) => (
           <button
             key={cat}
@@ -167,13 +178,15 @@ export function Catalog({
 
 const styles: Record<string, React.CSSProperties> = {
   wrap: { paddingBottom: 24 },
-  storesRow: {
+  storesRowWrap: {
+    overflow: "hidden",
+    marginBottom: 20,
+  },
+  storesMarquee: {
     display: "flex",
     gap: 12,
-    overflowX: "auto",
-    paddingBottom: 12,
-    marginBottom: 20,
-    WebkitOverflowScrolling: "touch",
+    width: "max-content",
+    animation: "store-marquee 40s linear infinite",
   },
   searchWrap: { marginBottom: 16 },
   search: {

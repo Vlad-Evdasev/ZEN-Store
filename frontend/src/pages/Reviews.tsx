@@ -32,6 +32,7 @@ export function Reviews({ userId, firstName, onBack }: ReviewsProps) {
   const [newText, setNewText] = useState("");
   const [newRating, setNewRating] = useState(5);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
   const [commentFor, setCommentFor] = useState<number | null>(null);
   const [commentText, setCommentText] = useState("");
 
@@ -51,6 +52,7 @@ export function Reviews({ userId, firstName, onBack }: ReviewsProps) {
     e.preventDefault();
     if (!newText.trim()) return;
     setSubmitting(true);
+    setError("");
     try {
       await addReview(userId, {
         user_name: firstName,
@@ -61,7 +63,7 @@ export function Reviews({ userId, firstName, onBack }: ReviewsProps) {
       setNewRating(5);
       refresh();
     } catch (err) {
-      console.error(err);
+      setError(err instanceof Error ? err.message : "Не удалось добавить отзыв");
     } finally {
       setSubmitting(false);
     }
@@ -70,6 +72,7 @@ export function Reviews({ userId, firstName, onBack }: ReviewsProps) {
   const handleAddComment = async (reviewId: number) => {
     if (!commentText.trim()) return;
     setSubmitting(true);
+    setError("");
     try {
       await addReviewComment(reviewId, userId, {
         user_name: firstName,
@@ -79,7 +82,7 @@ export function Reviews({ userId, firstName, onBack }: ReviewsProps) {
       setCommentFor(null);
       refresh();
     } catch (err) {
-      console.error(err);
+      setError(err instanceof Error ? err.message : "Не удалось добавить комментарий");
     } finally {
       setSubmitting(false);
     }
@@ -125,6 +128,7 @@ export function Reviews({ userId, firstName, onBack }: ReviewsProps) {
           rows={3}
           style={styles.textarea}
         />
+        {error && <p style={styles.error}>{error}</p>}
         <button type="submit" disabled={submitting} style={styles.submitBtn}>
           {submitting ? "..." : "Оставить отзыв"}
         </button>
@@ -259,6 +263,11 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "inherit",
     marginBottom: 12,
     resize: "vertical",
+  },
+  error: {
+    color: "var(--accent)",
+    fontSize: 13,
+    marginBottom: 12,
   },
   submitBtn: {
     padding: 12,

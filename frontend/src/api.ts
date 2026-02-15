@@ -94,6 +94,46 @@ export async function createProduct(
   return res.json();
 }
 
+export async function updateProduct(
+  id: number,
+  data: Partial<{
+    store_id: number;
+    name: string;
+    description: string;
+    price: number;
+    image_url: string;
+    category: string;
+    sizes: string;
+  }>,
+  adminSecret?: string
+) {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (adminSecret) headers["X-Admin-Secret"] = adminSecret;
+  const res = await fetch(`${API_URL}/api/products/${id}`, {
+    method: "PATCH",
+    headers,
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+  return res.json();
+}
+
+export async function deleteProduct(id: number, adminSecret?: string) {
+  const headers: Record<string, string> = {};
+  if (adminSecret) headers["X-Admin-Secret"] = adminSecret;
+  const res = await fetch(`${API_URL}/api/products/${id}`, {
+    method: "DELETE",
+    headers,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+}
+
 export async function getCart(userId: string): Promise<CartItem[]> {
   const res = await fetch(`${API_URL}/api/cart/${userId}`);
   if (!res.ok) throw new Error("Failed to fetch cart");

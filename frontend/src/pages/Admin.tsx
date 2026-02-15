@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { createProduct, getProducts, getStores, verifyAdmin, checkApiHealth, type Product, type Store } from "../api";
+import { createProduct, updateProduct, deleteProduct, getProducts, getStores, verifyAdmin, checkApiHealth, type Product, type Store } from "../api";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
@@ -20,6 +20,7 @@ export function Admin() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [apiStatus, setApiStatus] = useState<{ ok: boolean; url: string; error?: string } | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   const refresh = () => {
     getProducts().then(setProducts).catch(console.error);
@@ -67,6 +68,44 @@ export function Admin() {
     );
   }
 
+  const startEdit = (p: Product) => {
+    setEditingId(p.id);
+    setName(p.name);
+    setDescription(p.description || "");
+    setPrice(String(p.price));
+    setImageUrl(p.image_url || "");
+    setStoreId(p.store_id ?? 1);
+    setCategory(p.category || "tee");
+    setSizes(p.sizes || "S,M,L,XL");
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setName("");
+    setDescription("");
+    setPrice("");
+    setImageUrl("");
+    setStoreId(1);
+    setCategory("tee");
+    setSizes("S,M,L,XL");
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Удалить товар?")) return;
+    setSubmitting(true);
+    setMessage("");
+    try {
+      await deleteProduct(id, adminSecret);
+      setMessage("Товар удалён");
+      if (editingId === id) cancelEdit();
+      refresh();
+    } catch (err) {
+      setMessage("Ошибка: " + (err instanceof Error ? err.message : "Не удалось удалить"));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !price.trim()) {
@@ -76,8 +115,7 @@ export function Admin() {
     setSubmitting(true);
     setMessage("");
     try {
-      await createProduct(
-        {
+      const data = {
         store_id: storeId,
         name: name.trim(),
         description: description.trim() || undefined,
@@ -85,14 +123,16 @@ export function Admin() {
         image_url: imageUrl.trim() || undefined,
         category,
         sizes: sizes.trim() || undefined,
-      },
-        adminSecret
-      );
-      setMessage("Товар добавлен!");
-      setName("");
-      setDescription("");
-      setPrice("");
-      setImageUrl("");
+      };
+      if (editingId) {
+        await updateProduct(editingId, data, adminSecret);
+        setMessage("Товар обновлён!");
+        cancelEdit();
+      } else {
+        await createProduct(data, adminSecret);
+        setMessage("Товар добавлен!");
+        cancelEdit();
+      }
       refresh();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Не удалось добавить";
@@ -118,7 +158,7 @@ export function Admin() {
           Выйти
         </button>
       </div>
-      <p style={styles.hint}>Добавление товаров в каталог</p>
+      <p style={styles.hint}>{editingId ? "Редактирование товара" : "Добавление товаров в каталог"}</p>
 
       <form onSubmit={handleSubmit} style={styles.form}>
         <label style={styles.label}>
@@ -206,9 +246,16 @@ export function Admin() {
           />
         </label>
         {message && <p style={styles.message}>{message}</p>}
-        <button type="submit" disabled={submitting} style={styles.submit}>
-          {submitting ? "Добавляю..." : "Добавить товар"}
-        </button>
+        <div style={styles.formActions}>
+          <button type="submit" disabled={submitting} style={styles.submit}>
+            {submitting ? "..." : editingId ? "Сохранить" : "Добавить товар"}
+          </button>
+          {editingId && (
+            <button type="button" onClick={cancelEdit} style={styles.cancelBtn}>
+              Отмена
+            </button>
+          )}
+        </div>
       </form>
 
       <div style={styles.list}>
@@ -220,9 +267,17 @@ export function Admin() {
               alt=""
               style={styles.thumb}
             />
-            <div>
+            <div style={styles.productInfo}>
               <p style={styles.productName}>{p.name}</p>
               <p style={styles.productPrice}>{p.price} ₽</p>
+            </div>
+            <div style={styles.productActions}>
+              <button type="button" onClick={() => startEdit(p)} style={styles.smallBtn}>
+                Изменить
+              </button>
+              <button type="button" onClick={() => handleDelete(p.id)} style={styles.deleteBtn}>
+                Удалить
+              </button>
             </div>
           </div>
         ))}
@@ -353,6 +408,36 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 12,
     padding: "10px 0",
     borderBottom: "1px solid var(--border)",
+  },
+  productInfo: { flex: 1 },
+  productActions: { display: "flex", gap: 8 },
+  smallBtn: {
+    padding: "6px 10px",
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: 6,
+    color: "var(--text)",
+    fontSize: 12,
+    cursor: "pointer",
+  },
+  deleteBtn: {
+    padding: "6px 10px",
+    background: "rgba(196, 30, 58, 0.2)",
+    border: "1px solid var(--accent)",
+    borderRadius: 6,
+    color: "var(--accent)",
+    fontSize: 12,
+    cursor: "pointer",
+  },
+  formActions: { display: "flex", gap: 12, alignItems: "center" },
+  cancelBtn: {
+    padding: 14,
+    background: "none",
+    border: "1px solid var(--border)",
+    borderRadius: 8,
+    color: "var(--muted)",
+    fontSize: 15,
+    cursor: "pointer",
   },
   thumb: {
     width: 48,

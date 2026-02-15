@@ -5,6 +5,7 @@ interface ProductPageProps {
   product: Product | undefined;
   onBack: () => void;
   onCart: () => void;
+  onAddedToCart?: () => void;
   userId: string;
   inWishlist: boolean;
   onToggleWishlist: () => void;
@@ -14,12 +15,14 @@ export function ProductPage({
   product,
   onBack,
   onCart,
+  onAddedToCart,
   userId,
   inWishlist,
   onToggleWishlist,
 }: ProductPageProps) {
   const [size, setSize] = useState<string>("");
   const [adding, setAdding] = useState(false);
+  const [justAdded, setJustAdded] = useState(false);
 
   const sizes = product ? product.sizes.split(",").map((s) => s.trim()) : [];
   useEffect(() => {
@@ -37,9 +40,11 @@ export function ProductPage({
   const handleAdd = async () => {
     if (!size) return;
     setAdding(true);
+    setJustAdded(false);
     try {
       await addToCart(userId, product.id, size);
-      onCart();
+      onAddedToCart?.();
+      setJustAdded(true);
     } catch (e) {
       console.error(e);
     } finally {
@@ -92,9 +97,15 @@ export function ProductPage({
 
       <div style={styles.footer}>
         <span style={styles.price}>{product.price.toLocaleString("ru-RU")} ₽</span>
-        <button onClick={handleAdd} disabled={adding} style={styles.addBtn}>
-          {adding ? "..." : "В корзину"}
-        </button>
+        {justAdded ? (
+          <button onClick={onCart} style={styles.addBtn}>
+            Перейти в корзину
+          </button>
+        ) : (
+          <button onClick={handleAdd} disabled={adding} style={styles.addBtn}>
+            {adding ? "..." : "В корзину"}
+          </button>
+        )}
       </div>
     </div>
   );
