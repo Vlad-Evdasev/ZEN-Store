@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTelegram } from "./hooks/useTelegram";
+import { TelegramAuth } from "./components/TelegramAuth";
 import { useWishlist } from "./hooks/useWishlist";
 import { getProducts, getStores, getCart, getReviews, type Product, type Store } from "./api";
 import { Catalog } from "./pages/Catalog";
@@ -11,15 +12,18 @@ import { Profile } from "./pages/Profile";
 import { Reviews } from "./pages/Reviews";
 import { StoreCatalog } from "./pages/StoreCatalog";
 import { Settings } from "./pages/Settings";
+import { History } from "./pages/History";
 import { LoadingScreen } from "./components/LoadingScreen";
 import { Footer } from "./components/Footer";
 
-type Page = "catalog" | "cart" | "product" | "checkout" | "profile" | "reviews" | "favorites" | "storeCatalog" | "settings";
+type Page = "catalog" | "cart" | "product" | "checkout" | "profile" | "reviews" | "favorites" | "storeCatalog" | "settings" | "history";
 
 const STORE_LOAD_TIME_MS = 2000;
 
+const SELLER_LINK = import.meta.env.VITE_SELLER_LINK || "";
+
 function App() {
-  const { userId, userName, firstName } = useTelegram();
+  const { userId, userName, firstName, isInTelegram, setBrowserAuth } = useTelegram();
   const { wishlistIds, toggleWishlist, hasInWishlist } = useWishlist(userId);
   const [page, setPage] = useState<Page>("catalog");
   const [productId, setProductId] = useState<number | null>(null);
@@ -91,6 +95,10 @@ function App() {
     setMenuOpen(false);
     setPage("settings");
   };
+  const openHistory = () => {
+    setMenuOpen(false);
+    setPage("history");
+  };
   const openStoreCatalog = (store: { id: number; name: string } | { category: string; name: string }) => {
     setStoreCatalogStore(store);
     setPage("storeCatalog");
@@ -108,11 +116,21 @@ function App() {
   };
   const openCheckout = () => setPage("checkout");
 
+  const needsAuth = !isInTelegram && !userId;
+  if (needsAuth) {
+    return (
+      <div style={styles.app}>
+        <TelegramAuth onAuth={setBrowserAuth} />
+      </div>
+    );
+  }
+
   if (!storeReady) {
     return <LoadingScreen />;
   }
 
   return (
+    <div style={styles.appWrapper}>
     <div style={styles.app}>
       <header style={styles.header}>
         <button
@@ -146,6 +164,9 @@ function App() {
           <div style={styles.menu}>
             <button onClick={openProfile} style={styles.menuItem}>
               Профиль
+            </button>
+            <button onClick={openHistory} style={styles.menuItem}>
+              История
             </button>
             <button onClick={openReviews} style={styles.menuItem}>
               Отзывы {avgRating != null ? `★ ${avgRating}` : ""}
@@ -198,7 +219,12 @@ function App() {
           />
         )}
         {page === "checkout" && (
-          <Checkout userId={userId} onBack={openCart} onDone={openCatalog} />
+          <Checkout
+            userId={userId}
+            onBack={openCart}
+            onDone={openCatalog}
+            sellerLink={SELLER_LINK}
+          />
         )}
         {page === "profile" && (
           <Profile
@@ -217,6 +243,7 @@ function App() {
           />
         )}
         {page === "settings" && <Settings onBack={openCatalog} />}
+        {page === "history" && <History userId={userId} onBack={openCatalog} />}
         {page === "favorites" && (
           <Favorites
             products={products}
@@ -230,11 +257,20 @@ function App() {
 
       <Footer />
     </div>
+    </div>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
+  appWrapper: {
+    minHeight: "100vh",
+    display: "flex",
+    justifyContent: "center",
+    background: "var(--bg)",
+  },
   app: {
+    width: "100%",
+    maxWidth: 480,
     minHeight: "100vh",
     display: "flex",
     flexDirection: "column",

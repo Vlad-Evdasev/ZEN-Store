@@ -27,54 +27,42 @@ Telegram Mini App для магазина одежды на Node.js + React.
 ### 3. Установка и запуск
 
 ```bash
-# Установить зависимости
 npm install
-
-# Создать .env
 cp .env.example .env
-# Заполни BOT_TOKEN и WEB_APP_URL
-
-# Запустить backend и frontend
+# Заполни BOT_TOKEN, WEB_APP_URL, ADMIN_CHAT_ID
 npm run dev
 ```
 
-- **Backend (API + Bot):** http://localhost:3001
-- **Frontend (Mini App):** http://localhost:5173
-
-### 4. Локальная разработка Mini App
-
-Для тестирования Mini App в Telegram нужен HTTPS. Варианты:
-
-- **ngrok:** `ngrok http 5173` — получишь HTTPS URL
-- **Telegram Bot:** после деплоя frontend на Vercel/Netlify — укажи этот URL в BotFather
+- **Backend:** http://localhost:3001
+- **Frontend:** http://localhost:5173
 
 ## Переменные окружения
 
+**Backend (.env):**
 ```env
-BOT_TOKEN=     # Токен от @BotFather
-WEB_APP_URL=   # URL Mini App (HTTPS)
-PORT=3001      # Порт API (опционально)
+BOT_TOKEN=        # Токен от @BotFather
+WEB_APP_URL=      # URL Mini App (HTTPS)
+PORT=3001
+ADMIN_SECRET=     # Пароль админки
+ADMIN_CHAT_ID=    # Telegram ID чата для уведомлений о заказах
 ```
 
-## Скрипты
-
-| Команда | Описание |
-|---------|----------|
-| `npm run dev` | Запуск backend и frontend |
-| `npm run dev:backend` | Только API + Bot |
-| `npm run dev:frontend` | Только Mini App |
+**Frontend (Vercel):**
+```env
+VITE_API_URL=     # URL backend (Railway)
+VITE_TELEGRAM_BOT= # Username бота (для входа в браузере)
+VITE_SELLER_LINK=  # Ссылка на продавца (t.me/username)
+```
 
 ## API
 
 - `GET /api/products` — список товаров
-- `GET /api/products/:id` — товар по ID
-- `GET /api/cart/:userId` — корзина
-- `POST /api/cart/:userId` — добавить в корзину
-- `DELETE /api/cart/:userId/:itemId` — удалить из корзины
-- `POST /api/orders/:userId` — создать заказ
+- `POST /api/orders/:userId` — создать заказ (отправляет уведомление продавцу)
+- `PATCH /api/orders/order/:orderId/status` — обновить статус заказа (admin, body: `{status: "completed"}`)
 
-## Деплой
+## Браузерная версия
 
-- **Frontend:** Vercel, Netlify (статика)
-- **Backend:** Railway, Render, VPS (Node.js)
-- Обнови `WEB_APP_URL` в backend после деплоя frontend
+В браузере приложение показывает экран входа через Telegram. Нужно:
+1. Добавить `VITE_TELEGRAM_BOT` (username бота) на Vercel
+2. Настроить Telegram Login Widget в BotFather (Bot Settings → Domain)
+3. Указать домен приложения (например `zen-store.vercel.app`)

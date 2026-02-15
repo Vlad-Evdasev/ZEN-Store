@@ -62,17 +62,15 @@ export function Catalog({
   useEffect(() => {
     const el = scrollRef.current;
     if (!el || displayStores.length === 0) return;
-    let raf: number;
     const step = () => {
-      if (!marqueePausedRef.current && el) {
-        const half = el.scrollWidth / 2;
-        el.scrollLeft += 0.5;
-        if (el.scrollLeft >= half) el.scrollLeft = 0;
-      }
-      raf = requestAnimationFrame(step);
+      if (marqueePausedRef.current) return;
+      const half = el.scrollWidth / 2;
+      if (half <= 0) return;
+      el.scrollLeft += 1.5;
+      if (el.scrollLeft >= half - 1) el.scrollLeft = 0;
     };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
+    const id = setInterval(step, 30);
+    return () => clearInterval(id);
   }, [displayStores.length]);
 
   const filtered = useMemo(() => {
@@ -117,16 +115,25 @@ export function Catalog({
   return (
     <div style={styles.wrap}>
       {displayStores.length > 0 && (
-        <div
-          ref={scrollRef}
-          style={styles.storesRow}
-          className="hide-scrollbar"
-          onMouseDown={() => (marqueePausedRef.current = true)}
-          onMouseUp={() => setTimeout(() => (marqueePausedRef.current = false), 2000)}
-          onMouseLeave={() => setTimeout(() => (marqueePausedRef.current = false), 500)}
-          onTouchStart={() => (marqueePausedRef.current = true)}
-          onTouchEnd={() => setTimeout(() => (marqueePausedRef.current = false), 2000)}
-        >
+        <div style={styles.storesRowWrap}>
+          <button
+            type="button"
+            onClick={() => { marqueePausedRef.current = true; scrollRef.current?.scrollBy({ left: -200, behavior: "smooth" }); setTimeout(() => (marqueePausedRef.current = false), 2000); }}
+            style={styles.scrollBtn}
+            aria-label="Влево"
+          >
+            ‹
+          </button>
+          <div
+            ref={scrollRef}
+            style={styles.storesRow}
+            className="hide-scrollbar"
+            onMouseDown={() => (marqueePausedRef.current = true)}
+            onMouseUp={() => setTimeout(() => (marqueePausedRef.current = false), 2000)}
+            onMouseLeave={() => setTimeout(() => (marqueePausedRef.current = false), 500)}
+            onTouchStart={() => (marqueePausedRef.current = true)}
+            onTouchEnd={() => setTimeout(() => (marqueePausedRef.current = false), 2000)}
+          >
           {[...displayStores, ...displayStores].map((s, i) => (
             <StoreCard
               key={`${String(s.id)}-${i}`}
@@ -139,6 +146,15 @@ export function Catalog({
               onClick={() => handleStoreClick(s)}
             />
           ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => { marqueePausedRef.current = true; scrollRef.current?.scrollBy({ left: 200, behavior: "smooth" }); setTimeout(() => (marqueePausedRef.current = false), 2000); }}
+            style={styles.scrollBtn}
+            aria-label="Вправо"
+          >
+            ›
+          </button>
         </div>
       )}
 
@@ -199,14 +215,31 @@ export function Catalog({
 
 const styles: Record<string, React.CSSProperties> = {
   wrap: { paddingBottom: 24 },
+  storesRowWrap: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 20,
+  },
   storesRow: {
+    flex: 1,
     display: "flex",
     gap: 12,
     overflowX: "auto",
     overflowY: "hidden",
     paddingBottom: 12,
-    marginBottom: 20,
     WebkitOverflowScrolling: "touch",
+  },
+  scrollBtn: {
+    flexShrink: 0,
+    width: 36,
+    height: 36,
+    borderRadius: "50%",
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    color: "var(--text)",
+    fontSize: 24,
+    cursor: "pointer",
   },
   searchWrap: { marginBottom: 16 },
   search: {

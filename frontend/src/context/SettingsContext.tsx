@@ -14,7 +14,7 @@ const STORAGE_KEY = "zen-settings";
 
 const defaultSettings: Settings = {
   lang: "ru",
-  theme: "dark",
+  theme: "light",
   currency: "RUB",
 };
 

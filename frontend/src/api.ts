@@ -254,14 +254,33 @@ export async function addReviewComment(
   if (!res.ok) throw new Error("Failed to add comment");
 }
 
+export interface Order {
+  id: number;
+  user_id: string;
+  user_name: string | null;
+  user_phone: string | null;
+  user_address: string | null;
+  items: string;
+  total: number;
+  status: string;
+  created_at: string;
+}
+
+export async function getOrders(userId: string): Promise<Order[]> {
+  const res = await fetch(`${API_URL}/api/orders/${userId}`);
+  if (!res.ok) throw new Error("Failed to fetch orders");
+  return res.json();
+}
+
 export async function createOrder(
   userId: string,
   data: { user_name?: string; user_phone?: string; user_address?: string; items: CartItem[]; total: number }
-) {
+): Promise<{ ok: boolean; orderId?: number }> {
   const res = await fetch(`${API_URL}/api/orders/${userId}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error("Failed to create order");
+  return res.json();
 }

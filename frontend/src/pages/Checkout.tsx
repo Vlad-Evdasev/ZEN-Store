@@ -6,9 +6,10 @@ interface CheckoutProps {
   userId: string;
   onBack: () => void;
   onDone: () => void;
+  sellerLink?: string;
 }
 
-export function Checkout({ userId, onBack, onDone }: CheckoutProps) {
+export function Checkout({ userId, onBack, onDone, sellerLink }: CheckoutProps) {
   const { formatPrice } = useSettings();
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -16,6 +17,7 @@ export function Checkout({ userId, onBack, onDone }: CheckoutProps) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
+  const [orderSuccess, setOrderSuccess] = useState(false);
 
   useEffect(() => {
     getCart(userId).then(setItems).catch(console.error).finally(() => setLoading(false));
@@ -35,7 +37,7 @@ export function Checkout({ userId, onBack, onDone }: CheckoutProps) {
         items,
         total,
       });
-      onDone();
+      setOrderSuccess(true);
     } catch (e) {
       console.error(e);
     } finally {
@@ -43,10 +45,40 @@ export function Checkout({ userId, onBack, onDone }: CheckoutProps) {
     }
   };
 
+  const handleWriteSeller = () => {
+    window.open(sellerLink || "https://t.me/ZenStoreBot", "_blank");
+    onDone();
+  };
+
+  const handleSellerWillContact = () => {
+    onDone();
+  };
+
   if (loading) {
     return (
       <div style={styles.loading}>
         <p>Загрузка...</p>
+      </div>
+    );
+  }
+
+  if (orderSuccess) {
+    return (
+      <div style={styles.wrap}>
+        <h2 style={styles.title}>Заказ оформлен!</h2>
+        <p style={styles.successText}>Продавец получил уведомление и свяжется с вами.</p>
+        <div style={styles.choice}>
+          <p style={styles.choiceLabel}>Как продолжить?</p>
+          <button onClick={handleWriteSeller} style={styles.choiceBtn}>
+            Написать продавцу сейчас
+          </button>
+          <button onClick={handleSellerWillContact} style={styles.choiceBtnAlt}>
+            Продавец сам свяжется со мной
+          </button>
+        </div>
+        <button onClick={onDone} style={styles.backBtn}>
+          В каталог
+        </button>
       </div>
     );
   }
@@ -115,10 +147,57 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     marginBottom: 20,
   },
+  backBtn: {
+    marginTop: 24,
+    padding: 14,
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: 10,
+    color: "var(--text)",
+    fontFamily: "inherit",
+    fontSize: 15,
+    cursor: "pointer",
+  },
   title: {
     fontFamily: "Unbounded, sans-serif",
     fontSize: 20,
     marginBottom: 24,
+  },
+  successText: {
+    color: "var(--muted)",
+    marginBottom: 24,
+  },
+  choice: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 12,
+    marginBottom: 16,
+  },
+  choiceLabel: {
+    fontSize: 14,
+    color: "var(--muted)",
+    marginBottom: 4,
+  },
+  choiceBtn: {
+    padding: 16,
+    background: "var(--accent)",
+    border: "none",
+    borderRadius: 10,
+    color: "#fff",
+    fontFamily: "inherit",
+    fontSize: 15,
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+  choiceBtnAlt: {
+    padding: 16,
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: 10,
+    color: "var(--text)",
+    fontFamily: "inherit",
+    fontSize: 15,
+    cursor: "pointer",
   },
   form: { display: "flex", flexDirection: "column", gap: 16 },
   label: {
