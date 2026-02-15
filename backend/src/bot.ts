@@ -27,8 +27,13 @@ export async function notifyAdminNewOrder(orderId: number, userId: string, userN
   ].join("\n");
   try {
     await bot.api.sendMessage(ADMIN_CHAT_ID, text);
-  } catch (e) {
+    console.log("[ZEN] Уведомление о заказе #" + orderId + " отправлено");
+  } catch (e: unknown) {
+    const msg = String(e);
     console.error("[ZEN] Ошибка отправки уведомления продавцу:", e);
+    if (msg.includes("403") || msg.includes("bot was blocked") || msg.includes("user is deactivated")) {
+      console.error("[ZEN] Совет: открой бота в Telegram, нажми Start (/start) — бот не может первым написать.");
+    }
   }
 }
 
