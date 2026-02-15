@@ -1,16 +1,31 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTelegram } from "./hooks/useTelegram";
+import { getProducts, type Product } from "./api";
 import { Catalog } from "./pages/Catalog";
 import { Cart } from "./pages/Cart";
 import { ProductPage } from "./pages/ProductPage";
 import { Checkout } from "./pages/Checkout";
+import { LoadingScreen } from "./components/LoadingScreen";
 
 type Page = "catalog" | "cart" | "product" | "checkout";
+
+const STORE_LOAD_TIME_MS = 2000;
 
 function App() {
   const { userId } = useTelegram();
   const [page, setPage] = useState<Page>("catalog");
   const [productId, setProductId] = useState<number | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [storeReady, setStoreReady] = useState(false);
+
+  useEffect(() => {
+    Promise.all([
+      getProducts().then(setProducts),
+      new Promise((r) => setTimeout(r, STORE_LOAD_TIME_MS)),
+    ])
+      .catch(console.error)
+      .finally(() => setStoreReady(true));
+  }, []);
 
   const openProduct = (id: number) => {
     setProductId(id);
@@ -24,6 +39,10 @@ function App() {
   };
   const openCheckout = () => setPage("checkout");
 
+  if (!storeReady) {
+    return <LoadingScreen />;
+  }
+
   return (
     <div style={styles.app}>
       <header style={styles.header}>
@@ -36,7 +55,7 @@ function App() {
       </header>
 
       <main style={styles.main}>
-        {page === "catalog" && <Catalog onProductClick={openProduct} />}
+        {page === "catalog" && <Catalog products={products} onProductClick={openProduct} />}
         {page === "product" && productId && (
           <ProductPage productId={productId} onBack={openCatalog} onCart={openCart} userId={userId} />
         )}

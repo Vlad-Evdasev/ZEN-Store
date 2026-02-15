@@ -1,27 +1,12 @@
-import { useEffect, useState } from "react";
-import { getProducts, type Product } from "../api";
+import type { Product } from "../api";
 import { ProductCard } from "../components/ProductCard";
-import { LoadingScreen } from "../components/LoadingScreen";
 
 interface CatalogProps {
+  products: Product[];
   onProductClick: (id: number) => void;
 }
 
-export function Catalog({ onProductClick }: CatalogProps) {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getProducts()
-      .then(setProducts)
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) {
-    return <LoadingScreen />;
-  }
-
+export function Catalog({ products, onProductClick }: CatalogProps) {
   return (
     <div style={styles.grid}>
       {products.map((p) => (
