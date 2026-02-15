@@ -34,6 +34,19 @@ a {
   text-decoration: none;
 }
 
+button {
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus {
+  outline: none;
+}
+
+button:focus-visible {
+  outline: none;
+}
+
 @keyframes zen-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }

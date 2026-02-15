@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import type { Product } from "../api";
 import { ProductCard } from "../components/ProductCard";
+import { FeaturedCard } from "../components/FeaturedCard";
 import { getCategoryLabel } from "../utils/categories";
 
 interface CatalogProps {
@@ -15,6 +16,16 @@ const CATEGORIES = ["all", "tee", "hoodie", "pants", "jacket", "accessories"];
 export function Catalog({ products, onProductClick, wishlistIds, onToggleWishlist }: CatalogProps) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
+
+  const featuredProducts = useMemo(() => {
+    const cats = ["tee", "hoodie", "pants", "jacket"];
+    const seen = new Set<string>();
+    return products.filter((p) => {
+      if (seen.has(p.category) || !cats.includes(p.category)) return false;
+      seen.add(p.category);
+      return true;
+    }).slice(0, 4);
+  }, [products]);
 
   const filtered = useMemo(() => {
     let list = products;
@@ -34,10 +45,23 @@ export function Catalog({ products, onProductClick, wishlistIds, onToggleWishlis
 
   return (
     <div style={styles.wrap}>
-      <section style={styles.hero}>
-        <h1 style={styles.heroTitle}>ZΞN</h1>
-        <p style={styles.heroSub}>Минимализм. Качество. Твой стиль.</p>
-      </section>
+      {featuredProducts.length > 0 && (
+        <div style={styles.featuredGrid}>
+          {featuredProducts.map((p) => (
+            <FeaturedCard
+              key={p.id}
+              image={p.image_url || "https://via.placeholder.com/300"}
+              title={p.name}
+              description={
+                (p.description || "").length > 60
+                  ? (p.description || "").slice(0, 60) + "..."
+                  : p.description || ""
+              }
+              onClick={() => onProductClick(p.id)}
+            />
+          ))}
+        </div>
+      )}
 
       <div style={styles.searchWrap}>
         <input
@@ -90,23 +114,11 @@ export function Catalog({ products, onProductClick, wishlistIds, onToggleWishlis
 
 const styles: Record<string, React.CSSProperties> = {
   wrap: { paddingBottom: 24 },
-  hero: {
-    padding: "32px 0 24px",
-    borderBottom: "1px solid var(--border)",
+  featuredGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, 1fr)",
+    gap: 12,
     marginBottom: 20,
-  },
-  heroTitle: {
-    fontFamily: "Unbounded, sans-serif",
-    fontSize: 32,
-    fontWeight: 700,
-    letterSpacing: "-0.03em",
-    color: "var(--text)",
-    marginBottom: 4,
-  },
-  heroSub: {
-    fontSize: 14,
-    color: "var(--muted)",
-    letterSpacing: "0.02em",
   },
   searchWrap: { marginBottom: 16 },
   search: {

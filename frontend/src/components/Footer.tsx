@@ -3,11 +3,6 @@ export function Footer() {
     <footer style={styles.footer}>
       <div style={styles.brand}>ZΞN</div>
       <p style={styles.tagline}>Минимализм. Качество. Твой стиль.</p>
-      <div style={styles.links}>
-        <a href="https://t.me/zen_store" style={styles.link}>
-          Telegram
-        </a>
-      </div>
     </footer>
   );
 }
@@ -30,15 +25,5 @@ const styles: Record<string, React.CSSProperties> = {
   tagline: {
     fontSize: 12,
     color: "var(--muted)",
-    marginBottom: 12,
-  },
-  links: {
-    display: "flex",
-    justifyContent: "center",
-    gap: 16,
-  },
-  link: {
-    fontSize: 13,
-    color: "var(--accent)",
   },
 };

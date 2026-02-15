@@ -6,15 +6,17 @@ import { Catalog } from "./pages/Catalog";
 import { Cart } from "./pages/Cart";
 import { ProductPage } from "./pages/ProductPage";
 import { Checkout } from "./pages/Checkout";
+import { Profile } from "./pages/Profile";
+import { Reviews } from "./pages/Reviews";
 import { LoadingScreen } from "./components/LoadingScreen";
 import { Footer } from "./components/Footer";
 
-type Page = "catalog" | "cart" | "product" | "checkout";
+type Page = "catalog" | "cart" | "product" | "checkout" | "profile" | "reviews";
 
 const STORE_LOAD_TIME_MS = 2000;
 
 function App() {
-  const { userId } = useTelegram();
+  const { userId, userName, firstName } = useTelegram();
   const { wishlistIds, toggleWishlist, hasInWishlist } = useWishlist(userId);
   const [page, setPage] = useState<Page>("catalog");
   const [productId, setProductId] = useState<number | null>(null);
@@ -46,6 +48,8 @@ function App() {
   };
 
   const openCart = () => setPage("cart");
+  const openProfile = () => setPage("profile");
+  const openReviews = () => setPage("reviews");
   const openCatalog = () => {
     setPage("catalog");
     setProductId(null);
@@ -63,6 +67,12 @@ function App() {
           ZΞN
         </button>
         <div style={styles.headerActions}>
+          <button onClick={openReviews} style={styles.headerLink}>
+            Отзывы
+          </button>
+          <button onClick={openProfile} style={styles.headerLink}>
+            Профиль
+          </button>
           <button onClick={openCart} style={styles.headerBtn}>
             Корзина
           </button>
@@ -93,6 +103,21 @@ function App() {
         )}
         {page === "checkout" && (
           <Checkout userId={userId} onBack={openCart} onDone={openCatalog} />
+        )}
+        {page === "profile" && (
+          <Profile
+            userName={userName}
+            firstName={firstName}
+            onBack={openCatalog}
+          />
+        )}
+        {page === "reviews" && (
+          <Reviews
+            userId={userId}
+            userName={userName}
+            firstName={firstName}
+            onBack={openCatalog}
+          />
         )}
       </main>
 
@@ -131,6 +156,16 @@ const styles: Record<string, React.CSSProperties> = {
   headerActions: {
     display: "flex",
     gap: 8,
+    alignItems: "center",
+  },
+  headerLink: {
+    padding: "8px 12px",
+    background: "none",
+    border: "none",
+    color: "var(--muted)",
+    fontFamily: "inherit",
+    fontSize: 13,
+    cursor: "pointer",
   },
   headerBtn: {
     padding: "10px 16px",

@@ -46,6 +46,56 @@ export async function removeFromCart(userId: string, itemId: number) {
   if (!res.ok) throw new Error("Failed to remove from cart");
 }
 
+export interface Review {
+  id: number;
+  user_id: string;
+  user_name: string;
+  rating: number;
+  text: string;
+  created_at: string;
+  comments: ReviewComment[];
+}
+
+export interface ReviewComment {
+  id: number;
+  review_id: number;
+  user_id: string;
+  user_name: string;
+  text: string;
+  created_at: string;
+}
+
+export async function getReviews(): Promise<Review[]> {
+  const res = await fetch(`${API_URL}/api/reviews`);
+  if (!res.ok) throw new Error("Failed to fetch reviews");
+  return res.json();
+}
+
+export async function addReview(
+  userId: string,
+  data: { user_name?: string; rating?: number; text: string }
+) {
+  const res = await fetch(`${API_URL}/api/reviews`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId, ...data }),
+  });
+  if (!res.ok) throw new Error("Failed to add review");
+}
+
+export async function addReviewComment(
+  reviewId: number,
+  userId: string,
+  data: { user_name?: string; text: string }
+) {
+  const res = await fetch(`${API_URL}/api/reviews/${reviewId}/comments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId, ...data }),
+  });
+  if (!res.ok) throw new Error("Failed to add comment");
+}
+
 export async function createOrder(
   userId: string,
   data: { user_name?: string; user_phone?: string; user_address?: string; items: CartItem[]; total: number }
