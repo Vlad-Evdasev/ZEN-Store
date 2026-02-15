@@ -9,7 +9,6 @@ import {
 
 interface ReviewsProps {
   userId: string;
-  userName: string | null;
   firstName: string;
   onBack: () => void;
 }
@@ -27,7 +26,7 @@ function formatDate(s: string) {
   }
 }
 
-export function Reviews({ userId, userName, firstName, onBack }: ReviewsProps) {
+export function Reviews({ userId, firstName, onBack }: ReviewsProps) {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [newText, setNewText] = useState("");

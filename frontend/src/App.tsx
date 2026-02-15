@@ -114,7 +114,6 @@ function App() {
         {page === "reviews" && (
           <Reviews
             userId={userId}
-            userName={userName}
             firstName={firstName}
             onBack={openCatalog}
           />
