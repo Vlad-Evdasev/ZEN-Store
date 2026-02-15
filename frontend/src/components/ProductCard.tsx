@@ -1,3 +1,4 @@
+import { useSettings } from "../context/SettingsContext";
 import type { Product } from "../api";
 
 interface ProductCardProps {
@@ -8,6 +9,7 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, onClick, inWishlist, onWishlistClick }: ProductCardProps) {
+  const { formatPrice } = useSettings();
   return (
     <button onClick={onClick} style={styles.card}>
       <div style={styles.imageWrap}>
@@ -27,7 +29,7 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick }: P
         )}
       </div>
       <p style={styles.name}>{product.name}</p>
-      <p style={styles.price}>{product.price.toLocaleString("ru-RU")} ₽</p>
+      <p style={styles.price}>{formatPrice(product.price)}</p>
     </button>
   );
 }

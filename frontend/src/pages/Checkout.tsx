@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { getCart, createOrder, type CartItem } from "../api";
+import { useSettings } from "../context/SettingsContext";
 
 interface CheckoutProps {
   userId: string;
@@ -8,6 +9,7 @@ interface CheckoutProps {
 }
 
 export function Checkout({ userId, onBack, onDone }: CheckoutProps) {
+  const { formatPrice } = useSettings();
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -91,7 +93,7 @@ export function Checkout({ userId, onBack, onDone }: CheckoutProps) {
         </label>
 
         <div style={styles.total}>
-          К оплате: <strong>{total.toLocaleString("ru-RU")} ₽</strong>
+          К оплате: <strong>{formatPrice(total)}</strong>
         </div>
 
         <button type="submit" disabled={submitting} style={styles.submit}>

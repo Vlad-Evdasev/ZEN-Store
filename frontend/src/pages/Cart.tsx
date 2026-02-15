@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getCart, removeFromCart, type CartItem } from "../api";
+import { useSettings } from "../context/SettingsContext";
 
 interface CartProps {
   userId: string;
@@ -9,6 +10,7 @@ interface CartProps {
 }
 
 export function Cart({ userId, onBack, onCheckout, onCartChange }: CartProps) {
+  const { formatPrice } = useSettings();
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -76,7 +78,7 @@ export function Cart({ userId, onBack, onCheckout, onCartChange }: CartProps) {
               <p style={styles.itemMeta}>
                 {item.size} × {item.quantity}
               </p>
-              <p style={styles.itemPrice}>{item.price.toLocaleString("ru-RU")} ₽</p>
+              <p style={styles.itemPrice}>{formatPrice(item.price * item.quantity)}</p>
             </div>
             <button onClick={() => remove(item.id)} style={styles.remove}>
               ✕
@@ -86,7 +88,7 @@ export function Cart({ userId, onBack, onCheckout, onCartChange }: CartProps) {
       </div>
 
       <div style={styles.footer}>
-        <span style={styles.total}>Итого: {total.toLocaleString("ru-RU")} ₽</span>
+        <span style={styles.total}>Итого: {formatPrice(total)}</span>
         <button onClick={onCheckout} style={styles.checkout}>
           Оформить заказ
         </button>

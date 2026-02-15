@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { addToCart, type Product } from "../api";
+import { useSettings } from "../context/SettingsContext";
 
 interface ProductPageProps {
   product: Product | undefined;
@@ -20,6 +21,7 @@ export function ProductPage({
   inWishlist,
   onToggleWishlist,
 }: ProductPageProps) {
+  const { formatPrice } = useSettings();
   const [size, setSize] = useState<string>("");
   const [adding, setAdding] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
@@ -96,7 +98,7 @@ export function ProductPage({
       </div>
 
       <div style={styles.footer}>
-        <span style={styles.price}>{product.price.toLocaleString("ru-RU")} ₽</span>
+        <span style={styles.price}>{formatPrice(product.price)}</span>
         {justAdded ? (
           <button onClick={onCart} style={styles.addBtn}>
             Перейти в корзину

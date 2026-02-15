@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTelegram } from "./hooks/useTelegram";
 import { useWishlist } from "./hooks/useWishlist";
-import { getProducts, getStores, getCart, type Product, type Store } from "./api";
+import { getProducts, getStores, getCart, getReviews, type Product, type Store } from "./api";
 import { Catalog } from "./pages/Catalog";
 import { Cart } from "./pages/Cart";
 import { Favorites } from "./pages/Favorites";
@@ -9,10 +9,12 @@ import { ProductPage } from "./pages/ProductPage";
 import { Checkout } from "./pages/Checkout";
 import { Profile } from "./pages/Profile";
 import { Reviews } from "./pages/Reviews";
+import { StoreCatalog } from "./pages/StoreCatalog";
+import { Settings } from "./pages/Settings";
 import { LoadingScreen } from "./components/LoadingScreen";
 import { Footer } from "./components/Footer";
 
-type Page = "catalog" | "cart" | "product" | "checkout" | "profile" | "reviews" | "favorites";
+type Page = "catalog" | "cart" | "product" | "checkout" | "profile" | "reviews" | "favorites" | "storeCatalog" | "settings";
 
 const STORE_LOAD_TIME_MS = 2000;
 
@@ -25,6 +27,11 @@ function App() {
   const [stores, setStores] = useState<Store[]>([]);
   const [storeReady, setStoreReady] = useState(false);
   const [cartCount, setCartCount] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [avgRating, setAvgRating] = useState<number | null>(null);
+  const [storeCatalogStore, setStoreCatalogStore] = useState<
+    { id: number; name: string } | { category: string; name: string } | null
+  >(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -46,6 +53,13 @@ function App() {
       if (!cancelled) setCartCount(items.reduce((a, i) => a + i.quantity, 0));
     }).catch(() => {});
 
+    getReviews().then((reviews) => {
+      if (!cancelled && reviews.length > 0) {
+        const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
+        setAvgRating(Math.round(avg * 10) / 10);
+      }
+    }).catch(() => {});
+
     return () => {
       cancelled = true;
       clearTimeout(timer);
@@ -57,10 +71,30 @@ function App() {
     setPage("product");
   };
 
-  const openCart = () => setPage("cart");
-  const openProfile = () => setPage("profile");
-  const openReviews = () => setPage("reviews");
-  const openFavorites = () => setPage("favorites");
+  const openCart = () => {
+    setMenuOpen(false);
+    setPage("cart");
+  };
+  const openProfile = () => {
+    setMenuOpen(false);
+    setPage("profile");
+  };
+  const openReviews = () => {
+    setMenuOpen(false);
+    setPage("reviews");
+  };
+  const openFavorites = () => {
+    setMenuOpen(false);
+    setPage("favorites");
+  };
+  const openSettings = () => {
+    setMenuOpen(false);
+    setPage("settings");
+  };
+  const openStoreCatalog = (store: { id: number; name: string } | { category: string; name: string }) => {
+    setStoreCatalogStore(store);
+    setPage("storeCatalog");
+  };
 
   const refreshCartCount = () => {
     getCart(userId || "").then((items) =>
@@ -70,6 +104,7 @@ function App() {
   const openCatalog = () => {
     setPage("catalog");
     setProductId(null);
+    setStoreCatalogStore(null);
   };
   const openCheckout = () => setPage("checkout");
 
@@ -80,18 +115,19 @@ function App() {
   return (
     <div style={styles.app}>
       <header style={styles.header}>
+        <button
+          onClick={() => setMenuOpen(!menuOpen)}
+          style={styles.hamburger}
+          aria-label="Меню"
+        >
+          ☰
+        </button>
         <button onClick={openCatalog} style={styles.logo}>
           ZΞN
         </button>
         <div style={styles.headerActions}>
-          <button onClick={openReviews} style={styles.headerLink}>
-            Отзывы
-          </button>
           <button onClick={openFavorites} style={styles.headerLink}>
             Избранное
-          </button>
-          <button onClick={openProfile} style={styles.headerLink}>
-            Профиль
           </button>
           <button onClick={openCart} style={styles.headerBtnWrapper}>
             <span>Корзина</span>
@@ -100,12 +136,44 @@ function App() {
         </div>
       </header>
 
+      {menuOpen && (
+        <>
+          <div
+            style={styles.menuOverlay}
+            onClick={() => setMenuOpen(false)}
+            aria-hidden
+          />
+          <div style={styles.menu}>
+            <button onClick={openProfile} style={styles.menuItem}>
+              Профиль
+            </button>
+            <button onClick={openReviews} style={styles.menuItem}>
+              Отзывы {avgRating != null ? `★ ${avgRating}` : ""}
+            </button>
+            <button onClick={openSettings} style={styles.menuItem}>
+              Настройки
+            </button>
+          </div>
+        </>
+      )}
+
       <main style={styles.main}>
         {page === "catalog" && (
           <Catalog
             products={products}
             stores={stores}
             onProductClick={openProduct}
+            onStoreClick={openStoreCatalog}
+            wishlistIds={wishlistIds}
+            onToggleWishlist={toggleWishlist}
+          />
+        )}
+        {page === "storeCatalog" && storeCatalogStore && (
+          <StoreCatalog
+            store={storeCatalogStore}
+            products={products}
+            onProductClick={openProduct}
+            onBack={openCatalog}
             wishlistIds={wishlistIds}
             onToggleWishlist={toggleWishlist}
           />
@@ -148,6 +216,7 @@ function App() {
             onBack={openCatalog}
           />
         )}
+        {page === "settings" && <Settings onBack={openCatalog} />}
         {page === "favorites" && (
           <Favorites
             products={products}
@@ -175,12 +244,58 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: "16px 20px",
+    padding: "12px 16px",
+    paddingLeft: "max(16px, env(safe-area-inset-left))",
+    paddingRight: "max(16px, env(safe-area-inset-right))",
     borderBottom: "1px solid var(--border)",
     position: "sticky",
     top: 0,
     background: "var(--bg)",
     zIndex: 10,
+  },
+  hamburger: {
+    width: 40,
+    height: 40,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "none",
+    border: "none",
+    color: "var(--text)",
+    fontSize: 22,
+    cursor: "pointer",
+  },
+  menuOverlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.5)",
+    zIndex: 20,
+  },
+  menu: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: 280,
+    maxWidth: "85vw",
+    background: "var(--surface)",
+    borderRight: "1px solid var(--border)",
+    zIndex: 21,
+    paddingTop: "max(16px, env(safe-area-inset-top))",
+    paddingLeft: "max(16px, env(safe-area-inset-left))",
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+  },
+  menuItem: {
+    padding: "14px 20px",
+    textAlign: "left",
+    background: "none",
+    border: "none",
+    color: "var(--text)",
+    fontSize: 16,
+    fontFamily: "inherit",
+    cursor: "pointer",
   },
   logo: {
     fontFamily: "Unbounded, sans-serif",
@@ -236,7 +351,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
   main: {
     padding: 16,
+    paddingLeft: "max(16px, env(safe-area-inset-left))",
+    paddingRight: "max(16px, env(safe-area-inset-right))",
     flex: 1,
+    minWidth: 0,
   },
 };
 

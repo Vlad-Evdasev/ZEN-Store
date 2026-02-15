@@ -8,6 +8,7 @@ interface CatalogProps {
   products: Product[];
   stores: Store[];
   onProductClick: (id: number) => void;
+  onStoreClick: (store: { id: number; name: string } | { category: string; name: string }) => void;
   wishlistIds: Set<number>;
   onToggleWishlist: (id: number) => void;
 }
@@ -25,17 +26,15 @@ export function Catalog({
   products,
   stores,
   onProductClick,
+  onStoreClick,
   wishlistIds,
   onToggleWishlist,
 }: CatalogProps) {
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("all");
-  const [marqueePaused, setMarqueePaused] = useState(false);
-  const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
-  const [selectedStoreCategory, setSelectedStoreCategory] = useState<string | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set(["all"]));
 
   type DisplayStore =
-    | { id: number; name: string; image: string; desc: string; isReal: true; category?: never }
+    | { id: number; name: string; image: string; desc: string; isReal: true }
     | { id: string; name: string; image: string; desc: string; isReal: false; category: string };
 
   const displayStores = useMemo((): DisplayStore[] => {
@@ -60,14 +59,8 @@ export function Catalog({
 
   const filtered = useMemo(() => {
     let list = products;
-    if (selectedStoreId !== null) {
-      list = list.filter((p) => (p.store_id ?? 1) === selectedStoreId);
-    }
-    if (selectedStoreCategory !== null) {
-      list = list.filter((p) => p.category === selectedStoreCategory);
-    }
-    if (category !== "all") {
-      list = list.filter((p) => p.category === category);
+    if (!selectedCategories.has("all")) {
+      list = list.filter((p) => selectedCategories.has(p.category));
     }
     if (search.trim()) {
       const q = search.trim().toLowerCase();
@@ -78,52 +71,47 @@ export function Catalog({
       );
     }
     return list;
-  }, [products, selectedStoreId, selectedStoreCategory, category, search]);
+  }, [products, selectedCategories, search]);
+
+  const handleCategoryClick = (cat: string) => {
+    if (cat === "all") {
+      setSelectedCategories(new Set(["all"]));
+      return;
+    }
+    setSelectedCategories((prev) => {
+      const next = new Set(prev);
+      next.delete("all");
+      if (next.has(cat)) next.delete(cat);
+      else next.add(cat);
+      if (next.size === 0) return new Set(["all"]);
+      return next;
+    });
+  };
 
   const handleStoreClick = (item: DisplayStore) => {
     if (item.isReal && typeof item.id === "number") {
-      setSelectedStoreId(selectedStoreId === item.id ? null : item.id);
-      setSelectedStoreCategory(null);
+      onStoreClick({ id: item.id, name: item.name });
     } else if (!item.isReal && item.category) {
-      setSelectedStoreCategory(selectedStoreCategory === item.category ? null : item.category);
-      setSelectedStoreId(null);
+      onStoreClick({ category: item.category, name: item.name });
     }
-  };
-
-  const isStoreSelected = (item: DisplayStore) => {
-    if (item.isReal && typeof item.id === "number") return selectedStoreId === item.id;
-    return selectedStoreCategory === item.category;
   };
 
   return (
     <div style={styles.wrap}>
       {displayStores.length > 0 && (
-        <div
-          style={styles.storesRowWrap}
-          className="hide-scrollbar"
-          onMouseEnter={() => setMarqueePaused(true)}
-          onMouseLeave={() => setMarqueePaused(false)}
-        >
-          <div
-            style={{
-              ...styles.storesMarquee,
-              animationPlayState: marqueePaused ? "paused" : "running",
-            }}
-          >
-            {[...displayStores, ...displayStores].map((s, i) => (
-              <StoreCard
-                key={`${String(s.id)}-${i}`}
-                store={{
-                  id: typeof s.id === "number" ? s.id : 0,
-                  name: s.name,
-                  image_url: s.image,
-                  description: s.desc,
-                }}
-                onClick={() => handleStoreClick(s)}
-                selected={isStoreSelected(s)}
-              />
-            ))}
-          </div>
+        <div style={styles.storesRow} className="hide-scrollbar">
+          {displayStores.map((s) => (
+            <StoreCard
+              key={String(s.id)}
+              store={{
+                id: typeof s.id === "number" ? s.id : 0,
+                name: s.name,
+                image_url: s.image,
+                description: s.desc,
+              }}
+              onClick={() => handleStoreClick(s)}
+            />
+          ))}
         </div>
       )}
 
@@ -138,18 +126,24 @@ export function Catalog({
       </div>
 
       <div style={styles.tabsWrap} className="hide-scrollbar">
-        {CATEGORIES.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setCategory(cat)}
-            style={{
-              ...styles.tab,
-              ...(category === cat ? styles.tabActive : {}),
-            }}
-          >
-            {getCategoryLabel(cat)}
-          </button>
-        ))}
+        {CATEGORIES.map((cat) => {
+          const isSelected = cat === "all" ? selectedCategories.has("all") : selectedCategories.has(cat);
+          return (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => handleCategoryClick(cat)}
+              style={{
+                ...styles.tab,
+                ...(isSelected ? styles.tabActive : {}),
+                outline: "none",
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              {getCategoryLabel(cat)}
+            </button>
+          );
+        })}
       </div>
 
       {filtered.length === 0 ? (
@@ -178,15 +172,13 @@ export function Catalog({
 
 const styles: Record<string, React.CSSProperties> = {
   wrap: { paddingBottom: 24 },
-  storesRowWrap: {
-    overflow: "hidden",
-    marginBottom: 20,
-  },
-  storesMarquee: {
+  storesRow: {
     display: "flex",
     gap: 12,
-    width: "max-content",
-    animation: "store-marquee 40s linear infinite",
+    overflowX: "auto",
+    paddingBottom: 12,
+    marginBottom: 20,
+    WebkitOverflowScrolling: "touch",
   },
   searchWrap: { marginBottom: 16 },
   search: {

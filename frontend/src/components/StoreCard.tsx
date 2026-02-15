@@ -10,9 +10,11 @@ export function StoreCard({ store, onClick, selected }: StoreCardProps) {
   return (
     <button
       onClick={onClick}
+      type="button"
       style={{
         ...styles.card,
         ...(selected ? styles.cardSelected : {}),
+        outline: "none",
       }}
     >
       <div style={styles.imageWrap}>
