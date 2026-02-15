@@ -11,6 +11,7 @@ interface CatalogProps {
   onStoreClick: (store: { id: number; name: string } | { category: string; name: string }) => void;
   wishlistIds: Set<number>;
   onToggleWishlist: (id: number) => void;
+  hideStores?: boolean;
 }
 
 const CATEGORIES = ["all", "tee", "hoodie", "pants", "jacket", "accessories"];
@@ -29,6 +30,7 @@ export function Catalog({
   onStoreClick,
   wishlistIds,
   onToggleWishlist,
+  hideStores = false,
 }: CatalogProps) {
   const [search, setSearch] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set(["all"]));
@@ -151,8 +153,8 @@ export function Catalog({
 
   return (
     <div style={styles.wrap}>
-      {displayStores.length > 0 && (
-        <div style={styles.storesRowWrap} className="stores-full-bleed">
+      {!hideStores && displayStores.length > 0 && (
+        <div style={styles.storesRowWrap}>
           <button
             type="button"
             onClick={() => {
