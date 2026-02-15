@@ -13,12 +13,9 @@ import { Reviews } from "./pages/Reviews";
 import { StoreCatalog } from "./pages/StoreCatalog";
 import { Settings } from "./pages/Settings";
 import { History } from "./pages/History";
-import { LoadingScreen } from "./components/LoadingScreen";
 import { Footer } from "./components/Footer";
 
 type Page = "catalog" | "cart" | "product" | "checkout" | "profile" | "reviews" | "favorites" | "storeCatalog" | "settings" | "history";
-
-const STORE_LOAD_TIME_MS = 2000;
 
 const SELLER_LINK = import.meta.env.VITE_SELLER_LINK || "";
 
@@ -29,7 +26,6 @@ function App() {
   const [productId, setProductId] = useState<number | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
-  const [storeReady, setStoreReady] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [avgRating, setAvgRating] = useState<number | null>(null);
@@ -39,19 +35,8 @@ function App() {
 
   useEffect(() => {
     let cancelled = false;
-
-    Promise.all([
-      getProducts().then((p) => {
-        if (!cancelled) setProducts(p);
-      }),
-      getStores().then((s) => {
-        if (!cancelled) setStores(s);
-      }),
-    ]).catch(console.error);
-
-    const timer = setTimeout(() => {
-      if (!cancelled) setStoreReady(true);
-    }, STORE_LOAD_TIME_MS);
+    getProducts().then((p) => { if (!cancelled) setProducts(p); }).catch(console.error);
+    getStores().then((s) => { if (!cancelled) setStores(s); }).catch(console.error);
 
     getCart(userId || "").then((items) => {
       if (!cancelled) setCartCount(items.reduce((a, i) => a + i.quantity, 0));
@@ -64,10 +49,7 @@ function App() {
       }
     }).catch(() => {});
 
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
+    return () => { cancelled = true; };
   }, [userId]);
 
   const openProduct = (id: number) => {
@@ -125,10 +107,6 @@ function App() {
         </div>
       </div>
     );
-  }
-
-  if (!storeReady) {
-    return <LoadingScreen />;
   }
 
   return (
@@ -287,6 +265,7 @@ const styles: Record<string, React.CSSProperties> = {
   app: {
     width: "100%",
     maxWidth: 480,
+    overflowX: "visible",
     minHeight: "100vh",
     display: "flex",
     flexDirection: "column",
@@ -431,6 +410,7 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: "center",
   },
   main: {
+    overflowX: "visible",
     padding: 16,
     paddingLeft: "max(16px, env(safe-area-inset-left))",
     paddingRight: "max(16px, env(safe-area-inset-right))",

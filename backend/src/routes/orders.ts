@@ -4,6 +4,16 @@ import { notifyAdminNewOrder } from "../bot.js";
 
 export const ordersRouter = Router();
 
+ordersRouter.get("/admin/all", (req, res) => {
+  const ADMIN_SECRET = process.env.ADMIN_SECRET || "";
+  const secret = req.headers["x-admin-secret"] as string | undefined;
+  if (ADMIN_SECRET && secret !== ADMIN_SECRET) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  const orders = db.prepare("SELECT * FROM orders ORDER BY created_at DESC").all();
+  res.json(orders);
+});
+
 ordersRouter.get("/:userId", (req, res) => {
   const { userId } = req.params;
   const orders = db.prepare("SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC").all(userId);

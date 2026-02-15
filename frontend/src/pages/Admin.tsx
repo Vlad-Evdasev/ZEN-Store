@@ -10,13 +10,16 @@ import {
   getStores,
   verifyAdmin,
   checkApiHealth,
+  getOrdersAdmin,
+  updateOrderStatus,
   type Product,
   type Store,
+  type Order,
 } from "../api";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
-type Tab = "products" | "stores";
+type Tab = "products" | "stores" | "orders";
 
 export function Admin() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -113,6 +116,13 @@ export function Admin() {
         >
           Магазины
         </button>
+        <button
+          type="button"
+          onClick={() => { setTab("orders"); setEditingStoreId(null); setEditingProductId(null); }}
+          style={{ ...styles.tabBtn, ...(tab === "orders" ? styles.tabActive : {}) }}
+        >
+          Заказы
+        </button>
       </div>
 
       {tab === "products" && (
@@ -128,6 +138,10 @@ export function Admin() {
           submitting={submitting}
           setSubmitting={setSubmitting}
         />
+      )}
+
+      {tab === "orders" && (
+        <OrdersTab adminSecret={adminSecret} />
       )}
 
       {tab === "stores" && (
@@ -159,6 +173,94 @@ export function Admin() {
         <p style={styles.apiHint}>API: {API_URL}</p>
       </div>
     </div>
+  );
+}
+
+function OrdersTab({ adminSecret }: { adminSecret: string }) {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+  const [updatingId, setUpdatingId] = useState<number | null>(null);
+
+  const load = () => {
+    setLoading(true);
+    getOrdersAdmin(adminSecret)
+      .then(setOrders)
+      .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    if (adminSecret) load();
+  }, [adminSecret]);
+
+  const handleStatus = async (id: number, status: "pending" | "completed") => {
+    setUpdatingId(id);
+    setMessage("");
+    try {
+      await updateOrderStatus(id, status, adminSecret);
+      setMessage("Статус обновлён");
+      load();
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  if (loading) return <p style={styles.hint}>Загрузка заказов...</p>;
+
+  return (
+    <>
+      {message && <p style={styles.message}>{message}</p>}
+      <div style={styles.list}>
+        <h3 style={styles.subtitle}>Заказы ({orders.length})</h3>
+        {orders.length === 0 ? (
+          <p style={styles.hint}>Нет заказов</p>
+        ) : (
+          orders.map((o) => {
+            let items: { name?: string; size?: string; quantity?: number; price?: number }[] = [];
+            try {
+              items = typeof o.items === "string" ? JSON.parse(o.items) : o.items;
+            } catch {}
+            const itemsStr = Array.isArray(items)
+              ? items.map((i) => `${i.name || "Товар"} × ${i.quantity || 1} (${i.size || "—"})`).join(", ")
+              : String(o.items);
+            return (
+              <div key={o.id} style={styles.orderCard}>
+                <div style={styles.orderHeader}>
+                  <span style={styles.orderId}>#{o.id}</span>
+                  <span style={{ ...styles.orderStatus, color: o.status === "completed" ? "var(--accent)" : "var(--muted)" }}>
+                    {o.status === "completed" ? "Выполнен" : "Ожидает"}
+                  </span>
+                </div>
+                <p style={styles.orderField}>👤 {o.user_name || "—"}</p>
+                <p style={styles.orderField}>📞 {o.user_phone || "—"}</p>
+                {o.user_address && <p style={styles.orderField}>📍 {o.user_address}</p>}
+                <p style={styles.orderField}>📦 {itemsStr}</p>
+                <p style={styles.orderField}>💰 {o.total} ₽</p>
+                <p style={styles.orderDate}>{new Date(o.created_at).toLocaleString("ru")}</p>
+                <div style={styles.orderActions}>
+                  <a href={`tg://user?id=${o.user_id}`} target="_blank" rel="noopener noreferrer" style={styles.contactLink} title="Открыть чат с клиентом">
+                    Написать в Telegram
+                  </a>
+                  {o.status === "pending" && (
+                    <button
+                      type="button"
+                      disabled={updatingId === o.id}
+                      onClick={() => handleStatus(o.id, "completed")}
+                      style={styles.smallBtn}
+                    >
+                      {updatingId === o.id ? "..." : "Подтвердить"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </>
   );
 }
 
@@ -655,4 +757,12 @@ const styles: Record<string, React.CSSProperties> = {
   modalList: { marginTop: 12, padding: 12, background: "var(--bg)", borderRadius: 8, maxHeight: 200, overflowY: "auto" },
   modalOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 },
   modal: { background: "var(--surface)", borderRadius: 12, padding: 24, maxWidth: 400, width: "100%", maxHeight: "90vh", overflowY: "auto" },
+  orderCard: { padding: 16, marginBottom: 12, background: "var(--surface)", borderRadius: 12, border: "1px solid var(--border)" },
+  orderHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  orderId: { fontWeight: 700, fontSize: 16 },
+  orderStatus: { fontSize: 13 },
+  orderField: { fontSize: 14, marginBottom: 4, color: "var(--text)" },
+  orderDate: { fontSize: 12, color: "var(--muted)", marginTop: 8, marginBottom: 12 },
+  orderActions: { display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" },
+  contactLink: { color: "var(--accent)", fontSize: 14, textDecoration: "none" },
 };

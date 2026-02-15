@@ -272,6 +272,24 @@ export async function getOrders(userId: string): Promise<Order[]> {
   return res.json();
 }
 
+export async function getOrdersAdmin(adminSecret: string): Promise<Order[]> {
+  const res = await fetch(`${API_URL}/api/orders/admin/all`, {
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) throw new Error("Failed to fetch orders");
+  return res.json();
+}
+
+export async function updateOrderStatus(orderId: number, status: "pending" | "completed", adminSecret: string) {
+  const res = await fetch(`${API_URL}/api/orders/order/${orderId}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) throw new Error("Failed to update order");
+  return res.json();
+}
+
 export async function createOrder(
   userId: string,
   data: { user_name?: string; user_phone?: string; user_address?: string; items: CartItem[]; total: number }
