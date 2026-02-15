@@ -118,7 +118,16 @@ export function Catalog({
         <div style={styles.storesRowWrap}>
           <button
             type="button"
-            onClick={() => { marqueePausedRef.current = true; scrollRef.current?.scrollBy({ left: -200, behavior: "smooth" }); setTimeout(() => (marqueePausedRef.current = false), 2000); }}
+            onClick={() => {
+              marqueePausedRef.current = true;
+              const el = scrollRef.current;
+              if (el) {
+                const half = el.scrollWidth / 2;
+                if (el.scrollLeft <= 20) el.scrollLeft = half - 20;
+                else el.scrollBy({ left: -200, behavior: "smooth" });
+              }
+              setTimeout(() => (marqueePausedRef.current = false), 1000);
+            }}
             style={styles.scrollBtn}
             aria-label="Влево"
           >
@@ -128,11 +137,11 @@ export function Catalog({
             ref={scrollRef}
             style={styles.storesRow}
             className="hide-scrollbar"
-            onMouseDown={() => (marqueePausedRef.current = true)}
-            onMouseUp={() => setTimeout(() => (marqueePausedRef.current = false), 2000)}
-            onMouseLeave={() => setTimeout(() => (marqueePausedRef.current = false), 500)}
-            onTouchStart={() => (marqueePausedRef.current = true)}
-            onTouchEnd={() => setTimeout(() => (marqueePausedRef.current = false), 2000)}
+          onMouseDown={() => (marqueePausedRef.current = true)}
+          onMouseUp={() => setTimeout(() => (marqueePausedRef.current = false), 1000)}
+          onMouseLeave={() => setTimeout(() => (marqueePausedRef.current = false), 1000)}
+          onTouchStart={() => (marqueePausedRef.current = true)}
+          onTouchEnd={() => setTimeout(() => (marqueePausedRef.current = false), 1000)}
           >
           {[...displayStores, ...displayStores].map((s, i) => (
             <StoreCard
@@ -149,7 +158,16 @@ export function Catalog({
           </div>
           <button
             type="button"
-            onClick={() => { marqueePausedRef.current = true; scrollRef.current?.scrollBy({ left: 200, behavior: "smooth" }); setTimeout(() => (marqueePausedRef.current = false), 2000); }}
+            onClick={() => {
+              marqueePausedRef.current = true;
+              const el = scrollRef.current;
+              if (el) {
+                const half = el.scrollWidth / 2;
+                if (el.scrollLeft >= half - 20) el.scrollLeft = 0;
+                else el.scrollBy({ left: 200, behavior: "smooth" });
+              }
+              setTimeout(() => (marqueePausedRef.current = false), 1000);
+            }}
             style={styles.scrollBtn}
             aria-label="Вправо"
           >

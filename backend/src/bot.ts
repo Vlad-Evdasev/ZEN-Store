@@ -9,7 +9,10 @@ const WEB_APP_URL = process.env.WEB_APP_URL || "https://your-mini-app-url.vercel
 const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID ? parseInt(process.env.ADMIN_CHAT_ID, 10) : null;
 
 export async function notifyAdminNewOrder(orderId: number, userId: string, userName: string, userPhone: string, total: number, itemsCount: number) {
-  if (!ADMIN_CHAT_ID) return;
+  if (!ADMIN_CHAT_ID) {
+    console.warn("[ZEN] ADMIN_CHAT_ID не задан — уведомления о заказах отключены. Добавь ADMIN_CHAT_ID в Railway.");
+    return;
+  }
   const text = [
     `🛒 Новый заказ #${orderId}`,
     `👤 ${userName || "—"}`,
@@ -22,7 +25,7 @@ export async function notifyAdminNewOrder(orderId: number, userId: string, userN
   try {
     await bot.api.sendMessage(ADMIN_CHAT_ID, text);
   } catch (e) {
-    console.error("Failed to notify admin:", e);
+    console.error("[ZEN] Ошибка отправки уведомления продавцу:", e);
   }
 }
 

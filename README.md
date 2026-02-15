@@ -38,14 +38,16 @@ npm run dev
 
 ## Переменные окружения
 
-**Backend (.env):**
+**Backend (.env / Railway):**
 ```env
 BOT_TOKEN=        # Токен от @BotFather
 WEB_APP_URL=      # URL Mini App (HTTPS)
 PORT=3001
 ADMIN_SECRET=     # Пароль админки
-ADMIN_CHAT_ID=    # Telegram ID чата для уведомлений о заказах
+ADMIN_CHAT_ID=    # Твой Telegram ID — чтобы получать уведомления о заказах (узнать: @userinfobot)
 ```
+
+Без `ADMIN_CHAT_ID` бот не отправляет уведомления. Добавь переменную в Railway и сделай Redeploy.
 
 **Frontend (Vercel):**
 ```env

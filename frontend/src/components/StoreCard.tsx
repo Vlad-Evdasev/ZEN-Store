@@ -23,9 +23,11 @@ export function StoreCard({ store, onClick, selected }: StoreCardProps) {
           alt=""
           style={styles.image}
         />
+        <div style={styles.overlay}>
+          <p style={styles.title}>{store.name}</p>
+          <p style={styles.desc}>{store.description}</p>
+        </div>
       </div>
-      <p style={styles.title}>{store.name}</p>
-      <p style={styles.desc}>{store.description}</p>
     </button>
   );
 }
@@ -33,8 +35,7 @@ export function StoreCard({ store, onClick, selected }: StoreCardProps) {
 const styles: Record<string, React.CSSProperties> = {
   card: {
     flexShrink: 0,
-    display: "flex",
-    flexDirection: "column",
+    display: "block",
     width: 140,
     background: "var(--surface)",
     border: "1px solid var(--border)",
@@ -46,9 +47,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
   cardSelected: {
     borderColor: "var(--accent)",
-    boxShadow: "0 0 0 1px var(--accent)",
+    boxShadow: "0 0 0 2px var(--accent)",
   },
   imageWrap: {
+    position: "relative",
     aspectRatio: "1",
     overflow: "hidden",
     background: "var(--bg)",
@@ -58,16 +60,23 @@ const styles: Record<string, React.CSSProperties> = {
     height: "100%",
     objectFit: "cover",
   },
+  overlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: "24px 10px 10px",
+    background: "linear-gradient(transparent, rgba(0,0,0,0.85))",
+    color: "#fff",
+  },
   title: {
-    padding: "10px 10px 2px",
     fontSize: 13,
     fontWeight: 600,
-    color: "var(--text)",
+    marginBottom: 2,
   },
   desc: {
-    padding: "0 10px 10px",
     fontSize: 11,
-    color: "var(--muted)",
+    opacity: 0.9,
     lineHeight: 1.3,
   },
 };

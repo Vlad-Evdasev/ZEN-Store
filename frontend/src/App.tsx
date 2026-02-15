@@ -119,8 +119,10 @@ function App() {
   const needsAuth = !isInTelegram && !userId;
   if (needsAuth) {
     return (
-      <div style={styles.app}>
-        <TelegramAuth onAuth={setBrowserAuth} />
+      <div style={styles.authWrapper}>
+        <div style={styles.authCard}>
+          <TelegramAuth onAuth={setBrowserAuth} />
+        </div>
       </div>
     );
   }
@@ -131,7 +133,7 @@ function App() {
 
   return (
     <div style={styles.appWrapper}>
-    <div style={styles.app}>
+    <div style={styles.app} className="zen-app">
       <header style={styles.header}>
         <button
           onClick={() => setMenuOpen(!menuOpen)}
@@ -144,8 +146,9 @@ function App() {
           ZΞN
         </button>
         <div style={styles.headerActions}>
-          <button onClick={openFavorites} style={styles.headerLink}>
-            Избранное
+          <button onClick={openFavorites} style={styles.headerLinkWithBadge}>
+            <span>Избранное</span>
+            {wishlistIds.size > 0 && <span style={styles.favBadge}>{wishlistIds.size}</span>}
           </button>
           <button onClick={openCart} style={styles.headerBtnWrapper}>
             <span>Корзина</span>
@@ -223,6 +226,7 @@ function App() {
             userId={userId}
             onBack={openCart}
             onDone={openCatalog}
+            onOrderSuccess={refreshCartCount}
             sellerLink={SELLER_LINK}
           />
         )}
@@ -262,6 +266,18 @@ function App() {
 }
 
 const styles: Record<string, React.CSSProperties> = {
+  authWrapper: {
+    minHeight: "100vh",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "var(--bg)",
+    padding: 24,
+  },
+  authCard: {
+    width: "100%",
+    maxWidth: 400,
+  },
   appWrapper: {
     minHeight: "100vh",
     display: "flex",
@@ -356,6 +372,32 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "inherit",
     fontSize: 13,
     cursor: "pointer",
+  },
+  headerLinkWithBadge: {
+    position: "relative",
+    padding: "8px 12px",
+    background: "none",
+    border: "none",
+    color: "var(--muted)",
+    fontFamily: "inherit",
+    fontSize: 13,
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+  },
+  favBadge: {
+    minWidth: 18,
+    height: 18,
+    padding: "0 5px",
+    borderRadius: 9,
+    background: "var(--accent)",
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: 700,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
   headerBtnWrapper: {
     position: "relative",

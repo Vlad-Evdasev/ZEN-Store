@@ -43,13 +43,18 @@ export function TelegramAuth({ onAuth }: TelegramAuthProps) {
   }, [onAuth]);
 
   return (
-    <div style={styles.wrap}>
+    <div style={styles.wrap} className="telegram-auth-wrap">
       <h2 style={styles.title}>ZΞN</h2>
       <p style={styles.text}>Войдите через Telegram для заказа</p>
       {BOT_USERNAME ? (
-        <div ref={containerRef} />
+        <>
+          <div ref={containerRef} />
+          <p style={styles.hint}>Укажи в BotFather домен этого сайта (Domain/Login Widget)</p>
+        </>
       ) : (
-        <p style={styles.hint}>Настройте VITE_TELEGRAM_BOT для входа в браузере</p>
+        <p style={styles.hint}>
+          Добавь VITE_TELEGRAM_BOT (username бота) в настройках Vercel для входа в браузере
+        </p>
       )}
     </div>
   );

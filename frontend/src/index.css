@@ -81,3 +81,17 @@ button:active {
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
 }
+
+/* Адаптивная вёрстка для ноутбука и десктопа */
+@media (min-width: 768px) {
+  .telegram-auth-wrap {
+    padding: 48px !important;
+  }
+}
+
+@media (min-width: 900px) {
+  .zen-app {
+    max-width: 560px !important;
+    box-shadow: 0 0 40px rgba(0,0,0,0.12);
+  }
+}
