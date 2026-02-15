@@ -32,6 +32,9 @@ const styles: Record<string, React.CSSProperties> = {
   circleMask: {
     width: 160,
     height: 160,
+    minWidth: 160,
+    minHeight: 160,
+    aspectRatio: "1",
     borderRadius: "50%",
     overflow: "hidden",
     display: "flex",
@@ -40,8 +43,12 @@ const styles: Record<string, React.CSSProperties> = {
     background: "#000",
   },
   circle: {
-    width: 120,
-    height: 120,
+    width: 140,
+    height: 140,
+    minWidth: 140,
+    minHeight: 140,
+    aspectRatio: "1",
+    objectFit: "cover",
     animation: "zen-spin 1.2s linear infinite",
   },
 };
