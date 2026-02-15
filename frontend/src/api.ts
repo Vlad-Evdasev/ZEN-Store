@@ -2,12 +2,32 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 export interface Product {
   id: number;
+  store_id?: number;
   name: string;
   description: string;
   price: number;
   image_url: string | null;
   category: string;
   sizes: string;
+}
+
+export interface Store {
+  id: number;
+  name: string;
+  image_url: string | null;
+  description: string;
+}
+
+export async function getStores(): Promise<Store[]> {
+  const res = await fetch(`${API_URL}/api/stores`);
+  if (!res.ok) throw new Error("Failed to fetch stores");
+  return res.json();
+}
+
+export async function getProductsByStore(storeId: number): Promise<Product[]> {
+  const res = await fetch(`${API_URL}/api/stores/${storeId}/products`);
+  if (!res.ok) throw new Error("Failed to fetch products");
+  return res.json();
 }
 
 export interface CartItem {

@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { productsRouter } from "./routes/products.js";
+import { storesRouter } from "./routes/stores.js";
 import { cartRouter } from "./routes/cart.js";
 import { ordersRouter } from "./routes/orders.js";
 import { reviewsRouter } from "./routes/reviews.js";
@@ -13,6 +14,7 @@ app.use(cors({ origin: "*" }));
 app.use(express.json());
 
 app.use("/api/products", productsRouter);
+app.use("/api/stores", storesRouter);
 app.use("/api/cart", cartRouter);
 app.use("/api/orders", ordersRouter);
 app.use("/api/reviews", reviewsRouter);

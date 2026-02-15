@@ -1,11 +1,12 @@
 import { useState, useMemo } from "react";
-import type { Product } from "../api";
+import type { Product, Store } from "../api";
 import { ProductCard } from "../components/ProductCard";
-import { FeaturedCard } from "../components/FeaturedCard";
+import { StoreCard } from "../components/StoreCard";
 import { getCategoryLabel } from "../utils/categories";
 
 interface CatalogProps {
   products: Product[];
+  stores: Store[];
   onProductClick: (id: number) => void;
   wishlistIds: Set<number>;
   onToggleWishlist: (id: number) => void;
@@ -13,22 +14,22 @@ interface CatalogProps {
 
 const CATEGORIES = ["all", "tee", "hoodie", "pants", "jacket", "accessories"];
 
-export function Catalog({ products, onProductClick, wishlistIds, onToggleWishlist }: CatalogProps) {
+export function Catalog({
+  products,
+  stores,
+  onProductClick,
+  wishlistIds,
+  onToggleWishlist,
+}: CatalogProps) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
-
-  const featuredProducts = useMemo(() => {
-    const cats = ["tee", "hoodie", "pants", "jacket"];
-    const seen = new Set<string>();
-    return products.filter((p) => {
-      if (seen.has(p.category) || !cats.includes(p.category)) return false;
-      seen.add(p.category);
-      return true;
-    }).slice(0, 4);
-  }, [products]);
+  const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
 
   const filtered = useMemo(() => {
     let list = products;
+    if (selectedStoreId !== null) {
+      list = list.filter((p) => (p.store_id ?? 1) === selectedStoreId);
+    }
     if (category !== "all") {
       list = list.filter((p) => p.category === category);
     }
@@ -41,23 +42,20 @@ export function Catalog({ products, onProductClick, wishlistIds, onToggleWishlis
       );
     }
     return list;
-  }, [products, category, search]);
+  }, [products, selectedStoreId, category, search]);
 
   return (
     <div style={styles.wrap}>
-      {featuredProducts.length > 0 && (
-        <div style={styles.featuredGrid}>
-          {featuredProducts.map((p) => (
-            <FeaturedCard
-              key={p.id}
-              image={p.image_url || "https://via.placeholder.com/300"}
-              title={p.name}
-              description={
-                (p.description || "").length > 60
-                  ? (p.description || "").slice(0, 60) + "..."
-                  : p.description || ""
+      {stores.length > 0 && (
+        <div style={styles.storesRow}>
+          {stores.map((s) => (
+            <StoreCard
+              key={s.id}
+              store={s}
+              onClick={() =>
+                setSelectedStoreId((prev) => (prev === s.id ? null : s.id))
               }
-              onClick={() => onProductClick(p.id)}
+              selected={selectedStoreId === s.id}
             />
           ))}
         </div>
@@ -114,11 +112,13 @@ export function Catalog({ products, onProductClick, wishlistIds, onToggleWishlis
 
 const styles: Record<string, React.CSSProperties> = {
   wrap: { paddingBottom: 24 },
-  featuredGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(2, 1fr)",
+  storesRow: {
+    display: "flex",
     gap: 12,
+    overflowX: "auto",
+    paddingBottom: 12,
     marginBottom: 20,
+    WebkitOverflowScrolling: "touch",
   },
   searchWrap: { marginBottom: 16 },
   search: {

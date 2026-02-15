@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTelegram } from "./hooks/useTelegram";
 import { useWishlist } from "./hooks/useWishlist";
-import { getProducts, type Product } from "./api";
+import { getProducts, getStores, type Product, type Store } from "./api";
 import { Catalog } from "./pages/Catalog";
 import { Cart } from "./pages/Cart";
 import { ProductPage } from "./pages/ProductPage";
@@ -21,16 +21,20 @@ function App() {
   const [page, setPage] = useState<Page>("catalog");
   const [productId, setProductId] = useState<number | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
   const [storeReady, setStoreReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
-    getProducts()
-      .then((p) => {
+    Promise.all([
+      getProducts().then((p) => {
         if (!cancelled) setProducts(p);
-      })
-      .catch(console.error);
+      }),
+      getStores().then((s) => {
+        if (!cancelled) setStores(s);
+      }),
+    ]).catch(console.error);
 
     const timer = setTimeout(() => {
       if (!cancelled) setStoreReady(true);
@@ -83,6 +87,7 @@ function App() {
         {page === "catalog" && (
           <Catalog
             products={products}
+            stores={stores}
             onProductClick={openProduct}
             wishlistIds={wishlistIds}
             onToggleWishlist={toggleWishlist}
