@@ -1,5 +1,6 @@
 :root,
 [data-theme="dark"] {
+  --content-padding: 16px;
   --bg: #0a0a0a;
   --surface: #141414;
   --surface-elevated: #1a1a1a;
@@ -83,6 +84,13 @@ button:active {
 }
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+/* Карточки магазинов на всю ширину экрана */
+.stores-full-bleed {
+  margin-left: calc(-1 * var(--content-padding));
+  margin-right: calc(-1 * var(--content-padding));
+  width: calc(100% + 2 * var(--content-padding));
 }
 
 @keyframes store-marquee {

@@ -152,7 +152,7 @@ export function Catalog({
   return (
     <div style={styles.wrap}>
       {displayStores.length > 0 && (
-        <div style={styles.storesRowWrap}>
+        <div style={styles.storesRowWrap} className="stores-full-bleed">
           <button
             type="button"
             onClick={() => {
@@ -284,6 +284,8 @@ const styles: Record<string, React.CSSProperties> = {
     overflowX: "auto",
     overflowY: "hidden",
     paddingBottom: 12,
+    paddingLeft: 12,
+    paddingRight: 12,
     WebkitOverflowScrolling: "touch",
     minWidth: 0,
   },

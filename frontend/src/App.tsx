@@ -411,7 +411,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   main: {
     overflowX: "visible",
-    padding: 16,
+    padding: "16px",
     paddingLeft: "max(16px, env(safe-area-inset-left))",
     paddingRight: "max(16px, env(safe-area-inset-right))",
     flex: 1,
