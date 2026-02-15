@@ -162,6 +162,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 8,
     width: "100vw",
     marginLeft: "calc(50% - 50vw)",
+    marginTop: 16,
     marginBottom: 16,
   },
   scrollBtn: {
