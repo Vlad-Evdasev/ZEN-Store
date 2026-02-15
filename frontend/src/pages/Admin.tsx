@@ -155,12 +155,15 @@ export function Admin() {
         <label style={styles.label}>
           URL картинки
           <input
-            type="url"
+            type="text"
             value={imageUrl}
             onChange={(e) => setImageUrl(e.target.value)}
-            placeholder="https://..."
+            placeholder="https://example.com/image.jpg"
             style={styles.input}
           />
+          <span style={styles.hintSmall}>
+            Используй ссылку на картинку (https://). Не вставляй base64.
+          </span>
         </label>
         <label style={styles.label}>
           Магазин
@@ -275,6 +278,11 @@ const styles: Record<string, React.CSSProperties> = {
   authError: {
     color: "var(--accent)",
     fontSize: 14,
+  },
+  hintSmall: {
+    fontSize: 12,
+    color: "var(--muted)",
+    marginTop: 4,
   },
   form: {
     display: "flex",
