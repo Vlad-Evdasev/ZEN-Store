@@ -351,7 +351,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   logo: {
     position: "absolute",
-    left: "50%",
+    left: "calc(50% - 70px)",
     transform: "translateX(-50%)",
     fontFamily: "Unbounded, sans-serif",
     fontSize: 24,

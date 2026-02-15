@@ -276,6 +276,9 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     gap: 8,
     marginBottom: 20,
+    marginLeft: -16,
+    marginRight: -16,
+    width: "calc(100% + 32px)",
   },
   storesRow: {
     flex: 1,
@@ -284,7 +287,10 @@ const styles: Record<string, React.CSSProperties> = {
     overflowX: "auto",
     overflowY: "hidden",
     paddingBottom: 12,
+    paddingLeft: 16,
+    paddingRight: 16,
     WebkitOverflowScrolling: "touch",
+    minWidth: 0,
   },
   scrollBtn: {
     flexShrink: 0,
