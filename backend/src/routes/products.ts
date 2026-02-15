@@ -16,7 +16,13 @@ productsRouter.get("/:id", (req, res) => {
   res.json(product);
 });
 
+const ADMIN_SECRET = process.env.ADMIN_SECRET || "";
+
 productsRouter.post("/", (req, res) => {
+  const secret = req.headers["x-admin-secret"] as string | undefined;
+  if (ADMIN_SECRET && secret !== ADMIN_SECRET) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
   const { store_id, name, description, price, image_url, category, sizes } = req.body;
   if (!name || price == null) return res.status(400).json({ error: "name and price required" });
   const sid = store_id ?? 1;

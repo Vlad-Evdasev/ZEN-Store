@@ -46,18 +46,30 @@ export async function getProducts(): Promise<Product[]> {
   return res.json();
 }
 
-export async function createProduct(data: {
-  store_id?: number;
-  name: string;
-  description?: string;
-  price: number;
-  image_url?: string;
-  category?: string;
-  sizes?: string;
-}) {
+export async function verifyAdmin(adminSecret: string): Promise<boolean> {
+  const res = await fetch(`${API_URL}/api/admin/verify`, {
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  return res.ok;
+}
+
+export async function createProduct(
+  data: {
+    store_id?: number;
+    name: string;
+    description?: string;
+    price: number;
+    image_url?: string;
+    category?: string;
+    sizes?: string;
+  },
+  adminSecret?: string
+) {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (adminSecret) headers["X-Admin-Secret"] = adminSecret;
   const res = await fetch(`${API_URL}/api/products`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error("Failed to create product");

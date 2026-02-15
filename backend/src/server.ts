@@ -5,6 +5,7 @@ import { storesRouter } from "./routes/stores.js";
 import { cartRouter } from "./routes/cart.js";
 import { ordersRouter } from "./routes/orders.js";
 import { reviewsRouter } from "./routes/reviews.js";
+import { adminRouter } from "./routes/admin.js";
 import "./db/schema.js";
 
 const app = express();
@@ -18,6 +19,7 @@ app.use("/api/stores", storesRouter);
 app.use("/api/cart", cartRouter);
 app.use("/api/orders", ordersRouter);
 app.use("/api/reviews", reviewsRouter);
+app.use("/api/admin", adminRouter);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 

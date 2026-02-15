@@ -1,9 +1,13 @@
 import { useState, useEffect } from "react";
-import { createProduct, getProducts, getStores, type Product, type Store } from "../api";
+import { createProduct, getProducts, getStores, verifyAdmin, type Product, type Store } from "../api";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 export function Admin() {
+  const [authenticated, setAuthenticated] = useState(false);
+  const [adminSecret, setAdminSecret] = useState("");
+  const [passwordInput, setPasswordInput] = useState("");
+  const [authError, setAuthError] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
   const [name, setName] = useState("");
@@ -22,8 +26,45 @@ export function Admin() {
   };
 
   useEffect(() => {
-    refresh();
-  }, []);
+    if (authenticated) refresh();
+  }, [authenticated]);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError("");
+    const ok = await verifyAdmin(passwordInput);
+    if (ok) {
+      setAdminSecret(passwordInput);
+      setAuthenticated(true);
+    } else {
+      setAuthError("Неверный пароль");
+    }
+  };
+
+  if (!authenticated) {
+    return (
+      <div style={styles.wrap}>
+        <h1 style={styles.title}>Админ-панель</h1>
+        <form onSubmit={handleLogin} style={styles.authForm}>
+          <label style={styles.label}>
+            Пароль
+            <input
+              type="password"
+              value={passwordInput}
+              onChange={(e) => setPasswordInput(e.target.value)}
+              placeholder="Введите пароль"
+              style={styles.input}
+              autoComplete="current-password"
+            />
+          </label>
+          {authError && <p style={styles.authError}>{authError}</p>}
+          <button type="submit" style={styles.submit}>
+            Войти
+          </button>
+        </form>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +75,8 @@ export function Admin() {
     setSubmitting(true);
     setMessage("");
     try {
-      await createProduct({
+      await createProduct(
+        {
         store_id: storeId,
         name: name.trim(),
         description: description.trim() || undefined,
@@ -42,7 +84,9 @@ export function Admin() {
         image_url: imageUrl.trim() || undefined,
         category,
         sizes: sizes.trim() || undefined,
-      });
+      },
+        adminSecret
+      );
       setMessage("Товар добавлен!");
       setName("");
       setDescription("");
@@ -58,7 +102,20 @@ export function Admin() {
 
   return (
     <div style={styles.wrap}>
-      <h1 style={styles.title}>Админ-панель</h1>
+      <div style={styles.header}>
+        <h1 style={styles.title}>Админ-панель</h1>
+        <button
+          type="button"
+          onClick={() => {
+            setAuthenticated(false);
+            setAdminSecret("");
+            setPasswordInput("");
+          }}
+          style={styles.logoutBtn}
+        >
+          Выйти
+        </button>
+      </div>
       <p style={styles.hint}>Добавление товаров в каталог</p>
 
       <form onSubmit={handleSubmit} style={styles.form}>
@@ -180,15 +237,43 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 24,
     minHeight: "100vh",
   },
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
   title: {
     fontFamily: "Unbounded, sans-serif",
     fontSize: 24,
-    marginBottom: 4,
+  },
+  logoutBtn: {
+    padding: "8px 14px",
+    background: "none",
+    border: "1px solid var(--border)",
+    borderRadius: 8,
+    color: "var(--muted)",
+    fontSize: 13,
+    cursor: "pointer",
   },
   hint: {
     color: "var(--muted)",
     fontSize: 14,
     marginBottom: 24,
+  },
+  authForm: {
+    maxWidth: 320,
+    display: "flex",
+    flexDirection: "column",
+    gap: 16,
+    padding: 24,
+    background: "var(--surface)",
+    borderRadius: 12,
+    border: "1px solid var(--border)",
+  },
+  authError: {
+    color: "var(--accent)",
+    fontSize: 14,
   },
   form: {
     display: "flex",
