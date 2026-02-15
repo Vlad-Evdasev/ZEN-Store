@@ -4,7 +4,6 @@ import { TelegramAuth } from "./components/TelegramAuth";
 import { useWishlist } from "./hooks/useWishlist";
 import { getProducts, getStores, getCart, getReviews, type Product, type Store } from "./api";
 import { Catalog } from "./pages/Catalog";
-import { StoresCarousel } from "./components/StoresCarousel";
 import { Cart } from "./pages/Cart";
 import { Favorites } from "./pages/Favorites";
 import { ProductPage } from "./pages/ProductPage";
@@ -136,10 +135,6 @@ function App() {
         </div>
       </header>
 
-      {page === "catalog" && (
-        <StoresCarousel stores={stores} onStoreClick={openStoreCatalog} />
-      )}
-
       {menuOpen && (
         <>
           <div
@@ -173,7 +168,6 @@ function App() {
             onStoreClick={openStoreCatalog}
             wishlistIds={wishlistIds}
             onToggleWishlist={toggleWishlist}
-            hideStores
           />
         )}
         {page === "storeCatalog" && storeCatalogStore && (

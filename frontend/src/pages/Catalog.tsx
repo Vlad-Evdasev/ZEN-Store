@@ -11,7 +11,6 @@ interface CatalogProps {
   onStoreClick: (store: { id: number; name: string } | { category: string; name: string }) => void;
   wishlistIds: Set<number>;
   onToggleWishlist: (id: number) => void;
-  hideStores?: boolean;
 }
 
 const CATEGORIES = ["all", "tee", "hoodie", "pants", "jacket", "accessories"];
@@ -30,7 +29,6 @@ export function Catalog({
   onStoreClick,
   wishlistIds,
   onToggleWishlist,
-  hideStores = false,
 }: CatalogProps) {
   const [search, setSearch] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set(["all"]));
@@ -144,7 +142,6 @@ export function Catalog({
   };
 
   const handleStoreClick = (item: DisplayStore) => {
-    if (!onStoreClick) return;
     if (item.isReal && typeof item.id === "number") {
       onStoreClick({ id: item.id, name: item.name });
     } else if (!item.isReal && item.category) {
@@ -154,7 +151,7 @@ export function Catalog({
 
   return (
     <div style={styles.wrap}>
-      {!hideStores && displayStores.length > 0 && (
+      {displayStores.length > 0 && (
         <div style={styles.storesRowWrap}>
           <button
             type="button"
@@ -278,9 +275,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     gap: 8,
-    marginBottom: 20,
-    width: "100vw",
-    marginLeft: "calc(-50vw + 50%)",
+    marginBottom: 16,
   },
   storesRow: {
     flex: 1,
@@ -289,8 +284,6 @@ const styles: Record<string, React.CSSProperties> = {
     overflowX: "auto",
     overflowY: "hidden",
     paddingBottom: 12,
-    paddingLeft: "max(16px, env(safe-area-inset-left))",
-    paddingRight: "max(16px, env(safe-area-inset-right))",
     WebkitOverflowScrolling: "touch",
     minWidth: 0,
   },
