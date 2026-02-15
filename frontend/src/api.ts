@@ -39,6 +39,56 @@ export async function getProductsByStore(storeId: number): Promise<Product[]> {
   return res.json();
 }
 
+export async function createStore(
+  data: { name: string; image_url?: string; description?: string },
+  adminSecret?: string
+) {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (adminSecret) headers["X-Admin-Secret"] = adminSecret;
+  const res = await fetch(`${API_URL}/api/stores`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+  return res.json();
+}
+
+export async function updateStore(
+  id: number,
+  data: Partial<{ name: string; image_url: string; description: string }>,
+  adminSecret?: string
+) {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (adminSecret) headers["X-Admin-Secret"] = adminSecret;
+  const res = await fetch(`${API_URL}/api/stores/${id}`, {
+    method: "PATCH",
+    headers,
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+  return res.json();
+}
+
+export async function deleteStore(id: number, adminSecret?: string) {
+  const headers: Record<string, string> = {};
+  if (adminSecret) headers["X-Admin-Secret"] = adminSecret;
+  const res = await fetch(`${API_URL}/api/stores/${id}`, {
+    method: "DELETE",
+    headers,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+}
+
 export interface CartItem {
   id: number;
   product_id: number;

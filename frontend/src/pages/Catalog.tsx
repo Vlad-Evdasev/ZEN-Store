@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import type { Product, Store } from "../api";
 import { ProductCard } from "../components/ProductCard";
 import { StoreCard } from "../components/StoreCard";
@@ -32,6 +32,8 @@ export function Catalog({
 }: CatalogProps) {
   const [search, setSearch] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set(["all"]));
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const marqueePausedRef = useRef(false);
 
   type DisplayStore =
     | { id: number; name: string; image: string; desc: string; isReal: true }
@@ -56,6 +58,22 @@ export function Catalog({
       category: s.category,
     }));
   }, [stores]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || displayStores.length === 0) return;
+    let raf: number;
+    const step = () => {
+      if (!marqueePausedRef.current && el) {
+        const half = el.scrollWidth / 2;
+        el.scrollLeft += 0.5;
+        if (el.scrollLeft >= half) el.scrollLeft = 0;
+      }
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [displayStores.length]);
 
   const filtered = useMemo(() => {
     let list = products;
@@ -99,10 +117,19 @@ export function Catalog({
   return (
     <div style={styles.wrap}>
       {displayStores.length > 0 && (
-        <div style={styles.storesRow} className="hide-scrollbar">
-          {displayStores.map((s) => (
+        <div
+          ref={scrollRef}
+          style={styles.storesRow}
+          className="hide-scrollbar"
+          onMouseDown={() => (marqueePausedRef.current = true)}
+          onMouseUp={() => setTimeout(() => (marqueePausedRef.current = false), 2000)}
+          onMouseLeave={() => setTimeout(() => (marqueePausedRef.current = false), 500)}
+          onTouchStart={() => (marqueePausedRef.current = true)}
+          onTouchEnd={() => setTimeout(() => (marqueePausedRef.current = false), 2000)}
+        >
+          {[...displayStores, ...displayStores].map((s, i) => (
             <StoreCard
-              key={String(s.id)}
+              key={`${String(s.id)}-${i}`}
               store={{
                 id: typeof s.id === "number" ? s.id : 0,
                 name: s.name,
@@ -176,6 +203,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     gap: 12,
     overflowX: "auto",
+    overflowY: "hidden",
     paddingBottom: 12,
     marginBottom: 20,
     WebkitOverflowScrolling: "touch",
