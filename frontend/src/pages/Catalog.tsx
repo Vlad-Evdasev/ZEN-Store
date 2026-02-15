@@ -14,6 +14,13 @@ interface CatalogProps {
 
 const CATEGORIES = ["all", "tee", "hoodie", "pants", "jacket", "accessories"];
 
+const FALLBACK_STORES: { id: string; name: string; category: string; image: string; desc: string }[] = [
+  { id: "tee", name: "Футболки", category: "tee", image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400", desc: "Базовые и оверсайз" },
+  { id: "hoodie", name: "Худи", category: "hoodie", image: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=400", desc: "Худи и свитшоты" },
+  { id: "pants", name: "Штаны", category: "pants", image: "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=400", desc: "Карго и классика" },
+  { id: "jacket", name: "Верхняя одежда", category: "jacket", image: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400", desc: "Куртки и аксессуары" },
+];
+
 export function Catalog({
   products,
   stores,
@@ -24,11 +31,39 @@ export function Catalog({
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
+  const [selectedStoreCategory, setSelectedStoreCategory] = useState<string | null>(null);
+
+  type DisplayStore =
+    | { id: number; name: string; image: string; desc: string; isReal: true; category?: never }
+    | { id: string; name: string; image: string; desc: string; isReal: false; category: string };
+
+  const displayStores = useMemo((): DisplayStore[] => {
+    if (stores.length > 0) {
+      return stores.map((s) => ({
+        id: s.id,
+        name: s.name,
+        image: s.image_url || "",
+        desc: s.description || "",
+        isReal: true as const,
+      }));
+    }
+    return FALLBACK_STORES.map((s) => ({
+      id: s.id,
+      name: s.name,
+      image: s.image,
+      desc: s.desc,
+      isReal: false as const,
+      category: s.category,
+    }));
+  }, [stores]);
 
   const filtered = useMemo(() => {
     let list = products;
     if (selectedStoreId !== null) {
       list = list.filter((p) => (p.store_id ?? 1) === selectedStoreId);
+    }
+    if (selectedStoreCategory !== null) {
+      list = list.filter((p) => p.category === selectedStoreCategory);
     }
     if (category !== "all") {
       list = list.filter((p) => p.category === category);
@@ -42,20 +77,40 @@ export function Catalog({
       );
     }
     return list;
-  }, [products, selectedStoreId, category, search]);
+  }, [products, selectedStoreId, selectedStoreCategory, category, search]);
+
+  const handleStoreClick = (item: DisplayStore) => {
+    if (item.isReal) {
+      const newVal = selectedStoreId === item.id ? null : item.id;
+      setSelectedStoreId(newVal);
+      setSelectedStoreCategory(null);
+    } else {
+      const newVal = selectedStoreCategory === item.category ? null : item.category;
+      setSelectedStoreCategory(newVal);
+      setSelectedStoreId(null);
+    }
+  };
+
+  const isStoreSelected = (item: DisplayStore) => {
+    if (item.isReal) return selectedStoreId === item.id;
+    return selectedStoreCategory === item.category;
+  };
 
   return (
     <div style={styles.wrap}>
-      {stores.length > 0 && (
+      {displayStores.length > 0 && (
         <div style={styles.storesRow}>
-          {stores.map((s) => (
+          {displayStores.map((s) => (
             <StoreCard
-              key={s.id}
-              store={s}
-              onClick={() =>
-                setSelectedStoreId((prev) => (prev === s.id ? null : s.id))
-              }
-              selected={selectedStoreId === s.id}
+              key={String(s.id)}
+              store={{
+                id: typeof s.id === "number" ? s.id : 0,
+                name: s.name,
+                image_url: s.image,
+                description: s.desc,
+              }}
+              onClick={() => handleStoreClick(s)}
+              selected={isStoreSelected(s)}
             />
           ))}
         </div>
