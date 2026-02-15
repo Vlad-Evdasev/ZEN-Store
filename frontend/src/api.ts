@@ -46,6 +46,24 @@ export async function getProducts(): Promise<Product[]> {
   return res.json();
 }
 
+export async function createProduct(data: {
+  store_id?: number;
+  name: string;
+  description?: string;
+  price: number;
+  image_url?: string;
+  category?: string;
+  sizes?: string;
+}) {
+  const res = await fetch(`${API_URL}/api/products`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to create product");
+  return res.json();
+}
+
 export async function getCart(userId: string): Promise<CartItem[]> {
   const res = await fetch(`${API_URL}/api/cart/${userId}`);
   if (!res.ok) throw new Error("Failed to fetch cart");

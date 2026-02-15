@@ -15,3 +15,16 @@ productsRouter.get("/:id", (req, res) => {
   if (!product) return res.status(404).json({ error: "Product not found" });
   res.json(product);
 });
+
+productsRouter.post("/", (req, res) => {
+  const { store_id, name, description, price, image_url, category, sizes } = req.body;
+  if (!name || price == null) return res.status(400).json({ error: "name and price required" });
+  const sid = store_id ?? 1;
+  const cat = category || "tee";
+  const sz = sizes || "S,M,L,XL";
+  db.prepare(
+    "INSERT INTO products (store_id, name, description, price, image_url, category, sizes) VALUES (?, ?, ?, ?, ?, ?, ?)"
+  ).run(sid, name, description ?? "", Number(price), image_url ?? null, cat, sz);
+  const row = db.prepare("SELECT last_insert_rowid() as id").get() as { id: number };
+  res.status(201).json({ id: row.id, ok: true });
+});
