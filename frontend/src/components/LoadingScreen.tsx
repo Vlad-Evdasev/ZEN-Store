@@ -49,6 +49,6 @@ const styles: Record<string, React.CSSProperties> = {
     minHeight: 140,
     aspectRatio: "1",
     objectFit: "cover",
-    animation: "zen-spin 1.2s linear infinite",
+    animation: "zen-spin 2.4s linear infinite",
   },
 };
