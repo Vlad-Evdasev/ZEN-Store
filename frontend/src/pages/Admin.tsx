@@ -94,7 +94,8 @@ export function Admin() {
       setImageUrl("");
       refresh();
     } catch (err) {
-      setMessage("Ошибка: " + (err instanceof Error ? err.message : "не удалось добавить"));
+      const msg = err instanceof Error ? err.message : "Не удалось добавить";
+      setMessage("Ошибка: " + msg);
     } finally {
       setSubmitting(false);
     }

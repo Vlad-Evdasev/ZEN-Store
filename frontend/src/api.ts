@@ -72,7 +72,11 @@ export async function createProduct(
     headers,
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error("Failed to create product");
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    const msg = (err as { error?: string })?.error || res.statusText || "Failed to create product";
+    throw new Error(msg);
+  }
   return res.json();
 }
 
