@@ -19,12 +19,22 @@ function App() {
   const [storeReady, setStoreReady] = useState(false);
 
   useEffect(() => {
-    Promise.all([
-      getProducts().then(setProducts),
-      new Promise((r) => setTimeout(r, STORE_LOAD_TIME_MS)),
-    ])
-      .catch(console.error)
-      .finally(() => setStoreReady(true));
+    let cancelled = false;
+
+    getProducts()
+      .then((p) => {
+        if (!cancelled) setProducts(p);
+      })
+      .catch(console.error);
+
+    const timer = setTimeout(() => {
+      if (!cancelled) setStoreReady(true);
+    }, STORE_LOAD_TIME_MS);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, []);
 
   const openProduct = (id: number) => {
