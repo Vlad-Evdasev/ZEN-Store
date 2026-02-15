@@ -34,6 +34,8 @@ export function Catalog({
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set(["all"]));
   const scrollRef = useRef<HTMLDivElement>(null);
   const marqueePausedRef = useRef(false);
+  const pauseTimeoutRef = useRef<number | null>(null);
+  const lastAutoScrollRef = useRef(0);
 
   type DisplayStore =
     | { id: number; name: string; image: string; desc: string; isReal: true }
@@ -59,18 +61,53 @@ export function Catalog({
     }));
   }, [stores]);
 
+  const pauseAndResume = () => {
+    marqueePausedRef.current = true;
+    if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
+    pauseTimeoutRef.current = window.setTimeout(() => {
+      marqueePausedRef.current = false;
+      pauseTimeoutRef.current = null;
+    }, 1000);
+  };
+
   useEffect(() => {
     const el = scrollRef.current;
     if (!el || displayStores.length === 0) return;
+
+    const handleScroll = () => {
+      const half = el.scrollWidth / 2;
+      if (half <= 0) return;
+
+      if (Date.now() - lastAutoScrollRef.current < 80) return;
+
+      pauseAndResume();
+
+      if (el.scrollLeft < 5) {
+        lastAutoScrollRef.current = Date.now();
+        el.scrollLeft = half - 5;
+      } else if (el.scrollLeft > half - 5) {
+        lastAutoScrollRef.current = Date.now();
+        el.scrollLeft = 5;
+      }
+    };
+
     const step = () => {
       if (marqueePausedRef.current) return;
       const half = el.scrollWidth / 2;
       if (half <= 0) return;
+      lastAutoScrollRef.current = Date.now();
       el.scrollLeft += 1.5;
       if (el.scrollLeft >= half - 1) el.scrollLeft = 0;
     };
+
+    el.addEventListener("scroll", handleScroll, { passive: true });
     const id = setInterval(step, 30);
-    return () => clearInterval(id);
+
+    return () => {
+      el.removeEventListener("scroll", handleScroll);
+      clearInterval(id);
+      if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
+    };
   }, [displayStores.length]);
 
   const filtered = useMemo(() => {
@@ -119,14 +156,13 @@ export function Catalog({
           <button
             type="button"
             onClick={() => {
-              marqueePausedRef.current = true;
               const el = scrollRef.current;
               if (el) {
                 const half = el.scrollWidth / 2;
                 if (el.scrollLeft <= 20) el.scrollLeft = half - 20;
                 else el.scrollBy({ left: -200, behavior: "smooth" });
               }
-              setTimeout(() => (marqueePausedRef.current = false), 1000);
+              pauseAndResume();
             }}
             style={styles.scrollBtn}
             aria-label="Влево"
@@ -137,11 +173,11 @@ export function Catalog({
             ref={scrollRef}
             style={styles.storesRow}
             className="hide-scrollbar"
-          onMouseDown={() => (marqueePausedRef.current = true)}
-          onMouseUp={() => setTimeout(() => (marqueePausedRef.current = false), 1000)}
-          onMouseLeave={() => setTimeout(() => (marqueePausedRef.current = false), 1000)}
-          onTouchStart={() => (marqueePausedRef.current = true)}
-          onTouchEnd={() => setTimeout(() => (marqueePausedRef.current = false), 1000)}
+            onMouseDown={pauseAndResume}
+            onMouseUp={pauseAndResume}
+            onMouseLeave={pauseAndResume}
+            onTouchStart={pauseAndResume}
+            onTouchEnd={pauseAndResume}
           >
           {[...displayStores, ...displayStores].map((s, i) => (
             <StoreCard
@@ -159,14 +195,13 @@ export function Catalog({
           <button
             type="button"
             onClick={() => {
-              marqueePausedRef.current = true;
               const el = scrollRef.current;
               if (el) {
                 const half = el.scrollWidth / 2;
                 if (el.scrollLeft >= half - 20) el.scrollLeft = 0;
                 else el.scrollBy({ left: 200, behavior: "smooth" });
               }
-              setTimeout(() => (marqueePausedRef.current = false), 1000);
+              pauseAndResume();
             }}
             style={styles.scrollBtn}
             aria-label="Вправо"
