@@ -127,11 +127,11 @@ function App() {
         <div style={styles.headerActions}>
           <button onClick={openFavorites} style={styles.headerLinkWithBadge}>
             <span>Избранное</span>
-            {wishlistIds.size > 0 && <span style={styles.favBadge}>{wishlistIds.size}</span>}
+            <span style={{ ...styles.favBadge, visibility: wishlistIds.size > 0 ? "visible" : "hidden" }}>{wishlistIds.size || "0"}</span>
           </button>
           <button onClick={openCart} style={styles.headerBtnWrapper}>
             <span>Корзина</span>
-            {cartCount > 0 && <span style={styles.cartBadge}>{cartCount}</span>}
+            <span style={{ ...styles.cartBadge, visibility: cartCount > 0 ? "visible" : "hidden" }}>{cartCount || "0"}</span>
           </button>
         </div>
       </header>
@@ -143,21 +143,22 @@ function App() {
       {menuOpen && (
         <>
           <div
+            className="zen-menu-overlay"
             style={styles.menuOverlay}
             onClick={() => setMenuOpen(false)}
             aria-hidden
           />
-          <div style={styles.menu}>
-            <button onClick={openProfile} style={styles.menuItem}>
+          <div className="zen-menu-panel" style={styles.menu}>
+            <button onClick={openProfile} className="zen-menu-item" style={styles.menuItem}>
               Профиль
             </button>
-            <button onClick={openHistory} style={styles.menuItem}>
+            <button onClick={openHistory} className="zen-menu-item" style={styles.menuItem}>
               История
             </button>
-            <button onClick={openReviews} style={styles.menuItem}>
+            <button onClick={openReviews} className="zen-menu-item" style={styles.menuItem}>
               Отзывы {avgRating != null ? `★ ${avgRating}` : ""}
             </button>
-            <button onClick={openSettings} style={styles.menuItem}>
+            <button onClick={openSettings} className="zen-menu-item" style={styles.menuItem}>
               Настройки
             </button>
           </div>
@@ -165,6 +166,7 @@ function App() {
       )}
 
       <main style={styles.main}>
+        <div key={page} className={page === "cart" || page === "favorites" ? "zen-page-enter" : ""} style={styles.mainContent}>
         {page === "catalog" && (
           <Catalog
             products={products}
@@ -242,6 +244,7 @@ function App() {
             onBack={openCatalog}
           />
         )}
+        </div>
       </main>
 
       <Footer />
@@ -376,7 +379,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 6,
   },
   favBadge: {
-    minWidth: 18,
+    minWidth: 22,
     height: 18,
     padding: "0 5px",
     borderRadius: 9,
@@ -384,7 +387,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#fff",
     fontSize: 11,
     fontWeight: 700,
-    display: "flex",
+    display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -404,7 +407,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 6,
   },
   cartBadge: {
-    minWidth: 18,
+    minWidth: 22,
     height: 18,
     padding: "0 5px",
     borderRadius: 9,
@@ -412,7 +415,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--accent)",
     fontSize: 11,
     fontWeight: 700,
-    display: "flex",
+    display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -422,6 +425,9 @@ const styles: Record<string, React.CSSProperties> = {
     paddingLeft: "max(16px, env(safe-area-inset-left))",
     paddingRight: "max(16px, env(safe-area-inset-right))",
     flex: 1,
+    minWidth: 0,
+  },
+  mainContent: {
     minWidth: 0,
   },
 };
