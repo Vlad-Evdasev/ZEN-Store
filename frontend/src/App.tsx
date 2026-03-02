@@ -407,6 +407,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   headerBtnLabel: {
     display: "block",
+    /* сдвиг вправо на половину разницы padding (28-14)/2, чтобы надпись по центру кнопки */
+    marginLeft: 7,
   },
   headerBadgePos: {
     position: "absolute",
