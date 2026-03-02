@@ -100,7 +100,7 @@ button:active {
   to { opacity: 1; }
 }
 
-/* Экшен-меню: плавное появление */
+/* Экшен-меню: плавное появление без мигания */
 @keyframes menuOverlayFade {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -110,23 +110,26 @@ button:active {
   to { transform: translateX(0); }
 }
 @keyframes menuItemAppear {
-  from { opacity: 0; transform: translateX(-12px); }
+  from { opacity: 0; transform: translateX(-8px); }
   to { opacity: 1; transform: translateX(0); }
 }
 .zen-menu-overlay {
-  animation: menuOverlayFade var(--transition-normal) ease forwards;
+  animation: menuOverlayFade 0.3s ease-out forwards;
 }
 .zen-menu-panel {
-  animation: menuPanelSlide var(--transition-normal) ease forwards;
+  animation: menuPanelSlide 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards;
 }
+/* backwards = до старта анимации применить "from", чтобы кнопки не мигали */
 .zen-menu-item {
-  animation: menuItemAppear 0.25s ease forwards;
+  opacity: 0;
+  animation: menuItemAppear 0.28s ease-out forwards;
+  animation-fill-mode: both;
 }
-.zen-menu-item:nth-child(1) { animation-delay: 0.05s; }
-.zen-menu-item:nth-child(2) { animation-delay: 0.1s; }
-.zen-menu-item:nth-child(3) { animation-delay: 0.15s; }
-.zen-menu-item:nth-child(4) { animation-delay: 0.2s; }
-.zen-menu-item:nth-child(5) { animation-delay: 0.25s; }
+.zen-menu-item:nth-child(1) { animation-delay: 0.08s; }
+.zen-menu-item:nth-child(2) { animation-delay: 0.14s; }
+.zen-menu-item:nth-child(3) { animation-delay: 0.2s; }
+.zen-menu-item:nth-child(4) { animation-delay: 0.26s; }
+.zen-menu-item:nth-child(5) { animation-delay: 0.32s; }
 
 /* Открытие страниц корзины и избранного */
 @keyframes pageContentEnter {

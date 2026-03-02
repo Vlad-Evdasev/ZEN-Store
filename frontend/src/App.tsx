@@ -114,17 +114,21 @@ function App() {
     <div style={styles.appWrapper}>
     <div style={styles.app} className="zen-app">
       <header style={styles.header}>
-        <button
-          onClick={() => setMenuOpen(!menuOpen)}
-          style={styles.hamburger}
-          aria-label="Меню"
-        >
-          ☰
-        </button>
-        <button onClick={openCatalog} style={styles.logo} aria-label="На главную">
-          ZΞN
-        </button>
-        <div style={styles.headerActions}>
+        <div style={styles.headerLeft}>
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            style={styles.hamburger}
+            aria-label="Меню"
+          >
+            ☰
+          </button>
+        </div>
+        <div style={styles.headerCenter}>
+          <button onClick={openCatalog} style={styles.logo} aria-label="На главную">
+            ZΞN
+          </button>
+        </div>
+        <div style={styles.headerRight}>
           <button onClick={openFavorites} style={styles.headerLinkWithBadge}>
             <span>Избранное</span>
             <span style={{ ...styles.favBadge, visibility: wishlistIds.size > 0 ? "visible" : "hidden" }}>{wishlistIds.size || "0"}</span>
@@ -283,16 +287,34 @@ const styles: Record<string, React.CSSProperties> = {
   },
   header: {
     display: "flex",
-    justifyContent: "space-between",
     alignItems: "center",
     position: "sticky",
-    padding: "12px 16px",
-    paddingLeft: "max(16px, env(safe-area-inset-left))",
-    paddingRight: "max(16px, env(safe-area-inset-right))",
+    padding: "10px 12px",
+    paddingLeft: "max(12px, env(safe-area-inset-left))",
+    paddingRight: "max(12px, env(safe-area-inset-right))",
     borderBottom: "1px solid var(--border)",
     top: 0,
     background: "var(--bg)",
     zIndex: 10,
+    gap: 8,
+  },
+  headerLeft: {
+    flexShrink: 0,
+    display: "flex",
+    alignItems: "center",
+  },
+  headerCenter: {
+    flex: 1,
+    minWidth: 0,
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  headerRight: {
+    flexShrink: 0,
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
   },
   hamburger: {
     width: 40,
@@ -305,6 +327,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--text)",
     fontSize: 22,
     cursor: "pointer",
+    borderRadius: 8,
   },
   menuOverlay: {
     position: "fixed",
@@ -339,25 +362,18 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
   },
   logo: {
-    position: "absolute",
-    left: "calc(50% - 70px)",
-    transform: "translateX(-50%)",
     fontFamily: "Unbounded, sans-serif",
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 700,
     color: "var(--text)",
     background: "none",
     border: "none",
     cursor: "pointer",
     letterSpacing: "-0.02em",
-  },
-  headerActions: {
-    display: "flex",
-    gap: 8,
-    alignItems: "center",
+    padding: "6px 8px",
   },
   headerLink: {
-    padding: "8px 12px",
+    padding: "8px 10px",
     background: "none",
     border: "none",
     color: "var(--muted)",
@@ -366,8 +382,7 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
   },
   headerLinkWithBadge: {
-    position: "relative",
-    padding: "8px 12px",
+    padding: "8px 10px",
     background: "none",
     border: "none",
     color: "var(--muted)",
@@ -376,7 +391,9 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
-    gap: 6,
+    gap: 5,
+    borderRadius: 8,
+    minHeight: 40,
   },
   favBadge: {
     minWidth: 22,
@@ -392,8 +409,7 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: "center",
   },
   headerBtnWrapper: {
-    position: "relative",
-    padding: "10px 16px",
+    padding: "8px 14px",
     background: "var(--accent)",
     border: "none",
     borderRadius: 8,
@@ -404,7 +420,8 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
-    gap: 6,
+    gap: 5,
+    minHeight: 40,
   },
   cartBadge: {
     minWidth: 22,
