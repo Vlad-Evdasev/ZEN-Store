@@ -127,6 +127,37 @@ export function ProductPage({
       <h1 style={styles.title}>{product.name}</h1>
       <p style={styles.desc}>{product.description}</p>
 
+      <div style={styles.sizeSection}>
+        <p style={styles.label}>Размер</p>
+        <div style={styles.sizes}>
+          {sizes.map((s) => (
+            <button
+              key={s}
+              onClick={() => setSize(s)}
+              style={{
+                ...styles.sizeBtn,
+                ...(size === s ? styles.sizeBtnActive : {}),
+              }}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={styles.footer}>
+        <span style={styles.price}>{formatPrice(product.price)}</span>
+        {justAdded ? (
+          <button onClick={onCart} style={styles.addBtn}>
+            Перейти в корзину
+          </button>
+        ) : (
+          <button onClick={handleAdd} disabled={adding} style={styles.addBtn}>
+            {adding ? "..." : "В корзину"}
+          </button>
+        )}
+      </div>
+
       <div style={styles.reviewsSection}>
         <div style={styles.reviewsHeader}>
           <h3 style={styles.reviewsTitle}>
@@ -193,37 +224,6 @@ export function ProductPage({
             </div>
           ))}
         </div>
-      </div>
-
-      <div style={styles.sizeSection}>
-        <p style={styles.label}>Размер</p>
-        <div style={styles.sizes}>
-          {sizes.map((s) => (
-            <button
-              key={s}
-              onClick={() => setSize(s)}
-              style={{
-                ...styles.sizeBtn,
-                ...(size === s ? styles.sizeBtnActive : {}),
-              }}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div style={styles.footer}>
-        <span style={styles.price}>{formatPrice(product.price)}</span>
-        {justAdded ? (
-          <button onClick={onCart} style={styles.addBtn}>
-            Перейти в корзину
-          </button>
-        ) : (
-          <button onClick={handleAdd} disabled={adding} style={styles.addBtn}>
-            {adding ? "..." : "В корзину"}
-          </button>
-        )}
       </div>
     </div>
   );
