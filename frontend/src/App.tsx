@@ -162,7 +162,8 @@ function App() {
             <button onClick={openReviews} className="zen-menu-item" style={styles.menuItem}>
               Отзывы {avgRating != null ? `★ ${avgRating}` : ""}
             </button>
-            <button onClick={openSettings} className="zen-menu-item" style={styles.menuItem}>
+            <div style={styles.menuSpacer} aria-hidden />
+            <button onClick={openSettings} className="zen-menu-item zen-menu-item-last" style={styles.menuItem}>
               Настройки
             </button>
           </div>
@@ -361,6 +362,10 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "inherit",
     cursor: "pointer",
   },
+  menuSpacer: {
+    flex: 1,
+    minHeight: 0,
+  },
   logo: {
     fontFamily: "Unbounded, sans-serif",
     fontSize: 22,
@@ -382,12 +387,13 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
   },
   headerLinkWithBadge: {
-    padding: "8px 10px",
-    background: "none",
-    border: "none",
-    color: "var(--muted)",
+    padding: "8px 12px",
+    background: "var(--surface-elevated)",
+    border: "1px solid var(--border)",
+    color: "var(--text)",
     fontFamily: "inherit",
     fontSize: 13,
+    fontWeight: 500,
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
@@ -409,14 +415,14 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: "center",
   },
   headerBtnWrapper: {
-    padding: "8px 14px",
+    padding: "8px 12px",
     background: "var(--accent)",
     border: "none",
     borderRadius: 8,
     color: "#ffffff",
     fontFamily: "inherit",
     fontSize: 13,
-    fontWeight: 600,
+    fontWeight: 500,
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
