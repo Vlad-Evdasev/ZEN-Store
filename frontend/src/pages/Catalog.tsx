@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import type { Product, Store } from "../api";
+import type { Product, Store, ProductReviewStats } from "../api";
+import { getProductReviewStats } from "../api";
 import { ProductCard } from "../components/ProductCard";
 import { StoreCard } from "../components/StoreCard";
 import { getCategoryLabel } from "../utils/categories";
@@ -34,6 +35,7 @@ export function Catalog({
 }: CatalogProps) {
   const [search, setSearch] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set(["all"]));
+  const [reviewStats, setReviewStats] = useState<ProductReviewStats>({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const marqueePausedRef = useRef(false);
   const pauseTimeoutRef = useRef<number | null>(null);
@@ -71,6 +73,10 @@ export function Catalog({
       pauseTimeoutRef.current = null;
     }, 1000);
   };
+
+  useEffect(() => {
+    getProductReviewStats().then(setReviewStats).catch(console.error);
+  }, []);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -263,6 +269,8 @@ export function Catalog({
                 e.stopPropagation();
                 onToggleWishlist(p.id);
               }}
+              reviewCount={reviewStats[p.id]?.count}
+              reviewAvg={reviewStats[p.id]?.avg}
             />
           ))}
         </div>

@@ -9,6 +9,17 @@ productsRouter.get("/", (_req, res) => {
   res.json(products);
 });
 
+productsRouter.get("/reviews/stats", (_req, res) => {
+  const rows = db
+    .prepare("SELECT product_id, COUNT(*) as count, AVG(rating) as avg FROM product_reviews GROUP BY product_id")
+    .all() as { product_id: number; count: number; avg: number }[];
+  const stats: Record<number, { count: number; avg: number }> = {};
+  for (const r of rows) {
+    stats[r.product_id] = { count: r.count, avg: Math.round((r.avg || 0) * 10) / 10 };
+  }
+  res.json(stats);
+});
+
 productsRouter.get("/:id", (req, res) => {
   const id = parseInt(req.params.id, 10);
   const product = db.prepare("SELECT * FROM products WHERE id = ?").get(id) as Product | undefined;
@@ -79,4 +90,27 @@ productsRouter.delete("/:id", (req, res) => {
   const result = db.prepare("DELETE FROM products WHERE id = ?").run(id);
   if (result.changes === 0) return res.status(404).json({ error: "Product not found" });
   return res.json({ ok: true });
+});
+
+productsRouter.get("/:id/reviews", (req, res) => {
+  const productId = parseInt(req.params.id, 10);
+  const reviews = db
+    .prepare("SELECT * FROM product_reviews WHERE product_id = ? ORDER BY created_at DESC")
+    .all(productId) as { id: number; product_id: number; user_id: string; user_name: string; rating: number; text: string; created_at: string }[];
+  res.json(reviews);
+});
+
+productsRouter.post("/:id/reviews", (req, res) => {
+  const productId = parseInt(req.params.id, 10);
+  const { user_id, user_name, rating, text } = req.body;
+  if (!user_id || !text) return res.status(400).json({ error: "user_id and text required" });
+  const name = user_name || "Гость";
+  const r = Number(rating) || 5;
+  const finalRating = Math.min(5, Math.max(1, r));
+
+  db.prepare(
+    "INSERT INTO product_reviews (product_id, user_id, user_name, rating, text) VALUES (?, ?, ?, ?, ?)"
+  ).run(productId, user_id, name, finalRating, String(text));
+  const id = db.prepare("SELECT last_insert_rowid() as id").get() as { id: number };
+  res.status(201).json({ id: id.id, ok: true });
 });

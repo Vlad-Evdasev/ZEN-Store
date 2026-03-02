@@ -7,15 +7,18 @@ interface ProductCardProps {
   inWishlist?: boolean;
   onWishlistClick?: (e: React.MouseEvent) => void;
   compact?: boolean;
+  reviewCount?: number;
+  reviewAvg?: number;
 }
 
-export function ProductCard({ product, onClick, inWishlist, onWishlistClick, compact }: ProductCardProps) {
+export function ProductCard({ product, onClick, inWishlist, onWishlistClick, compact, reviewCount, reviewAvg }: ProductCardProps) {
   const { formatPrice } = useSettings();
   const cardStyle = compact ? { ...styles.card, ...styles.cardCompact } : styles.card;
   const nameStyle = compact ? { ...styles.name, ...styles.nameCompact } : styles.name;
   const priceStyle = compact ? { ...styles.price, ...styles.priceCompact } : styles.price;
   const imageWrapStyle = compact ? { ...styles.imageWrap, ...styles.imageWrapCompact } : styles.imageWrap;
   const wishlistBtnStyle = compact ? { ...styles.wishlistBtn, ...styles.wishlistBtnCompact } : styles.wishlistBtn;
+  const hasReviews = reviewCount != null && reviewCount > 0;
   return (
     <button onClick={onClick} style={cardStyle}>
       <div style={imageWrapStyle}>
@@ -35,6 +38,11 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
         )}
       </div>
       <p style={nameStyle}>{product.name}</p>
+      {hasReviews && (
+        <p style={compact ? styles.reviewsCompact : styles.reviews}>
+          ★ {reviewAvg?.toFixed(1) ?? "—"} {reviewCount !== undefined && `(${reviewCount})`}
+        </p>
+      )}
       <p style={priceStyle}>{formatPrice(product.price)}</p>
     </button>
   );
@@ -87,6 +95,16 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 15,
     color: "var(--accent)",
     fontWeight: 700,
+  },
+  reviews: {
+    padding: "0 14px 4px",
+    fontSize: 12,
+    color: "var(--muted)",
+  },
+  reviewsCompact: {
+    padding: "0 10px 2px",
+    fontSize: 11,
+    color: "var(--muted)",
   },
   cardCompact: { borderRadius: 10 },
   imageWrapCompact: {},

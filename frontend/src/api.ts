@@ -224,7 +224,7 @@ export interface ReviewComment {
 }
 
 export async function getReviews(): Promise<Review[]> {
-  const res = await fetch(`${API_URL}/api/reviews`);
+  const res = await fetch(`${API_URL}/api/reviews?_t=${Date.now()}`);
   if (!res.ok) throw new Error("Failed to fetch reviews");
   return res.json();
 }
@@ -300,5 +300,43 @@ export async function createOrder(
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error("Failed to create order");
+  return res.json();
+}
+
+export interface ProductReview {
+  id: number;
+  product_id: number;
+  user_id: string;
+  user_name: string;
+  rating: number;
+  text: string;
+  created_at: string;
+}
+
+export async function getProductReviews(productId: number): Promise<ProductReview[]> {
+  const res = await fetch(`${API_URL}/api/products/${productId}/reviews`);
+  if (!res.ok) throw new Error("Failed to fetch product reviews");
+  return res.json();
+}
+
+export type ProductReviewStats = Record<number, { count: number; avg: number }>;
+
+export async function getProductReviewStats(): Promise<ProductReviewStats> {
+  const res = await fetch(`${API_URL}/api/products/reviews/stats`);
+  if (!res.ok) return {};
+  return res.json();
+}
+
+export async function addProductReview(
+  productId: number,
+  userId: string,
+  data: { user_name?: string; rating?: number; text: string }
+) {
+  const res = await fetch(`${API_URL}/api/products/${productId}/reviews`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId, ...data }),
+  });
+  if (!res.ok) throw new Error("Failed to add product review");
   return res.json();
 }

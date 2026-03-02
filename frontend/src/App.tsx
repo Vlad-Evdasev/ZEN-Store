@@ -193,6 +193,7 @@ function App() {
             onCart={openCart}
             onAddedToCart={refreshCartCount}
             userId={userId}
+            userName={firstName}
             inWishlist={hasInWishlist(productId)}
             onToggleWishlist={() => toggleWishlist(productId)}
           />
