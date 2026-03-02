@@ -117,12 +117,6 @@ export function ProductPage({
         <button onClick={onBack} style={styles.back}>
           ← Назад
         </button>
-        <button
-          onClick={onToggleWishlist}
-          style={{ ...styles.wishlistBtn, color: inWishlist ? "var(--accent)" : "var(--muted)" }}
-        >
-          {inWishlist ? "♥" : "♡"}
-        </button>
       </div>
 
       <div style={styles.imageWrap}>
@@ -165,6 +159,17 @@ export function ProductPage({
         )}
       </div>
 
+      <div style={styles.wishlistUnderPhoto}>
+        <button
+          type="button"
+          onClick={onToggleWishlist}
+          style={{ ...styles.wishlistBtn, color: inWishlist ? "var(--accent)" : "var(--muted)" }}
+          aria-label={inWishlist ? "Убрать из избранного" : "В избранное"}
+        >
+          {inWishlist ? "♥" : "♡"}
+        </button>
+      </div>
+
       <h1 style={styles.title}>{product.name}</h1>
       <p style={styles.desc}>{product.description}</p>
 
@@ -174,6 +179,8 @@ export function ProductPage({
           {sizes.map((s) => (
             <button
               key={s}
+              type="button"
+              className="product-size-btn"
               onClick={() => setSize(s)}
               style={{
                 ...styles.sizeBtn,
@@ -202,7 +209,7 @@ export function ProductPage({
       <div style={styles.reviewsSection}>
         <div style={styles.reviewsHeader}>
           <h3 style={styles.reviewsTitle}>
-            Отзывы {reviews.length > 0 && `(${reviews.length})`}
+            Отзывы на товар {reviews.length > 0 && `(${reviews.length})`}
             {avgRating != null && <span style={styles.avgRating}> ★ {avgRating}</span>}
           </h3>
           {!showReviewForm && (
@@ -274,9 +281,8 @@ const styles: Record<string, React.CSSProperties> = {
   wrap: { maxWidth: 420, margin: "0 auto", paddingBottom: 24 },
   topBar: {
     display: "flex",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 12,
   },
   back: {
     background: "none",
@@ -286,11 +292,17 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     cursor: "pointer",
   },
+  wishlistUnderPhoto: {
+    display: "flex",
+    justifyContent: "flex-end",
+    marginBottom: 16,
+  },
   wishlistBtn: {
     background: "none",
     border: "none",
     fontSize: 24,
     cursor: "pointer",
+    padding: 4,
   },
   imageWrap: {
     position: "relative",
@@ -391,11 +403,15 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     fontWeight: 500,
     cursor: "pointer",
+    outline: "none",
+    boxShadow: "none",
   },
   sizeBtnActive: {
     borderColor: "var(--accent)",
     color: "var(--accent)",
     background: "rgba(196, 30, 58, 0.1)",
+    outline: "none",
+    boxShadow: "none",
   },
   footer: {
     display: "flex",

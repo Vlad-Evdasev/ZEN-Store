@@ -82,10 +82,18 @@ button:active {
   outline: none;
 }
 
-/* Кнопки категорий: убрать рамку при focus после отмены выбора (тёмная тема) */
+/* Кнопки категорий: убрать рамку при focus (тёмная тема — без белых границ) */
 .catalog-tab-btn:focus,
 .catalog-tab-btn:focus-visible,
 .catalog-tab-btn:active {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Кнопки выбора размера на странице товара: без белых границ при focus в тёмной теме */
+.product-size-btn:focus,
+.product-size-btn:focus-visible,
+.product-size-btn:active {
   outline: none;
   box-shadow: none;
 }
