@@ -41,8 +41,17 @@ export function ProductPage({
   const [reviewRating, setReviewRating] = useState(5);
   const [submittingReview, setSubmittingReview] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
+  const [imageIndex, setImageIndex] = useState(0);
 
   const sizes = product ? product.sizes.split(",").map((s) => s.trim()) : [];
+  const imageUrls = product
+    ? ((product.image_urls && product.image_urls.length > 0) ? product.image_urls : (product.image_url ? [product.image_url] : []))
+    : [];
+  const currentImage = imageUrls[imageIndex] || product?.image_url || "https://via.placeholder.com/400";
+
+  useEffect(() => {
+    setImageIndex(0);
+  }, [product?.id]);
   
   useEffect(() => {
     if (product && sizes.length) setSize(sizes[0]);
@@ -118,10 +127,42 @@ export function ProductPage({
 
       <div style={styles.imageWrap}>
         <img
-          src={product.image_url || "https://via.placeholder.com/400"}
+          key={`${product.id}-${imageIndex}`}
+          src={currentImage}
           alt={product.name}
-          style={styles.image}
+          style={{ ...styles.image, animation: "productImageFade 0.3s ease" }}
         />
+        {imageUrls.length > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setImageIndex((i) => (i === 0 ? imageUrls.length - 1 : i - 1)); }}
+              style={styles.galleryPrev}
+              aria-label="Предыдущее фото"
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setImageIndex((i) => (i === imageUrls.length - 1 ? 0 : i + 1)); }}
+              style={styles.galleryNext}
+              aria-label="Следующее фото"
+            >
+              ›
+            </button>
+            <div style={styles.galleryDots}>
+              {imageUrls.map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setImageIndex(i); }}
+                  style={{ ...styles.galleryDot, ...(i === imageIndex ? styles.galleryDotActive : {}) }}
+                  aria-label={`Фото ${i + 1}`}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       <h1 style={styles.title}>{product.name}</h1>
@@ -252,6 +293,7 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
   },
   imageWrap: {
+    position: "relative",
     borderRadius: 12,
     overflow: "hidden",
     background: "var(--surface)",
@@ -259,6 +301,60 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 24,
   },
   image: { width: "100%", height: "100%", objectFit: "cover" },
+  galleryPrev: {
+    position: "absolute",
+    left: 8,
+    top: "50%",
+    transform: "translateY(-50%)",
+    width: 40,
+    height: 40,
+    borderRadius: "50%",
+    background: "rgba(0,0,0,0.5)",
+    border: "none",
+    color: "#fff",
+    fontSize: 24,
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  galleryNext: {
+    position: "absolute",
+    right: 8,
+    top: "50%",
+    transform: "translateY(-50%)",
+    width: 40,
+    height: 40,
+    borderRadius: "50%",
+    background: "rgba(0,0,0,0.5)",
+    border: "none",
+    color: "#fff",
+    fontSize: 24,
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  galleryDots: {
+    position: "absolute",
+    bottom: 12,
+    left: "50%",
+    transform: "translateX(-50%)",
+    display: "flex",
+    gap: 6,
+  },
+  galleryDot: {
+    width: 8,
+    height: 8,
+    borderRadius: "50%",
+    border: "none",
+    background: "rgba(255,255,255,0.5)",
+    cursor: "pointer",
+    padding: 0,
+  },
+  galleryDotActive: {
+    background: "#fff",
+  },
   title: {
     fontFamily: "Unbounded, sans-serif",
     fontSize: 22,

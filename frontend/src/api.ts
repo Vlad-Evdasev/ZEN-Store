@@ -16,6 +16,7 @@ export interface Product {
   description: string;
   price: number;
   image_url: string | null;
+  image_urls?: string[];
   category: string;
   sizes: string;
 }
@@ -119,6 +120,7 @@ export async function createProduct(
     description?: string;
     price: number;
     image_url?: string;
+    image_urls?: string[];
     category?: string;
     sizes?: string;
   },
@@ -152,6 +154,7 @@ export async function updateProduct(
     description: string;
     price: number;
     image_url: string;
+    image_urls: string[];
     category: string;
     sizes: string;
   }>,

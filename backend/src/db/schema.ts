@@ -86,6 +86,13 @@ try {
   // column already exists
 }
 
+// Add images (JSON array of URLs, max 5) for product gallery
+try {
+  db.exec("ALTER TABLE products ADD COLUMN images TEXT");
+} catch {
+  // column already exists
+}
+
 // Seed stores
 const storeCount = db.prepare("SELECT COUNT(*) as count FROM stores").get() as { count: number };
 if (storeCount.count === 0) {

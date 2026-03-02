@@ -23,7 +23,7 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
     <button onClick={onClick} style={cardStyle}>
       <div style={imageWrapStyle}>
         <img
-          src={product.image_url || "https://via.placeholder.com/200"}
+          src={(product.image_urls && product.image_urls[0]) || product.image_url || "https://via.placeholder.com/200"}
           alt={product.name}
           style={styles.image}
         />
@@ -59,7 +59,7 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: "left",
     cursor: "pointer",
     padding: 0,
-    transition: "border-color 0.2s, transform 0.15s",
+    transition: "border-color var(--transition-fast), transform var(--transition-normal), box-shadow var(--transition-normal)",
   },
   imageWrap: {
     position: "relative",

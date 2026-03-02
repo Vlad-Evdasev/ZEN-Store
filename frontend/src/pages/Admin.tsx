@@ -290,7 +290,7 @@ function ProductsTab({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
+  const [imageUrls, setImageUrls] = useState<string[]>(["", "", "", "", ""]);
   const [category, setCategory] = useState("tee");
   const [storeId, setStoreId] = useState(1);
   const [sizes, setSizes] = useState("S,M,L,XL");
@@ -300,7 +300,8 @@ function ProductsTab({
     setName(p.name);
     setDescription(p.description || "");
     setPrice(String(p.price));
-    setImageUrl(p.image_url || "");
+    const urls = (p.image_urls && p.image_urls.length > 0) ? p.image_urls : (p.image_url ? [p.image_url] : []);
+    setImageUrls([...urls, "", "", "", "", ""].slice(0, 5));
     setStoreId(p.store_id ?? 1);
     setCategory(p.category || "tee");
     setSizes(p.sizes || "S,M,L,XL");
@@ -311,7 +312,7 @@ function ProductsTab({
     setName("");
     setDescription("");
     setPrice("");
-    setImageUrl("");
+    setImageUrls(["", "", "", "", ""]);
     setStoreId(1);
     setCategory("tee");
     setSizes("S,M,L,XL");
@@ -326,12 +327,14 @@ function ProductsTab({
     setSubmitting(true);
     setMessage("");
     try {
+      const urls = imageUrls.map((x) => x.trim()).filter(Boolean);
       const data = {
         store_id: storeId,
         name: name.trim(),
         description: description.trim() || undefined,
         price: Number(price.replace(/\s/g, "")) || 0,
-        image_url: imageUrl.trim() || undefined,
+        image_url: urls[0] || undefined,
+        image_urls: urls.length > 0 ? urls : undefined,
         category,
         sizes: sizes.trim() || undefined,
       };
@@ -377,8 +380,17 @@ function ProductsTab({
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} style={styles.input} />
         <label style={styles.label}>Цена (₽) *</label>
         <input type="text" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="2990" style={styles.input} required />
-        <label style={styles.label}>URL картинки</label>
-        <input type="text" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." style={styles.input} />
+        <label style={styles.label}>Картинки (до 5 URL)</label>
+        {[0, 1, 2, 3, 4].map((i) => (
+          <input
+            key={i}
+            type="text"
+            value={imageUrls[i] ?? ""}
+            onChange={(e) => setImageUrls((prev) => { const n = [...prev]; n[i] = e.target.value; return n; })}
+            placeholder={i === 0 ? "https://... (обязательно первая)" : `Картинка ${i + 1} (необязательно)`}
+            style={styles.input}
+          />
+        ))}
         <label style={styles.label}>Магазин</label>
         <select value={storeId} onChange={(e) => setStoreId(Number(e.target.value))} style={styles.input}>
           {stores.map((s) => (
@@ -408,7 +420,7 @@ function ProductsTab({
         <h3 style={styles.subtitle}>Товары в каталоге ({products.length})</h3>
         {products.map((p) => (
           <div key={p.id} style={styles.productRow}>
-            <img src={p.image_url || "https://via.placeholder.com/48"} alt="" style={styles.thumb} />
+            <img src={(p.image_urls && p.image_urls[0]) || p.image_url || "https://via.placeholder.com/48"} alt="" style={styles.thumb} />
             <div style={styles.productInfo}>
               <p style={styles.productName}>{p.name}</p>
               <p style={styles.productPrice}>{p.price} ₽ · {stores.find(s => s.id === (p.store_id ?? 1))?.name || "—"}</p>
@@ -574,7 +586,7 @@ function StoresTab({
             <div style={styles.modalList}>
               {otherProducts.map((p) => (
                 <div key={p.id} style={styles.productRow}>
-                  <img src={p.image_url || "https://via.placeholder.com/40"} alt="" style={{ ...styles.thumb, width: 40, height: 40 }} />
+                  <img src={(p.image_urls && p.image_urls[0]) || p.image_url || "https://via.placeholder.com/40"} alt="" style={{ ...styles.thumb, width: 40, height: 40 }} />
                   <div style={styles.productInfo}>
                     <p style={styles.productName}>{p.name}</p>
                     <p style={styles.productPrice}>{p.price} ₽</p>
@@ -591,7 +603,7 @@ function StoresTab({
 
           {storeProducts.map((p) => (
             <div key={p.id} style={styles.productRow}>
-              <img src={p.image_url || "https://via.placeholder.com/48"} alt="" style={styles.thumb} />
+              <img src={(p.image_urls && p.image_urls[0]) || p.image_url || "https://via.placeholder.com/48"} alt="" style={styles.thumb} />
               <div style={styles.productInfo}>
                 <p style={styles.productName}>{p.name}</p>
                 <p style={styles.productPrice}>{p.price} ₽</p>
@@ -668,7 +680,7 @@ function ProductFormModal({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
+  const [imageUrls, setImageUrls] = useState<string[]>(["", "", "", "", ""]);
   const [category, setCategory] = useState("tee");
   const [sizes, setSizes] = useState("S,M,L,XL");
 
@@ -677,12 +689,14 @@ function ProductFormModal({
     if (!name.trim() || !price.trim()) return;
     setSubmitting(true);
     try {
+      const urls = imageUrls.map((x) => x.trim()).filter(Boolean);
       await createProduct({
         store_id: storeId,
         name: name.trim(),
         description: description.trim() || undefined,
         price: Number(price.replace(/\s/g, "")) || 0,
-        image_url: imageUrl.trim() || undefined,
+        image_url: urls[0] || undefined,
+        image_urls: urls.length > 0 ? urls : undefined,
         category,
         sizes: sizes.trim() || undefined,
       }, adminSecret);
@@ -702,7 +716,17 @@ function ProductFormModal({
           <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Название *" style={styles.input} required />
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Описание" rows={2} style={styles.input} />
           <input type="text" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Цена (₽) *" style={styles.input} required />
-          <input type="text" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="URL картинки" style={styles.input} />
+          <label style={styles.label}>Картинки (до 5 URL)</label>
+          {[0, 1, 2, 3, 4].map((i) => (
+            <input
+              key={i}
+              type="text"
+              value={imageUrls[i] ?? ""}
+              onChange={(e) => setImageUrls((prev) => { const n = [...prev]; n[i] = e.target.value; return n; })}
+              placeholder={i === 0 ? "https://... (первая)" : `Картинка ${i + 1}`}
+              style={styles.input}
+            />
+          ))}
           <select value={category} onChange={(e) => setCategory(e.target.value)} style={styles.input}>
             <option value="tee">Футболки</option>
             <option value="hoodie">Худи</option>
