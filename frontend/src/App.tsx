@@ -130,12 +130,12 @@ function App() {
         </div>
         <div style={styles.headerRight}>
           <button onClick={openFavorites} style={styles.headerLinkWithBadge}>
-            <span>Избранное</span>
-            <span style={{ ...styles.favBadge, visibility: wishlistIds.size > 0 ? "visible" : "hidden" }}>{wishlistIds.size || "0"}</span>
+            <span style={styles.headerBtnLabel}>Избранное</span>
+            <span style={{ ...styles.favBadge, ...styles.headerBadgePos, visibility: wishlistIds.size > 0 ? "visible" : "hidden" }}>{wishlistIds.size || "0"}</span>
           </button>
           <button onClick={openCart} style={styles.headerBtnWrapper}>
-            <span>Корзина</span>
-            <span style={{ ...styles.cartBadge, visibility: cartCount > 0 ? "visible" : "hidden" }}>{cartCount || "0"}</span>
+            <span style={styles.headerBtnLabel}>Корзина</span>
+            <span style={{ ...styles.cartBadge, ...styles.headerBadgePos, visibility: cartCount > 0 ? "visible" : "hidden" }}>{cartCount || "0"}</span>
           </button>
         </div>
       </header>
@@ -387,8 +387,9 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
   },
   headerLinkWithBadge: {
+    position: "relative",
     paddingLeft: 14,
-    paddingRight: 14,
+    paddingRight: 28,
     paddingTop: 8,
     paddingBottom: 8,
     background: "var(--surface-elevated)",
@@ -401,9 +402,17 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: 5,
     borderRadius: 8,
     minHeight: 40,
+  },
+  headerBtnLabel: {
+    display: "block",
+  },
+  headerBadgePos: {
+    position: "absolute",
+    right: 6,
+    top: "50%",
+    transform: "translateY(-50%)",
   },
   favBadge: {
     minWidth: 22,
@@ -419,8 +428,9 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: "center",
   },
   headerBtnWrapper: {
+    position: "relative",
     paddingLeft: 14,
-    paddingRight: 14,
+    paddingRight: 28,
     paddingTop: 8,
     paddingBottom: 8,
     background: "var(--accent)",
@@ -434,7 +444,6 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: 5,
     minHeight: 40,
   },
   cartBadge: {
