@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { getOrders, type Order } from "../api";
 import { useSettings } from "../context/SettingsContext";
+import type { Lang } from "../context/SettingsContext";
 import { t } from "../i18n";
 
 interface HistoryProps {
@@ -110,7 +111,7 @@ export function History({ userId, onBack }: HistoryProps) {
   );
 }
 
-function orderStatusLabel(status: string, lang: string, t: (l: string, k: string) => string): string {
+function orderStatusLabel(status: string, lang: Lang, t: (l: Lang, k: string) => string): string {
   if (status === "pending") return t(lang, "historyStatusProcessing");
   if (status === "in_transit") return t(lang, "historyStatusInTransit");
   if (status === "delivered" || status === "completed") return t(lang, "historyStatusDelivered");
@@ -125,8 +126,8 @@ function OrderCard({
 }: {
   order: Order;
   formatPrice: (n: number) => string;
-  lang: string;
-  t: (l: string, k: string) => string;
+  lang: Lang;
+  t: (l: Lang, k: string) => string;
 }) {
   let items: { name?: string; price?: number; quantity?: number }[] = [];
   try {

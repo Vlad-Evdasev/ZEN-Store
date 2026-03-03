@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { getCart, removeFromCart, submitCustomOrder, type CartItem } from "../api";
 import { useSettings } from "../context/SettingsContext";
+import type { Lang } from "../context/SettingsContext";
 import { t } from "../i18n";
 
 interface CartProps {
@@ -8,10 +9,9 @@ interface CartProps {
   onBack: () => void;
   onCheckout: () => void;
   onCartChange?: () => void;
-  sellerLink?: string;
 }
 
-export function Cart({ userId, onBack, onCheckout, onCartChange, sellerLink }: CartProps) {
+export function Cart({ userId, onBack, onCheckout, onCartChange }: CartProps) {
   const { formatPrice, settings } = useSettings();
   const lang = settings.lang;
   const [items, setItems] = useState<CartItem[]>([]);
@@ -96,7 +96,6 @@ export function Cart({ userId, onBack, onCheckout, onCartChange, sellerLink }: C
         </button>
         <p style={styles.empty}>{t(lang, "cartEmpty")}</p>
         <CustomOrderForm
-          userId={userId}
           lang={lang}
           customDesc={customDesc}
           setCustomDesc={setCustomDesc}
@@ -151,7 +150,6 @@ export function Cart({ userId, onBack, onCheckout, onCartChange, sellerLink }: C
       </div>
 
       <CustomOrderForm
-        userId={userId}
         lang={lang}
         customDesc={customDesc}
         setCustomDesc={setCustomDesc}
@@ -171,7 +169,6 @@ export function Cart({ userId, onBack, onCheckout, onCartChange, sellerLink }: C
 }
 
 function CustomOrderForm({
-  userId,
   lang,
   customDesc,
   setCustomDesc,
@@ -186,8 +183,7 @@ function CustomOrderForm({
   fileInputRef,
   t,
 }: {
-  userId: string;
-  lang: string;
+  lang: Lang;
   customDesc: string;
   setCustomDesc: (s: string) => void;
   customSize: string;
@@ -199,7 +195,7 @@ function CustomOrderForm({
   handleCustomOrderSubmit: (e: React.FormEvent) => void;
   onPhotoChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
-  t: (lang: string, key: string) => string;
+  t: (lang: Lang, key: string) => string;
 }) {
   return (
     <div style={styles.customOrderWrap}>
@@ -208,7 +204,7 @@ function CustomOrderForm({
       <form onSubmit={handleCustomOrderSubmit} style={styles.customOrderForm}>
         <label style={styles.customOrderLabel}>{t(lang, "customOrderPhoto")}</label>
         <input
-          ref={fileInputRef}
+          ref={fileInputRef as React.Ref<HTMLInputElement>}
           type="file"
           accept="image/*"
           onChange={onPhotoChange}

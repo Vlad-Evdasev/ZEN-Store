@@ -217,7 +217,6 @@ function App() {
             onBack={openCatalog}
             onCheckout={openCheckout}
             onCartChange={refreshCartCount}
-            sellerLink={SELLER_LINK}
           />
         )}
         {page === "checkout" && (
