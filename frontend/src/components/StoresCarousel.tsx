@@ -54,6 +54,7 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
   useEffect(() => {
     const el = scrollRef.current;
     if (!el || displayStores.length === 0) return;
+    const scrollStep = 1.65;
     const handleScroll = () => {
       const half = el.scrollWidth / 2;
       if (half <= 0) return;
@@ -67,19 +68,27 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
         el.scrollLeft = 5;
       }
     };
+    let rafId = 0;
     const step = () => {
-      if (marqueePausedRef.current) return;
+      if (marqueePausedRef.current) {
+        rafId = requestAnimationFrame(step);
+        return;
+      }
       const half = el.scrollWidth / 2;
-      if (half <= 0) return;
+      if (half <= 0) {
+        rafId = requestAnimationFrame(step);
+        return;
+      }
       lastAutoScrollRef.current = Date.now();
-      el.scrollLeft += 1.5;
+      el.scrollLeft += scrollStep;
       if (el.scrollLeft >= half - 1) el.scrollLeft = 0;
+      rafId = requestAnimationFrame(step);
     };
+    rafId = requestAnimationFrame(step);
     el.addEventListener("scroll", handleScroll, { passive: true });
-    const id = setInterval(step, 30);
     return () => {
       el.removeEventListener("scroll", handleScroll);
-      clearInterval(id);
+      cancelAnimationFrame(rafId);
       if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
     };
   }, [displayStores.length]);

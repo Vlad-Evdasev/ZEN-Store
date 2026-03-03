@@ -22,11 +22,13 @@ export function Profile({ userName, firstName, onBack, onOpenDeliveryTerms, onOp
         <div style={styles.actions}>
           {onOpenDeliveryTerms && (
             <button onClick={onOpenDeliveryTerms} style={styles.actionBtn}>
+              <span style={styles.actionBtnIcon}>📋</span>
               Условия доставки
             </button>
           )}
           {onOpenSupport && (
             <button onClick={onOpenSupport} style={styles.actionBtn}>
+              <span style={styles.actionBtnIcon}>💬</span>
               Поддержка
             </button>
           )}
@@ -104,6 +106,9 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 10,
   },
   actionBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
     padding: 14,
     background: "var(--bg)",
     border: "1px solid var(--border)",
@@ -113,6 +118,10 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "inherit",
     cursor: "pointer",
     textAlign: "left",
+  },
+  actionBtnIcon: {
+    opacity: 0.6,
+    fontSize: 16,
   },
   text: {
     fontSize: 14,
