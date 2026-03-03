@@ -6,16 +6,20 @@ import { t } from "../i18n";
 
 interface CartProps {
   userId: string;
+  userName: string | null;
+  firstName: string;
   onBack: () => void;
   onCheckout: () => void;
   onCartChange?: () => void;
 }
 
-export function Cart({ userId, onBack, onCheckout, onCartChange }: CartProps) {
+export function Cart({ userId, userName, firstName, onBack, onCheckout, onCartChange }: CartProps) {
   const { formatPrice, settings } = useSettings();
   const lang = settings.lang;
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [customName, setCustomName] = useState("");
+  const [customAddress, setCustomAddress] = useState("");
   const [customDesc, setCustomDesc] = useState("");
   const [customSize, setCustomSize] = useState("");
   const [customPhoto, setCustomPhoto] = useState<string | null>(null);
@@ -56,11 +60,16 @@ export function Cart({ userId, onBack, onCheckout, onCartChange }: CartProps) {
     setCustomSuccess(false);
     try {
       await submitCustomOrder(userId, {
+        user_name: customName.trim() || undefined,
+        user_username: userName ?? undefined,
+        user_address: customAddress.trim() || undefined,
         description: customDesc.trim(),
         size: customSize.trim(),
         image_data: customPhoto || undefined,
       });
       setCustomSuccess(true);
+      setCustomName("");
+      setCustomAddress("");
       setCustomDesc("");
       setCustomSize("");
       setCustomPhoto(null);
@@ -97,6 +106,12 @@ export function Cart({ userId, onBack, onCheckout, onCartChange }: CartProps) {
         <p style={styles.empty}>{t(lang, "cartEmpty")}</p>
         <CustomOrderForm
           lang={lang}
+          userName={userName}
+          firstName={firstName}
+          customName={customName}
+          setCustomName={setCustomName}
+          customAddress={customAddress}
+          setCustomAddress={setCustomAddress}
           customDesc={customDesc}
           setCustomDesc={setCustomDesc}
           customSize={customSize}
@@ -105,6 +120,7 @@ export function Cart({ userId, onBack, onCheckout, onCartChange }: CartProps) {
           setCustomPhoto={setCustomPhoto}
           customSubmitting={customSubmitting}
           customSuccess={customSuccess}
+          setCustomSuccess={setCustomSuccess}
           handleCustomOrderSubmit={handleCustomOrderSubmit}
           onPhotoChange={onPhotoChange}
           fileInputRef={fileInputRef}
@@ -151,6 +167,12 @@ export function Cart({ userId, onBack, onCheckout, onCartChange }: CartProps) {
 
       <CustomOrderForm
         lang={lang}
+        userName={userName}
+        firstName={firstName}
+        customName={customName}
+        setCustomName={setCustomName}
+        customAddress={customAddress}
+        setCustomAddress={setCustomAddress}
         customDesc={customDesc}
         setCustomDesc={setCustomDesc}
         customSize={customSize}
@@ -159,6 +181,7 @@ export function Cart({ userId, onBack, onCheckout, onCartChange }: CartProps) {
         setCustomPhoto={setCustomPhoto}
         customSubmitting={customSubmitting}
         customSuccess={customSuccess}
+        setCustomSuccess={setCustomSuccess}
         handleCustomOrderSubmit={handleCustomOrderSubmit}
         onPhotoChange={onPhotoChange}
         fileInputRef={fileInputRef}
@@ -170,6 +193,12 @@ export function Cart({ userId, onBack, onCheckout, onCartChange }: CartProps) {
 
 function CustomOrderForm({
   lang,
+  userName,
+  firstName,
+  customName,
+  setCustomName,
+  customAddress,
+  setCustomAddress,
   customDesc,
   setCustomDesc,
   customSize,
@@ -178,12 +207,19 @@ function CustomOrderForm({
   setCustomPhoto,
   customSubmitting,
   customSuccess,
+  setCustomSuccess,
   handleCustomOrderSubmit,
   onPhotoChange,
   fileInputRef,
   t,
 }: {
   lang: Lang;
+  userName: string | null;
+  firstName: string;
+  customName: string;
+  setCustomName: (s: string) => void;
+  customAddress: string;
+  setCustomAddress: (s: string) => void;
   customDesc: string;
   setCustomDesc: (s: string) => void;
   customSize: string;
@@ -192,16 +228,55 @@ function CustomOrderForm({
   setCustomPhoto: (s: string | null) => void;
   customSubmitting: boolean;
   customSuccess: boolean;
+  setCustomSuccess: (v: boolean) => void;
   handleCustomOrderSubmit: (e: React.FormEvent) => void;
   onPhotoChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   t: (lang: Lang, key: string) => string;
 }) {
+  if (customSuccess) {
+    return (
+      <div style={styles.customOrderWrap}>
+        <h3 style={styles.customOrderTitle}>{t(lang, "customOrderTitle")}</h3>
+        <p style={styles.customOrderSuccess}>{t(lang, "customOrderSuccess")}</p>
+        <button
+          type="button"
+          onClick={() => setCustomSuccess(false)}
+          style={styles.customOrderNewBtn}
+        >
+          <span style={styles.customOrderNewBtnIcon} aria-hidden>↻</span>
+          {t(lang, "customOrderNew")}
+        </button>
+      </div>
+    );
+  }
   return (
     <div style={styles.customOrderWrap}>
       <h3 style={styles.customOrderTitle}>{t(lang, "customOrderTitle")}</h3>
-      {customSuccess && <p style={styles.customOrderSuccess}>{t(lang, "customOrderSuccess")}</p>}
       <form onSubmit={handleCustomOrderSubmit} style={styles.customOrderForm}>
+        <label style={styles.customOrderLabel}>{t(lang, "customOrderName")}</label>
+        <input
+          type="text"
+          value={customName}
+          onChange={(e) => setCustomName(e.target.value)}
+          placeholder={firstName || t(lang, "customOrderPlaceholderName")}
+          style={styles.customOrderInput}
+        />
+        <label style={styles.customOrderLabel}>{t(lang, "customOrderUsername")}</label>
+        <input
+          type="text"
+          value={userName ?? ""}
+          readOnly
+          style={{ ...styles.customOrderInput, opacity: 0.9 }}
+        />
+        <label style={styles.customOrderLabel}>{t(lang, "customOrderAddress")}</label>
+        <input
+          type="text"
+          value={customAddress}
+          onChange={(e) => setCustomAddress(e.target.value)}
+          placeholder={t(lang, "customOrderPlaceholderAddress")}
+          style={styles.customOrderInput}
+        />
         <label style={styles.customOrderLabel}>{t(lang, "customOrderPhoto")}</label>
         <input
           ref={fileInputRef as React.Ref<HTMLInputElement>}
@@ -316,7 +391,25 @@ const styles: Record<string, React.CSSProperties> = {
   customOrderSuccess: {
     color: "var(--accent)",
     fontSize: 14,
-    marginBottom: 12,
+    marginBottom: 16,
+  },
+  customOrderNewBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    padding: "12px 20px",
+    background: "var(--accent)",
+    border: "none",
+    borderRadius: 10,
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: 600,
+    fontFamily: "inherit",
+    cursor: "pointer",
+  },
+  customOrderNewBtnIcon: {
+    fontSize: 18,
+    lineHeight: 1,
   },
   customOrderForm: { display: "flex", flexDirection: "column", gap: 10 },
   customOrderLabel: {

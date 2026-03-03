@@ -214,6 +214,8 @@ function App() {
         {page === "cart" && (
           <Cart
             userId={userId}
+            userName={userName}
+            firstName={firstName}
             onBack={openCatalog}
             onCheckout={openCheckout}
             onCartChange={refreshCartCount}
@@ -222,6 +224,7 @@ function App() {
         {page === "checkout" && (
           <Checkout
             userId={userId}
+            userName={userName}
             onBack={openCart}
             onDone={openCatalog}
             onOrderSuccess={refreshCartCount}

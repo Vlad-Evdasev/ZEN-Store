@@ -22,7 +22,7 @@ ordersRouter.get("/:userId", (req, res) => {
 
 ordersRouter.post("/:userId", async (req, res) => {
   const { userId } = req.params;
-  const { user_name, user_phone, user_address, items, total } = req.body;
+  const { user_name, user_phone, user_username, user_address, items, total } = req.body;
   if (!items || total == null) return res.status(400).json({ error: "items and total required" });
 
   const itemsStr = typeof items === "string" ? items : JSON.stringify(items);
@@ -30,14 +30,15 @@ ordersRouter.post("/:userId", async (req, res) => {
   const itemsCount = Array.isArray(itemsArr) ? itemsArr.reduce((s: number, i: { quantity?: number }) => s + (i.quantity || 1), 0) : 0;
 
   db.prepare(
-    "INSERT INTO orders (user_id, user_name, user_phone, user_address, items, total, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')"
-  ).run(userId, user_name || null, user_phone || null, user_address || null, itemsStr, total);
+    "INSERT INTO orders (user_id, user_name, user_phone, user_username, user_address, items, total, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')"
+  ).run(userId, user_name || null, user_phone || null, user_username || null, user_address || null, itemsStr, total);
 
   const row = db.prepare("SELECT last_insert_rowid() as id").get() as { id: number };
 
   db.prepare("DELETE FROM cart_items WHERE user_id = ?").run(userId);
 
-  notifyAdminNewOrder(row.id, userId, user_name || "", user_phone || "", total, itemsCount).catch((err) => {
+  const contact = user_username || user_phone || "";
+  notifyAdminNewOrder(row.id, userId, user_name || "", contact, total, itemsCount).catch((err) => {
     console.error("[ZEN] Ошибка отправки уведомления о заказе:", err);
   });
 

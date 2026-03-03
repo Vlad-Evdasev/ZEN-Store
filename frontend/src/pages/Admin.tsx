@@ -11,15 +11,17 @@ import {
   verifyAdmin,
   checkApiHealth,
   getOrdersAdmin,
+  getCustomOrdersAdmin,
   updateOrderStatus,
   type Product,
   type Store,
   type Order,
+  type CustomOrderAdmin,
 } from "../api";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
-type Tab = "products" | "stores" | "orders";
+type Tab = "products" | "stores" | "orders" | "customOrders";
 
 export function Admin() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -123,6 +125,13 @@ export function Admin() {
         >
           Заказы
         </button>
+        <button
+          type="button"
+          onClick={() => { setTab("customOrders"); setEditingStoreId(null); setEditingProductId(null); }}
+          style={{ ...styles.tabBtn, ...(tab === "customOrders" ? styles.tabActive : {}) }}
+        >
+          Заявки не из каталога
+        </button>
       </div>
 
       {tab === "products" && (
@@ -142,6 +151,10 @@ export function Admin() {
 
       {tab === "orders" && (
         <OrdersTab adminSecret={adminSecret} />
+      )}
+
+      {tab === "customOrders" && (
+        <CustomOrdersTab adminSecret={adminSecret} />
       )}
 
       {tab === "stores" && (
@@ -262,6 +275,60 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
               </div>
             );
           })
+        )}
+      </div>
+    </>
+  );
+}
+
+function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
+  const [list, setList] = useState<CustomOrderAdmin[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+
+  const load = () => {
+    setLoading(true);
+    getCustomOrdersAdmin(adminSecret)
+      .then(setList)
+      .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    if (adminSecret) load();
+  }, [adminSecret]);
+
+  if (loading) return <p style={styles.hint}>Загрузка заявок...</p>;
+
+  return (
+    <>
+      {message && <p style={styles.message}>{message}</p>}
+      <div style={styles.list}>
+        <h3 style={styles.subtitle}>Заявки не из каталога ({list.length})</h3>
+        {list.length === 0 ? (
+          <p style={styles.hint}>Нет заявок</p>
+        ) : (
+          list.map((c) => (
+            <div key={c.id} style={styles.orderCard}>
+              <div style={styles.orderHeader}>
+                <span style={styles.orderId}>#{c.id}</span>
+              </div>
+              <p style={styles.orderField}>👤 {c.user_name || "—"}</p>
+              <p style={styles.orderField}>📱 {c.user_username || "—"}</p>
+              {c.user_address && <p style={styles.orderField}>📍 {c.user_address}</p>}
+              <p style={styles.orderField}>📝 {c.description || "—"}</p>
+              {c.size && <p style={styles.orderField}>📐 Размер: {c.size}</p>}
+              {c.image_data && (
+                <p style={styles.orderField}>
+                  <img src={c.image_data} alt="" style={{ maxWidth: 120, maxHeight: 120, objectFit: "cover", borderRadius: 8 }} />
+                </p>
+              )}
+              <p style={styles.orderDate}>{new Date(c.created_at).toLocaleString("ru")}</p>
+              <a href={`tg://user?id=${c.user_id}`} target="_blank" rel="noopener noreferrer" style={styles.contactLink}>
+                Написать в Telegram
+              </a>
+            </div>
+          ))
         )}
       </div>
     </>

@@ -246,7 +246,30 @@ export async function updateSettings(
   if (!res.ok) throw new Error("Failed to update settings");
 }
 
-export async function submitCustomOrder(userId: string, data: { description: string; size: string; image_data?: string | null }) {
+export interface CustomOrderAdmin {
+  id: number;
+  user_id: string;
+  user_name: string | null;
+  user_username: string | null;
+  user_address: string | null;
+  description: string | null;
+  size: string | null;
+  image_data: string | null;
+  created_at: string;
+}
+
+export async function getCustomOrdersAdmin(adminSecret: string): Promise<CustomOrderAdmin[]> {
+  const res = await fetch(`${API_URL}/api/custom-orders/admin/all`, {
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) throw new Error("Failed to fetch custom orders");
+  return res.json();
+}
+
+export async function submitCustomOrder(
+  userId: string,
+  data: { user_name?: string; user_username?: string; user_address?: string; description: string; size: string; image_data?: string | null }
+) {
   const res = await fetch(`${API_URL}/api/custom-orders`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -347,7 +370,7 @@ export async function updateOrderStatus(
 
 export async function createOrder(
   userId: string,
-  data: { user_name?: string; user_phone?: string; user_address?: string; items: CartItem[]; total: number }
+  data: { user_name?: string; user_phone?: string; user_username?: string; user_address?: string; items: CartItem[]; total: number }
 ): Promise<{ ok: boolean; orderId?: number }> {
   const res = await fetch(`${API_URL}/api/orders/${userId}`, {
     method: "POST",

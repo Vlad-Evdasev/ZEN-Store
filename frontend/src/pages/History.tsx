@@ -65,15 +65,19 @@ export function History({ userId, onBack }: HistoryProps) {
       <h2 style={styles.title}>{t(lang, "historyTitle")}</h2>
 
       <div style={styles.filterWrap}>
-        <select
-          value={filter}
-          onChange={(e) => setFilter(e.target.value as HistoryFilter)}
-          style={styles.filterSelect}
-        >
-          <option value="all">{t(lang, "historyFilterAll")}</option>
-          <option value="in_progress">{t(lang, "historyFilterInProgress")}</option>
-          <option value="delivered">{t(lang, "historyFilterDelivered")}</option>
-        </select>
+        {(["all", "in_progress", "delivered"] as const).map((f) => (
+          <button
+            key={f}
+            type="button"
+            onClick={() => setFilter(f)}
+            style={{
+              ...styles.filterPill,
+              ...(filter === f ? styles.filterPillActive : {}),
+            }}
+          >
+            {f === "all" ? t(lang, "historyFilterAll") : f === "in_progress" ? t(lang, "historyFilterInProgress") : t(lang, "historyFilterDelivered")}
+          </button>
+        ))}
       </div>
 
       {filter === "all" && (
@@ -170,17 +174,27 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     marginBottom: 20,
   },
-  filterWrap: { marginBottom: 16 },
-  filterSelect: {
-    width: "100%",
-    padding: "10px 14px",
+  filterWrap: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 20,
+  },
+  filterPill: {
+    flexShrink: 0,
+    padding: "10px 16px",
     background: "var(--surface)",
     border: "1px solid var(--border)",
-    borderRadius: 10,
-    color: "var(--text)",
-    fontSize: 14,
+    borderRadius: 20,
+    color: "var(--muted)",
+    fontSize: 13,
     fontFamily: "inherit",
     cursor: "pointer",
+  },
+  filterPillActive: {
+    background: "var(--accent)",
+    borderColor: "var(--accent)",
+    color: "#fff",
   },
   section: { marginBottom: 28 },
   sectionTitle: {

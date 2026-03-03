@@ -4,30 +4,26 @@ import { useSettings } from "../context/SettingsContext";
 
 interface CheckoutProps {
   userId: string;
+  userName: string | null;
   onBack: () => void;
   onDone: () => void;
   onOrderSuccess?: () => void;
   sellerLink?: string;
 }
 
-export function Checkout({ userId, onBack, onDone, onOrderSuccess, sellerLink }: CheckoutProps) {
+export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, sellerLink }: CheckoutProps) {
   const { formatPrice } = useSettings();
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [username, setUsername] = useState(userName ?? "");
   const [address, setAddress] = useState("");
   const [orderSuccess, setOrderSuccess] = useState(false);
-  const [phoneError, setPhoneError] = useState("");
 
-  const isBelarusPhone = (s: string): boolean => {
-    const digits = s.replace(/\D/g, "");
-    if (digits.length === 12 && digits.startsWith("375")) return /^375(29|33|44|25)\d{7}$/.test(digits);
-    if (digits.length === 11 && digits.startsWith("80")) return /^80(29|33|44|25)\d{7}$/.test(digits);
-    if (digits.length === 9) return /^(29|33|44|25)\d{7}$/.test(digits);
-    return false;
-  };
+  useEffect(() => {
+    setUsername(userName ?? "");
+  }, [userName]);
 
   useEffect(() => {
     getCart(userId).then(setItems).catch(console.error).finally(() => setLoading(false));
@@ -37,20 +33,11 @@ export function Checkout({ userId, onBack, onDone, onOrderSuccess, sellerLink }:
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setPhoneError("");
-    if (!phone.trim()) {
-      setPhoneError("Укажите номер телефона");
-      return;
-    }
-    if (!isBelarusPhone(phone.trim())) {
-      setPhoneError("Только белорусский номер: +375 (29/33/44/25) XXX-XX-XX");
-      return;
-    }
     setSubmitting(true);
     try {
       await createOrder(userId, {
         user_name: name.trim() || undefined,
-        user_phone: phone.trim(),
+        user_username: username.trim() || undefined,
         user_address: address.trim() || undefined,
         items,
         total,
@@ -122,16 +109,14 @@ export function Checkout({ userId, onBack, onDone, onOrderSuccess, sellerLink }:
           />
         </label>
         <label style={styles.label}>
-          Телефон * (только Беларусь)
+          Username
           <input
-            type="tel"
-            value={phone}
-            onChange={(e) => { setPhone(e.target.value); setPhoneError(""); }}
-            placeholder="+375 29 123-45-67"
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="@username"
             style={styles.input}
-            required
           />
-          {phoneError && <span style={styles.error}>{phoneError}</span>}
         </label>
         <label style={styles.label}>
           Адрес доставки

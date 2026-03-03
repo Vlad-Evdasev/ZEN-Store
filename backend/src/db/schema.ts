@@ -49,6 +49,7 @@ db.exec(`
     user_id TEXT NOT NULL,
     user_name TEXT,
     user_phone TEXT,
+    user_username TEXT,
     user_address TEXT,
     items TEXT NOT NULL,
     total INTEGER NOT NULL,
@@ -97,12 +98,31 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS custom_orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id TEXT NOT NULL,
+    user_name TEXT,
+    user_username TEXT,
+    user_address TEXT,
     description TEXT,
     size TEXT,
     image_data TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 `);
+
+// Migrations for existing DBs
+try {
+  db.exec("ALTER TABLE orders ADD COLUMN user_username TEXT");
+} catch {
+  // column already exists
+}
+try {
+  db.exec("ALTER TABLE custom_orders ADD COLUMN user_name TEXT");
+} catch {}
+try {
+  db.exec("ALTER TABLE custom_orders ADD COLUMN user_username TEXT");
+} catch {}
+try {
+  db.exec("ALTER TABLE custom_orders ADD COLUMN user_address TEXT");
+} catch {}
 
 // Add store_id to products if missing (migration)
 try {
@@ -117,6 +137,24 @@ try {
 } catch {
   // column already exists
 }
+
+// Add user_username to orders (instead of/in addition to phone)
+try {
+  db.exec("ALTER TABLE orders ADD COLUMN user_username TEXT");
+} catch {
+  // column already exists
+}
+
+// Add contact fields to custom_orders (same as catalog checkout)
+try {
+  db.exec("ALTER TABLE custom_orders ADD COLUMN user_name TEXT");
+} catch {}
+try {
+  db.exec("ALTER TABLE custom_orders ADD COLUMN user_username TEXT");
+} catch {}
+try {
+  db.exec("ALTER TABLE custom_orders ADD COLUMN user_address TEXT");
+} catch {}
 
 // Seed stores
 const storeCount = db.prepare("SELECT COUNT(*) as count FROM stores").get() as { count: number };
