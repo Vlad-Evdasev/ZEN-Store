@@ -208,7 +208,10 @@ export async function removeFromCart(userId: string, itemId: number) {
 }
 
 export async function getWishlist(userId: string): Promise<number[]> {
-  const res = await fetch(`${API_URL}/api/wishlist/${userId}?_t=${Date.now()}`, { cache: "no-store" });
+  const res = await fetch(`${API_URL}/api/wishlist/${userId}?_t=${Date.now()}`, {
+    cache: "no-store",
+    headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+  });
   if (!res.ok) return [];
   return res.json();
 }

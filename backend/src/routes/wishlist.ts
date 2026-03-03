@@ -4,6 +4,7 @@ import { db } from "../db/schema.js";
 export const wishlistRouter = Router();
 
 wishlistRouter.get("/:userId", (req, res) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
   const { userId } = req.params;
   const rows = db.prepare("SELECT product_id FROM wishlist WHERE user_id = ?").all(userId) as { product_id: number }[];
   res.json(rows.map((r) => r.product_id));

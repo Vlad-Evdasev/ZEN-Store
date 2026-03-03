@@ -31,12 +31,15 @@ export function useWishlist(userId: string) {
       }
       return;
     }
+    setIds(new Set());
     fetchWishlist();
     const onVisible = () => {
-      if (document.visibilityState === "visible") fetchWishlist();
+      if (document.visibilityState === "visible") {
+        setTimeout(() => fetchWishlist(), 50);
+      }
     };
     const onPageShow = (e: PageTransitionEvent) => {
-      if (e.persisted) fetchWishlist();
+      if (e.persisted) setTimeout(() => fetchWishlist(), 50);
     };
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("pageshow", onPageShow);

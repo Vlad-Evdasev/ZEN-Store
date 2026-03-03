@@ -23,6 +23,7 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
   const marqueePausedRef = useRef(false);
   const pauseTimeoutRef = useRef<number | null>(null);
   const lastAutoScrollRef = useRef(0);
+  const isSeamJumpRef = useRef(false);
 
   const displayStores: DisplayStore[] =
     stores.length > 0
@@ -58,15 +59,24 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
     const handleScroll = () => {
       const half = el.scrollWidth / 2;
       if (half <= 0) return;
+      const atSeam = el.scrollLeft < 5 || el.scrollLeft > half - 5;
+      if (atSeam) {
+        isSeamJumpRef.current = true;
+        if (el.scrollLeft < 5) {
+          lastAutoScrollRef.current = Date.now();
+          el.scrollLeft = half - 5;
+        } else if (el.scrollLeft > half - 5) {
+          lastAutoScrollRef.current = Date.now();
+          el.scrollLeft = 5;
+        }
+        return;
+      }
+      if (isSeamJumpRef.current) {
+        isSeamJumpRef.current = false;
+        return;
+      }
       if (Date.now() - lastAutoScrollRef.current < 80) return;
       pauseAndResume();
-      if (el.scrollLeft < 5) {
-        lastAutoScrollRef.current = Date.now();
-        el.scrollLeft = half - 5;
-      } else if (el.scrollLeft > half - 5) {
-        lastAutoScrollRef.current = Date.now();
-        el.scrollLeft = 5;
-      }
     };
     let rafId = 0;
     const step = () => {
@@ -81,7 +91,10 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
       }
       lastAutoScrollRef.current = Date.now();
       el.scrollLeft += scrollStep;
-      if (el.scrollLeft >= half - 1) el.scrollLeft = 0;
+      if (el.scrollLeft >= half - 1) {
+        isSeamJumpRef.current = true;
+        el.scrollLeft = 0;
+      }
       rafId = requestAnimationFrame(step);
     };
     rafId = requestAnimationFrame(step);
