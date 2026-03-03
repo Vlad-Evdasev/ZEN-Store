@@ -196,7 +196,6 @@ const styles: Record<string, React.CSSProperties> = {
   },
   filterSelect: {
     width: "100%",
-    maxWidth: 280,
     padding: "12px 40px 12px 14px",
     background: "var(--surface)",
     border: "1px solid var(--border)",
