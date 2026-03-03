@@ -55,7 +55,11 @@ export function ProductPage({
   useEffect(() => {
     setImageIndex(0);
   }, [product?.id]);
-  
+
+  useEffect(() => {
+    if (product?.id) window.scrollTo(0, 0);
+  }, [product?.id]);
+
   useEffect(() => {
     if (product && sizes.length) setSize(sizes[0]);
   }, [product?.id]);

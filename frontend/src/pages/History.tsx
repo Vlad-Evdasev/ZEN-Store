@@ -63,19 +63,20 @@ export function History({ userId, onBack, onProductClick }: HistoryProps) {
       <button onClick={onBack} style={styles.back}>
         ← {t(lang, "back")}
       </button>
-      <h2 style={styles.title}>{t(lang, "historyTitle")}</h2>
-
-      <div style={styles.filterWrap}>
-        <select
-          value={filter}
-          onChange={(e) => setFilter(e.target.value as HistoryFilter)}
-          style={styles.filterSelect}
-          aria-label={t(lang, "historyTitle")}
-        >
-          <option value="all">{t(lang, "historyFilterAll")}</option>
-          <option value="in_progress">{t(lang, "historyFilterInProgress")}</option>
-          <option value="delivered">{t(lang, "historyFilterDelivered")}</option>
-        </select>
+      <div style={styles.titleFilterBlock}>
+        <h2 style={styles.title}>{t(lang, "historyTitle")}</h2>
+        <div style={styles.filterWrap}>
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value as HistoryFilter)}
+            style={styles.filterSelect}
+            aria-label={t(lang, "historyTitle")}
+          >
+            <option value="all">{t(lang, "historyFilterAll")}</option>
+            <option value="in_progress">{t(lang, "historyFilterInProgress")}</option>
+            <option value="delivered">{t(lang, "historyFilterDelivered")}</option>
+          </select>
+        </div>
       </div>
 
       {filter === "all" && (
@@ -185,14 +186,18 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     marginBottom: 20,
   },
+  titleFilterBlock: {
+    display: "inline-block",
+    marginBottom: 20,
+  },
   title: {
     fontFamily: "Unbounded, sans-serif",
     fontSize: 22,
     fontWeight: 600,
-    marginBottom: 20,
+    marginBottom: 12,
   },
   filterWrap: {
-    marginBottom: 20,
+    marginBottom: 0,
   },
   filterSelect: {
     width: "100%",
