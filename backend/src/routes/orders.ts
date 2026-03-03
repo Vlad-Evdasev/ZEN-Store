@@ -52,8 +52,8 @@ ordersRouter.patch("/order/:orderId/status", (req, res) => {
   }
   const orderId = parseInt(req.params.orderId, 10);
   const { status } = req.body;
-  if (!status || !["pending", "completed"].includes(status)) {
-    return res.status(400).json({ error: "status must be pending or completed" });
+  if (!status || !["pending", "in_transit", "delivered", "completed"].includes(status)) {
+    return res.status(400).json({ error: "status must be pending, in_transit, delivered or completed" });
   }
   const result = db.prepare("UPDATE orders SET status = ? WHERE id = ?").run(status, orderId);
   if (result.changes === 0) return res.status(404).json({ error: "Order not found" });

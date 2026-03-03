@@ -15,6 +15,7 @@ import { StoreCatalog } from "./pages/StoreCatalog";
 import { Settings } from "./pages/Settings";
 import { History } from "./pages/History";
 import { Footer } from "./components/Footer";
+import { SettingsSync } from "./components/SettingsSync";
 import { useSettings } from "./context/SettingsContext";
 import { t } from "./i18n";
 
@@ -117,6 +118,7 @@ function App() {
   return (
     <div style={styles.appWrapper}>
     <div style={styles.app} className="zen-app">
+      <SettingsSync />
       <header style={styles.header}>
         <div style={styles.headerLeft}>
           <button

@@ -227,6 +227,34 @@ export async function removeFromWishlist(userId: string, productId: number) {
   if (!res.ok) throw new Error("Failed to remove from wishlist");
 }
 
+export async function getSettings(userId: string): Promise<{ lang: string; theme: string; currency: string } | null> {
+  const res = await fetch(`${API_URL}/api/settings/${userId}`);
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data;
+}
+
+export async function updateSettings(
+  userId: string,
+  data: { lang?: string; theme?: string; currency?: string }
+) {
+  const res = await fetch(`${API_URL}/api/settings/${userId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to update settings");
+}
+
+export async function submitCustomOrder(userId: string, data: { description: string; size: string; image_data?: string | null }) {
+  const res = await fetch(`${API_URL}/api/custom-orders`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId, ...data }),
+  });
+  if (!res.ok) throw new Error("Failed to submit custom order");
+}
+
 export interface Review {
   id: number;
   user_id: string;
@@ -303,7 +331,11 @@ export async function getOrdersAdmin(adminSecret: string): Promise<Order[]> {
   return res.json();
 }
 
-export async function updateOrderStatus(orderId: number, status: "pending" | "completed", adminSecret: string) {
+export async function updateOrderStatus(
+  orderId: number,
+  status: "pending" | "in_transit" | "delivered" | "completed",
+  adminSecret: string
+) {
   const res = await fetch(`${API_URL}/api/orders/order/${orderId}/status`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },

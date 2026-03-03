@@ -194,7 +194,7 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
     if (adminSecret) load();
   }, [adminSecret]);
 
-  const handleStatus = async (id: number, status: "pending" | "completed") => {
+  const handleStatus = async (id: number, status: "pending" | "in_transit" | "delivered" | "completed") => {
     setUpdatingId(id);
     setMessage("");
     try {
@@ -207,6 +207,9 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
       setUpdatingId(null);
     }
   };
+
+  const statusLabel = (s: string) =>
+    ({ pending: "Ожидает", in_transit: "В пути", delivered: "Доставлено", completed: "Выполнен" }[s] || s);
 
   if (loading) return <p style={styles.hint}>Загрузка заказов...</p>;
 
@@ -230,30 +233,31 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
               <div key={o.id} style={styles.orderCard}>
                 <div style={styles.orderHeader}>
                   <span style={styles.orderId}>#{o.id}</span>
-                  <span style={{ ...styles.orderStatus, color: o.status === "completed" ? "var(--accent)" : "var(--muted)" }}>
-                    {o.status === "completed" ? "Выполнен" : "Ожидает"}
+                  <span style={{ ...styles.orderStatus, color: o.status === "completed" || o.status === "delivered" ? "var(--accent)" : "var(--muted)" }}>
+                    {statusLabel(o.status)}
                   </span>
                 </div>
                 <p style={styles.orderField}>👤 {o.user_name || "—"}</p>
                 <p style={styles.orderField}>📞 {o.user_phone || "—"}</p>
                 {o.user_address && <p style={styles.orderField}>📍 {o.user_address}</p>}
                 <p style={styles.orderField}>📦 {itemsStr}</p>
-                <p style={styles.orderField}>💰 {o.total} ₽</p>
+                <p style={styles.orderField}>💰 {o.total} $</p>
                 <p style={styles.orderDate}>{new Date(o.created_at).toLocaleString("ru")}</p>
                 <div style={styles.orderActions}>
                   <a href={`tg://user?id=${o.user_id}`} target="_blank" rel="noopener noreferrer" style={styles.contactLink} title="Открыть чат с клиентом">
                     Написать в Telegram
                   </a>
-                  {o.status === "pending" && (
-                    <button
-                      type="button"
-                      disabled={updatingId === o.id}
-                      onClick={() => handleStatus(o.id, "completed")}
-                      style={styles.smallBtn}
-                    >
-                      {updatingId === o.id ? "..." : "Подтвердить"}
-                    </button>
-                  )}
+                  <select
+                    value={o.status}
+                    onChange={(e) => handleStatus(o.id, e.target.value as "pending" | "in_transit" | "delivered" | "completed")}
+                    disabled={updatingId === o.id}
+                    style={styles.statusSelect}
+                  >
+                    <option value="pending">Ожидает</option>
+                    <option value="in_transit">В пути</option>
+                    <option value="delivered">Доставлено</option>
+                    <option value="completed">Выполнен</option>
+                  </select>
                 </div>
               </div>
             );
@@ -789,4 +793,13 @@ const styles: Record<string, React.CSSProperties> = {
   orderDate: { fontSize: 12, color: "var(--muted)", marginTop: 8, marginBottom: 12 },
   orderActions: { display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" },
   contactLink: { color: "var(--accent)", fontSize: 14, textDecoration: "none" },
+  statusSelect: {
+    padding: "6px 10px",
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: 6,
+    fontSize: 13,
+    fontFamily: "inherit",
+    cursor: "pointer",
+  },
 };
