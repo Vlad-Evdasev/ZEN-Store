@@ -82,7 +82,7 @@ button:active {
   outline: none;
 }
 
-/* Кнопки категорий (виды товара): убрать белые границы при focus в тёмной теме */
+/* Кнопки категорий (виды товара): без белых границ в тёмной теме */
 .catalog-tab-btn,
 .catalog-tab-btn:focus,
 .catalog-tab-btn:focus-visible,

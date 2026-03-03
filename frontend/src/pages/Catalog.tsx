@@ -333,7 +333,7 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0,
     padding: "10px 16px",
     background: "var(--surface)",
-    border: "1px solid var(--border)",
+    border: "1px solid var(--surface)",
     borderRadius: 20,
     color: "var(--muted)",
     fontSize: 13,
@@ -344,7 +344,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   tabActive: {
     background: "var(--accent)",
-    borderColor: "var(--accent)",
+    border: "1px solid var(--accent)",
     color: "#fff",
     outline: "none",
     boxShadow: "none",
