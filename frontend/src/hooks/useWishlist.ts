@@ -1,16 +1,56 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { getWishlist, addToWishlist, removeFromWishlist } from "../api";
 
 const STORAGE_KEY = "zen-wishlist";
+const REMOVED_KEY = "zen-wishlist-removed";
+const REMOVED_TTL_MS = 15 * 60 * 1000;
+
+function loadRecentlyRemoved(): Set<number> {
+  try {
+    const raw = localStorage.getItem(REMOVED_KEY);
+    if (!raw) return new Set();
+    const data = JSON.parse(raw) as { id: number; ts: number }[];
+    const now = Date.now();
+    const valid = (data || []).filter((x) => now - x.ts < REMOVED_TTL_MS).map((x) => x.id);
+    return new Set(valid);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveRecentlyRemoved(productId: number) {
+  try {
+    const raw = localStorage.getItem(REMOVED_KEY);
+    const data: { id: number; ts: number }[] = raw ? JSON.parse(raw) : [];
+    const now = Date.now();
+    const filtered = data.filter((x) => now - x.ts < REMOVED_TTL_MS && x.id !== productId);
+    filtered.push({ id: productId, ts: now });
+    localStorage.setItem(REMOVED_KEY, JSON.stringify(filtered.slice(-50)));
+  } catch {}
+}
+
+function removeFromRecentlyRemoved(productId: number) {
+  try {
+    const raw = localStorage.getItem(REMOVED_KEY);
+    if (!raw) return;
+    const data: { id: number; ts: number }[] = JSON.parse(raw);
+    const now = Date.now();
+    const filtered = data.filter((x) => x.id !== productId && now - x.ts < REMOVED_TTL_MS);
+    localStorage.setItem(REMOVED_KEY, JSON.stringify(filtered));
+  } catch {}
+}
 
 export function useWishlist(userId: string) {
   const [ids, setIds] = useState<Set<number>>(new Set());
+  const removedRef = useRef<Set<number>>(loadRecentlyRemoved());
 
   const fetchWishlist = useCallback(() => {
     if (!userId) return;
     getWishlist(userId)
       .then((arr) => {
-        const next = new Set(arr);
+        removedRef.current = loadRecentlyRemoved();
+        const filtered = arr.filter((id) => !removedRef.current.has(id));
+        const next = new Set(filtered);
         setIds(next);
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
@@ -62,8 +102,13 @@ export function useWishlist(userId: string) {
           return nextSet;
         });
         try {
-          if (had) await removeFromWishlist(userId, productId);
-          else await addToWishlist(userId, productId);
+          if (had) {
+            await removeFromWishlist(userId, productId);
+            saveRecentlyRemoved(productId);
+          } else {
+            await addToWishlist(userId, productId);
+            removeFromRecentlyRemoved(productId);
+          }
           try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify([...nextSet]));
           } catch {}

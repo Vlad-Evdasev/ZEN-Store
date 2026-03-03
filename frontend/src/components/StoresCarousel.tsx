@@ -20,10 +20,7 @@ interface StoresCarouselProps {
 
 export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const marqueePausedRef = useRef(false);
-  const pauseTimeoutRef = useRef<number | null>(null);
   const lastAutoScrollRef = useRef(0);
-  const isSeamJumpRef = useRef(false);
 
   const displayStores: DisplayStore[] =
     stores.length > 0
@@ -43,15 +40,6 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
           category: s.category,
         }));
 
-  const pauseAndResume = () => {
-    marqueePausedRef.current = true;
-    if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
-    pauseTimeoutRef.current = window.setTimeout(() => {
-      marqueePausedRef.current = false;
-      pauseTimeoutRef.current = null;
-    }, 1000);
-  };
-
   useEffect(() => {
     const el = scrollRef.current;
     if (!el || displayStores.length === 0) return;
@@ -59,31 +47,16 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
     const handleScroll = () => {
       const half = el.scrollWidth / 2;
       if (half <= 0) return;
-      const atSeam = el.scrollLeft < 5 || el.scrollLeft > half - 5;
-      if (atSeam) {
-        isSeamJumpRef.current = true;
-        if (el.scrollLeft < 5) {
-          lastAutoScrollRef.current = Date.now();
-          el.scrollLeft = half - 5;
-        } else if (el.scrollLeft > half - 5) {
-          lastAutoScrollRef.current = Date.now();
-          el.scrollLeft = 5;
-        }
-        return;
+      if (el.scrollLeft < 5) {
+        lastAutoScrollRef.current = Date.now();
+        el.scrollLeft = half - 5;
+      } else if (el.scrollLeft > half - 5) {
+        lastAutoScrollRef.current = Date.now();
+        el.scrollLeft = 5;
       }
-      if (isSeamJumpRef.current) {
-        isSeamJumpRef.current = false;
-        return;
-      }
-      if (Date.now() - lastAutoScrollRef.current < 80) return;
-      pauseAndResume();
     };
     let rafId = 0;
     const step = () => {
-      if (marqueePausedRef.current) {
-        rafId = requestAnimationFrame(step);
-        return;
-      }
       const half = el.scrollWidth / 2;
       if (half <= 0) {
         rafId = requestAnimationFrame(step);
@@ -91,10 +64,7 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
       }
       lastAutoScrollRef.current = Date.now();
       el.scrollLeft += scrollStep;
-      if (el.scrollLeft >= half - 1) {
-        isSeamJumpRef.current = true;
-        el.scrollLeft = 0;
-      }
+      if (el.scrollLeft >= half - 1) el.scrollLeft = 0;
       rafId = requestAnimationFrame(step);
     };
     rafId = requestAnimationFrame(step);
@@ -102,7 +72,6 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
     return () => {
       el.removeEventListener("scroll", handleScroll);
       cancelAnimationFrame(rafId);
-      if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
     };
   }, [displayStores.length]);
 
@@ -122,11 +91,6 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
         ref={scrollRef}
         style={styles.scrollArea}
         className="hide-scrollbar"
-        onMouseDown={pauseAndResume}
-        onMouseUp={pauseAndResume}
-        onMouseLeave={pauseAndResume}
-        onTouchStart={pauseAndResume}
-        onTouchEnd={pauseAndResume}
       >
         {[...displayStores, ...displayStores].map((s, i) => (
           <StoreCard
