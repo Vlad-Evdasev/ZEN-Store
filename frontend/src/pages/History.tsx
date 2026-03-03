@@ -52,7 +52,7 @@ export function History({ userId, onBack, onProductClick }: HistoryProps) {
   if (loading) {
     return (
       <div style={styles.wrap}>
-        <button onClick={onBack} style={styles.back}>← {t(lang, "back")}</button>
+        <button onClick={onBack} style={styles.back} type="button">← {t(lang, "back")}</button>
         <p style={styles.loading}>{t(lang, "loading")}</p>
       </div>
     );
@@ -60,11 +60,11 @@ export function History({ userId, onBack, onProductClick }: HistoryProps) {
 
   return (
     <div style={styles.wrap}>
-      <button onClick={onBack} style={styles.back}>
-        ← {t(lang, "back")}
-      </button>
-      <div style={styles.titleFilterBlock}>
-        <h2 style={styles.title}>{t(lang, "historyTitle")}</h2>
+      <header style={styles.header}>
+        <button onClick={onBack} style={styles.back} type="button">
+          ← {t(lang, "back")}
+        </button>
+        <h1 style={styles.title}>{t(lang, "historyTitle")}</h1>
         <div style={styles.filterWrap}>
           <select
             value={filter}
@@ -77,7 +77,7 @@ export function History({ userId, onBack, onProductClick }: HistoryProps) {
             <option value="delivered">{t(lang, "historyFilterDelivered")}</option>
           </select>
         </div>
-      </div>
+      </header>
 
       {filter === "all" && (
         <>
@@ -108,7 +108,9 @@ export function History({ userId, onBack, onProductClick }: HistoryProps) {
       )}
 
       {filtered.length === 0 && (
-        <p style={styles.empty}>{t(lang, "historyEmpty")}</p>
+        <div style={styles.emptyWrap}>
+          <p style={styles.empty}>{t(lang, "historyEmpty")}</p>
+        </div>
       )}
     </div>
   );
@@ -176,32 +178,34 @@ function OrderCard({
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  wrap: { maxWidth: 420, margin: "0 auto", paddingBottom: 24 },
+  wrap: { maxWidth: 420, margin: "0 auto", paddingBottom: 32 },
+  header: {
+    marginBottom: 24,
+  },
   back: {
+    display: "block",
     background: "none",
     border: "none",
     color: "var(--muted)",
     fontFamily: "inherit",
     fontSize: 14,
     cursor: "pointer",
-    marginBottom: 20,
-  },
-  titleFilterBlock: {
-    display: "inline-block",
-    marginBottom: 20,
+    marginBottom: 16,
+    padding: "4px 0",
   },
   title: {
     fontFamily: "Unbounded, sans-serif",
     fontSize: 22,
     fontWeight: 600,
-    marginBottom: 12,
+    margin: "0 0 16px 0",
+    lineHeight: 1.25,
   },
   filterWrap: {
-    marginBottom: 0,
+    width: "100%",
   },
   filterSelect: {
     width: "100%",
-    padding: "12px 40px 12px 14px",
+    padding: "14px 44px 14px 16px",
     background: "var(--surface)",
     border: "1px solid var(--border)",
     borderRadius: 12,
@@ -212,7 +216,12 @@ const styles: Record<string, React.CSSProperties> = {
     appearance: "none",
     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
     backgroundRepeat: "no-repeat",
-    backgroundPosition: "right 12px center",
+    backgroundPosition: "right 14px center",
+    boxSizing: "border-box",
+  },
+  emptyWrap: {
+    padding: "48px 24px",
+    textAlign: "center",
   },
   section: { marginBottom: 28 },
   sectionTitle: {
@@ -255,6 +264,6 @@ const styles: Record<string, React.CSSProperties> = {
   item: { fontSize: 14, marginBottom: 4 },
   total: { fontWeight: 600, color: "var(--accent)", marginBottom: 4 },
   status: { fontSize: 12, color: "var(--muted)" },
-  empty: { textAlign: "center", color: "var(--muted)", padding: 48 },
+  empty: { margin: 0, color: "var(--muted)", fontSize: 15, lineHeight: 1.5 },
   loading: { textAlign: "center", color: "var(--muted)", padding: 48 },
 };
