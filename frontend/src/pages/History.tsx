@@ -7,6 +7,7 @@ import { t } from "../i18n";
 interface HistoryProps {
   userId: string;
   onBack: () => void;
+  onProductClick?: (productId: number) => void;
 }
 
 function formatDate(s: string) {
@@ -25,7 +26,7 @@ function formatDate(s: string) {
 
 type HistoryFilter = "all" | "in_progress" | "delivered";
 
-export function History({ userId, onBack }: HistoryProps) {
+export function History({ userId, onBack, onProductClick }: HistoryProps) {
   const { formatPrice, settings } = useSettings();
   const lang = settings.lang;
   const [orders, setOrders] = useState<Order[]>([]);
@@ -65,19 +66,16 @@ export function History({ userId, onBack }: HistoryProps) {
       <h2 style={styles.title}>{t(lang, "historyTitle")}</h2>
 
       <div style={styles.filterWrap}>
-        {(["all", "in_progress", "delivered"] as const).map((f) => (
-          <button
-            key={f}
-            type="button"
-            onClick={() => setFilter(f)}
-            style={{
-              ...styles.filterPill,
-              ...(filter === f ? styles.filterPillActive : {}),
-            }}
-          >
-            {f === "all" ? t(lang, "historyFilterAll") : f === "in_progress" ? t(lang, "historyFilterInProgress") : t(lang, "historyFilterDelivered")}
-          </button>
-        ))}
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value as HistoryFilter)}
+          style={styles.filterSelect}
+          aria-label={t(lang, "historyTitle")}
+        >
+          <option value="all">{t(lang, "historyFilterAll")}</option>
+          <option value="in_progress">{t(lang, "historyFilterInProgress")}</option>
+          <option value="delivered">{t(lang, "historyFilterDelivered")}</option>
+        </select>
       </div>
 
       {filter === "all" && (
@@ -86,7 +84,7 @@ export function History({ userId, onBack }: HistoryProps) {
             <section style={styles.section}>
               <h3 style={styles.sectionTitle}>{t(lang, "historyOrdered")} ({inProgressOrders.length})</h3>
               {inProgressOrders.map((o) => (
-                <OrderCard key={o.id} order={o} formatPrice={formatPrice} lang={lang} t={t} />
+                <OrderCard key={o.id} order={o} formatPrice={formatPrice} lang={lang} t={t} onProductClick={onProductClick} />
               ))}
             </section>
           )}
@@ -94,7 +92,7 @@ export function History({ userId, onBack }: HistoryProps) {
             <section style={styles.section}>
               <h3 style={styles.sectionTitle}>{t(lang, "historyBought")} ({deliveredOrders.length})</h3>
               {deliveredOrders.map((o) => (
-                <OrderCard key={o.id} order={o} formatPrice={formatPrice} lang={lang} t={t} />
+                <OrderCard key={o.id} order={o} formatPrice={formatPrice} lang={lang} t={t} onProductClick={onProductClick} />
               ))}
             </section>
           )}
@@ -103,7 +101,7 @@ export function History({ userId, onBack }: HistoryProps) {
       {filter !== "all" && (
         <section style={styles.section}>
           {filtered.map((o) => (
-            <OrderCard key={o.id} order={o} formatPrice={formatPrice} lang={lang} t={t} />
+            <OrderCard key={o.id} order={o} formatPrice={formatPrice} lang={lang} t={t} onProductClick={onProductClick} />
           ))}
         </section>
       )}
@@ -127,32 +125,51 @@ function OrderCard({
   formatPrice,
   lang,
   t,
+  onProductClick,
 }: {
   order: Order;
   formatPrice: (n: number) => string;
   lang: Lang;
   t: (l: Lang, k: string) => string;
+  onProductClick?: (productId: number) => void;
 }) {
-  let items: { name?: string; price?: number; quantity?: number }[] = [];
+  let items: { product_id?: number; image_url?: string; name?: string; price?: number; quantity?: number }[] = [];
   try {
     items = JSON.parse(order.items);
   } catch {}
+  const firstItem = items[0];
+  const productId = firstItem?.product_id;
+  const imageUrl = firstItem?.image_url;
+  const isClickable = onProductClick && productId != null;
 
   return (
-    <div style={styles.card}>
+    <div
+      style={{ ...styles.card, ...(isClickable ? styles.cardClickable : {}) }}
+      onClick={isClickable ? () => onProductClick(productId) : undefined}
+      role={isClickable ? "button" : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      onKeyDown={isClickable ? (e) => { if (e.key === "Enter" || e.key === " ") onProductClick!(productId); } : undefined}
+    >
       <div style={styles.cardHead}>
         <span style={styles.orderId}>#{order.id}</span>
         <span style={styles.date}>{formatDate(order.created_at)}</span>
       </div>
-      <div style={styles.items}>
-        {items.map((i, idx) => (
-          <p key={idx} style={styles.item}>
-            {i.name || "Товар"} × {i.quantity || 1} — {formatPrice((i.price || 0) * (i.quantity || 1))}
-          </p>
-        ))}
+      <div style={styles.cardBody}>
+        {imageUrl && (
+          <img src={imageUrl} alt="" style={styles.cardThumb} />
+        )}
+        <div style={styles.cardContent}>
+          <div style={styles.items}>
+            {items.map((i, idx) => (
+              <p key={idx} style={styles.item}>
+                {i.name || "Товар"} × {i.quantity || 1} — {formatPrice((i.price || 0) * (i.quantity || 1))}
+              </p>
+            ))}
+          </div>
+          <p style={styles.total}>{t(lang, "total")}: {formatPrice(order.total)}</p>
+          <p style={styles.status}>{orderStatusLabel(order.status, lang, t)}</p>
+        </div>
       </div>
-      <p style={styles.total}>{t(lang, "total")}: {formatPrice(order.total)}</p>
-      <p style={styles.status}>{orderStatusLabel(order.status, lang, t)}</p>
     </div>
   );
 }
@@ -175,26 +192,23 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 20,
   },
   filterWrap: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 8,
     marginBottom: 20,
   },
-  filterPill: {
-    flexShrink: 0,
-    padding: "10px 16px",
+  filterSelect: {
+    width: "100%",
+    maxWidth: 280,
+    padding: "12px 40px 12px 14px",
     background: "var(--surface)",
     border: "1px solid var(--border)",
-    borderRadius: 20,
-    color: "var(--muted)",
-    fontSize: 13,
+    borderRadius: 12,
+    color: "var(--text)",
+    fontSize: 15,
     fontFamily: "inherit",
     cursor: "pointer",
-  },
-  filterPillActive: {
-    background: "var(--accent)",
-    borderColor: "var(--accent)",
-    color: "#fff",
+    appearance: "none",
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: "right 12px center",
   },
   section: { marginBottom: 28 },
   sectionTitle: {
@@ -210,6 +224,9 @@ const styles: Record<string, React.CSSProperties> = {
     border: "1px solid var(--border)",
     marginBottom: 12,
   },
+  cardClickable: {
+    cursor: "pointer",
+  },
   cardHead: {
     display: "flex",
     justifyContent: "space-between",
@@ -217,6 +234,19 @@ const styles: Record<string, React.CSSProperties> = {
   },
   orderId: { fontWeight: 600 },
   date: { fontSize: 13, color: "var(--muted)" },
+  cardBody: {
+    display: "flex",
+    gap: 12,
+    alignItems: "flex-start",
+  },
+  cardThumb: {
+    width: 72,
+    height: 72,
+    borderRadius: 8,
+    objectFit: "cover",
+    flexShrink: 0,
+  },
+  cardContent: { flex: 1, minWidth: 0 },
   items: { marginBottom: 8 },
   item: { fontSize: 14, marginBottom: 4 },
   total: { fontWeight: 600, color: "var(--accent)", marginBottom: 4 },

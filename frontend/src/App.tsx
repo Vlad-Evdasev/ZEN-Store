@@ -248,7 +248,7 @@ function App() {
           />
         )}
         {page === "settings" && <Settings onBack={openCatalog} />}
-        {page === "history" && <History userId={userId} onBack={openCatalog} />}
+        {page === "history" && <History userId={userId} onBack={openCatalog} onProductClick={openProduct} />}
         {page === "favorites" && (
           <Favorites
             products={products}

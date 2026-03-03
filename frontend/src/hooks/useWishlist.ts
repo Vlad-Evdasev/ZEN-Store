@@ -19,7 +19,13 @@ export function useWishlist(userId: string) {
       return;
     }
     getWishlist(userId)
-      .then((arr) => setIds(new Set(arr)))
+      .then((arr) => {
+        const next = new Set(arr);
+        setIds(next);
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
+        } catch {}
+      })
       .catch(() => {});
   }, [userId]);
 
@@ -27,16 +33,20 @@ export function useWishlist(userId: string) {
     async (productId: number) => {
       if (userId) {
         let had = false;
+        let nextSet: Set<number> = new Set();
         setIds((prev) => {
           had = prev.has(productId);
-          const next = new Set(prev);
-          if (had) next.delete(productId);
-          else next.add(productId);
-          return next;
+          nextSet = new Set(prev);
+          if (had) nextSet.delete(productId);
+          else nextSet.add(productId);
+          return nextSet;
         });
         try {
           if (had) await removeFromWishlist(userId, productId);
           else await addToWishlist(userId, productId);
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify([...nextSet]));
+          } catch {}
         } catch {
           setIds((prev) => {
             const next = new Set(prev);
