@@ -223,7 +223,7 @@ export async function addToWishlist(userId: string, productId: number) {
 }
 
 export async function removeFromWishlist(userId: string, productId: number) {
-  const res = await fetch(`${API_URL}/api/wishlist/${userId}/${productId}`, { method: "DELETE" });
+  const res = await fetch(`${API_URL}/api/wishlist/${userId}/${productId}`, { method: "DELETE", cache: "no-store" });
   if (!res.ok) throw new Error("Failed to remove from wishlist");
 }
 

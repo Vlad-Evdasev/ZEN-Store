@@ -23,6 +23,8 @@ wishlistRouter.post("/:userId", (req, res) => {
 
 wishlistRouter.delete("/:userId/:productId", (req, res) => {
   const { userId, productId } = req.params;
-  db.prepare("DELETE FROM wishlist WHERE user_id = ? AND product_id = ?").run(userId, productId);
+  const pid = parseInt(productId, 10);
+  if (Number.isNaN(pid)) return res.status(400).json({ error: "Invalid product id" });
+  db.prepare("DELETE FROM wishlist WHERE user_id = ? AND product_id = ?").run(userId, pid);
   res.json({ ok: true });
 });

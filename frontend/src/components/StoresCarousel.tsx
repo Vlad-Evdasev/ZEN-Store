@@ -119,38 +119,6 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
           />
         ))}
       </div>
-      <button
-        type="button"
-        onClick={() => {
-          const el = scrollRef.current;
-          if (el) {
-            const half = el.scrollWidth / 2;
-            if (el.scrollLeft <= 20) el.scrollLeft = half - 20;
-            else el.scrollBy({ left: -200, behavior: "smooth" });
-          }
-          pauseAndResume();
-        }}
-        style={styles.scrollBtnLeft}
-        aria-label="Влево"
-      >
-        ‹
-      </button>
-      <button
-        type="button"
-        onClick={() => {
-          const el = scrollRef.current;
-          if (el) {
-            const half = el.scrollWidth / 2;
-            if (el.scrollLeft >= half - 20) el.scrollLeft = 0;
-            else el.scrollBy({ left: 200, behavior: "smooth" });
-          }
-          pauseAndResume();
-        }}
-        style={styles.scrollBtnRight}
-        aria-label="Вправо"
-      >
-        ›
-      </button>
     </div>
   );
 }
@@ -172,37 +140,5 @@ const styles: Record<string, React.CSSProperties> = {
     paddingLeft: 12,
     paddingRight: 12,
     WebkitOverflowScrolling: "touch",
-  },
-  scrollBtnLeft: {
-    position: "absolute",
-    left: 8,
-    top: "50%",
-    transform: "translateY(-50%)",
-    width: 36,
-    height: 36,
-    borderRadius: "50%",
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    color: "var(--text)",
-    fontSize: 24,
-    cursor: "pointer",
-    zIndex: 2,
-    boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
-  },
-  scrollBtnRight: {
-    position: "absolute",
-    right: 8,
-    top: "50%",
-    transform: "translateY(-50%)",
-    width: 36,
-    height: 36,
-    borderRadius: "50%",
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    color: "var(--text)",
-    fontSize: 24,
-    cursor: "pointer",
-    zIndex: 2,
-    boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
   },
 };
