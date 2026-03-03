@@ -55,7 +55,7 @@ export function Cart({ userId, userName, firstName, onBack, onCheckout, onCartCh
 
   const handleCustomOrderSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customDesc.trim()) return;
+    if (!customName.trim() || !customAddress.trim() || !customDesc.trim()) return;
     setCustomSubmitting(true);
     setCustomSuccess(false);
     try {
@@ -254,13 +254,14 @@ function CustomOrderForm({
     <div style={styles.customOrderWrap}>
       <h3 style={styles.customOrderTitle}>{t(lang, "customOrderTitle")}</h3>
       <form onSubmit={handleCustomOrderSubmit} style={styles.customOrderForm}>
-        <label style={styles.customOrderLabel}>{t(lang, "customOrderName")}</label>
+        <label style={styles.customOrderLabel}>{t(lang, "customOrderName")} *</label>
         <input
           type="text"
           value={customName}
           onChange={(e) => setCustomName(e.target.value)}
           placeholder={firstName || t(lang, "customOrderPlaceholderName")}
           style={styles.customOrderInput}
+          required
         />
         <label style={styles.customOrderLabel}>{t(lang, "customOrderUsername")}</label>
         <input
@@ -269,28 +270,41 @@ function CustomOrderForm({
           readOnly
           style={{ ...styles.customOrderInput, opacity: 0.9 }}
         />
-        <label style={styles.customOrderLabel}>{t(lang, "customOrderAddress")}</label>
+        <label style={styles.customOrderLabel}>{t(lang, "customOrderAddress")} *</label>
         <input
           type="text"
           value={customAddress}
           onChange={(e) => setCustomAddress(e.target.value)}
           placeholder={t(lang, "customOrderPlaceholderAddress")}
           style={styles.customOrderInput}
+          required
         />
         <label style={styles.customOrderLabel}>{t(lang, "customOrderPhoto")}</label>
-        <input
-          ref={fileInputRef as React.Ref<HTMLInputElement>}
-          type="file"
-          accept="image/*"
-          onChange={onPhotoChange}
-          style={styles.customOrderFile}
-        />
-        {customPhoto && (
-          <div style={styles.customOrderPhotoWrap}>
-            <img src={customPhoto} alt="" style={styles.customOrderPhotoPreview} />
-            <button type="button" onClick={() => setCustomPhoto(null)} style={styles.customOrderPhotoRemove}>✕</button>
-          </div>
-        )}
+        <div style={styles.customOrderPhotoBlock}>
+          <input
+            ref={fileInputRef as React.Ref<HTMLInputElement>}
+            type="file"
+            accept="image/*"
+            onChange={onPhotoChange}
+            style={styles.customOrderFileHidden}
+            aria-hidden
+          />
+          {customPhoto ? (
+            <div style={styles.customOrderPhotoWrap}>
+              <img src={customPhoto} alt="" style={styles.customOrderPhotoPreview} />
+              <button type="button" onClick={() => setCustomPhoto(null)} style={styles.customOrderPhotoRemove}>✕</button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              style={styles.customOrderPhotoBtn}
+            >
+              <span style={styles.customOrderPhotoBtnIcon}>📷</span>
+              <span>{t(lang, "customOrderPhotoAdd")}</span>
+            </button>
+          )}
+        </div>
         <label style={styles.customOrderLabel}>{t(lang, "customOrderDesc")} *</label>
         <textarea
           value={customDesc}
@@ -413,16 +427,36 @@ const styles: Record<string, React.CSSProperties> = {
   },
   customOrderForm: { display: "flex", flexDirection: "column", gap: 10 },
   customOrderLabel: {
-    fontSize: 12,
-    color: "var(--muted)",
-    textTransform: "uppercase",
-  },
-  customOrderFile: {
     fontSize: 13,
-    padding: 8,
+    color: "var(--muted)",
+  },
+  customOrderPhotoBlock: {
+    marginBottom: 4,
+  },
+  customOrderFileHidden: {
+    position: "absolute",
+    width: 1,
+    height: 1,
+    opacity: 0,
+    overflow: "hidden",
+    clip: "rect(0,0,0,0)",
+  },
+  customOrderPhotoBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    padding: "14px 16px",
+    width: "100%",
     background: "var(--bg)",
-    border: "1px solid var(--border)",
-    borderRadius: 8,
+    border: "1px dashed var(--border)",
+    borderRadius: 10,
+    color: "var(--muted)",
+    fontSize: 14,
+    fontFamily: "inherit",
+    cursor: "pointer",
+  },
+  customOrderPhotoBtnIcon: {
+    fontSize: 18,
   },
   customOrderPhotoWrap: {
     position: "relative",

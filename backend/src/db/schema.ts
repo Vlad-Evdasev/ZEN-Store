@@ -156,34 +156,57 @@ try {
   db.exec("ALTER TABLE custom_orders ADD COLUMN user_address TEXT");
 } catch {}
 
-// Seed stores
+// Seed stores — 4 нишевых магазина
 const storeCount = db.prepare("SELECT COUNT(*) as count FROM stores").get() as { count: number };
 if (storeCount.count === 0) {
   const insertStore = db.prepare(`
     INSERT INTO stores (name, image_url, description) VALUES (?, ?, ?)
   `);
-  const stores = [
-    ["Футболки", "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400", "Базовые и оверсайз футболки"],
-    ["Худи", "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=400", "Худи и свитшоты"],
-    ["Штаны", "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=400", "Карго и классика"],
-    ["Верхняя одежда", "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400", "Куртки и аксессуары"],
+  const stores: [string, string, string][] = [
+    ["Минимал", "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400", "Базовые вещи без лишнего. Футболки и худи в сдержанной палитре."],
+    ["Уличный стиль", "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=400", "Оверсайз, худи, куртки и вещи для города."],
+    ["Классика", "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=400", "Штаны, брюки и верхняя одежда на каждый день."],
+    ["Аксессуары", "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=400", "Кепки, сумки и детали, которые дополняют образ."],
   ];
   for (const s of stores) insertStore.run(...s);
 }
 
-// Seed products
+// Seed products — 5–7 товаров в каждом магазине
 const productCount = db.prepare("SELECT COUNT(*) as count FROM products").get() as { count: number };
 if (productCount.count === 0) {
   const insertProduct = db.prepare(`
     INSERT INTO products (store_id, name, description, price, image_url, category, sizes)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
-  const products: [number, string, string, number, string, string, string][] = [
-    [1, "Essential Tee", "Базовая хлопковая футболка премиум качества", 2990, "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400", "tee", "S,M,L,XL"],
-    [2, "Oversized Hoodie", "Оверсайз худи из мягкого флиса", 5990, "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=400", "hoodie", "S,M,L,XL"],
-    [3, "Cargo Pants", "Широкие карго с множеством карманов", 4990, "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=400", "pants", "S,M,L,XL"],
-    [4, "Minimal Jacket", "Минималистичная ветровка", 7990, "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400", "jacket", "S,M,L,XL"],
-    [4, "Black Cap", "Чёрная кепка с вышивкой ZΞN", 1990, "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=400", "accessories", "One size"],
+  type Row = [number, string, string, number, string, string, string];
+  const products: Row[] = [
+    // Минимал (1) — 6 товаров
+    [1, "Базовый чёрный", "Хлопковая футболка оверсайз, плотная ткань", 2990, "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400", "tee", "S,M,L,XL"],
+    [1, "Белый минимал", "Классический крой, матовый хлопок", 2790, "https://images.unsplash.com/photo-1562157873-818bc0726f68?w=400", "tee", "S,M,L,XL"],
+    [1, "Серый оверсайз", "Футболка свободного кроя", 3190, "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=400", "tee", "S,M,L,XL"],
+    [1, "Худи базовое", "Толстовка из флиса, капюшон", 5490, "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=400", "hoodie", "S,M,L,XL"],
+    [1, "Свитшот без капюшона", "Минималистичный свитшот", 4490, "https://images.unsplash.com/photo-1578768079052-aa76e52d2e3a?w=400", "hoodie", "S,M,L,XL"],
+    [1, "Лонгслив", "Длинный рукав, плотный хлопок", 3490, "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=400", "tee", "S,M,L,XL"],
+    // Уличный стиль (2) — 6 товаров
+    [2, "Оверсайз худи", "Объёмное худи из мягкого флиса", 5990, "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=400", "hoodie", "S,M,L,XL"],
+    [2, "Кроп-топ", "Короткая футболка для девушек", 2490, "https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=400", "tee", "S,M,L"],
+    [2, "Ветровка", "Лёгкая ветровка с капюшоном", 6990, "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400", "jacket", "S,M,L,XL"],
+    [2, "Парка уличная", "Тёплая парка на осень-зиму", 8990, "https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=400", "jacket", "S,M,L,XL"],
+    [2, "Худи с принтом", "Худи с минималистичным принтом", 5490, "https://images.unsplash.com/photo-1545127398-14699f92334b?w=400", "hoodie", "S,M,L,XL"],
+    [2, "Футболка оверсайз", "Свободная футболка для стрита", 3190, "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=400", "tee", "S,M,L,XL"],
+    // Классика (3) — 5 товаров
+    [3, "Чиносы", "Классические брюки чинос", 4990, "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=400", "pants", "S,M,L,XL"],
+    [3, "Карго", "Широкие карго с карманами", 5290, "https://images.unsplash.com/photo-1624378515192-6b8f2b17b4d2?w=400", "pants", "S,M,L,XL"],
+    [3, "Куртка бомбер", "Лёгкая куртка-бомбер", 7490, "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400", "jacket", "S,M,L,XL"],
+    [3, "Брюки оверсайз", "Свободные брюки из хлопка", 4790, "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=400", "pants", "S,M,L,XL"],
+    [3, "Пальто лёгкое", "Демисезонное пальто", 9990, "https://images.unsplash.com/photo-1544022613-e87ca75a784a?w=400", "jacket", "S,M,L,XL"],
+    // Аксессуары (4) — 6 товаров
+    [4, "Кепка чёрная", "Кепка с минималистичной вышивкой", 1990, "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=400", "accessories", "One size"],
+    [4, "Кепка белая", "Белая кепка, универсальный размер", 1990, "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=400", "accessories", "One size"],
+    [4, "Шапка бини", "Трикотажная шапка бини", 1490, "https://images.unsplash.com/photo-1576871337632-b9aef4c17ab9?w=400", "accessories", "One size"],
+    [4, "Сумка шоппер", "Хлопковая сумка с принтом", 2490, "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400", "accessories", "One size"],
+    [4, "Рюкзак минимал", "Компактный рюкзак на каждый день", 3990, "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400", "accessories", "One size"],
+    [4, "Пояс кожаный", "Минималистичный кожаный ремень", 2990, "https://images.unsplash.com/photo-1624222247344-550fb60583c2?w=400", "accessories", "One size"],
   ];
   for (const p of products) insertProduct.run(...p);
 }

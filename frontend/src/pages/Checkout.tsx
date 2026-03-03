@@ -33,12 +33,14 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, sel
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!name.trim()) return;
+    if (!address.trim()) return;
     setSubmitting(true);
     try {
       await createOrder(userId, {
-        user_name: name.trim() || undefined,
+        user_name: name.trim(),
         user_username: username.trim() || undefined,
-        user_address: address.trim() || undefined,
+        user_address: address.trim(),
         items,
         total,
       });
@@ -99,13 +101,14 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, sel
 
       <form onSubmit={handleSubmit} style={styles.form}>
         <label style={styles.label}>
-          Имя
+          Имя *
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Ваше имя"
             style={styles.input}
+            required
           />
         </label>
         <label style={styles.label}>
@@ -113,19 +116,20 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, sel
           <input
             type="text"
             value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            readOnly
             placeholder="@username"
-            style={styles.input}
+            style={{ ...styles.input, ...styles.inputReadOnly }}
           />
         </label>
         <label style={styles.label}>
-          Адрес доставки
+          Адрес доставки *
           <input
             type="text"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             placeholder="Город, улица, дом, квартира"
             style={styles.input}
+            required
           />
         </label>
 
@@ -220,6 +224,10 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--text)",
     fontFamily: "inherit",
     fontSize: 15,
+  },
+  inputReadOnly: {
+    opacity: 0.85,
+    cursor: "default",
   },
   total: {
     fontSize: 16,
