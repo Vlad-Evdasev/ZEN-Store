@@ -3,7 +3,7 @@ import { getWishlist, addToWishlist, removeFromWishlist } from "../api";
 
 const STORAGE_KEY = "zen-wishlist";
 const REMOVED_KEY = "zen-wishlist-removed";
-const REMOVED_TTL_MS = 15 * 60 * 1000;
+const REMOVED_TTL_MS = 60 * 60 * 1000;
 
 function loadRecentlyRemoved(): Set<number> {
   try {
@@ -101,22 +101,31 @@ export function useWishlist(userId: string) {
           else nextSet.add(productId);
           return nextSet;
         });
+        if (had) {
+          saveRecentlyRemoved(productId);
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify([...nextSet]));
+          } catch {}
+        }
         try {
           if (had) {
             await removeFromWishlist(userId, productId);
-            saveRecentlyRemoved(productId);
           } else {
             await addToWishlist(userId, productId);
             removeFromRecentlyRemoved(productId);
           }
-          try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify([...nextSet]));
-          } catch {}
+          if (!had) {
+            try {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify([...nextSet]));
+            } catch {}
+          }
         } catch {
           setIds((prev) => {
             const next = new Set(prev);
-            if (had) next.add(productId);
-            else next.delete(productId);
+            if (had) {
+              next.add(productId);
+              removeFromRecentlyRemoved(productId);
+            } else next.delete(productId);
             return next;
           });
         }
