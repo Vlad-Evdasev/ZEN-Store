@@ -2,11 +2,11 @@ interface ProfileProps {
   userName: string | null;
   firstName: string;
   onBack: () => void;
-  onOpenFavorites?: () => void;
-  onOpenReviews?: () => void;
+  onOpenDeliveryTerms?: () => void;
+  onOpenSupport?: () => void;
 }
 
-export function Profile({ userName, firstName, onBack, onOpenFavorites, onOpenReviews }: ProfileProps) {
+export function Profile({ userName, firstName, onBack, onOpenDeliveryTerms, onOpenSupport }: ProfileProps) {
   return (
     <div style={styles.wrap}>
       <button onClick={onBack} style={styles.back}>
@@ -20,14 +20,14 @@ export function Profile({ userName, firstName, onBack, onOpenFavorites, onOpenRe
       <div style={styles.section}>
         <p style={styles.sectionTitle}>Быстрые действия</p>
         <div style={styles.actions}>
-          {onOpenFavorites && (
-            <button onClick={onOpenFavorites} style={styles.actionBtn}>
-              ♡ Избранное
+          {onOpenDeliveryTerms && (
+            <button onClick={onOpenDeliveryTerms} style={styles.actionBtn}>
+              Условия доставки
             </button>
           )}
-          {onOpenReviews && (
-            <button onClick={onOpenReviews} style={styles.actionBtn}>
-              ★ Оставить отзыв
+          {onOpenSupport && (
+            <button onClick={onOpenSupport} style={styles.actionBtn}>
+              Поддержка
             </button>
           )}
         </div>

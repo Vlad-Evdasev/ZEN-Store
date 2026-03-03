@@ -96,22 +96,6 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
 
   return (
     <div style={styles.wrap}>
-      <button
-        type="button"
-        onClick={() => {
-          const el = scrollRef.current;
-          if (el) {
-            const half = el.scrollWidth / 2;
-            if (el.scrollLeft <= 20) el.scrollLeft = half - 20;
-            else el.scrollBy({ left: -200, behavior: "smooth" });
-          }
-          pauseAndResume();
-        }}
-        style={styles.scrollBtn}
-        aria-label="Влево"
-      >
-        ‹
-      </button>
       <div
         ref={scrollRef}
         style={styles.scrollArea}
@@ -141,12 +125,28 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
           const el = scrollRef.current;
           if (el) {
             const half = el.scrollWidth / 2;
+            if (el.scrollLeft <= 20) el.scrollLeft = half - 20;
+            else el.scrollBy({ left: -200, behavior: "smooth" });
+          }
+          pauseAndResume();
+        }}
+        style={styles.scrollBtnLeft}
+        aria-label="Влево"
+      >
+        ‹
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          const el = scrollRef.current;
+          if (el) {
+            const half = el.scrollWidth / 2;
             if (el.scrollLeft >= half - 20) el.scrollLeft = 0;
             else el.scrollBy({ left: 200, behavior: "smooth" });
           }
           pauseAndResume();
         }}
-        style={styles.scrollBtn}
+        style={styles.scrollBtnRight}
         aria-label="Вправо"
       >
         ›
@@ -157,16 +157,27 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
 
 const styles: Record<string, React.CSSProperties> = {
   wrap: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
+    position: "relative",
     width: "100vw",
     marginLeft: "calc(50% - 50vw)",
     marginTop: 24,
     marginBottom: 16,
   },
-  scrollBtn: {
-    flexShrink: 0,
+  scrollArea: {
+    display: "flex",
+    gap: 12,
+    overflowX: "auto",
+    overflowY: "hidden",
+    paddingBottom: 12,
+    paddingLeft: 12,
+    paddingRight: 12,
+    WebkitOverflowScrolling: "touch",
+  },
+  scrollBtnLeft: {
+    position: "absolute",
+    left: 8,
+    top: "50%",
+    transform: "translateY(-50%)",
     width: 36,
     height: 36,
     borderRadius: "50%",
@@ -175,15 +186,23 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--text)",
     fontSize: 24,
     cursor: "pointer",
+    zIndex: 2,
+    boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
   },
-  scrollArea: {
-    flex: 1,
-    display: "flex",
-    gap: 12,
-    overflowX: "auto",
-    overflowY: "hidden",
-    paddingBottom: 12,
-    WebkitOverflowScrolling: "touch",
-    minWidth: 0,
+  scrollBtnRight: {
+    position: "absolute",
+    right: 8,
+    top: "50%",
+    transform: "translateY(-50%)",
+    width: 36,
+    height: 36,
+    borderRadius: "50%",
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    color: "var(--text)",
+    fontSize: 24,
+    cursor: "pointer",
+    zIndex: 2,
+    boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
   },
 };

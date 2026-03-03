@@ -6,6 +6,19 @@ const STORAGE_KEY = "zen-wishlist";
 export function useWishlist(userId: string) {
   const [ids, setIds] = useState<Set<number>>(new Set());
 
+  const fetchWishlist = useCallback(() => {
+    if (!userId) return;
+    getWishlist(userId)
+      .then((arr) => {
+        const next = new Set(arr);
+        setIds(next);
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
+        } catch {}
+      })
+      .catch(() => {});
+  }, [userId]);
+
   useEffect(() => {
     if (!userId) {
       try {
@@ -18,16 +31,13 @@ export function useWishlist(userId: string) {
       }
       return;
     }
-    getWishlist(userId)
-      .then((arr) => {
-        const next = new Set(arr);
-        setIds(next);
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
-        } catch {}
-      })
-      .catch(() => {});
-  }, [userId]);
+    fetchWishlist();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") fetchWishlist();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [userId, fetchWishlist]);
 
   const toggle = useCallback(
     async (productId: number) => {
