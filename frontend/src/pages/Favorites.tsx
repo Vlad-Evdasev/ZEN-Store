@@ -1,5 +1,7 @@
 import type { Product } from "../api";
 import { ProductCard } from "../components/ProductCard";
+import { useSettings } from "../context/SettingsContext";
+import { t } from "../i18n";
 
 interface FavoritesProps {
   products: Product[];
@@ -16,18 +18,20 @@ export function Favorites({
   onToggleWishlist,
   onBack,
 }: FavoritesProps) {
+  const { settings } = useSettings();
+  const lang = settings.lang;
   const favorites = products.filter((p) => wishlistIds.has(p.id));
 
   return (
     <div style={styles.wrap}>
       <button onClick={onBack} style={styles.back}>
-        ← Назад
+        ← {t(lang, "back")}
       </button>
-      <h2 style={styles.title}>Избранное</h2>
+      <h2 style={styles.title}>{t(lang, "favoritesTitle")}</h2>
       {favorites.length === 0 ? (
         <div style={styles.empty}>
-          <p>В избранном пока пусто</p>
-          <p style={styles.emptyHint}>Добавляйте товары, нажимая ♡ в каталоге</p>
+          <p>{t(lang, "favoritesEmpty")}</p>
+          <p style={styles.emptyHint}>{t(lang, "favoritesEmptyHint")}</p>
         </div>
       ) : (
         <div style={styles.grid}>

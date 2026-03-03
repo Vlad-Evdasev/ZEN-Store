@@ -15,7 +15,7 @@ const STORAGE_KEY = "zen-settings";
 const defaultSettings: Settings = {
   lang: "ru",
   theme: "light",
-  currency: "RUB",
+  currency: "USD",
 };
 
 function loadSettings(): Settings {
@@ -43,8 +43,9 @@ const SettingsContext = createContext<{
   formatPrice: (price: number) => string;
 } | null>(null);
 
-const CURRENCY_RATES: Record<Currency, number> = { RUB: 1, BYN: 0.034, USD: 0.011 };
-const CURRENCY_SYMBOLS: Record<Currency, string> = { RUB: "₽", BYN: "Br", USD: "$" };
+/* Цены в БД хранятся в долларах; конвертация в другие валюты */
+const CURRENCY_RATES: Record<Currency, number> = { USD: 1, RUB: 90, BYN: 3.2 };
+const CURRENCY_SYMBOLS: Record<Currency, string> = { USD: "$", RUB: "₽", BYN: "Br" };
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<Settings>(() => {

@@ -21,12 +21,16 @@ export function Settings({ onBack }: SettingsProps) {
         <p style={styles.label}>{t(lang, "language")}</p>
         <div style={styles.row}>
           <button
+            type="button"
+            className="settings-opt-btn"
             onClick={() => setLang("ru")}
             style={{ ...styles.optBtn, ...(settings.lang === "ru" ? styles.optActive : {}) }}
           >
             {t(lang, "ru")}
           </button>
           <button
+            type="button"
+            className="settings-opt-btn"
             onClick={() => setLang("en")}
             style={{ ...styles.optBtn, ...(settings.lang === "en" ? styles.optActive : {}) }}
           >
@@ -39,12 +43,16 @@ export function Settings({ onBack }: SettingsProps) {
         <p style={styles.label}>{t(lang, "theme")}</p>
         <div style={styles.row}>
           <button
+            type="button"
+            className="settings-opt-btn"
             onClick={() => setTheme("dark")}
             style={{ ...styles.optBtn, ...(settings.theme === "dark" ? styles.optActive : {}) }}
           >
             {t(lang, "dark")}
           </button>
           <button
+            type="button"
+            className="settings-opt-btn"
             onClick={() => setTheme("light")}
             style={{ ...styles.optBtn, ...(settings.theme === "light" ? styles.optActive : {}) }}
           >
@@ -59,6 +67,8 @@ export function Settings({ onBack }: SettingsProps) {
           {(["BYN", "RUB", "USD"] as Currency[]).map((c) => (
             <button
               key={c}
+              type="button"
+              className="settings-opt-btn"
               onClick={() => setCurrency(c)}
               style={{ ...styles.optBtn, ...(settings.currency === c ? styles.optActive : {}) }}
             >
@@ -100,16 +110,18 @@ const styles: Record<string, React.CSSProperties> = {
   optBtn: {
     padding: "12px 18px",
     background: "var(--surface)",
-    border: "1px solid var(--border)",
+    border: "1px solid var(--surface)",
     borderRadius: 10,
     color: "var(--text)",
     fontSize: 14,
     fontFamily: "inherit",
     cursor: "pointer",
+    outline: "none",
+    boxShadow: "none",
   },
   optActive: {
     background: "var(--accent)",
-    borderColor: "var(--accent)",
+    border: "1px solid var(--accent)",
     color: "#fff",
   },
 };

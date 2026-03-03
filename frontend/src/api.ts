@@ -207,6 +207,26 @@ export async function removeFromCart(userId: string, itemId: number) {
   if (!res.ok) throw new Error("Failed to remove from cart");
 }
 
+export async function getWishlist(userId: string): Promise<number[]> {
+  const res = await fetch(`${API_URL}/api/wishlist/${userId}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function addToWishlist(userId: string, productId: number) {
+  const res = await fetch(`${API_URL}/api/wishlist/${userId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ product_id: productId }),
+  });
+  if (!res.ok) throw new Error("Failed to add to wishlist");
+}
+
+export async function removeFromWishlist(userId: string, productId: number) {
+  const res = await fetch(`${API_URL}/api/wishlist/${userId}/${productId}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Failed to remove from wishlist");
+}
+
 export interface Review {
   id: number;
   user_id: string;

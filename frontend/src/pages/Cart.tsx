@@ -1,16 +1,19 @@
 import { useEffect, useState } from "react";
 import { getCart, removeFromCart, type CartItem } from "../api";
 import { useSettings } from "../context/SettingsContext";
+import { t } from "../i18n";
 
 interface CartProps {
   userId: string;
   onBack: () => void;
   onCheckout: () => void;
   onCartChange?: () => void;
+  sellerLink?: string;
 }
 
-export function Cart({ userId, onBack, onCheckout, onCartChange }: CartProps) {
-  const { formatPrice } = useSettings();
+export function Cart({ userId, onBack, onCheckout, onCartChange, sellerLink }: CartProps) {
+  const { formatPrice, settings } = useSettings();
+  const lang = settings.lang;
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -43,7 +46,7 @@ export function Cart({ userId, onBack, onCheckout, onCartChange }: CartProps) {
   if (loading) {
     return (
       <div style={styles.loading}>
-        <p>Загрузка...</p>
+        <p>{t(lang, "loading")}</p>
       </div>
     );
   }
@@ -51,9 +54,9 @@ export function Cart({ userId, onBack, onCheckout, onCartChange }: CartProps) {
   if (items.length === 0) {
     return (
       <div style={styles.empty}>
-        <p>Корзина пуста</p>
+        <p>{t(lang, "cartEmpty")}</p>
         <button onClick={onBack} style={styles.back}>
-          ← В каталог
+          ← {t(lang, "toCatalog")}
         </button>
       </div>
     );
@@ -62,7 +65,7 @@ export function Cart({ userId, onBack, onCheckout, onCartChange }: CartProps) {
   return (
     <div style={styles.wrap}>
       <button onClick={onBack} style={styles.back}>
-        ← Назад
+        ← {t(lang, "back")}
       </button>
 
       <div style={styles.list}>
@@ -88,10 +91,21 @@ export function Cart({ userId, onBack, onCheckout, onCartChange }: CartProps) {
       </div>
 
       <div style={styles.footer}>
-        <span style={styles.total}>Итого: {formatPrice(total)}</span>
+        <span style={styles.total}>{t(lang, "total")}: {formatPrice(total)}</span>
         <button onClick={onCheckout} style={styles.checkout}>
-          Оформить заказ
+          {t(lang, "checkout")}
         </button>
+      </div>
+
+      <div style={styles.customOrderWrap}>
+        <a
+          href={sellerLink || "https://t.me/ZenStoreBot"}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={styles.customOrderBtn}
+        >
+          {t(lang, "customOrder")}
+        </a>
       </div>
     </div>
   );
@@ -155,6 +169,22 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "inherit",
     fontSize: 15,
     fontWeight: 600,
+    cursor: "pointer",
+  },
+  customOrderWrap: {
+    marginTop: 16,
+    textAlign: "center",
+  },
+  customOrderBtn: {
+    display: "inline-block",
+    padding: "12px 20px",
+    background: "none",
+    border: "1px solid var(--border)",
+    borderRadius: 10,
+    color: "var(--muted)",
+    fontSize: 14,
+    fontFamily: "inherit",
+    textDecoration: "none",
     cursor: "pointer",
   },
   empty: {

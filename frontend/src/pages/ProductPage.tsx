@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { addToCart, getProductReviews, addProductReview, type Product, type ProductReview } from "../api";
 import { useSettings } from "../context/SettingsContext";
+import { t } from "../i18n";
 
 interface ProductPageProps {
   product: Product | undefined;
@@ -32,7 +33,8 @@ export function ProductPage({
   inWishlist,
   onToggleWishlist,
 }: ProductPageProps) {
-  const { formatPrice } = useSettings();
+  const { formatPrice, settings } = useSettings();
+  const lang = settings.lang;
   const [size, setSize] = useState<string>("");
   const [adding, setAdding] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
@@ -116,7 +118,7 @@ export function ProductPage({
     <div style={styles.wrap}>
       <div style={styles.topBar}>
         <button onClick={onBack} style={styles.back}>
-          ← Назад
+          ← {t(lang, "back")}
         </button>
       </div>
 
@@ -177,9 +179,9 @@ export function ProductPage({
 
       <div style={styles.sizeSection}>
         <div style={styles.sizeSectionHeader}>
-          <p style={styles.sizeSectionLabel}>Размер</p>
+          <p style={styles.sizeSectionLabel}>{t(lang, "size")}</p>
           <button type="button" onClick={() => setShowSizeGuide(true)} style={styles.sizeGuideBtn}>
-            Размерная сетка
+            {t(lang, "sizeGuide")}
           </button>
         </div>
         <div style={styles.sizes}>
@@ -204,11 +206,11 @@ export function ProductPage({
         <span style={styles.price}>{formatPrice(product.price)}</span>
         {justAdded ? (
           <button onClick={onCart} style={styles.addBtn}>
-            Перейти в корзину
+            {t(lang, "goToCart")}
           </button>
         ) : (
           <button onClick={handleAdd} disabled={adding} style={styles.addBtn}>
-            {adding ? "..." : "В корзину"}
+            {adding ? "..." : t(lang, "addToCart")}
           </button>
         )}
       </div>
@@ -216,12 +218,12 @@ export function ProductPage({
       <div style={styles.reviewsSection}>
         <div style={styles.reviewsHeader}>
           <h3 style={styles.reviewsTitle}>
-            Отзывы на товар {reviews.length > 0 && `(${reviews.length})`}
+            {t(lang, "reviewsOnProduct")} {reviews.length > 0 && `(${reviews.length})`}
             {avgRating != null && <span style={styles.avgRating}> ★ {avgRating}</span>}
           </h3>
           {!showReviewForm && (
             <button onClick={() => setShowReviewForm(true)} type="button" style={styles.addReviewBtn}>
-              Оставить отзыв
+              {t(lang, "leaveReview")}
             </button>
           )}
         </div>
@@ -260,7 +262,7 @@ export function ProductPage({
         )}
 
         {reviews.length === 0 && !showReviewForm && (
-          <p style={styles.noReviews}>Пока нет отзывов. Будьте первым!</p>
+          <p style={styles.noReviews}>{t(lang, "noReviewsYet")}</p>
         )}
 
         <div style={styles.reviewsList}>
@@ -285,7 +287,7 @@ export function ProductPage({
         <div style={styles.sizeGuideOverlay} onClick={() => setShowSizeGuide(false)} aria-hidden>
           <div style={styles.sizeGuideModal} onClick={(e) => e.stopPropagation()}>
             <div style={styles.sizeGuideHeader}>
-              <h3 style={styles.sizeGuideTitle}>Размерная сетка</h3>
+                <h3 style={styles.sizeGuideTitle}>{t(lang, "sizeGuide")}</h3>
               <button type="button" onClick={() => setShowSizeGuide(false)} style={styles.sizeGuideClose}>×</button>
             </div>
             <div style={styles.sizeGuideContent}>

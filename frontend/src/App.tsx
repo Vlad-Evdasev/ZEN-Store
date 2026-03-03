@@ -15,12 +15,16 @@ import { StoreCatalog } from "./pages/StoreCatalog";
 import { Settings } from "./pages/Settings";
 import { History } from "./pages/History";
 import { Footer } from "./components/Footer";
+import { useSettings } from "./context/SettingsContext";
+import { t } from "./i18n";
 
 type Page = "catalog" | "cart" | "product" | "checkout" | "profile" | "reviews" | "favorites" | "storeCatalog" | "settings" | "history";
 
 const SELLER_LINK = import.meta.env.VITE_SELLER_LINK || "";
 
 function App() {
+  const { settings } = useSettings();
+  const lang = settings.lang;
   const { userId, userName, firstName, isInTelegram, setBrowserAuth } = useTelegram();
   const { wishlistIds, toggleWishlist, hasInWishlist } = useWishlist(userId);
   const [page, setPage] = useState<Page>("catalog");
@@ -130,11 +134,11 @@ function App() {
         </div>
         <div style={styles.headerRight}>
           <button onClick={openFavorites} style={styles.headerLinkWithBadge}>
-            <span style={styles.headerBtnLabel}>Избранное</span>
+            <span style={styles.headerBtnLabel}>{t(lang, "favorites")}</span>
             <span style={{ ...styles.favBadge, ...styles.headerBadgePos, visibility: wishlistIds.size > 0 ? "visible" : "hidden" }}>{wishlistIds.size || "0"}</span>
           </button>
           <button onClick={openCart} style={styles.headerBtnWrapper}>
-            <span style={styles.headerBtnLabel}>Корзина</span>
+            <span style={styles.headerBtnLabel}>{t(lang, "cart")}</span>
             <span style={{ ...styles.cartBadge, ...styles.headerBadgePos, visibility: cartCount > 0 ? "visible" : "hidden" }}>{cartCount || "0"}</span>
           </button>
         </div>
@@ -154,17 +158,17 @@ function App() {
           />
           <div className="zen-menu-panel" style={styles.menu}>
             <button onClick={openProfile} className="zen-menu-item" style={styles.menuItem}>
-              Профиль
+              {t(lang, "profile")}
             </button>
             <button onClick={openHistory} className="zen-menu-item" style={styles.menuItem}>
-              История
+              {t(lang, "history")}
             </button>
             <button onClick={openReviews} className="zen-menu-item" style={styles.menuItem}>
-              Отзывы {avgRating != null ? `★ ${avgRating}` : ""}
+              {t(lang, "reviews")} {avgRating != null ? `★ ${avgRating}` : ""}
             </button>
             <div style={styles.menuSpacer} aria-hidden />
             <button onClick={openSettings} className="zen-menu-item zen-menu-item-last" style={styles.menuItem}>
-              Настройки
+              {t(lang, "settings")}
             </button>
           </div>
         </>
@@ -211,6 +215,7 @@ function App() {
             onBack={openCatalog}
             onCheckout={openCheckout}
             onCartChange={refreshCartCount}
+            sellerLink={SELLER_LINK}
           />
         )}
         {page === "checkout" && (

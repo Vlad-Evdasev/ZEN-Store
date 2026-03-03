@@ -378,8 +378,8 @@ function ProductsTab({
         <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Essential Tee" style={styles.input} required />
         <label style={styles.label}>Описание</label>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} style={styles.input} />
-        <label style={styles.label}>Цена (₽) *</label>
-        <input type="text" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="2990" style={styles.input} required />
+        <label style={styles.label}>Цена ($) *</label>
+        <input type="text" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="33" style={styles.input} required />
         <label style={styles.label}>Картинки (до 5 URL)</label>
         {[0, 1, 2, 3, 4].map((i) => (
           <input
@@ -423,7 +423,7 @@ function ProductsTab({
             <img src={(p.image_urls && p.image_urls[0]) || p.image_url || "https://via.placeholder.com/48"} alt="" style={styles.thumb} />
             <div style={styles.productInfo}>
               <p style={styles.productName}>{p.name}</p>
-              <p style={styles.productPrice}>{p.price} ₽ · {stores.find(s => s.id === (p.store_id ?? 1))?.name || "—"}</p>
+              <p style={styles.productPrice}>{p.price} $ · {stores.find(s => s.id === (p.store_id ?? 1))?.name || "—"}</p>
             </div>
             <div style={styles.productActions}>
               <button type="button" onClick={() => startEdit(p)} style={styles.smallBtn}>Изменить</button>
@@ -589,7 +589,7 @@ function StoresTab({
                   <img src={(p.image_urls && p.image_urls[0]) || p.image_url || "https://via.placeholder.com/40"} alt="" style={{ ...styles.thumb, width: 40, height: 40 }} />
                   <div style={styles.productInfo}>
                     <p style={styles.productName}>{p.name}</p>
-                    <p style={styles.productPrice}>{p.price} ₽</p>
+                    <p style={styles.productPrice}>{p.price} $</p>
                   </div>
                   <button type="button" onClick={() => handleAssignProduct(p.id, editingStoreId)} style={styles.smallBtn}>Добавить</button>
                 </div>
@@ -606,7 +606,7 @@ function StoresTab({
               <img src={(p.image_urls && p.image_urls[0]) || p.image_url || "https://via.placeholder.com/48"} alt="" style={styles.thumb} />
               <div style={styles.productInfo}>
                 <p style={styles.productName}>{p.name}</p>
-                <p style={styles.productPrice}>{p.price} ₽</p>
+                <p style={styles.productPrice}>{p.price} $</p>
               </div>
             </div>
           ))}
@@ -715,7 +715,7 @@ function ProductFormModal({
         <form onSubmit={handleSubmit} style={styles.form}>
           <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Название *" style={styles.input} required />
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Описание" rows={2} style={styles.input} />
-          <input type="text" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Цена (₽) *" style={styles.input} required />
+          <input type="text" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Цена ($) *" style={styles.input} required />
           <label style={styles.label}>Картинки (до 5 URL)</label>
           {[0, 1, 2, 3, 4].map((i) => (
             <input

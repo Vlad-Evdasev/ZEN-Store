@@ -36,6 +36,14 @@ db.exec(`
     FOREIGN KEY (product_id) REFERENCES products(id)
   );
 
+  CREATE TABLE IF NOT EXISTS wishlist (
+    user_id TEXT NOT NULL,
+    product_id INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, product_id),
+    FOREIGN KEY (product_id) REFERENCES products(id)
+  );
+
   CREATE TABLE IF NOT EXISTS orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id TEXT NOT NULL,

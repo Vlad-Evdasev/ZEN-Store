@@ -105,6 +105,14 @@ button:active {
   box-shadow: none;
 }
 
+/* Настройки: кнопки без белых границ в тёмной теме */
+.settings-opt-btn:focus,
+.settings-opt-btn:focus-visible,
+.settings-opt-btn:active {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 @keyframes zen-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }

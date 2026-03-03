@@ -3,7 +3,8 @@ import type { Product, Store, ProductReviewStats } from "../api";
 import { getProductReviewStats } from "../api";
 import { ProductCard } from "../components/ProductCard";
 import { StoreCard } from "../components/StoreCard";
-import { getCategoryLabel } from "../utils/categories";
+import { useSettings } from "../context/SettingsContext";
+import { t } from "../i18n";
 
 interface CatalogProps {
   products: Product[];
@@ -33,6 +34,8 @@ export function Catalog({
   onToggleWishlist,
   hideStores = false,
 }: CatalogProps) {
+  const { settings } = useSettings();
+  const lang = settings.lang;
   const [search, setSearch] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set(["all"]));
   const [reviewStats, setReviewStats] = useState<ProductReviewStats>({});
@@ -222,7 +225,7 @@ export function Catalog({
       <div style={styles.searchWrap}>
         <input
           type="text"
-          placeholder="Поиск..."
+          placeholder={t(lang, "search")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={styles.search}
@@ -246,7 +249,7 @@ export function Catalog({
                 WebkitTapHighlightColor: "transparent",
               }}
             >
-              {getCategoryLabel(cat)}
+              {t(lang, cat)}
             </button>
           );
         })}
@@ -254,7 +257,7 @@ export function Catalog({
 
       {filtered.length === 0 ? (
         <div style={styles.empty}>
-          <p>Ничего не найдено</p>
+          <p>{t(lang, "nothingFound")}</p>
         </div>
       ) : (
         <div style={styles.grid}>
