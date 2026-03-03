@@ -340,11 +340,14 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "inherit",
     cursor: "pointer",
     boxShadow: "none",
+    outline: "none",
   },
   tabActive: {
     background: "var(--accent)",
     borderColor: "var(--accent)",
     color: "#fff",
+    outline: "none",
+    boxShadow: "none",
   },
   grid: {
     display: "grid",

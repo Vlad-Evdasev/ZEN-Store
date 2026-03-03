@@ -82,12 +82,19 @@ button:active {
   outline: none;
 }
 
-/* Кнопки категорий: убрать рамку при focus (тёмная тема — без белых границ) */
+/* Кнопки категорий (виды товара): убрать белые границы при focus в тёмной теме */
+.catalog-tab-btn,
 .catalog-tab-btn:focus,
 .catalog-tab-btn:focus-visible,
-.catalog-tab-btn:active {
-  outline: none;
-  box-shadow: none;
+.catalog-tab-btn:active,
+.zen-app .catalog-tab-btn,
+.zen-app .catalog-tab-btn:focus,
+.zen-app .catalog-tab-btn:focus-visible {
+  outline: none !important;
+  outline-width: 0 !important;
+  outline-color: transparent !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Кнопки выбора размера на странице товара: без белых границ при focus в тёмной теме */

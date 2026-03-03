@@ -41,6 +41,7 @@ export function ProductPage({
   const [reviewRating, setReviewRating] = useState(5);
   const [submittingReview, setSubmittingReview] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
+  const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [imageIndex, setImageIndex] = useState(0);
 
   const sizes = product ? product.sizes.split(",").map((s) => s.trim()) : [];
@@ -159,7 +160,11 @@ export function ProductPage({
         )}
       </div>
 
-      <div style={styles.wishlistUnderPhoto}>
+      <div style={styles.titleRow}>
+        <div style={styles.titleBlock}>
+          <h1 style={styles.title}>{product.name}</h1>
+          <p style={styles.desc}>{product.description}</p>
+        </div>
         <button
           type="button"
           onClick={onToggleWishlist}
@@ -170,11 +175,13 @@ export function ProductPage({
         </button>
       </div>
 
-      <h1 style={styles.title}>{product.name}</h1>
-      <p style={styles.desc}>{product.description}</p>
-
       <div style={styles.sizeSection}>
-        <p style={styles.label}>Размер</p>
+        <div style={styles.sizeSectionHeader}>
+          <p style={styles.sizeSectionLabel}>Размер</p>
+          <button type="button" onClick={() => setShowSizeGuide(true)} style={styles.sizeGuideBtn}>
+            Размерная сетка
+          </button>
+        </div>
         <div style={styles.sizes}>
           {sizes.map((s) => (
             <button
@@ -273,6 +280,20 @@ export function ProductPage({
           ))}
         </div>
       </div>
+
+      {showSizeGuide && (
+        <div style={styles.sizeGuideOverlay} onClick={() => setShowSizeGuide(false)} aria-hidden>
+          <div style={styles.sizeGuideModal} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.sizeGuideHeader}>
+              <h3 style={styles.sizeGuideTitle}>Размерная сетка</h3>
+              <button type="button" onClick={() => setShowSizeGuide(false)} style={styles.sizeGuideClose}>×</button>
+            </div>
+            <div style={styles.sizeGuideContent}>
+              <p style={styles.sizeGuideText}>Таблица размеров зависит от категории товара (футболки, худи, штаны и т.д.). Рекомендуем ориентироваться на размерную сетку в описании товара или уточнить у продавца.</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -292,12 +313,18 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     cursor: "pointer",
   },
-  wishlistUnderPhoto: {
+  titleRow: {
     display: "flex",
-    justifyContent: "flex-end",
-    marginBottom: 16,
+    alignItems: "flex-start",
+    gap: 12,
+    marginBottom: 24,
+  },
+  titleBlock: {
+    flex: 1,
+    minWidth: 0,
   },
   wishlistBtn: {
+    flexShrink: 0,
     background: "none",
     border: "none",
     fontSize: 24,
@@ -378,13 +405,38 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--muted)",
     fontSize: 14,
     lineHeight: 1.6,
-    marginBottom: 24,
+    marginBottom: 0,
   },
   sizeSection: { marginBottom: 24 },
+  sizeSectionHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 10,
+  },
+  sizeGuideBtn: {
+    background: "none",
+    border: "none",
+    color: "var(--accent)",
+    fontSize: 12,
+    fontFamily: "inherit",
+    cursor: "pointer",
+    textDecoration: "underline",
+    padding: 0,
+  },
   label: {
     fontSize: 12,
     color: "var(--muted)",
     marginBottom: 10,
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+  },
+  sizeSectionLabel: {
+    fontSize: 12,
+    color: "var(--muted)",
+    marginBottom: 0,
     textTransform: "uppercase",
     letterSpacing: "0.05em",
   },
@@ -564,6 +616,55 @@ const styles: Record<string, React.CSSProperties> = {
   reviewItemText: {
     fontSize: 13,
     lineHeight: 1.5,
+    color: "var(--text)",
+  },
+  sizeGuideOverlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.6)",
+    zIndex: 100,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  sizeGuideModal: {
+    background: "var(--surface)",
+    borderRadius: 12,
+    border: "1px solid var(--border)",
+    maxWidth: 360,
+    width: "100%",
+    maxHeight: "80vh",
+    overflow: "auto",
+  },
+  sizeGuideHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "16px 20px",
+    borderBottom: "1px solid var(--border)",
+  },
+  sizeGuideTitle: {
+    fontSize: 18,
+    fontWeight: 600,
+    margin: 0,
+  },
+  sizeGuideClose: {
+    background: "none",
+    border: "none",
+    fontSize: 24,
+    color: "var(--muted)",
+    cursor: "pointer",
+    padding: 0,
+    lineHeight: 1,
+  },
+  sizeGuideContent: {
+    padding: 20,
+  },
+  sizeGuideText: {
+    margin: 0,
+    fontSize: 14,
+    lineHeight: 1.6,
     color: "var(--text)",
   },
 };
