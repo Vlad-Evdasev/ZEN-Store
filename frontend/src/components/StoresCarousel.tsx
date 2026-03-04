@@ -152,9 +152,8 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
 const styles: Record<string, React.CSSProperties> = {
   wrap: {
     position: "relative",
-    width: "100vw",
-    marginLeft: "calc(50% - 50vw)",
-    marginTop: 24,
+    width: "100%",
+    marginTop: 0,
     marginBottom: 16,
   },
   scrollArea: {
@@ -163,8 +162,10 @@ const styles: Record<string, React.CSSProperties> = {
     overflowX: "auto",
     overflowY: "hidden",
     paddingBottom: 12,
-    paddingLeft: 12,
-    paddingRight: 12,
+    paddingLeft: 0,
+    paddingRight: 0,
     WebkitOverflowScrolling: "touch",
+    touchAction: "pan-x",
+    minWidth: 0,
   },
 };

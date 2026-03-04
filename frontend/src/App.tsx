@@ -166,10 +166,6 @@ function App() {
         </div>
       </header>
 
-      {page === "catalog" && (
-        <StoresCarousel stores={stores} onStoreClick={openStoreCatalog} />
-      )}
-
       {menuOpen && (
         <>
           <div
@@ -199,7 +195,9 @@ function App() {
       <main style={styles.main}>
         <div key={page} className={page === "cart" || page === "favorites" ? "zen-page-enter" : ""} style={styles.mainContent}>
         {page === "catalog" && (
-          <Catalog
+          <>
+            <StoresCarousel stores={stores} onStoreClick={openStoreCatalog} />
+            <Catalog
             products={products}
             stores={stores}
             onProductClick={openProduct}
@@ -208,6 +206,7 @@ function App() {
             onToggleWishlist={toggleWishlist}
             hideStores
           />
+          </>
         )}
         {page === "storeCatalog" && storeCatalogStore && (
           <StoreCatalog
@@ -313,8 +312,8 @@ const styles: Record<string, React.CSSProperties> = {
   app: {
     width: "100%",
     maxWidth: 480,
-    overflow: "hidden",
-    height: "100vh",
+    overflowX: "hidden" as const,
+    minHeight: "100vh",
     display: "flex",
     flexDirection: "column",
     background: "var(--bg)",
@@ -495,14 +494,11 @@ const styles: Record<string, React.CSSProperties> = {
   },
   main: {
     overflowX: "hidden",
-    overflowY: "auto",
-    WebkitOverflowScrolling: "touch",
     padding: "16px",
     paddingLeft: "max(16px, env(safe-area-inset-left))",
     paddingRight: "max(16px, env(safe-area-inset-right))",
     flex: 1,
     minWidth: 0,
-    minHeight: 0,
   },
   mainContent: {
     minWidth: 0,
