@@ -68,7 +68,11 @@ export function History({ userId, onBack, onProductClick }: HistoryProps) {
         <div style={styles.filterWrap}>
           <select
             value={filter}
-            onChange={(e) => setFilter(e.target.value as HistoryFilter)}
+            onChange={(e) => {
+              const v = e.target.value as HistoryFilter;
+              setFilter(v);
+              (e.target as HTMLSelectElement).blur();
+            }}
             style={styles.filterSelect}
             aria-label={t(lang, "historyTitle")}
           >
@@ -201,11 +205,14 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: 1.25,
   },
   filterWrap: {
-    width: "100%",
+    width: "fit-content",
+    maxWidth: "100%",
   },
   filterSelect: {
-    width: "100%",
-    padding: "14px 44px 14px 16px",
+    width: "auto",
+    minWidth: 140,
+    maxWidth: 220,
+    padding: "12px 36px 12px 14px",
     background: "var(--surface)",
     border: "1px solid var(--border)",
     borderRadius: 12,

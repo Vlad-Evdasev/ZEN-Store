@@ -43,6 +43,8 @@ export function Catalog({
   const marqueePausedRef = useRef(false);
   const pauseTimeoutRef = useRef<number | null>(null);
   const lastAutoScrollRef = useRef(0);
+  const touchActiveRef = useRef(false);
+  const isTouchDevice = typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0);
 
   type DisplayStore =
     | { id: number; name: string; image: string; desc: string; isReal: true }
@@ -88,17 +90,18 @@ export function Catalog({
     const handleScroll = () => {
       const half = el.scrollWidth / 2;
       if (half <= 0) return;
-
+      if (touchActiveRef.current) return;
       if (Date.now() - lastAutoScrollRef.current < 80) return;
 
       pauseAndResume();
 
-      if (el.scrollLeft < 5) {
+      const left = el.scrollLeft;
+      if (left < 3) {
         lastAutoScrollRef.current = Date.now();
-        el.scrollLeft = half - 5;
-      } else if (el.scrollLeft > half - 5) {
+        requestAnimationFrame(() => { el.scrollLeft = half - 3; });
+      } else if (left > half - 3) {
         lastAutoScrollRef.current = Date.now();
-        el.scrollLeft = 5;
+        requestAnimationFrame(() => { el.scrollLeft = 3; });
       }
     };
 
@@ -111,15 +114,29 @@ export function Catalog({
       if (el.scrollLeft >= half - 1) el.scrollLeft = 0;
     };
 
+    const onTouchStart = () => { touchActiveRef.current = true; };
+    const onTouchEnd = () => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => { touchActiveRef.current = false; });
+      });
+    };
+
     el.addEventListener("scroll", handleScroll, { passive: true });
-    const id = setInterval(step, 30);
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
+    el.addEventListener("touchcancel", onTouchEnd, { passive: true });
+
+    const id = isTouchDevice ? null : setInterval(step, 30);
 
     return () => {
       el.removeEventListener("scroll", handleScroll);
-      clearInterval(id);
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("touchcancel", onTouchEnd);
+      if (id !== null) clearInterval(id);
       if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
     };
-  }, [displayStores.length]);
+  }, [displayStores.length, isTouchDevice]);
 
   const filtered = useMemo(() => {
     let list = products;
@@ -187,8 +204,6 @@ export function Catalog({
             onMouseDown={pauseAndResume}
             onMouseUp={pauseAndResume}
             onMouseLeave={pauseAndResume}
-            onTouchStart={pauseAndResume}
-            onTouchEnd={pauseAndResume}
           >
           {[...displayStores, ...displayStores].map((s, i) => (
             <StoreCard
@@ -283,7 +298,7 @@ export function Catalog({
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  wrap: { paddingBottom: 24, overflowX: "visible" },
+  wrap: { paddingBottom: 24, overflowX: "hidden", minWidth: 0 },
   storesRowWrap: {
     display: "flex",
     alignItems: "center",

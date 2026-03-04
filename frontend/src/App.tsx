@@ -301,7 +301,7 @@ const styles: Record<string, React.CSSProperties> = {
   app: {
     width: "100%",
     maxWidth: 480,
-    overflowX: "visible" as const,
+    overflowX: "hidden" as const,
     minHeight: "100vh",
     display: "flex",
     flexDirection: "column",
@@ -482,7 +482,7 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: "center",
   },
   main: {
-    overflowX: "visible",
+    overflowX: "hidden",
     padding: "16px",
     paddingLeft: "max(16px, env(safe-area-inset-left))",
     paddingRight: "max(16px, env(safe-area-inset-right))",
