@@ -26,6 +26,7 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
   const isSeamJumpRef = useRef(false);
   const userScrollingRef = useRef(false);
   const programmaticScrollRef = useRef(false);
+  const touchActiveRef = useRef(false);
 
   const displayStores: DisplayStore[] =
     stores.length > 0
@@ -60,6 +61,21 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
     }, 1500);
   };
 
+  const doSeamJumpIfAtEdge = () => {
+    const el = scrollRef.current;
+    if (!el || displayStores.length === 0) return;
+    const half = el.scrollWidth / 2;
+    if (half <= 0) return;
+    const left = el.scrollLeft;
+    if (left < 3) {
+      programmaticScrollRef.current = true;
+      el.scrollLeft = half - 3;
+    } else if (left > half - 3) {
+      programmaticScrollRef.current = true;
+      el.scrollLeft = 3;
+    }
+  };
+
   useEffect(() => {
     const el = scrollRef.current;
     if (!el || displayStores.length === 0) return;
@@ -69,6 +85,7 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
         programmaticScrollRef.current = false;
         return;
       }
+      if (touchActiveRef.current) return;
       const half = el.scrollWidth / 2;
       if (half <= 0) return;
       const atSeam = el.scrollLeft < 3 || el.scrollLeft > half - 3;
@@ -88,12 +105,6 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
         isSeamJumpRef.current = false;
         return;
       }
-      pauseOnUserStart();
-      if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
-      pauseTimeoutRef.current = window.setTimeout(() => {
-        marqueePausedRef.current = false;
-        pauseTimeoutRef.current = null;
-      }, 1500);
     };
     let rafId = 0;
     const step = () => {
@@ -140,11 +151,29 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
         ref={scrollRef}
         style={styles.scrollArea}
         className="hide-scrollbar"
-        onTouchStart={() => { userScrollingRef.current = true; pauseOnUserStart(); }}
-        onTouchEnd={() => resumeAfterUserEnd()}
+        onTouchStart={() => { touchActiveRef.current = true; userScrollingRef.current = true; pauseOnUserStart(); }}
+        onTouchEnd={() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              touchActiveRef.current = false;
+              doSeamJumpIfAtEdge();
+              resumeAfterUserEnd();
+            });
+          });
+        }}
         onMouseDown={() => { userScrollingRef.current = true; pauseOnUserStart(); }}
         onMouseUp={() => resumeAfterUserEnd()}
         onMouseLeave={() => resumeAfterUserEnd()}
+        onWheel={(e) => {
+          if (e.deltaX !== 0) {
+            pauseOnUserStart();
+            if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
+            pauseTimeoutRef.current = window.setTimeout(() => {
+              marqueePausedRef.current = false;
+              pauseTimeoutRef.current = null;
+            }, 1500);
+          }
+        }}
       >
         {[...displayStores, ...displayStores].map((s, i) => (
           <StoreCard

@@ -83,7 +83,7 @@ button:active {
   outline: none;
 }
 
-/* Кнопки категорий и истории заказов: без белых границ в тёмной теме */
+/* Кнопки категорий: без белых границ в тёмной теме */
 .catalog-tab-btn,
 .catalog-tab-btn:focus,
 .catalog-tab-btn:focus-visible,
@@ -91,15 +91,7 @@ button:active {
 .zen-app .catalog-tab-btn,
 .zen-app .catalog-tab-btn:focus,
 .zen-app .catalog-tab-btn:focus-visible,
-.zen-app .catalog-tab-btn:active,
-.history-filter-tab,
-.history-filter-tab:focus,
-.history-filter-tab:focus-visible,
-.history-filter-tab:active,
-.zen-app .history-filter-tab,
-.zen-app .history-filter-tab:focus,
-.zen-app .history-filter-tab:focus-visible,
-.zen-app .history-filter-tab:active {
+.zen-app .catalog-tab-btn:active {
   outline: none !important;
   outline-width: 0 !important;
   outline-color: transparent !important;
@@ -115,12 +107,20 @@ button:active {
   box-shadow: none;
 }
 
-/* Настройки: кнопки без белых границ в тёмной теме */
+/* Настройки и история заказов: кнопки без белых границ в тёмной теме */
+.settings-opt-btn,
 .settings-opt-btn:focus,
 .settings-opt-btn:focus-visible,
-.settings-opt-btn:active {
+.settings-opt-btn:active,
+.zen-app .settings-opt-btn,
+.zen-app .settings-opt-btn:focus,
+.zen-app .settings-opt-btn:focus-visible,
+.zen-app .settings-opt-btn:active {
   outline: none !important;
+  outline-width: 0 !important;
+  outline-color: transparent !important;
   box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent;
 }
 
 
