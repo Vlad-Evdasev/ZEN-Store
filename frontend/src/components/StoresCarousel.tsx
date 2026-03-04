@@ -28,7 +28,9 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
   const programmaticScrollRef = useRef(false);
   const touchActiveRef = useRef(false);
   const lastTouchRecenterRef = useRef(0);
-  const COPIES = 5;
+  const touchRecenterRafRef = useRef<number>(0);
+  const COPIES = 9;
+  const CENTER_OFFSET = Math.floor(COPIES / 2);
 
   const displayStores: DisplayStore[] =
     stores.length > 0
@@ -72,11 +74,36 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
     const left = el.scrollLeft;
     if (left < copyWidth) {
       programmaticScrollRef.current = true;
-      el.scrollLeft = left + 2 * copyWidth;
+      el.scrollLeft = left + CENTER_OFFSET * copyWidth;
     } else if (left > (COPIES - 1) * copyWidth) {
       programmaticScrollRef.current = true;
-      el.scrollLeft = left - 2 * copyWidth;
+      el.scrollLeft = left - CENTER_OFFSET * copyWidth;
     }
+  };
+
+  const startTouchRecenterLoop = () => {
+    const loop = () => {
+      if (!touchActiveRef.current) return;
+      const el = scrollRef.current;
+      if (el && displayStores.length > 0) {
+        const total = el.scrollWidth;
+        const copyWidth = total / COPIES;
+        if (copyWidth > 0) {
+          const left = el.scrollLeft;
+          const now = Date.now();
+          if (left < copyWidth || left > (COPIES - 1) * copyWidth) {
+            if (now - lastTouchRecenterRef.current >= 32) {
+              lastTouchRecenterRef.current = now;
+              programmaticScrollRef.current = true;
+              if (left < copyWidth) el.scrollLeft = left + CENTER_OFFSET * copyWidth;
+              else el.scrollLeft = left - CENTER_OFFSET * copyWidth;
+            }
+          }
+        }
+      }
+      touchRecenterRafRef.current = requestAnimationFrame(loop);
+    };
+    touchRecenterRafRef.current = requestAnimationFrame(loop);
   };
 
   const onTouchMoveRecenter = () => {
@@ -87,15 +114,15 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
     if (copyWidth <= 0) return;
     const left = el.scrollLeft;
     const now = Date.now();
-    if (now - lastTouchRecenterRef.current < 80) return;
+    if (now - lastTouchRecenterRef.current < 32) return;
     if (left < copyWidth) {
       lastTouchRecenterRef.current = now;
       programmaticScrollRef.current = true;
-      el.scrollLeft = left + 2 * copyWidth;
+      el.scrollLeft = left + CENTER_OFFSET * copyWidth;
     } else if (left > (COPIES - 1) * copyWidth) {
       lastTouchRecenterRef.current = now;
       programmaticScrollRef.current = true;
-      el.scrollLeft = left - 2 * copyWidth;
+      el.scrollLeft = left - CENTER_OFFSET * copyWidth;
     }
   };
 
@@ -117,7 +144,7 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
         lastAutoScrollRef.current = Date.now();
         isSeamJumpRef.current = true;
         programmaticScrollRef.current = true;
-        el.scrollLeft = left + 2 * copyWidth;
+        el.scrollLeft = left + CENTER_OFFSET * copyWidth;
         return;
       }
       if (left > (COPIES - 1) * copyWidth) {
@@ -125,7 +152,7 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
         lastAutoScrollRef.current = Date.now();
         isSeamJumpRef.current = true;
         programmaticScrollRef.current = true;
-        el.scrollLeft = left - 2 * copyWidth;
+        el.scrollLeft = left - CENTER_OFFSET * copyWidth;
         return;
       }
       if (isSeamJumpRef.current) {
@@ -149,7 +176,7 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
       el.scrollLeft += scrollStep;
       if (el.scrollLeft >= (COPIES - 1) * copyWidth - 1) {
         isSeamJumpRef.current = true;
-        el.scrollLeft = 2 * copyWidth;
+        el.scrollLeft = CENTER_OFFSET * copyWidth;
       }
       rafId = requestAnimationFrame(step);
     };
@@ -160,7 +187,7 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
       if (target && target.scrollWidth > 0) {
         const cw = target.scrollWidth / COPIES;
         programmaticScrollRef.current = true;
-        target.scrollLeft = 2 * cw;
+        target.scrollLeft = CENTER_OFFSET * cw;
       }
     });
     return () => {
@@ -190,10 +217,15 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
           touchActiveRef.current = true;
           userScrollingRef.current = true;
           pauseOnUserStart();
+          startTouchRecenterLoop();
         }}
         onTouchMove={onTouchMoveRecenter}
         onTouchEnd={() => {
           touchActiveRef.current = false;
+          if (touchRecenterRafRef.current) {
+            cancelAnimationFrame(touchRecenterRafRef.current);
+            touchRecenterRafRef.current = 0;
+          }
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
               doSeamJumpIfAtEdge();
