@@ -42,11 +42,25 @@ function App() {
   >(null);
   const [productReturnTo, setProductReturnTo] = useState<Page | null>(null);
   const mainScrollRef = useRef<HTMLElement | null>(null);
+  const [visualHeight, setVisualHeight] = useState<number | null>(null);
 
   useEffect(() => {
     if (typeof history !== "undefined" && "scrollRestoration" in history) {
       history.scrollRestoration = "manual";
     }
+  }, []);
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => setVisualHeight(vv.height);
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
   }, []);
 
   useEffect(() => {
@@ -171,7 +185,13 @@ function App() {
 
   return (
     <div style={styles.appWrapper}>
-    <div style={styles.app} className="zen-app">
+    <div
+      className="zen-app"
+      style={{
+        ...styles.app,
+        ...(visualHeight != null ? { height: visualHeight, maxHeight: visualHeight } : {}),
+      }}
+    >
       <SettingsSync />
       <header style={styles.header}>
         <div style={styles.headerLeft}>
