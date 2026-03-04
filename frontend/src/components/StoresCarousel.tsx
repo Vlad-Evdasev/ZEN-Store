@@ -27,6 +27,7 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
   const userScrollingRef = useRef(false);
   const programmaticScrollRef = useRef(false);
   const touchActiveRef = useRef(false);
+  const lastTouchRecenterRef = useRef(0);
   const COPIES = 5;
 
   const displayStores: DisplayStore[] =
@@ -73,6 +74,26 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
       programmaticScrollRef.current = true;
       el.scrollLeft = left + 2 * copyWidth;
     } else if (left > (COPIES - 1) * copyWidth) {
+      programmaticScrollRef.current = true;
+      el.scrollLeft = left - 2 * copyWidth;
+    }
+  };
+
+  const onTouchMoveRecenter = () => {
+    const el = scrollRef.current;
+    if (!el || displayStores.length === 0) return;
+    const total = el.scrollWidth;
+    const copyWidth = total / COPIES;
+    if (copyWidth <= 0) return;
+    const left = el.scrollLeft;
+    const now = Date.now();
+    if (now - lastTouchRecenterRef.current < 80) return;
+    if (left < copyWidth) {
+      lastTouchRecenterRef.current = now;
+      programmaticScrollRef.current = true;
+      el.scrollLeft = left + 2 * copyWidth;
+    } else if (left > (COPIES - 1) * copyWidth) {
+      lastTouchRecenterRef.current = now;
       programmaticScrollRef.current = true;
       el.scrollLeft = left - 2 * copyWidth;
     }
@@ -170,6 +191,7 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
           userScrollingRef.current = true;
           pauseOnUserStart();
         }}
+        onTouchMove={onTouchMoveRecenter}
         onTouchEnd={() => {
           touchActiveRef.current = false;
           requestAnimationFrame(() => {
