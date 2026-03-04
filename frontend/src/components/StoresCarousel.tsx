@@ -27,6 +27,8 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
   const userScrollingRef = useRef(false);
   const programmaticScrollRef = useRef(false);
   const touchActiveRef = useRef(false);
+  const lastTouchSeamJumpRef = useRef(0);
+  const SEAM_ZONE = 50;
 
   const displayStores: DisplayStore[] =
     stores.length > 0
@@ -67,12 +69,31 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
     const half = el.scrollWidth / 2;
     if (half <= 0) return;
     const left = el.scrollLeft;
-    if (left < 3) {
+    if (left < SEAM_ZONE) {
       programmaticScrollRef.current = true;
-      el.scrollLeft = half - 3;
-    } else if (left > half - 3) {
+      el.scrollLeft = half - SEAM_ZONE;
+    } else if (left > half - SEAM_ZONE) {
       programmaticScrollRef.current = true;
-      el.scrollLeft = 3;
+      el.scrollLeft = SEAM_ZONE;
+    }
+  };
+
+  const onTouchMove = () => {
+    const el = scrollRef.current;
+    if (!el || displayStores.length === 0) return;
+    const half = el.scrollWidth / 2;
+    if (half <= 0) return;
+    const left = el.scrollLeft;
+    const now = Date.now();
+    if (now - lastTouchSeamJumpRef.current < 60) return;
+    if (left < SEAM_ZONE) {
+      lastTouchSeamJumpRef.current = now;
+      programmaticScrollRef.current = true;
+      el.scrollLeft = half - SEAM_ZONE;
+    } else if (left > half - SEAM_ZONE) {
+      lastTouchSeamJumpRef.current = now;
+      programmaticScrollRef.current = true;
+      el.scrollLeft = SEAM_ZONE;
     }
   };
 
@@ -87,16 +108,16 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
       }
       const half = el.scrollWidth / 2;
       if (half <= 0) return;
-      const atSeam = el.scrollLeft < 3 || el.scrollLeft > half - 3;
+      const atSeam = el.scrollLeft < SEAM_ZONE || el.scrollLeft > half - SEAM_ZONE;
       if (atSeam) {
         if (Date.now() - lastAutoScrollRef.current < 80) return;
         lastAutoScrollRef.current = Date.now();
         isSeamJumpRef.current = true;
         programmaticScrollRef.current = true;
-        if (el.scrollLeft < 3) {
-          el.scrollLeft = half - 3;
+        if (el.scrollLeft < SEAM_ZONE) {
+          el.scrollLeft = half - SEAM_ZONE;
         } else {
-          el.scrollLeft = 3;
+          el.scrollLeft = SEAM_ZONE;
         }
         return;
       }
@@ -151,6 +172,7 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
         style={styles.scrollArea}
         className="hide-scrollbar"
         onTouchStart={() => { touchActiveRef.current = true; userScrollingRef.current = true; pauseOnUserStart(); }}
+        onTouchMove={onTouchMove}
         onTouchEnd={() => {
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
