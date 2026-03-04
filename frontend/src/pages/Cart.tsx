@@ -19,9 +19,10 @@ interface CartProps {
   onBack: () => void;
   onCheckout: () => void;
   onCartChange?: () => void;
+  onProductClick?: (productId: number) => void;
 }
 
-export function Cart({ userId, userName, firstName, onBack, onCheckout, onCartChange }: CartProps) {
+export function Cart({ userId, userName, firstName, onBack, onCheckout, onCartChange, onProductClick }: CartProps) {
   const { formatPrice, settings } = useSettings();
   const lang = settings.lang;
   const [items, setItems] = useState<CartItem[]>([]);
@@ -146,7 +147,14 @@ export function Cart({ userId, userName, firstName, onBack, onCheckout, onCartCh
 
       <div style={styles.list}>
         {items.map((item) => (
-          <div key={item.id} style={styles.item}>
+          <div
+            key={item.id}
+            style={{ ...styles.item, ...(onProductClick ? styles.itemClickable : {}) }}
+            onClick={onProductClick ? () => onProductClick(item.product_id) : undefined}
+            role={onProductClick ? "button" : undefined}
+            tabIndex={onProductClick ? 0 : undefined}
+            onKeyDown={onProductClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onProductClick(item.product_id); } } : undefined}
+          >
             <img
               src={item.image_url || "https://via.placeholder.com/80"}
               alt=""
@@ -159,7 +167,12 @@ export function Cart({ userId, userName, firstName, onBack, onCheckout, onCartCh
               </p>
               <p style={styles.itemPrice}>{formatPrice(item.price * item.quantity)}</p>
             </div>
-            <button onClick={() => remove(item.id)} style={styles.remove}>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); remove(item.id); }}
+              style={styles.remove}
+              aria-label="Удалить"
+            >
               ✕
             </button>
           </div>
@@ -360,6 +373,9 @@ const styles: Record<string, React.CSSProperties> = {
     background: "var(--surface)",
     borderRadius: 12,
     border: "1px solid var(--border)",
+  },
+  itemClickable: {
+    cursor: "pointer",
   },
   thumb: { width: 64, height: 64, objectFit: "cover", borderRadius: 8 },
   itemInfo: { flex: 1 },

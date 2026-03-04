@@ -43,7 +43,7 @@ export function Catalog({
   const marqueePausedRef = useRef(false);
   const pauseTimeoutRef = useRef<number | null>(null);
   const lastAutoScrollRef = useRef(0);
-  const isTouchDevice = typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0);
+  const isTouchOnly = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
 
   type DisplayStore =
     | { id: number; name: string; image: string; desc: string; isReal: true }
@@ -87,7 +87,7 @@ export function Catalog({
     if (!el || displayStores.length === 0) return;
 
     const handleScroll = () => {
-      if (isTouchDevice) return;
+      if (isTouchOnly) return;
       const half = el.scrollWidth / 2;
       if (half <= 0) return;
       if (Date.now() - lastAutoScrollRef.current < 80) return;
@@ -114,14 +114,14 @@ export function Catalog({
     };
 
     el.addEventListener("scroll", handleScroll, { passive: true });
-    const id = isTouchDevice ? null : setInterval(step, 30);
+    const id = isTouchOnly ? null : setInterval(step, 30);
 
     return () => {
       el.removeEventListener("scroll", handleScroll);
       if (id !== null) clearInterval(id);
       if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
     };
-  }, [displayStores.length, isTouchDevice]);
+  }, [displayStores.length, isTouchOnly]);
 
   const filtered = useMemo(() => {
     let list = products;
@@ -184,7 +184,7 @@ export function Catalog({
           </button>
           <div
             ref={scrollRef}
-            style={styles.storesRow}
+            style={{ ...styles.storesRow, touchAction: "pan-x" }}
             className="hide-scrollbar"
             onMouseDown={pauseAndResume}
             onMouseUp={pauseAndResume}

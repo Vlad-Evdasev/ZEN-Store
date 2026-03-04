@@ -228,6 +228,7 @@ function App() {
             onBack={openCatalog}
             onCheckout={openCheckout}
             onCartChange={refreshCartCount}
+            onProductClick={openProduct}
           />
         )}
         {page === "checkout" && (
