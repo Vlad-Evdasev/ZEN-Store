@@ -43,7 +43,6 @@ export function Catalog({
   const marqueePausedRef = useRef(false);
   const pauseTimeoutRef = useRef<number | null>(null);
   const lastAutoScrollRef = useRef(0);
-  const touchActiveRef = useRef(false);
   const isTouchDevice = typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0);
 
   type DisplayStore =
@@ -88,9 +87,9 @@ export function Catalog({
     if (!el || displayStores.length === 0) return;
 
     const handleScroll = () => {
+      if (isTouchDevice) return;
       const half = el.scrollWidth / 2;
       if (half <= 0) return;
-      if (touchActiveRef.current) return;
       if (Date.now() - lastAutoScrollRef.current < 80) return;
 
       pauseAndResume();
@@ -114,25 +113,11 @@ export function Catalog({
       if (el.scrollLeft >= half - 1) el.scrollLeft = 0;
     };
 
-    const onTouchStart = () => { touchActiveRef.current = true; };
-    const onTouchEnd = () => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => { touchActiveRef.current = false; });
-      });
-    };
-
     el.addEventListener("scroll", handleScroll, { passive: true });
-    el.addEventListener("touchstart", onTouchStart, { passive: true });
-    el.addEventListener("touchend", onTouchEnd, { passive: true });
-    el.addEventListener("touchcancel", onTouchEnd, { passive: true });
-
     const id = isTouchDevice ? null : setInterval(step, 30);
 
     return () => {
       el.removeEventListener("scroll", handleScroll);
-      el.removeEventListener("touchstart", onTouchStart);
-      el.removeEventListener("touchend", onTouchEnd);
-      el.removeEventListener("touchcancel", onTouchEnd);
       if (id !== null) clearInterval(id);
       if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
     };

@@ -65,21 +65,20 @@ export function History({ userId, onBack, onProductClick }: HistoryProps) {
           ← {t(lang, "back")}
         </button>
         <h1 style={styles.title}>{t(lang, "historyTitle")}</h1>
-        <div style={styles.filterWrap}>
-          <select
-            value={filter}
-            onChange={(e) => {
-              const v = e.target.value as HistoryFilter;
-              setFilter(v);
-              (e.target as HTMLSelectElement).blur();
-            }}
-            style={styles.filterSelect}
-            aria-label={t(lang, "historyTitle")}
-          >
-            <option value="all">{t(lang, "historyFilterAll")}</option>
-            <option value="in_progress">{t(lang, "historyFilterInProgress")}</option>
-            <option value="delivered">{t(lang, "historyFilterDelivered")}</option>
-          </select>
+        <div style={styles.filterRow} role="group" aria-label={t(lang, "historyTitle")}>
+          {(["all", "in_progress", "delivered"] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setFilter(value)}
+              style={{
+                ...styles.filterTab,
+                ...(filter === value ? styles.filterTabActive : {}),
+              }}
+            >
+              {value === "all" ? t(lang, "historyFilterAll") : value === "in_progress" ? t(lang, "historyFilterInProgress") : t(lang, "historyFilterDelivered")}
+            </button>
+          ))}
         </div>
       </header>
 
@@ -204,27 +203,27 @@ const styles: Record<string, React.CSSProperties> = {
     margin: "0 0 16px 0",
     lineHeight: 1.25,
   },
-  filterWrap: {
-    width: "fit-content",
-    maxWidth: "100%",
+  filterRow: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 8,
   },
-  filterSelect: {
-    width: "auto",
-    minWidth: 140,
-    maxWidth: 220,
-    padding: "12px 36px 12px 14px",
+  filterTab: {
+    padding: "10px 16px",
     background: "var(--surface)",
     border: "1px solid var(--border)",
-    borderRadius: 12,
-    color: "var(--text)",
-    fontSize: 15,
+    borderRadius: 20,
+    color: "var(--muted)",
+    fontSize: 13,
     fontFamily: "inherit",
     cursor: "pointer",
-    appearance: "none",
-    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
-    backgroundRepeat: "no-repeat",
-    backgroundPosition: "right 14px center",
-    boxSizing: "border-box",
+    boxShadow: "none",
+    outline: "none",
+  },
+  filterTabActive: {
+    background: "var(--accent)",
+    borderColor: "var(--accent)",
+    color: "#fff",
   },
   emptyWrap: {
     padding: "48px 24px",

@@ -54,7 +54,16 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, sel
   };
 
   const handleWriteSeller = () => {
-    window.open(sellerLink || "https://t.me/ZenStoreBot", "_blank");
+    const base = sellerLink || "https://t.me/ZenStoreBot";
+    const parts = items.map((i) => {
+      const line = [i.name].concat(i.size ? [`размер ${i.size}`] : []).join(", ");
+      const img = i.image_url || "";
+      return img ? `${line}\n${img}` : line;
+    });
+    const text = parts.join("\n\n");
+    const sep = base.includes("?") ? "&" : "?";
+    const url = text ? `${base}${sep}text=${encodeURIComponent(text)}` : base;
+    window.open(url, "_blank");
     onDone();
   };
 

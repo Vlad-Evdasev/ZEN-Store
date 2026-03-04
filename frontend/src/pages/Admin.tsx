@@ -235,13 +235,14 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
           <p style={styles.hint}>Нет заказов</p>
         ) : (
           orders.map((o) => {
-            let items: { name?: string; size?: string; quantity?: number; price?: number }[] = [];
+            let items: { name?: string; size?: string; quantity?: number; price?: number; image_url?: string | null }[] = [];
             try {
               items = typeof o.items === "string" ? JSON.parse(o.items) : o.items;
             } catch {}
             const itemsStr = Array.isArray(items)
               ? items.map((i) => `${i.name || "Товар"} × ${i.quantity || 1} (${i.size || "—"})`).join(", ")
               : String(o.items);
+            const firstImage = Array.isArray(items) && items.length > 0 ? items[0].image_url : null;
             return (
               <div key={o.id} style={styles.orderCard}>
                 <div style={styles.orderHeader}>
@@ -250,6 +251,11 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
                     {statusLabel(o.status)}
                   </span>
                 </div>
+                {firstImage && (
+                  <p style={styles.orderField}>
+                    <img src={firstImage} alt="" style={styles.orderThumb} />
+                  </p>
+                )}
                 <p style={styles.orderField}>👤 {o.user_name || "—"}</p>
                 <p style={styles.orderField}>📞 {o.user_phone || "—"}</p>
                 {o.user_address && <p style={styles.orderField}>📍 {o.user_address}</p>}
@@ -856,6 +862,7 @@ const styles: Record<string, React.CSSProperties> = {
   orderHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
   orderId: { fontWeight: 700, fontSize: 16 },
   orderStatus: { fontSize: 13 },
+  orderThumb: { maxWidth: 120, maxHeight: 120, objectFit: "cover", borderRadius: 8, display: "block", marginBottom: 8 },
   orderField: { fontSize: 14, marginBottom: 4, color: "var(--text)" },
   orderDate: { fontSize: 12, color: "var(--muted)", marginTop: 8, marginBottom: 12 },
   orderActions: { display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" },
