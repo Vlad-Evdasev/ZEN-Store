@@ -213,6 +213,22 @@ function App() {
 
   const keyboardOpen = viewportCover != null;
   return (
+    <>
+      {keyboardOpen && viewportCover && (
+        <div
+          aria-hidden
+          style={{
+            position: "fixed",
+            top: viewportCover.top + viewportCover.height,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "var(--bg)",
+            zIndex: 0,
+            pointerEvents: "none",
+          }}
+        />
+      )}
     <div
       style={{
         ...styles.appWrapper,
@@ -387,6 +403,7 @@ function App() {
       <Footer />
     </div>
     </div>
+    </>
   );
 }
 
