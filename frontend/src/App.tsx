@@ -42,7 +42,7 @@ function App() {
   >(null);
   const [productReturnTo, setProductReturnTo] = useState<Page | null>(null);
   const mainScrollRef = useRef<HTMLElement | null>(null);
-  const [visualHeight, setVisualHeight] = useState<number | null>(null);
+  const [viewportCover, setViewportCover] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
 
   useEffect(() => {
     if (typeof history !== "undefined" && "scrollRestoration" in history) {
@@ -55,26 +55,41 @@ function App() {
     if (!vv) return;
     const update = () => {
       const h = vv.height;
+      const w = vv.width;
       const inner = window.innerHeight;
-      setVisualHeight(h < inner * 0.85 ? h : null);
+      const keyboardOpen = h < inner * 0.9;
+      setViewportCover(
+        keyboardOpen
+          ? { top: vv.offsetTop, left: vv.offsetLeft, width: w, height: h }
+          : null
+      );
     };
     update();
     vv.addEventListener("resize", update);
     vv.addEventListener("scroll", update);
+    window.addEventListener("resize", update);
     return () => {
       vv.removeEventListener("resize", update);
       vv.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
     };
   }, []);
 
   useEffect(() => {
-    if (visualHeight == null) return;
-    const prev = document.body.style.overflow;
+    if (viewportCover == null) return;
+    const vvHeight = `${viewportCover.height}px`;
+    document.documentElement.classList.add("zen-keyboard-open");
+    document.documentElement.style.setProperty("--zen-vv-height", vvHeight);
+    document.body.classList.add("zen-keyboard-open");
+    const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
-      document.body.style.overflow = prev;
+      document.documentElement.classList.remove("zen-keyboard-open");
+      document.documentElement.style.removeProperty("--zen-vv-height");
+      document.body.classList.remove("zen-keyboard-open");
+      document.body.style.overflow = prevOverflow;
     };
-  }, [visualHeight]);
+  }, [viewportCover]);
 
   useEffect(() => {
     let cancelled = false;
@@ -196,21 +211,22 @@ function App() {
     );
   }
 
-  const keyboardOpen = visualHeight != null;
+  const keyboardOpen = viewportCover != null;
   return (
     <div
       style={{
         ...styles.appWrapper,
-        ...(keyboardOpen
+        ...(keyboardOpen && viewportCover
           ? {
               position: "fixed",
-              top: 0,
-              left: 0,
-              right: 0,
-              height: visualHeight,
-              maxHeight: visualHeight,
+              top: viewportCover.top,
+              left: viewportCover.left,
+              width: viewportCover.width,
+              height: viewportCover.height,
+              maxHeight: viewportCover.height,
               overflow: "hidden",
               zIndex: 1,
+              background: "var(--bg)",
             }
           : {}),
       }}

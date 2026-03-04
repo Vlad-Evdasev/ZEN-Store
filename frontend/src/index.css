@@ -52,6 +52,14 @@ body {
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
+html.zen-keyboard-open,
+html.zen-keyboard-open body,
+html.zen-keyboard-open #root {
+  height: var(--zen-vv-height, 100vh) !important;
+  max-height: var(--zen-vv-height, 100vh) !important;
+  overflow: hidden !important;
+}
+
 
 button {
   outline: none;
