@@ -83,6 +83,16 @@ button:active {
   outline: none;
 }
 
+.zen-app input,
+.zen-app input:focus,
+.zen-app input:focus-visible,
+.zen-app textarea,
+.zen-app textarea:focus,
+.zen-app textarea:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 /* Кнопки категорий: без белых границ в тёмной теме */
 .catalog-tab-btn,
 .catalog-tab-btn:focus,

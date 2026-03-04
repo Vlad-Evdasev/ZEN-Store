@@ -319,6 +319,8 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "12px 16px",
     background: "var(--surface)",
     border: "1px solid var(--border)",
+    outline: "none",
+    boxShadow: "none",
     borderRadius: 10,
     color: "var(--text)",
     fontSize: 15,
