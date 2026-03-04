@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { addToCart, getProductReviews, addProductReview, type Product, type ProductReview } from "../api";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
@@ -45,6 +45,7 @@ export function ProductPage({
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [imageIndex, setImageIndex] = useState(0);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   const sizes = product ? product.sizes.split(",").map((s) => s.trim()) : [];
   const imageUrls = product
@@ -58,17 +59,21 @@ export function ProductPage({
 
   useEffect(() => {
     if (!product?.id) return;
-    window.scrollTo(0, 0);
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
+    const scrollToTop = () => {
+      rootRef.current?.scrollIntoView({ block: "start", behavior: "auto" });
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+    scrollToTop();
     const raf = requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        window.scrollTo(0, 0);
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
-      });
+      requestAnimationFrame(scrollToTop);
     });
-    return () => cancelAnimationFrame(raf);
+    const t = setTimeout(scrollToTop, 100);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(t);
+    };
   }, [product?.id]);
 
   useEffect(() => {
@@ -130,7 +135,7 @@ export function ProductPage({
   };
 
   return (
-    <div style={styles.wrap}>
+    <div ref={rootRef} style={styles.wrap}>
       <div style={styles.topBar}>
         <button onClick={onBack} style={styles.back}>
           ← {t(lang, "back")}

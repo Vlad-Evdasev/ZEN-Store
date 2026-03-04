@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { flushSync } from "react-dom";
 import { useTelegram } from "./hooks/useTelegram";
 import { TelegramAuth } from "./components/TelegramAuth";
 import { useWishlist } from "./hooks/useWishlist";
@@ -41,6 +42,12 @@ function App() {
   >(null);
   const [productReturnTo, setProductReturnTo] = useState<Page | null>(null);
   const mainScrollRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (typeof history !== "undefined" && "scrollRestoration" in history) {
+      history.scrollRestoration = "manual";
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -86,6 +93,11 @@ function App() {
     setProductId(id);
     setProductReturnTo(from ?? page);
     setPage("product");
+    flushSync(() => {});
+    mainScrollRef.current?.scrollTo(0, 0);
+    requestAnimationFrame(() => {
+      mainScrollRef.current?.scrollTo(0, 0);
+    });
   };
 
   const goBackFromProduct = () => {
