@@ -454,7 +454,7 @@ const styles: Record<string, React.CSSProperties> = {
   sizeBtn: {
     padding: "12px 18px",
     background: "var(--surface)",
-    border: "1px solid var(--border)",
+    border: "1px solid var(--surface)",
     borderRadius: 8,
     color: "var(--text)",
     fontFamily: "inherit",
@@ -465,7 +465,7 @@ const styles: Record<string, React.CSSProperties> = {
     boxShadow: "none",
   },
   sizeBtnActive: {
-    borderColor: "var(--accent)",
+    border: "1px solid var(--accent)",
     color: "var(--accent)",
     background: "rgba(196, 30, 58, 0.1)",
     outline: "none",

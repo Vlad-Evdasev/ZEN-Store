@@ -99,12 +99,20 @@ button:active {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Кнопки выбора размера на странице товара: без белых границ при focus в тёмной теме */
+/* Кнопки выбора размера на странице товара: как в настройках, без белых границ */
+.product-size-btn,
 .product-size-btn:focus,
 .product-size-btn:focus-visible,
-.product-size-btn:active {
-  outline: none;
-  box-shadow: none;
+.product-size-btn:active,
+.zen-app .product-size-btn,
+.zen-app .product-size-btn:focus,
+.zen-app .product-size-btn:focus-visible,
+.zen-app .product-size-btn:active {
+  outline: none !important;
+  outline-width: 0 !important;
+  outline-color: transparent !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Настройки и история заказов: кнопки без белых границ в тёмной теме */
