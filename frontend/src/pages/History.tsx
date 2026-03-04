@@ -75,6 +75,9 @@ export function History({ userId, onBack, onProductClick }: HistoryProps) {
               style={{
                 ...styles.filterTab,
                 ...(filter === value ? styles.filterTabActive : {}),
+                outline: "none",
+                boxShadow: "none",
+                WebkitTapHighlightColor: "transparent",
               }}
             >
               {value === "all" ? t(lang, "historyFilterAll") : value === "in_progress" ? t(lang, "historyFilterInProgress") : t(lang, "historyFilterDelivered")}

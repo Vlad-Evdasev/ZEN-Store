@@ -114,11 +114,14 @@ button:active {
   box-shadow: none !important;
 }
 
-/* История заказов: кнопки фильтра без белых границ в тёмной теме */
+/* История заказов: кнопки фильтра без белых границ в тёмной теме (как в каталоге) */
 .history-filter-tab,
 .history-filter-tab:focus,
 .history-filter-tab:focus-visible,
-.history-filter-tab:active {
+.history-filter-tab:active,
+.zen-app .history-filter-tab,
+.zen-app .history-filter-tab:focus,
+.zen-app .history-filter-tab:focus-visible {
   outline: none !important;
   outline-width: 0 !important;
   outline-color: transparent !important;

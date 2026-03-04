@@ -47,17 +47,19 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
           category: s.category,
         }));
 
-  const pauseAndResume = () => {
+  const pauseOnUserStart = () => {
     marqueePausedRef.current = true;
+    if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
+    pauseTimeoutRef.current = null;
+  };
+
+  const resumeAfterUserEnd = () => {
+    userScrollingRef.current = false;
     if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
     pauseTimeoutRef.current = window.setTimeout(() => {
       marqueePausedRef.current = false;
       pauseTimeoutRef.current = null;
     }, 1500);
-  };
-
-  const setUserScrolling = (value: boolean) => {
-    userScrollingRef.current = value;
   };
 
   useEffect(() => {
@@ -84,7 +86,6 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
         isSeamJumpRef.current = false;
         return;
       }
-      if (userScrollingRef.current) pauseAndResume();
     };
     let rafId = 0;
     const step = () => {
@@ -105,7 +106,7 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
       }
       rafId = requestAnimationFrame(step);
     };
-    if (!isTouchOnly) rafId = requestAnimationFrame(step);
+    rafId = requestAnimationFrame(step);
     el.addEventListener("scroll", handleScroll, { passive: true });
     return () => {
       el.removeEventListener("scroll", handleScroll);
@@ -130,11 +131,11 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
         ref={scrollRef}
         style={styles.scrollArea}
         className="hide-scrollbar"
-        onTouchStart={() => setUserScrolling(true)}
-        onTouchEnd={() => setTimeout(() => setUserScrolling(false), 200)}
-        onMouseDown={() => setUserScrolling(true)}
-        onMouseUp={() => setTimeout(() => setUserScrolling(false), 200)}
-        onMouseLeave={() => setTimeout(() => setUserScrolling(false), 200)}
+        onTouchStart={() => { userScrollingRef.current = true; pauseOnUserStart(); }}
+        onTouchEnd={() => resumeAfterUserEnd()}
+        onMouseDown={() => { userScrollingRef.current = true; pauseOnUserStart(); }}
+        onMouseUp={() => resumeAfterUserEnd()}
+        onMouseLeave={() => resumeAfterUserEnd()}
       >
         {[...displayStores, ...displayStores].map((s, i) => (
           <StoreCard
