@@ -528,14 +528,13 @@ const styles: Record<string, React.CSSProperties> = {
   },
   main: {
     overflowX: "hidden",
-    overflowY: "auto",
+    overflowY: "visible",
     padding: "16px",
     paddingLeft: "max(16px, env(safe-area-inset-left))",
     paddingRight: "max(16px, env(safe-area-inset-right))",
     flex: 1,
     minWidth: 0,
     minHeight: 0,
-    WebkitOverflowScrolling: "touch",
   },
   mainContent: {
     minWidth: 0,
