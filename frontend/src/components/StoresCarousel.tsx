@@ -27,9 +27,7 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
   const userScrollingRef = useRef(false);
   const programmaticScrollRef = useRef(false);
   const touchActiveRef = useRef(false);
-  const lastTouchSeamJumpRef = useRef(0);
-  const touchSeamRafRef = useRef<number>(0);
-  const SEAM_ZONE = 8;
+  const COPIES = 5;
 
   const displayStores: DisplayStore[] =
     stores.length > 0
@@ -67,40 +65,17 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
   const doSeamJumpIfAtEdge = () => {
     const el = scrollRef.current;
     if (!el || displayStores.length === 0) return;
-    const half = el.scrollWidth / 2;
-    if (half <= 0) return;
+    const total = el.scrollWidth;
+    const copyWidth = total / COPIES;
+    if (copyWidth <= 0) return;
     const left = el.scrollLeft;
-    if (left < SEAM_ZONE) {
+    if (left < copyWidth) {
       programmaticScrollRef.current = true;
-      el.scrollLeft = half - SEAM_ZONE;
-    } else if (left > half - SEAM_ZONE) {
+      el.scrollLeft = left + 2 * copyWidth;
+    } else if (left > (COPIES - 1) * copyWidth) {
       programmaticScrollRef.current = true;
-      el.scrollLeft = SEAM_ZONE;
+      el.scrollLeft = left - 2 * copyWidth;
     }
-  };
-
-  const startTouchSeamWatch = () => {
-    const loop = () => {
-      if (!touchActiveRef.current) return;
-      const el = scrollRef.current;
-      if (el && displayStores.length > 0) {
-        const half = el.scrollWidth / 2;
-        if (half > 0) {
-          const left = el.scrollLeft;
-          if (left < SEAM_ZONE || left > half - SEAM_ZONE) {
-            const now = Date.now();
-            if (now - lastTouchSeamJumpRef.current >= 80) {
-              lastTouchSeamJumpRef.current = now;
-              programmaticScrollRef.current = true;
-              if (left < SEAM_ZONE) el.scrollLeft = half - SEAM_ZONE;
-              else el.scrollLeft = SEAM_ZONE;
-            }
-          }
-        }
-      }
-      touchSeamRafRef.current = requestAnimationFrame(loop);
-    };
-    touchSeamRafRef.current = requestAnimationFrame(loop);
   };
 
   useEffect(() => {
@@ -112,24 +87,28 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
         programmaticScrollRef.current = false;
         return;
       }
-      const half = el.scrollWidth / 2;
-      if (half <= 0) return;
-      const atSeam = el.scrollLeft < SEAM_ZONE || el.scrollLeft > half - SEAM_ZONE;
-      if (atSeam) {
+      const total = el.scrollWidth;
+      const copyWidth = total / COPIES;
+      if (copyWidth <= 0) return;
+      const left = el.scrollLeft;
+      if (left < copyWidth) {
         if (Date.now() - lastAutoScrollRef.current < 80) return;
         lastAutoScrollRef.current = Date.now();
         isSeamJumpRef.current = true;
         programmaticScrollRef.current = true;
-        if (el.scrollLeft < SEAM_ZONE) {
-          el.scrollLeft = half - SEAM_ZONE;
-        } else {
-          el.scrollLeft = SEAM_ZONE;
-        }
+        el.scrollLeft = left + 2 * copyWidth;
+        return;
+      }
+      if (left > (COPIES - 1) * copyWidth) {
+        if (Date.now() - lastAutoScrollRef.current < 80) return;
+        lastAutoScrollRef.current = Date.now();
+        isSeamJumpRef.current = true;
+        programmaticScrollRef.current = true;
+        el.scrollLeft = left - 2 * copyWidth;
         return;
       }
       if (isSeamJumpRef.current) {
         isSeamJumpRef.current = false;
-        return;
       }
     };
     let rafId = 0;
@@ -138,22 +117,31 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
         rafId = requestAnimationFrame(step);
         return;
       }
-      const half = el.scrollWidth / 2;
-      if (half <= 0) {
+      const total = el.scrollWidth;
+      const copyWidth = total / COPIES;
+      if (copyWidth <= 0) {
         rafId = requestAnimationFrame(step);
         return;
       }
       lastAutoScrollRef.current = Date.now();
       programmaticScrollRef.current = true;
       el.scrollLeft += scrollStep;
-      if (el.scrollLeft >= half - 1) {
+      if (el.scrollLeft >= (COPIES - 1) * copyWidth - 1) {
         isSeamJumpRef.current = true;
-        el.scrollLeft = 2;
+        el.scrollLeft = 2 * copyWidth;
       }
       rafId = requestAnimationFrame(step);
     };
     rafId = requestAnimationFrame(step);
     el.addEventListener("scroll", handleScroll, { passive: true });
+    requestAnimationFrame(() => {
+      const target = scrollRef.current;
+      if (target && target.scrollWidth > 0) {
+        const cw = target.scrollWidth / COPIES;
+        programmaticScrollRef.current = true;
+        target.scrollLeft = 2 * cw;
+      }
+    });
     return () => {
       el.removeEventListener("scroll", handleScroll);
       cancelAnimationFrame(rafId);
@@ -181,14 +169,9 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
           touchActiveRef.current = true;
           userScrollingRef.current = true;
           pauseOnUserStart();
-          startTouchSeamWatch();
         }}
         onTouchEnd={() => {
           touchActiveRef.current = false;
-          if (touchSeamRafRef.current) {
-            cancelAnimationFrame(touchSeamRafRef.current);
-            touchSeamRafRef.current = 0;
-          }
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
               doSeamJumpIfAtEdge();
@@ -210,7 +193,7 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
           }
         }}
       >
-        {[...displayStores, ...displayStores].map((s, i) => (
+        {Array.from({ length: COPIES }, () => displayStores).flat().map((s, i) => (
           <StoreCard
             key={`${String(s.id)}-${i}`}
             store={{
