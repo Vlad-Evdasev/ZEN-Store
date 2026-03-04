@@ -60,6 +60,21 @@ function App() {
     return () => { cancelled = true; };
   }, [userId]);
 
+  useEffect(() => {
+    if (page !== "product") return;
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+      });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [page]);
+
   const openProduct = (id: number, from?: Page) => {
     setProductId(id);
     setProductReturnTo(from ?? page);

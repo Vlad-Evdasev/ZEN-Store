@@ -57,7 +57,18 @@ export function ProductPage({
   }, [product?.id]);
 
   useEffect(() => {
-    if (product?.id) window.scrollTo(0, 0);
+    if (!product?.id) return;
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+      });
+    });
+    return () => cancelAnimationFrame(raf);
   }, [product?.id]);
 
   useEffect(() => {
