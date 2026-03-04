@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTelegram } from "./hooks/useTelegram";
 import { TelegramAuth } from "./components/TelegramAuth";
 import { useWishlist } from "./hooks/useWishlist";
@@ -40,6 +40,7 @@ function App() {
     { id: number; name: string } | { category: string; name: string } | null
   >(null);
   const [productReturnTo, setProductReturnTo] = useState<Page | null>(null);
+  const mainScrollRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,17 +63,23 @@ function App() {
 
   useEffect(() => {
     if (page !== "product") return;
-    window.scrollTo(0, 0);
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
+    const scrollToTop = () => {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      mainScrollRef.current?.scrollTo(0, 0);
+    };
+    scrollToTop();
+    const t1 = setTimeout(scrollToTop, 0);
+    const t2 = setTimeout(scrollToTop, 50);
     const raf = requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        window.scrollTo(0, 0);
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
-      });
+      requestAnimationFrame(scrollToTop);
     });
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      cancelAnimationFrame(raf);
+    };
   }, [page]);
 
   const openProduct = (id: number, from?: Page) => {
@@ -207,7 +214,7 @@ function App() {
         </>
       )}
 
-      <main style={styles.main}>
+      <main ref={mainScrollRef} style={styles.main}>
         <div key={page} className={page === "cart" || page === "favorites" ? "zen-page-enter" : ""} style={styles.mainContent}>
         {page === "catalog" && (
           <>
@@ -509,11 +516,14 @@ const styles: Record<string, React.CSSProperties> = {
   },
   main: {
     overflowX: "hidden",
+    overflowY: "auto",
     padding: "16px",
     paddingLeft: "max(16px, env(safe-area-inset-left))",
     paddingRight: "max(16px, env(safe-area-inset-right))",
     flex: 1,
     minWidth: 0,
+    minHeight: 0,
+    WebkitOverflowScrolling: "touch",
   },
   mainContent: {
     minWidth: 0,
