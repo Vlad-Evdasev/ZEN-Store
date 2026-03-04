@@ -39,6 +39,7 @@ function App() {
   const [storeCatalogStore, setStoreCatalogStore] = useState<
     { id: number; name: string } | { category: string; name: string } | null
   >(null);
+  const [productReturnTo, setProductReturnTo] = useState<Page | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -59,9 +60,19 @@ function App() {
     return () => { cancelled = true; };
   }, [userId]);
 
-  const openProduct = (id: number) => {
+  const openProduct = (id: number, from?: Page) => {
     setProductId(id);
+    setProductReturnTo(from ?? page);
     setPage("product");
+  };
+
+  const goBackFromProduct = () => {
+    if (productReturnTo) {
+      setPage(productReturnTo);
+      setProductReturnTo(null);
+    } else {
+      setPage("catalog");
+    }
   };
 
   const openCart = () => {
@@ -211,7 +222,7 @@ function App() {
         {page === "product" && productId && (
           <ProductPage
             product={products.find((p) => p.id === productId)}
-            onBack={openCatalog}
+            onBack={goBackFromProduct}
             onCart={openCart}
             onAddedToCart={refreshCartCount}
             userId={userId}
@@ -228,7 +239,7 @@ function App() {
             onBack={openCatalog}
             onCheckout={openCheckout}
             onCartChange={refreshCartCount}
-            onProductClick={openProduct}
+            onProductClick={(id) => openProduct(id, "cart")}
           />
         )}
         {page === "checkout" && (
@@ -261,12 +272,12 @@ function App() {
           />
         )}
         {page === "settings" && <Settings onBack={openCatalog} />}
-        {page === "history" && <History userId={userId} onBack={openCatalog} onProductClick={openProduct} />}
+        {page === "history" && <History userId={userId} onBack={openCatalog} onProductClick={(id) => openProduct(id, "history")} />}
         {page === "favorites" && (
           <Favorites
             products={products}
             wishlistIds={wishlistIds}
-            onProductClick={openProduct}
+            onProductClick={(id) => openProduct(id, "favorites")}
             onToggleWishlist={toggleWishlist}
             onBack={openCatalog}
           />
@@ -302,8 +313,8 @@ const styles: Record<string, React.CSSProperties> = {
   app: {
     width: "100%",
     maxWidth: 480,
-    overflowX: "hidden" as const,
-    minHeight: "100vh",
+    overflow: "hidden",
+    height: "100vh",
     display: "flex",
     flexDirection: "column",
     background: "var(--bg)",
@@ -484,11 +495,14 @@ const styles: Record<string, React.CSSProperties> = {
   },
   main: {
     overflowX: "hidden",
+    overflowY: "auto",
+    WebkitOverflowScrolling: "touch",
     padding: "16px",
     paddingLeft: "max(16px, env(safe-area-inset-left))",
     paddingRight: "max(16px, env(safe-area-inset-right))",
     flex: 1,
     minWidth: 0,
+    minHeight: 0,
   },
   mainContent: {
     minWidth: 0,

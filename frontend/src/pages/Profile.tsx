@@ -1,3 +1,6 @@
+import { useSettings } from "../context/SettingsContext";
+import { t } from "../i18n";
+
 interface ProfileProps {
   userName: string | null;
   firstName: string;
@@ -7,10 +10,12 @@ interface ProfileProps {
 }
 
 export function Profile({ userName, firstName, onBack, onOpenDeliveryTerms, onOpenSupport }: ProfileProps) {
+  const { settings } = useSettings();
+  const lang = settings.lang;
   return (
     <div style={styles.wrap}>
       <button onClick={onBack} style={styles.back}>
-        ← Назад
+        ← {t(lang, "back")}
       </button>
 
       <div style={styles.avatar}>{firstName[0]?.toUpperCase() || "?"}</div>
@@ -18,35 +23,31 @@ export function Profile({ userName, firstName, onBack, onOpenDeliveryTerms, onOp
       {userName && <p style={styles.username}>{userName}</p>}
 
       <div style={styles.section}>
-        <p style={styles.sectionTitle}>Быстрые действия</p>
+        <p style={styles.sectionTitle}>{t(lang, "profileQuickActions")}</p>
         <div style={styles.actions}>
           {onOpenDeliveryTerms && (
             <button onClick={onOpenDeliveryTerms} style={styles.actionBtn}>
               <span style={styles.actionBtnIcon}>📋</span>
-              Условия доставки
+              {t(lang, "profileDeliveryTerms")}
             </button>
           )}
           {onOpenSupport && (
             <button onClick={onOpenSupport} style={styles.actionBtn}>
               <span style={styles.actionBtnIcon}>💬</span>
-              Поддержка
+              {t(lang, "profileSupport")}
             </button>
           )}
         </div>
       </div>
 
       <div style={styles.section}>
-        <p style={styles.sectionTitle}>О магазине</p>
-        <p style={styles.text}>
-          ZΞN — минималистичный магазин одежды. Качество, стиль, твой выбор.
-        </p>
+        <p style={styles.sectionTitle}>{t(lang, "profileAboutTitle")}</p>
+        <p style={styles.text}>{t(lang, "profileAboutText")}</p>
       </div>
 
       <div style={styles.section}>
-        <p style={styles.sectionTitle}>Поддержка</p>
-        <p style={styles.text}>
-          По вопросам заказов пишите в Telegram. Мы ответим в течение 24 часов.
-        </p>
+        <p style={styles.sectionTitle}>{t(lang, "profileSupport")}</p>
+        <p style={styles.text}>{t(lang, "profileSupportText")}</p>
       </div>
     </div>
   );

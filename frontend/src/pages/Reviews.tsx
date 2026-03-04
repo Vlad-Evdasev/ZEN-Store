@@ -6,6 +6,8 @@ import {
   type Review,
   type ReviewComment,
 } from "../api";
+import { useSettings } from "../context/SettingsContext";
+import { t } from "../i18n";
 
 interface ReviewsProps {
   userId: string;
@@ -27,6 +29,8 @@ function formatDate(s: string) {
 }
 
 export function Reviews({ userId, firstName, onBack }: ReviewsProps) {
+  const { settings } = useSettings();
+  const lang = settings.lang;
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [newText, setNewText] = useState("");
@@ -63,7 +67,7 @@ export function Reviews({ userId, firstName, onBack }: ReviewsProps) {
       setNewRating(5);
       refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Не удалось добавить отзыв");
+      setError(err instanceof Error ? err.message : t(lang, "reviewsAddError"));
     } finally {
       setSubmitting(false);
     }
@@ -82,7 +86,7 @@ export function Reviews({ userId, firstName, onBack }: ReviewsProps) {
       setCommentFor(null);
       refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Не удалось добавить комментарий");
+      setError(err instanceof Error ? err.message : t(lang, "reviewsCommentError"));
     } finally {
       setSubmitting(false);
     }
@@ -91,7 +95,7 @@ export function Reviews({ userId, firstName, onBack }: ReviewsProps) {
   if (loading) {
     return (
       <div style={styles.loading}>
-        <p>Загрузка...</p>
+        <p>{t(lang, "loading")}</p>
       </div>
     );
   }
@@ -99,14 +103,14 @@ export function Reviews({ userId, firstName, onBack }: ReviewsProps) {
   return (
     <div style={styles.wrap}>
       <button onClick={onBack} style={styles.back}>
-        ← Назад
+        ← {t(lang, "back")}
       </button>
 
-      <h2 style={styles.title}>Отзывы</h2>
+      <h2 style={styles.title}>{t(lang, "reviewsTitle")}</h2>
 
       <form onSubmit={handleAddReview} style={styles.form}>
         <div style={styles.ratingRow}>
-          <span style={styles.label}>Оценка:</span>
+          <span style={styles.label}>{t(lang, "reviewsRatingLabel")}</span>
           {[1, 2, 3, 4, 5].map((r) => (
             <button
               key={r}
@@ -124,13 +128,13 @@ export function Reviews({ userId, firstName, onBack }: ReviewsProps) {
         <textarea
           value={newText}
           onChange={(e) => setNewText(e.target.value)}
-          placeholder="Напишите отзыв..."
+          placeholder={t(lang, "reviewsPlaceholder")}
           rows={3}
           style={styles.textarea}
         />
         {error && <p style={styles.error}>{error}</p>}
         <button type="submit" disabled={submitting} style={styles.submitBtn}>
-          {submitting ? "..." : "Оставить отзыв"}
+          {submitting ? "..." : t(lang, "reviewsSubmit")}
         </button>
       </form>
 
@@ -138,7 +142,7 @@ export function Reviews({ userId, firstName, onBack }: ReviewsProps) {
         {reviews.map((r) => (
           <div key={r.id} style={styles.review}>
             <div style={styles.reviewHead}>
-              <span style={styles.reviewName}>{r.user_name || "Гость"}</span>
+              <span style={styles.reviewName}>{r.user_name || t(lang, "guest")}</span>
               <span style={styles.reviewDate}>{formatDate(r.created_at)}</span>
             </div>
             <div style={styles.reviewStars}>
@@ -159,7 +163,7 @@ export function Reviews({ userId, firstName, onBack }: ReviewsProps) {
             <div style={styles.comments}>
               {r.comments?.map((c: ReviewComment) => (
                 <div key={c.id} style={styles.comment}>
-                  <span style={styles.commentName}>{c.user_name || "Гость"}</span>
+                  <span style={styles.commentName}>{c.user_name || t(lang, "guest")}</span>
                   <span style={styles.commentDate}>{formatDate(c.created_at)}</span>
                   <p style={styles.commentText}>{c.text}</p>
                 </div>
@@ -169,7 +173,7 @@ export function Reviews({ userId, firstName, onBack }: ReviewsProps) {
                   <textarea
                     value={commentText}
                     onChange={(e) => setCommentText(e.target.value)}
-                    placeholder="Написать комментарий..."
+                    placeholder={t(lang, "reviewsCommentPlaceholder")}
                     rows={2}
                     style={styles.commentInput}
                   />
@@ -180,7 +184,7 @@ export function Reviews({ userId, firstName, onBack }: ReviewsProps) {
                       disabled={submitting}
                       style={styles.commentSubmit}
                     >
-                      Отправить
+                      {t(lang, "reviewsSend")}
                     </button>
                     <button
                       type="button"
@@ -190,7 +194,7 @@ export function Reviews({ userId, firstName, onBack }: ReviewsProps) {
                       }}
                       style={styles.commentCancel}
                     >
-                      Отмена
+                      {t(lang, "reviewsCancel")}
                     </button>
                   </div>
                 </div>
@@ -200,7 +204,7 @@ export function Reviews({ userId, firstName, onBack }: ReviewsProps) {
                   onClick={() => setCommentFor(r.id)}
                   style={styles.replyBtn}
                 >
-                  Ответить
+                  {t(lang, "reviewsReply")}
                 </button>
               )}
             </div>
@@ -209,7 +213,7 @@ export function Reviews({ userId, firstName, onBack }: ReviewsProps) {
       </div>
 
       {reviews.length === 0 && (
-        <p style={styles.empty}>Пока нет отзывов. Будьте первым!</p>
+        <p style={styles.empty}>{t(lang, "reviewsEmpty")}</p>
       )}
     </div>
   );
