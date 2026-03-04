@@ -68,6 +68,15 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (visualHeight == null) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [visualHeight]);
+
+  useEffect(() => {
     let cancelled = false;
     getProducts().then((p) => { if (!cancelled) setProducts(p); }).catch(console.error);
     getStores().then((s) => { if (!cancelled) setStores(s); }).catch(console.error);
@@ -187,13 +196,30 @@ function App() {
     );
   }
 
+  const keyboardOpen = visualHeight != null;
   return (
-    <div style={styles.appWrapper}>
+    <div
+      style={{
+        ...styles.appWrapper,
+        ...(keyboardOpen
+          ? {
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              height: visualHeight,
+              maxHeight: visualHeight,
+              overflow: "hidden",
+              zIndex: 1,
+            }
+          : {}),
+      }}
+    >
     <div
       className="zen-app"
       style={{
         ...styles.app,
-        ...(visualHeight != null ? { height: visualHeight, maxHeight: visualHeight } : {}),
+        ...(keyboardOpen ? { height: "100%", maxHeight: "100%", minHeight: 0 } : {}),
       }}
     >
       <SettingsSync />
