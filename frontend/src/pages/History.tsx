@@ -70,6 +70,7 @@ export function History({ userId, onBack, onProductClick }: HistoryProps) {
             <button
               key={value}
               type="button"
+              className="history-filter-tab"
               onClick={() => setFilter(value)}
               style={{
                 ...styles.filterTab,

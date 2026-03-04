@@ -114,6 +114,18 @@ button:active {
   box-shadow: none !important;
 }
 
+/* История заказов: кнопки фильтра без белых границ в тёмной теме */
+.history-filter-tab,
+.history-filter-tab:focus,
+.history-filter-tab:focus-visible,
+.history-filter-tab:active {
+  outline: none !important;
+  outline-width: 0 !important;
+  outline-color: transparent !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
 @keyframes zen-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }

@@ -18,6 +18,9 @@ interface StoresCarouselProps {
   onStoreClick: (store: { id: number; name: string } | { category: string; name: string }) => void;
 }
 
+const isTouchOnly =
+  typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+
 export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const marqueePausedRef = useRef(false);
@@ -62,6 +65,7 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
     if (!el || displayStores.length === 0) return;
     const scrollStep = 1.65;
     const handleScroll = () => {
+      if (isTouchOnly) return;
       const half = el.scrollWidth / 2;
       if (half <= 0) return;
       const atSeam = el.scrollLeft < 3 || el.scrollLeft > half - 3;
@@ -101,7 +105,7 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
       }
       rafId = requestAnimationFrame(step);
     };
-    rafId = requestAnimationFrame(step);
+    if (!isTouchOnly) rafId = requestAnimationFrame(step);
     el.addEventListener("scroll", handleScroll, { passive: true });
     return () => {
       el.removeEventListener("scroll", handleScroll);
