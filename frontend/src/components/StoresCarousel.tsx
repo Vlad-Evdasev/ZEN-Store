@@ -85,19 +85,34 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
         programmaticScrollRef.current = false;
         return;
       }
-      if (touchActiveRef.current) return;
       const half = el.scrollWidth / 2;
       if (half <= 0) return;
       const atSeam = el.scrollLeft < 3 || el.scrollLeft > half - 3;
       if (atSeam) {
         isSeamJumpRef.current = true;
-        programmaticScrollRef.current = true;
-        if (el.scrollLeft < 3) {
-          lastAutoScrollRef.current = Date.now();
-          el.scrollLeft = half - 3;
+        if (touchActiveRef.current) {
+          requestAnimationFrame(() => {
+            const el2 = scrollRef.current;
+            if (!el2) return;
+            const half2 = el2.scrollWidth / 2;
+            const left = el2.scrollLeft;
+            if (left < 3) {
+              programmaticScrollRef.current = true;
+              el2.scrollLeft = half2 - 3;
+            } else if (left > half2 - 3) {
+              programmaticScrollRef.current = true;
+              el2.scrollLeft = 3;
+            }
+          });
         } else {
-          lastAutoScrollRef.current = Date.now();
-          el.scrollLeft = 3;
+          programmaticScrollRef.current = true;
+          if (el.scrollLeft < 3) {
+            lastAutoScrollRef.current = Date.now();
+            el.scrollLeft = half - 3;
+          } else {
+            lastAutoScrollRef.current = Date.now();
+            el.scrollLeft = 3;
+          }
         }
         return;
       }
