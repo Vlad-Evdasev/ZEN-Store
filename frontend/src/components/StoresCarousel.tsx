@@ -18,9 +18,6 @@ interface StoresCarouselProps {
   onStoreClick: (store: { id: number; name: string } | { category: string; name: string }) => void;
 }
 
-const isTouchOnly =
-  typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
-
 export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const marqueePausedRef = useRef(false);
@@ -28,6 +25,7 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
   const lastAutoScrollRef = useRef(0);
   const isSeamJumpRef = useRef(false);
   const userScrollingRef = useRef(false);
+  const programmaticScrollRef = useRef(false);
 
   const displayStores: DisplayStore[] =
     stores.length > 0
@@ -67,12 +65,16 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
     if (!el || displayStores.length === 0) return;
     const scrollStep = 1.65;
     const handleScroll = () => {
-      if (isTouchOnly) return;
+      if (programmaticScrollRef.current) {
+        programmaticScrollRef.current = false;
+        return;
+      }
       const half = el.scrollWidth / 2;
       if (half <= 0) return;
       const atSeam = el.scrollLeft < 3 || el.scrollLeft > half - 3;
       if (atSeam) {
         isSeamJumpRef.current = true;
+        programmaticScrollRef.current = true;
         if (el.scrollLeft < 3) {
           lastAutoScrollRef.current = Date.now();
           el.scrollLeft = half - 3;
@@ -86,6 +88,12 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
         isSeamJumpRef.current = false;
         return;
       }
+      pauseOnUserStart();
+      if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
+      pauseTimeoutRef.current = window.setTimeout(() => {
+        marqueePausedRef.current = false;
+        pauseTimeoutRef.current = null;
+      }, 1500);
     };
     let rafId = 0;
     const step = () => {
@@ -99,6 +107,7 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
         return;
       }
       lastAutoScrollRef.current = Date.now();
+      programmaticScrollRef.current = true;
       el.scrollLeft += scrollStep;
       if (el.scrollLeft >= half - 1) {
         isSeamJumpRef.current = true;
