@@ -20,9 +20,10 @@ interface CartProps {
   onCheckout: () => void;
   onCartChange?: () => void;
   onProductClick?: (productId: number) => void;
+  onFormFieldFocus?: () => void;
 }
 
-export function Cart({ userId, userName, firstName, onBack, onCheckout, onCartChange, onProductClick }: CartProps) {
+export function Cart({ userId, userName, firstName, onBack, onCheckout, onCartChange, onProductClick, onFormFieldFocus }: CartProps) {
   const { formatPrice, settings } = useSettings();
   const lang = settings.lang;
   const [items, setItems] = useState<CartItem[]>([]);
@@ -99,6 +100,7 @@ export function Cart({ userId, userName, firstName, onBack, onCheckout, onCartCh
   };
 
   const scrollFieldIntoView = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    onFormFieldFocus?.();
     const el = e.target;
     setTimeout(() => {
       el.scrollIntoView({ block: "center", behavior: "smooth" });

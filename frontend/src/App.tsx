@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { flushSync } from "react-dom";
 import { useTelegram } from "./hooks/useTelegram";
 import { TelegramAuth } from "./components/TelegramAuth";
@@ -50,30 +50,49 @@ function App() {
     }
   }, []);
 
+  const applyViewportFromVV = useCallback(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const h = vv.height;
+    const w = vv.width;
+    const inner = window.innerHeight;
+    const keyboardOpen = h < inner * 0.95;
+    setViewportCover(
+      keyboardOpen
+        ? { top: vv.offsetTop, left: vv.offsetLeft, width: w, height: h }
+        : null
+    );
+  }, []);
+
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
-    const update = () => {
-      const h = vv.height;
-      const w = vv.width;
-      const inner = window.innerHeight;
-      const keyboardOpen = h < inner * 0.9;
-      setViewportCover(
-        keyboardOpen
-          ? { top: vv.offsetTop, left: vv.offsetLeft, width: w, height: h }
-          : null
-      );
-    };
-    update();
-    vv.addEventListener("resize", update);
-    vv.addEventListener("scroll", update);
-    window.addEventListener("resize", update);
+    vv.addEventListener("resize", applyViewportFromVV);
+    vv.addEventListener("scroll", applyViewportFromVV);
+    window.addEventListener("resize", applyViewportFromVV);
+    applyViewportFromVV();
     return () => {
-      vv.removeEventListener("resize", update);
-      vv.removeEventListener("scroll", update);
-      window.removeEventListener("resize", update);
+      vv.removeEventListener("resize", applyViewportFromVV);
+      vv.removeEventListener("scroll", applyViewportFromVV);
+      window.removeEventListener("resize", applyViewportFromVV);
     };
-  }, []);
+  }, [applyViewportFromVV]);
+
+  const onFormFieldFocus = useCallback(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const inner = window.innerHeight;
+    const h = vv.height;
+    if (h < inner * 0.95) {
+      setViewportCover({ top: vv.offsetTop, left: vv.offsetLeft, width: vv.width, height: h });
+    } else {
+      setViewportCover({ top: 0, left: 0, width: vv.width, height: Math.round(inner * 0.52) });
+    }
+    requestAnimationFrame(() => applyViewportFromVV());
+    setTimeout(applyViewportFromVV, 50);
+    setTimeout(applyViewportFromVV, 150);
+    setTimeout(applyViewportFromVV, 350);
+  }, [applyViewportFromVV]);
 
   useEffect(() => {
     if (viewportCover == null) return;
@@ -355,6 +374,7 @@ function App() {
             onCheckout={openCheckout}
             onCartChange={refreshCartCount}
             onProductClick={(id) => openProduct(id, "cart")}
+            onFormFieldFocus={onFormFieldFocus}
           />
         )}
         {page === "checkout" && (
