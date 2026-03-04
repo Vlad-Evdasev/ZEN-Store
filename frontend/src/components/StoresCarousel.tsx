@@ -28,7 +28,8 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
   const programmaticScrollRef = useRef(false);
   const touchActiveRef = useRef(false);
   const lastTouchSeamJumpRef = useRef(0);
-  const SEAM_ZONE = 50;
+  const touchSeamRafRef = useRef<number>(0);
+  const SEAM_ZONE = 8;
 
   const displayStores: DisplayStore[] =
     stores.length > 0
@@ -78,23 +79,28 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
     }
   };
 
-  const onTouchMove = () => {
-    const el = scrollRef.current;
-    if (!el || displayStores.length === 0) return;
-    const half = el.scrollWidth / 2;
-    if (half <= 0) return;
-    const left = el.scrollLeft;
-    const now = Date.now();
-    if (now - lastTouchSeamJumpRef.current < 60) return;
-    if (left < SEAM_ZONE) {
-      lastTouchSeamJumpRef.current = now;
-      programmaticScrollRef.current = true;
-      el.scrollLeft = half - SEAM_ZONE;
-    } else if (left > half - SEAM_ZONE) {
-      lastTouchSeamJumpRef.current = now;
-      programmaticScrollRef.current = true;
-      el.scrollLeft = SEAM_ZONE;
-    }
+  const startTouchSeamWatch = () => {
+    const loop = () => {
+      if (!touchActiveRef.current) return;
+      const el = scrollRef.current;
+      if (el && displayStores.length > 0) {
+        const half = el.scrollWidth / 2;
+        if (half > 0) {
+          const left = el.scrollLeft;
+          if (left < SEAM_ZONE || left > half - SEAM_ZONE) {
+            const now = Date.now();
+            if (now - lastTouchSeamJumpRef.current >= 80) {
+              lastTouchSeamJumpRef.current = now;
+              programmaticScrollRef.current = true;
+              if (left < SEAM_ZONE) el.scrollLeft = half - SEAM_ZONE;
+              else el.scrollLeft = SEAM_ZONE;
+            }
+          }
+        }
+      }
+      touchSeamRafRef.current = requestAnimationFrame(loop);
+    };
+    touchSeamRafRef.current = requestAnimationFrame(loop);
   };
 
   useEffect(() => {
@@ -171,12 +177,20 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
         ref={scrollRef}
         style={styles.scrollArea}
         className="hide-scrollbar"
-        onTouchStart={() => { touchActiveRef.current = true; userScrollingRef.current = true; pauseOnUserStart(); }}
-        onTouchMove={onTouchMove}
+        onTouchStart={() => {
+          touchActiveRef.current = true;
+          userScrollingRef.current = true;
+          pauseOnUserStart();
+          startTouchSeamWatch();
+        }}
         onTouchEnd={() => {
+          touchActiveRef.current = false;
+          if (touchSeamRafRef.current) {
+            cancelAnimationFrame(touchSeamRafRef.current);
+            touchSeamRafRef.current = 0;
+          }
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
-              touchActiveRef.current = false;
               doSeamJumpIfAtEdge();
               resumeAfterUserEnd();
             });
