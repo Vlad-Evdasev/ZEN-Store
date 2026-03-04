@@ -53,7 +53,11 @@ function App() {
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
-    const update = () => setVisualHeight(vv.height);
+    const update = () => {
+      const h = vv.height;
+      const inner = window.innerHeight;
+      setVisualHeight(h < inner * 0.85 ? h : null);
+    };
     update();
     vv.addEventListener("resize", update);
     vv.addEventListener("scroll", update);

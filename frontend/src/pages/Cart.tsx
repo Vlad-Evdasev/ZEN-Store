@@ -98,6 +98,13 @@ export function Cart({ userId, userName, firstName, onBack, onCheckout, onCartCh
     reader.readAsDataURL(file);
   };
 
+  const scrollFieldIntoView = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const el = e.target;
+    setTimeout(() => {
+      el.scrollIntoView({ block: "center", behavior: "smooth" });
+    }, 400);
+  };
+
   if (loading) {
     return (
       <div style={styles.loading}>
@@ -133,6 +140,7 @@ export function Cart({ userId, userName, firstName, onBack, onCheckout, onCartCh
           handleCustomOrderSubmit={handleCustomOrderSubmit}
           onPhotoChange={onPhotoChange}
           fileInputRef={fileInputRef}
+          onFieldFocus={scrollFieldIntoView}
           t={t}
         />
       </div>
@@ -206,6 +214,7 @@ export function Cart({ userId, userName, firstName, onBack, onCheckout, onCartCh
         handleCustomOrderSubmit={handleCustomOrderSubmit}
         onPhotoChange={onPhotoChange}
         fileInputRef={fileInputRef}
+        onFieldFocus={scrollFieldIntoView}
         t={t}
       />
     </div>
@@ -232,6 +241,7 @@ function CustomOrderForm({
   handleCustomOrderSubmit,
   onPhotoChange,
   fileInputRef,
+  onFieldFocus,
   t,
 }: {
   lang: Lang;
@@ -253,6 +263,7 @@ function CustomOrderForm({
   handleCustomOrderSubmit: (e: React.FormEvent) => void;
   onPhotoChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
+  onFieldFocus?: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   t: (lang: Lang, key: string) => string;
 }) {
   if (customSuccess) {
@@ -280,6 +291,7 @@ function CustomOrderForm({
           type="text"
           value={customName}
           onChange={(e) => setCustomName(e.target.value)}
+          onFocus={onFieldFocus}
           placeholder={firstName || t(lang, "customOrderPlaceholderName")}
           style={styles.customOrderInput}
           required
@@ -289,6 +301,7 @@ function CustomOrderForm({
           type="text"
           value={userName ?? ""}
           readOnly
+          onFocus={onFieldFocus}
           style={{ ...styles.customOrderInput, opacity: 0.9 }}
         />
         <label style={styles.customOrderLabel}>{t(lang, "customOrderAddress")} *</label>
@@ -296,6 +309,7 @@ function CustomOrderForm({
           type="text"
           value={customAddress}
           onChange={(e) => setCustomAddress(e.target.value)}
+          onFocus={onFieldFocus}
           placeholder={t(lang, "customOrderPlaceholderAddress")}
           style={styles.customOrderInput}
           required
@@ -332,6 +346,7 @@ function CustomOrderForm({
         <textarea
           value={customDesc}
           onChange={(e) => setCustomDesc(e.target.value)}
+          onFocus={onFieldFocus}
           placeholder={t(lang, "customOrderPlaceholderDesc")}
           rows={3}
           style={styles.customOrderTextarea}
@@ -342,6 +357,7 @@ function CustomOrderForm({
           type="text"
           value={customSize}
           onChange={(e) => setCustomSize(e.target.value)}
+          onFocus={onFieldFocus}
           placeholder={t(lang, "customOrderPlaceholderSize")}
           style={styles.customOrderInput}
         />
@@ -419,6 +435,7 @@ const styles: Record<string, React.CSSProperties> = {
   customOrderWrap: {
     marginTop: 24,
     padding: 16,
+    paddingBottom: 260,
     background: "var(--surface)",
     borderRadius: 12,
     border: "1px solid var(--border)",
