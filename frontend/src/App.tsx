@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { flushSync } from "react-dom";
 import { useTelegram } from "./hooks/useTelegram";
 import { TelegramAuth } from "./components/TelegramAuth";
@@ -42,73 +42,12 @@ function App() {
   >(null);
   const [productReturnTo, setProductReturnTo] = useState<Page | null>(null);
   const mainScrollRef = useRef<HTMLElement | null>(null);
-  const [viewportCover, setViewportCover] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
 
   useEffect(() => {
     if (typeof history !== "undefined" && "scrollRestoration" in history) {
       history.scrollRestoration = "manual";
     }
   }, []);
-
-  const applyViewportFromVV = useCallback(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const h = vv.height;
-    const w = vv.width;
-    const inner = window.innerHeight;
-    const keyboardOpen = h < inner * 0.95;
-    setViewportCover(
-      keyboardOpen
-        ? { top: vv.offsetTop, left: vv.offsetLeft, width: w, height: h }
-        : null
-    );
-  }, []);
-
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    vv.addEventListener("resize", applyViewportFromVV);
-    vv.addEventListener("scroll", applyViewportFromVV);
-    window.addEventListener("resize", applyViewportFromVV);
-    applyViewportFromVV();
-    return () => {
-      vv.removeEventListener("resize", applyViewportFromVV);
-      vv.removeEventListener("scroll", applyViewportFromVV);
-      window.removeEventListener("resize", applyViewportFromVV);
-    };
-  }, [applyViewportFromVV]);
-
-  const onFormFieldFocus = useCallback(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const inner = window.innerHeight;
-    const h = vv.height;
-    if (h < inner * 0.95) {
-      setViewportCover({ top: vv.offsetTop, left: vv.offsetLeft, width: vv.width, height: h });
-    } else {
-      setViewportCover({ top: 0, left: 0, width: vv.width, height: Math.round(inner * 0.52) });
-    }
-    requestAnimationFrame(() => applyViewportFromVV());
-    setTimeout(applyViewportFromVV, 50);
-    setTimeout(applyViewportFromVV, 150);
-    setTimeout(applyViewportFromVV, 350);
-  }, [applyViewportFromVV]);
-
-  useEffect(() => {
-    if (viewportCover == null) return;
-    const vvHeight = `${viewportCover.height}px`;
-    document.documentElement.classList.add("zen-keyboard-open");
-    document.documentElement.style.setProperty("--zen-vv-height", vvHeight);
-    document.body.classList.add("zen-keyboard-open");
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.documentElement.classList.remove("zen-keyboard-open");
-      document.documentElement.style.removeProperty("--zen-vv-height");
-      document.body.classList.remove("zen-keyboard-open");
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [viewportCover]);
 
   useEffect(() => {
     let cancelled = false;
@@ -230,49 +169,9 @@ function App() {
     );
   }
 
-  const keyboardOpen = viewportCover != null;
   return (
-    <>
-      {keyboardOpen && viewportCover && (
-        <div
-          aria-hidden
-          style={{
-            position: "fixed",
-            top: viewportCover.top + viewportCover.height,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "var(--bg)",
-            zIndex: 0,
-            pointerEvents: "none",
-          }}
-        />
-      )}
-    <div
-      style={{
-        ...styles.appWrapper,
-        ...(keyboardOpen && viewportCover
-          ? {
-              position: "fixed",
-              top: viewportCover.top,
-              left: viewportCover.left,
-              width: viewportCover.width,
-              height: viewportCover.height,
-              maxHeight: viewportCover.height,
-              overflow: "hidden",
-              zIndex: 1,
-              background: "var(--bg)",
-            }
-          : {}),
-      }}
-    >
-    <div
-      className="zen-app"
-      style={{
-        ...styles.app,
-        ...(keyboardOpen ? { height: "100%", maxHeight: "100%", minHeight: 0 } : {}),
-      }}
-    >
+    <div style={styles.appWrapper}>
+    <div className="zen-app" style={styles.app}>
       <SettingsSync />
       <header style={styles.header}>
         <div style={styles.headerLeft}>
@@ -374,7 +273,6 @@ function App() {
             onCheckout={openCheckout}
             onCartChange={refreshCartCount}
             onProductClick={(id) => openProduct(id, "cart")}
-            onFormFieldFocus={onFormFieldFocus}
           />
         )}
         {page === "checkout" && (
@@ -423,7 +321,6 @@ function App() {
       <Footer />
     </div>
     </div>
-    </>
   );
 }
 
@@ -441,7 +338,7 @@ const styles: Record<string, React.CSSProperties> = {
     maxWidth: 400,
   },
   appWrapper: {
-    minHeight: "100vh",
+    minHeight: "100dvh",
     display: "flex",
     justifyContent: "center",
     background: "var(--bg)",
@@ -450,7 +347,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: "100%",
     maxWidth: 480,
     overflowX: "hidden" as const,
-    minHeight: "100vh",
+    minHeight: "100dvh",
     display: "flex",
     flexDirection: "column",
     background: "var(--bg)",
