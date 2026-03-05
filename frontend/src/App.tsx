@@ -124,9 +124,11 @@ function App() {
       if (!cancelled) setCartCount(items.reduce((a, i) => a + i.quantity, 0));
     }).catch(() => {});
 
-    getSupportUnreadCount(userId || "").then(({ count }) => {
-      if (!cancelled) setSupportUnreadCount(count);
-    }).catch(() => {});
+    if (userId) {
+      getSupportUnreadCount(userId).then(({ count }) => {
+        if (!cancelled) setSupportUnreadCount(Number(count) || 0);
+      }).catch(() => {});
+    }
 
     getReviews().then((reviews) => {
       if (!cancelled && reviews.length > 0) {
@@ -140,8 +142,16 @@ function App() {
 
   useEffect(() => {
     if ((page !== "profile" && page !== "support") || !userId) return;
-    getSupportUnreadCount(userId).then(({ count }) => setSupportUnreadCount(count)).catch(() => {});
+    getSupportUnreadCount(userId).then(({ count }) => setSupportUnreadCount(Number(count) || 0)).catch(() => {});
   }, [page, userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+    const t = setInterval(() => {
+      getSupportUnreadCount(userId).then(({ count }) => setSupportUnreadCount(Number(count) || 0)).catch(() => {});
+    }, 25000);
+    return () => clearInterval(t);
+  }, [userId]);
 
   useEffect(() => {
     if (page !== "product") return;

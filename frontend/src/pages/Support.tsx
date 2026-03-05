@@ -54,6 +54,14 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
     loadChats();
   }, [loadChats]);
 
+  useEffect(() => {
+    if (!userId) return;
+    const t = setInterval(() => {
+      getSupportChats(userId).then(setChats).catch(() => {});
+    }, 5000);
+    return () => clearInterval(t);
+  }, [userId]);
+
   const loadMessages = useCallback((isPolling?: boolean) => {
     if (selectedChatId == null) return;
     if (!isPolling) setMessagesLoading(true);
@@ -371,8 +379,8 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
                   >
                     <span style={styles.chatItemTitle}>
                       {c.title && c.title.trim() ? c.title.trim() : `${t(lang, "supportChat")} #${c.id}`}
-                      {(c.unread_count ?? 0) > 0 && (
-                        <span style={styles.chatUnreadBadge} aria-label="Непрочитанные">{c.unread_count}</span>
+                      {Number(c.unread_count ?? 0) > 0 && (
+                        <span style={styles.chatUnreadBadge} aria-label="Непрочитанные">{Number(c.unread_count)}</span>
                       )}
                     </span>
                     <span style={styles.chatItemDate}>{formatDate(c.created_at)}</span>
