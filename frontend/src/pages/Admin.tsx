@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   createProduct,
   updateProduct,
@@ -580,6 +580,17 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
   const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
   const [editingMessageText, setEditingMessageText] = useState("");
   const [expandedImageUrl, setExpandedImageUrl] = useState<string | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const ADMIN_INPUT_MIN_H = 40;
+  const ADMIN_INPUT_MAX_H = 160;
+
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "0px";
+    const h = el.scrollHeight;
+    el.style.height = Math.max(ADMIN_INPUT_MIN_H, Math.min(h, ADMIN_INPUT_MAX_H)) + "px";
+  }, [input]);
 
   useEffect(() => {
     if (!adminSecret) return;
@@ -762,13 +773,13 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
                 )}
               </div>
               <div style={styles.supportInputRow}>
-                <input
-                  type="text"
+                <textarea
+                  ref={inputRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSend()}
                   placeholder="Сообщение..."
-                  style={{ ...styles.input, flex: 1 }}
+                  style={styles.supportTextarea}
+                  rows={1}
                   disabled={sending}
                 />
                 <button type="button" onClick={handleSend} style={styles.submit} disabled={sending || !input.trim()}>
@@ -1404,7 +1415,22 @@ const styles: Record<string, React.CSSProperties> = {
   chatListItemMeta: { display: "block", fontSize: 12, opacity: 0.85, marginTop: 2 },
   chatListItemDate: { display: "block", fontSize: 11, opacity: 0.75, marginTop: 2 },
   supportThreadHeader: { marginBottom: 12, paddingBottom: 12, borderBottom: "1px solid var(--border)" },
-  supportInputRow: { display: "flex", gap: 10, marginTop: 12 },
+  supportInputRow: { display: "flex", gap: 10, marginTop: 12, alignItems: "flex-end" },
+  supportTextarea: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 40,
+    maxHeight: 160,
+    padding: "10px 12px",
+    border: "1px solid var(--border)",
+    borderRadius: 8,
+    fontFamily: "inherit",
+    fontSize: 14,
+    lineHeight: 1.35,
+    resize: "none",
+    overflowY: "auto",
+    boxSizing: "border-box",
+  },
   supportPlaceholder: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)" },
   supportEditBlock: { width: "100%", minWidth: 0 },
   supportEditInput: { width: "100%", boxSizing: "border-box", padding: "8px 10px", marginBottom: 8, border: "1px solid rgba(255,255,255,0.5)", borderRadius: 8, background: "rgba(0,0,0,0.2)", color: "#fff", fontSize: 14 },
