@@ -38,6 +38,8 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
   const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
   const [editingMessageText, setEditingMessageText] = useState("");
   const threadRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const INPUT_MAX_HEIGHT = 120;
 
   const loadChats = useCallback(() => {
     if (!userId) return;
@@ -80,6 +82,16 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
       });
     }
   }, [messages.length, messages[messages.length - 1]?.id]);
+
+  const INPUT_MIN_HEIGHT = 40; // одна строка (padding + lineHeight)
+
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "0px";
+    const contentH = el.scrollHeight;
+    el.style.height = Math.max(INPUT_MIN_HEIGHT, Math.min(contentH, INPUT_MAX_HEIGHT)) + "px";
+  }, [input]);
 
   const handleCreateChat = () => {
     if (!userId || creating) return;
@@ -287,11 +299,12 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
               </span>
             </label>
             <textarea
+              ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={t(lang, "supportMessagePlaceholder")}
               style={styles.inputTextarea}
-              rows={2}
+              rows={1}
               disabled={sending}
             />
           </div>
@@ -557,11 +570,15 @@ const styles: Record<string, React.CSSProperties> = {
     border: "none",
     fontFamily: "inherit",
     fontSize: 14,
+    lineHeight: 1.35,
     background: "transparent",
     color: "var(--text)",
     caretColor: "var(--accent)",
     resize: "none",
-    minHeight: 44,
+    boxSizing: "border-box",
+    minHeight: 0,
+    maxHeight: 120,
+    overflowY: "auto",
   },
   sendBtn: {
     flexShrink: 0,
