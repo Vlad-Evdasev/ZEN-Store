@@ -13,15 +13,20 @@ import {
   getOrdersAdmin,
   getCustomOrdersAdmin,
   updateOrderStatus,
+  getSupportChatsAdmin,
+  getSupportMessagesAdmin,
+  sendSupportMessageAdmin,
   type Product,
   type Store,
   type Order,
   type CustomOrderAdmin,
+  type SupportChat,
+  type SupportMessage,
 } from "../api";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
-type Tab = "products" | "stores" | "orders" | "customOrders";
+type Tab = "products" | "stores" | "orders" | "customOrders" | "support";
 
 export function Admin() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -132,6 +137,13 @@ export function Admin() {
         >
           Заявки не из каталога
         </button>
+        <button
+          type="button"
+          onClick={() => { setTab("support"); setEditingStoreId(null); setEditingProductId(null); }}
+          style={{ ...styles.tabBtn, ...(tab === "support" ? styles.tabActive : {}) }}
+        >
+          Поддержка
+        </button>
       </div>
 
       {tab === "products" && (
@@ -155,6 +167,10 @@ export function Admin() {
 
       {tab === "customOrders" && (
         <CustomOrdersTab adminSecret={adminSecret} />
+      )}
+
+      {tab === "support" && (
+        <SupportTab adminSecret={adminSecret} />
       )}
 
       {tab === "stores" && (
@@ -340,6 +356,177 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
     </>
   );
 }
+
+function SupportTab({ adminSecret }: { adminSecret: string }) {
+  const [chats, setChats] = useState<SupportChat[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedChatId, setSelectedChatId] = useState<number | null>(null);
+  const [messages, setMessages] = useState<SupportMessage[]>([]);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const loadChats = () => {
+    getSupportChatsAdmin(adminSecret)
+      .then(setChats)
+      .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")));
+  };
+
+  useEffect(() => {
+    if (!adminSecret) return;
+    setLoading(true);
+    getSupportChatsAdmin(adminSecret)
+      .then(setChats)
+      .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")))
+      .finally(() => setLoading(false));
+  }, [adminSecret]);
+
+  useEffect(() => {
+    if (!adminSecret || !selectedChatId) return;
+    setMessagesLoading(true);
+    getSupportMessagesAdmin(selectedChatId, adminSecret)
+      .then(setMessages)
+      .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")))
+      .finally(() => setMessagesLoading(false));
+  }, [adminSecret, selectedChatId]);
+
+  useEffect(() => {
+    if (!selectedChatId || !adminSecret) return;
+    const t = setInterval(() => {
+      getSupportMessagesAdmin(selectedChatId, adminSecret).then(setMessages).catch(() => {});
+      getSupportChatsAdmin(adminSecret).then((list) => {
+        setChats(list);
+        if (!list.some((c) => c.id === selectedChatId)) setSelectedChatId(null);
+      }).catch(() => {});
+    }, 5000);
+    return () => clearInterval(t);
+  }, [selectedChatId, adminSecret]);
+
+  const handleSend = () => {
+    const text = input.trim();
+    if (!text || selectedChatId == null || sending) return;
+    setSending(true);
+    setMessage("");
+    sendSupportMessageAdmin(selectedChatId, adminSecret, text)
+      .then((msg) => {
+        setMessages((prev) => [...prev, msg]);
+        setInput("");
+      })
+      .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")))
+      .finally(() => setSending(false));
+  };
+
+  const formatDate = (s: string) => {
+    try {
+      return new Date(s).toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+    } catch {
+      return s;
+    }
+  };
+
+  if (loading) return <p style={styles.hint}>Загрузка чатов...</p>;
+
+  if (selectedChatId != null) {
+    const chat = chats.find((c) => c.id === selectedChatId);
+    if (!chat) return <p style={styles.hint}>Чат удалён или не найден.</p>;
+    return (
+      <>
+        {message && <p style={styles.message}>{message}</p>}
+        <div style={styles.list}>
+          <button type="button" onClick={() => setSelectedChatId(null)} style={styles.backBtn}>
+            ← К списку чатов
+          </button>
+          <h3 style={styles.subtitle}>
+            Чат #{chat.id} — {chat.user_name || chat.user_username || chat.user_id}
+          </h3>
+          <div style={supportThreadStyle}>
+            {messagesLoading && messages.length === 0 ? (
+              <p style={styles.hint}>Загрузка сообщений...</p>
+            ) : (
+              messages.map((m) => (
+                <div
+                  key={m.id}
+                  style={{
+                    ...supportBubbleStyle,
+                    ...(m.sender_type === "admin" ? supportBubbleAdminStyle : supportBubbleUserStyle),
+                  }}
+                >
+                  <span style={{ display: "block", fontSize: 14 }}>{m.text}</span>
+                  <span style={{ display: "block", fontSize: 11, opacity: 0.8, marginTop: 4 }}>{formatDate(m.created_at)}</span>
+                </div>
+              ))
+            )}
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSend()}
+              placeholder="Сообщение..."
+              style={styles.input}
+              disabled={sending}
+            />
+            <button type="button" onClick={handleSend} style={styles.submit} disabled={sending || !input.trim()}>
+              Отправить
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      {message && <p style={styles.message}>{message}</p>}
+      <div style={styles.list}>
+        <h3 style={styles.subtitle}>Чаты поддержки ({chats.length})</h3>
+        {chats.length === 0 ? (
+          <p style={styles.hint}>Нет чатов. Когда пользователь создаст чат из приложения, он появится здесь.</p>
+        ) : (
+          chats.map((c) => (
+            <div key={c.id} style={styles.orderCard}>
+              <div style={styles.orderHeader}>
+                <span style={styles.orderId}>#{c.id}</span>
+              </div>
+              <p style={styles.orderField}>👤 {c.user_name || "—"}</p>
+              <p style={styles.orderField}>📱 {c.user_username || "—"}</p>
+              <p style={styles.orderDate}>{formatDate(c.created_at)}</p>
+              <button
+                type="button"
+                onClick={() => setSelectedChatId(c.id)}
+                style={styles.smallBtn}
+              >
+                Открыть чат
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+    </>
+  );
+}
+
+const supportThreadStyle: React.CSSProperties = {
+  minHeight: 200,
+  maxHeight: 360,
+  overflowY: "auto",
+  display: "flex",
+  flexDirection: "column",
+  gap: 8,
+  padding: 8,
+  background: "var(--surface)",
+  borderRadius: 8,
+};
+const supportBubbleStyle: React.CSSProperties = {
+  maxWidth: "85%",
+  padding: "10px 14px",
+  borderRadius: 12,
+  alignSelf: "flex-start",
+};
+const supportBubbleAdminStyle: React.CSSProperties = { ...supportBubbleStyle, background: "var(--accent)", color: "#fff", alignSelf: "flex-end" };
+const supportBubbleUserStyle: React.CSSProperties = { ...supportBubbleStyle, background: "var(--border)", color: "var(--text)" };
 
 function ProductsTab({
   products,

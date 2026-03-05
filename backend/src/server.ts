@@ -9,6 +9,7 @@ import { customOrdersRouter } from "./routes/customOrders.js";
 import { ordersRouter } from "./routes/orders.js";
 import { reviewsRouter } from "./routes/reviews.js";
 import { adminRouter } from "./routes/admin.js";
+import { supportRouter } from "./routes/support.js";
 import "./db/schema.js";
 
 const app = express();
@@ -26,6 +27,7 @@ app.use("/api/custom-orders", customOrdersRouter);
 app.use("/api/orders", ordersRouter);
 app.use("/api/reviews", reviewsRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/support", supportRouter);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 

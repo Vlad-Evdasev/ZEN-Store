@@ -421,3 +421,95 @@ export async function addProductReview(
   if (!res.ok) throw new Error("Failed to add product review");
   return res.json();
 }
+
+export interface SupportChat {
+  id: number;
+  user_id: string;
+  user_name: string | null;
+  user_username: string | null;
+  created_at: string;
+}
+
+export interface SupportMessage {
+  id: number;
+  chat_id: number;
+  sender_type: "user" | "admin";
+  text: string;
+  created_at: string;
+}
+
+export async function getSupportChats(userId: string): Promise<SupportChat[]> {
+  const res = await fetch(`${API_URL}/api/support/chats?userId=${encodeURIComponent(userId)}`);
+  if (!res.ok) throw new Error("Failed to fetch chats");
+  return res.json();
+}
+
+export async function getSupportChatsAdmin(adminSecret: string): Promise<SupportChat[]> {
+  const res = await fetch(`${API_URL}/api/support/chats`, {
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) throw new Error("Failed to fetch chats");
+  return res.json();
+}
+
+export async function createSupportChat(
+  userId: string,
+  data: { user_name?: string; user_username?: string }
+): Promise<SupportChat> {
+  const res = await fetch(`${API_URL}/api/support/chats`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId, ...data }),
+  });
+  if (!res.ok) throw new Error("Failed to create chat");
+  return res.json();
+}
+
+export async function getSupportMessages(chatId: number, userId: string): Promise<SupportMessage[]> {
+  const res = await fetch(`${API_URL}/api/support/chats/${chatId}/messages?userId=${encodeURIComponent(userId)}`);
+  if (!res.ok) throw new Error("Failed to fetch messages");
+  return res.json();
+}
+
+export async function getSupportMessagesAdmin(chatId: number, adminSecret: string): Promise<SupportMessage[]> {
+  const res = await fetch(`${API_URL}/api/support/chats/${chatId}/messages`, {
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) throw new Error("Failed to fetch messages");
+  return res.json();
+}
+
+export async function sendSupportMessage(chatId: number, userId: string, text: string): Promise<SupportMessage> {
+  const res = await fetch(`${API_URL}/api/support/chats/${chatId}/messages?userId=${encodeURIComponent(userId)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
+  if (!res.ok) throw new Error("Failed to send message");
+  return res.json();
+}
+
+export async function sendSupportMessageAdmin(chatId: number, adminSecret: string, text: string): Promise<SupportMessage> {
+  const res = await fetch(`${API_URL}/api/support/chats/${chatId}/messages`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
+    body: JSON.stringify({ text }),
+  });
+  if (!res.ok) throw new Error("Failed to send message");
+  return res.json();
+}
+
+export async function deleteSupportChat(chatId: number, userId: string): Promise<void> {
+  const res = await fetch(`${API_URL}/api/support/chats/${chatId}?userId=${encodeURIComponent(userId)}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Failed to delete chat");
+}
+
+export async function deleteSupportChatAdmin(chatId: number, adminSecret: string): Promise<void> {
+  const res = await fetch(`${API_URL}/api/support/chats/${chatId}`, {
+    method: "DELETE",
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) throw new Error("Failed to delete chat");
+}

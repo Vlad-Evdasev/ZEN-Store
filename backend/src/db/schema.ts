@@ -106,6 +106,24 @@ db.exec(`
     image_data TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE IF NOT EXISTS support_chats (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    user_name TEXT,
+    user_username TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME
+  );
+
+  CREATE TABLE IF NOT EXISTS support_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chat_id INTEGER NOT NULL,
+    sender_type TEXT NOT NULL,
+    text TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (chat_id) REFERENCES support_chats(id)
+  );
 `);
 
 // Migrations for existing DBs

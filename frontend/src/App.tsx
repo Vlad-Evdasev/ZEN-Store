@@ -12,6 +12,7 @@ import { ProductPage } from "./pages/ProductPage";
 import { Checkout } from "./pages/Checkout";
 import { Profile } from "./pages/Profile";
 import { DeliveryTerms } from "./pages/DeliveryTerms";
+import { Support } from "./pages/Support";
 import { Reviews } from "./pages/Reviews";
 import { StoreCatalog } from "./pages/StoreCatalog";
 import { Settings } from "./pages/Settings";
@@ -21,7 +22,7 @@ import { SettingsSync } from "./components/SettingsSync";
 import { useSettings } from "./context/SettingsContext";
 import { t } from "./i18n";
 
-type Page = "catalog" | "cart" | "product" | "checkout" | "profile" | "reviews" | "favorites" | "storeCatalog" | "settings" | "history" | "deliveryTerms";
+type Page = "catalog" | "cart" | "product" | "checkout" | "profile" | "reviews" | "favorites" | "storeCatalog" | "settings" | "history" | "deliveryTerms" | "support";
 
 const SELLER_LINK = import.meta.env.VITE_SELLER_LINK || "";
 
@@ -143,7 +144,7 @@ function App() {
   };
   const openSupport = () => {
     setMenuOpen(false);
-    window.open(SELLER_LINK || "https://t.me/ZenStoreBot", "_blank");
+    setPage("support");
   };
 
   const refreshCartCount = () => {
@@ -297,6 +298,14 @@ function App() {
         )}
         {page === "deliveryTerms" && (
           <DeliveryTerms onBack={openProfile} />
+        )}
+        {page === "support" && (
+          <Support
+            userId={userId || ""}
+            userName={userName}
+            firstName={firstName}
+            onBack={openProfile}
+          />
         )}
         {page === "reviews" && (
           <Reviews

@@ -84,6 +84,13 @@ const texts: Record<Lang, Record<string, string>> = {
     reviewsEmpty: "Пока нет отзывов. Будьте первым!",
     guest: "Гость",
     reviewsCommentError: "Не удалось добавить комментарий",
+    supportTitle: "Поддержка",
+    supportNewChat: "Новый чат",
+    supportNoChats: "Пока нет чатов. Создайте первый.",
+    supportChat: "Чат",
+    supportDeleteChat: "Удалить чат",
+    supportMessagePlaceholder: "Сообщение...",
+    send: "Отправить",
   },
   en: {
     search: "Search...",
@@ -168,6 +175,13 @@ const texts: Record<Lang, Record<string, string>> = {
     reviewsEmpty: "No reviews yet. Be the first!",
     guest: "Guest",
     reviewsCommentError: "Failed to add comment",
+    supportTitle: "Support",
+    supportNewChat: "New chat",
+    supportNoChats: "No chats yet. Create one.",
+    supportChat: "Chat",
+    supportDeleteChat: "Delete chat",
+    supportMessagePlaceholder: "Message...",
+    send: "Send",
   },
 };
 
