@@ -187,7 +187,7 @@ function App() {
   };
   const openStoreCatalog = (store: { id: number; name: string } | { category: string; name: string }) => {
     setStoreCatalogStore(store);
-    setStoreCatalogView("welcome");
+    setStoreCatalogView("catalog");
     setPage("storeCatalog");
   };
   const openDeliveryTerms = () => {
@@ -215,6 +215,7 @@ function App() {
     storeCatalogStore &&
     "category" in storeCatalogStore &&
     storeCatalogStore.category === DEFAULT_WELCOME_STORE.category;
+  const isInitialWelcomeScreen = page === "storeCatalog" && storeCatalogView === "welcome" && isDefaultWelcomeStore;
   const openCheckout = () => setPage("checkout");
 
   const needsAuth = !isInTelegram && !userId;
@@ -232,33 +233,37 @@ function App() {
     <div style={styles.appWrapper}>
     <div className="zen-app" style={styles.app}>
       <SettingsSync />
-      <header style={styles.header}>
-        <div style={styles.headerLeft}>
-          <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            style={styles.hamburger}
-            aria-label="Меню"
-          >
-            ☰
-          </button>
-        </div>
-        <div style={styles.headerCenter}>
-          <button onClick={openCatalog} style={styles.logo} aria-label="На главную">
-            ZΞN
-          </button>
-        </div>
-        <div style={styles.headerRight}>
-          <button onClick={openFavorites} style={styles.headerLinkWithBadge}>
-            <span style={styles.headerBtnLabel}>{t(lang, "favorites")}</span>
-            <span style={{ ...styles.favBadge, ...styles.headerBadgePos, visibility: wishlistIds.size > 0 ? "visible" : "hidden" }}>{wishlistIds.size || "0"}</span>
-          </button>
-          <button onClick={openCart} style={styles.headerBtnWrapper}>
-            <span style={styles.headerBtnLabel}>{t(lang, "cart")}</span>
-            <span style={{ ...styles.cartBadge, ...styles.headerBadgePos, visibility: cartCount > 0 ? "visible" : "hidden" }}>{cartCount || "0"}</span>
-          </button>
-        </div>
-      </header>
-      <div style={styles.headerSpacer} aria-hidden />
+      {!isInitialWelcomeScreen && (
+        <>
+          <header style={styles.header}>
+            <div style={styles.headerLeft}>
+              <button
+                onClick={() => setMenuOpen(!menuOpen)}
+                style={styles.hamburger}
+                aria-label="Меню"
+              >
+                ☰
+              </button>
+            </div>
+            <div style={styles.headerCenter}>
+              <button onClick={openCatalog} style={styles.logo} aria-label="На главную">
+                ZΞN
+              </button>
+            </div>
+            <div style={styles.headerRight}>
+              <button onClick={openFavorites} style={styles.headerLinkWithBadge}>
+                <span style={styles.headerBtnLabel}>{t(lang, "favorites")}</span>
+                <span style={{ ...styles.favBadge, ...styles.headerBadgePos, visibility: wishlistIds.size > 0 ? "visible" : "hidden" }}>{wishlistIds.size || "0"}</span>
+              </button>
+              <button onClick={openCart} style={styles.headerBtnWrapper}>
+                <span style={styles.headerBtnLabel}>{t(lang, "cart")}</span>
+                <span style={{ ...styles.cartBadge, ...styles.headerBadgePos, visibility: cartCount > 0 ? "visible" : "hidden" }}>{cartCount || "0"}</span>
+              </button>
+            </div>
+          </header>
+          <div style={styles.headerSpacer} aria-hidden />
+        </>
+      )}
 
       {menuOpen && (
         <>
@@ -319,6 +324,7 @@ function App() {
             {storeCatalogView === "welcome" && (
               <StoreWelcome
                 store={storeCatalogStore}
+                showBack={!isDefaultWelcomeStore}
                 onBack={openCatalog}
                 onGoToCatalog={isDefaultWelcomeStore ? openCatalog : () => setStoreCatalogView("catalog")}
                 onCustomOrder={() => setStoreCatalogView("customOrder")}
@@ -329,7 +335,7 @@ function App() {
                 store={storeCatalogStore}
                 products={products}
                 onProductClick={openProduct}
-                onBack={() => setStoreCatalogView("welcome")}
+                onBack={openCatalog}
                 wishlistIds={wishlistIds}
                 onToggleWishlist={toggleWishlist}
               />

@@ -5,12 +5,13 @@ import { getCategoryLabel } from "../utils/categories";
 
 interface StoreWelcomeProps {
   store: { id: number; name: string } | { category: string; name: string };
+  showBack?: boolean;
   onBack: () => void;
   onGoToCatalog: () => void;
   onCustomOrder: () => void;
 }
 
-export function StoreWelcome({ store, onBack, onGoToCatalog, onCustomOrder }: StoreWelcomeProps) {
+export function StoreWelcome({ store, showBack = true, onBack, onGoToCatalog, onCustomOrder }: StoreWelcomeProps) {
   const { settings } = useSettings();
   const lang = settings.lang;
   const [visible, setVisible] = useState(false);
@@ -24,10 +25,12 @@ export function StoreWelcome({ store, onBack, onGoToCatalog, onCustomOrder }: St
   }, []);
 
   return (
-    <div style={styles.wrap}>
-      <button onClick={onBack} style={styles.back}>
-        ← {t(lang, "back")}
-      </button>
+    <div style={{ ...styles.wrap, ...(showBack ? {} : styles.wrapNoHeader) }}>
+      {showBack && (
+        <button onClick={onBack} style={styles.back}>
+          ← {t(lang, "back")}
+        </button>
+      )}
       <h1
         style={{
           ...styles.title,
@@ -61,6 +64,7 @@ export function StoreWelcome({ store, onBack, onGoToCatalog, onCustomOrder }: St
 
 const styles: Record<string, React.CSSProperties> = {
   wrap: { maxWidth: 420, margin: "0 auto", paddingBottom: 24 },
+  wrapNoHeader: { paddingTop: 48 },
   back: {
     background: "none",
     border: "none",
