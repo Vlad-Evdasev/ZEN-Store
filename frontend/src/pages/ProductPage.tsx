@@ -46,6 +46,7 @@ export function ProductPage({
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [imageIndex, setImageIndex] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
+  const galleryScrollRef = useRef<HTMLDivElement>(null);
 
   const sizes = product ? product.sizes.split(",").map((s) => s.trim()) : [];
   const imageUrls = product
@@ -56,6 +57,22 @@ export function ProductPage({
   useEffect(() => {
     setImageIndex(0);
   }, [product?.id]);
+
+  const syncIndexFromScroll = () => {
+    const el = galleryScrollRef.current;
+    if (!el || imageUrls.length <= 1) return;
+    const w = el.clientWidth;
+    const index = Math.round(el.scrollLeft / w);
+    const clamped = Math.max(0, Math.min(index, imageUrls.length - 1));
+    if (clamped !== imageIndex) setImageIndex(clamped);
+  };
+
+  useEffect(() => {
+    const el = galleryScrollRef.current;
+    if (!el || imageUrls.length <= 1) return;
+    const targetLeft = imageIndex * el.clientWidth;
+    if (Math.abs(el.scrollLeft - targetLeft) > 2) el.scrollTo({ left: targetLeft, behavior: "smooth" });
+  }, [imageIndex, imageUrls.length]);
 
   useEffect(() => {
     if (!product?.id) return;
@@ -143,37 +160,35 @@ export function ProductPage({
       </div>
 
       <div style={styles.imageWrap}>
-        <img
-          key={`${product.id}-${imageIndex}`}
-          src={currentImage}
-          alt={product.name}
-          style={{ ...styles.image, animation: "productImageFade 0.3s ease" }}
-        />
-        {imageUrls.length > 1 && (
+        {imageUrls.length <= 1 ? (
+          <img
+            key={`${product.id}-img`}
+            src={currentImage}
+            alt={product.name}
+            style={styles.image}
+          />
+        ) : (
           <>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setImageIndex((i) => (i === 0 ? imageUrls.length - 1 : i - 1)); }}
-              style={styles.galleryPrev}
-              aria-label="Предыдущее фото"
+            <div
+              ref={galleryScrollRef}
+              className="hide-scrollbar"
+              style={styles.galleryScroll}
+              onScroll={syncIndexFromScroll}
+              onTouchEnd={syncIndexFromScroll}
             >
-              ‹
-            </button>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setImageIndex((i) => (i === imageUrls.length - 1 ? 0 : i + 1)); }}
-              style={styles.galleryNext}
-              aria-label="Следующее фото"
-            >
-              ›
-            </button>
-            <div style={styles.galleryDots}>
+              {imageUrls.map((url, i) => (
+                <div key={`${product.id}-${i}`} style={styles.gallerySlide}>
+                  <img src={url} alt={`${product.name} — ${i + 1}`} style={styles.image} />
+                </div>
+              ))}
+            </div>
+            <div style={styles.gallerySegments}>
               {imageUrls.map((_, i) => (
                 <button
                   key={i}
                   type="button"
                   onClick={(e) => { e.stopPropagation(); setImageIndex(i); }}
-                  style={{ ...styles.galleryDot, ...(i === imageIndex ? styles.galleryDotActive : {}) }}
+                  style={{ ...styles.gallerySegment, ...(i === imageIndex ? styles.gallerySegmentActive : {}) }}
                   aria-label={`Фото ${i + 1}`}
                 />
               ))}
@@ -362,58 +377,46 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 24,
   },
   image: { width: "100%", height: "100%", objectFit: "cover" },
-  galleryPrev: {
-    position: "absolute",
-    left: 8,
-    top: "50%",
-    transform: "translateY(-50%)",
-    width: 40,
-    height: 40,
-    borderRadius: "50%",
-    background: "rgba(0,0,0,0.5)",
-    border: "none",
-    color: "#fff",
-    fontSize: 24,
-    cursor: "pointer",
+  galleryScroll: {
     display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
+    width: "100%",
+    height: "100%",
+    overflowX: "auto",
+    overflowY: "hidden",
+    scrollSnapType: "x mandatory",
+    scrollBehavior: "smooth",
+    WebkitOverflowScrolling: "touch",
+    scrollbarWidth: "none",
+    msOverflowStyle: "none",
   },
-  galleryNext: {
-    position: "absolute",
-    right: 8,
-    top: "50%",
-    transform: "translateY(-50%)",
-    width: 40,
-    height: 40,
-    borderRadius: "50%",
-    background: "rgba(0,0,0,0.5)",
-    border: "none",
-    color: "#fff",
-    fontSize: 24,
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
+  gallerySlide: {
+    flex: "0 0 100%",
+    width: "100%",
+    height: "100%",
+    scrollSnapAlign: "start",
+    scrollSnapStop: "always",
+    minWidth: 0,
   },
-  galleryDots: {
+  gallerySegments: {
     position: "absolute",
     bottom: 12,
     left: "50%",
     transform: "translateX(-50%)",
     display: "flex",
     gap: 6,
+    zIndex: 2,
   },
-  galleryDot: {
-    width: 8,
-    height: 8,
-    borderRadius: "50%",
+  gallerySegment: {
+    width: 24,
+    height: 3,
+    borderRadius: 2,
     border: "none",
-    background: "rgba(255,255,255,0.5)",
+    background: "rgba(255,255,255,0.35)",
     cursor: "pointer",
     padding: 0,
+    transition: "background 0.2s ease",
   },
-  galleryDotActive: {
+  gallerySegmentActive: {
     background: "#fff",
   },
   title: {
