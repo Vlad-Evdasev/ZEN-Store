@@ -289,9 +289,6 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
-              }}
               placeholder={t(lang, "supportMessagePlaceholder")}
               style={styles.inputTextarea}
               rows={2}
@@ -393,7 +390,7 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  wrap: { maxWidth: 420, margin: "0 auto", paddingBottom: 24 },
+  wrap: { maxWidth: 420, margin: "0 auto", paddingBottom: 0 },
   topRow: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
   back: {
     background: "none",
