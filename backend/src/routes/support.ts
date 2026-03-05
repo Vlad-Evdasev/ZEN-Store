@@ -134,8 +134,8 @@ supportRouter.patch("/chats/:id/messages/:messageId", (req, res) => {
   if (chat.deleted_at) return res.status(404).json({ error: "Chat deleted" });
   const msg = db.prepare("SELECT id, chat_id, sender_type, text FROM support_messages WHERE id = ? AND chat_id = ?").get(messageId, chatId) as { id: number; sender_type: string } | undefined;
   if (!msg) return res.status(404).json({ error: "Message not found" });
-  if (msg.sender_type !== "user") return res.status(403).json({ error: "Can only edit own messages" });
-  if (!asAdmin && chat.user_id !== userId) return res.status(403).json({ error: "Forbidden" });
+  const canEdit = asAdmin ? msg.sender_type === "admin" : msg.sender_type === "user" && chat.user_id === userId;
+  if (!canEdit) return res.status(403).json({ error: "Can only edit own messages" });
   const textVal = typeof text === "string" ? text.trim() : "";
   db.prepare("UPDATE support_messages SET text = ? WHERE id = ? AND chat_id = ?").run(textVal, messageId, chatId);
   const row = db.prepare("SELECT id, chat_id, sender_type, text, image_url, created_at FROM support_messages WHERE id = ?").get(messageId) as Record<string, unknown>;
@@ -153,8 +153,8 @@ supportRouter.delete("/chats/:id/messages/:messageId", (req, res) => {
   if (chat.deleted_at) return res.status(404).json({ error: "Chat deleted" });
   const msg = db.prepare("SELECT id, sender_type FROM support_messages WHERE id = ? AND chat_id = ?").get(messageId, chatId) as { sender_type: string } | undefined;
   if (!msg) return res.status(404).json({ error: "Message not found" });
-  if (msg.sender_type !== "user") return res.status(403).json({ error: "Can only delete own messages" });
-  if (!asAdmin && chat.user_id !== userId) return res.status(403).json({ error: "Forbidden" });
+  const canDelete = asAdmin ? msg.sender_type === "admin" : msg.sender_type === "user" && chat.user_id === userId;
+  if (!canDelete) return res.status(403).json({ error: "Can only delete own messages" });
   db.prepare("DELETE FROM support_messages WHERE id = ? AND chat_id = ?").run(messageId, chatId);
   res.json({ ok: true });
 });

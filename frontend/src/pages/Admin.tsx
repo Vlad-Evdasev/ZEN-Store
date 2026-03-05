@@ -20,6 +20,8 @@ import {
   getSupportChatsAdmin,
   getSupportMessagesAdmin,
   sendSupportMessageAdmin,
+  updateSupportMessageAdmin,
+  deleteSupportMessageAdmin,
   type Product,
   type Store,
   type Category,
@@ -575,6 +577,8 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState("");
+  const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
+  const [editingMessageText, setEditingMessageText] = useState("");
 
   useEffect(() => {
     if (!adminSecret) return;
@@ -628,6 +632,38 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
     }
   };
 
+  const handleUpdateMessage = () => {
+    if (selectedChatId == null || editingMessageId == null) return;
+    const text = editingMessageText.trim();
+    if (!text) return;
+    setSending(true);
+    setMessage("");
+    updateSupportMessageAdmin(selectedChatId, editingMessageId, adminSecret, { text })
+      .then((updated) => {
+        setMessages((prev) => prev.map((x) => (x.id === editingMessageId ? updated : x)));
+        setEditingMessageId(null);
+        setEditingMessageText("");
+      })
+      .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")))
+      .finally(() => setSending(false));
+  };
+
+  const handleDeleteMessage = (messageId: number) => {
+    if (selectedChatId == null || !confirm("Удалить сообщение?")) return;
+    setSending(true);
+    setMessage("");
+    deleteSupportMessageAdmin(selectedChatId, messageId, adminSecret)
+      .then(() => {
+        setMessages((prev) => prev.filter((m) => m.id !== messageId));
+        if (editingMessageId === messageId) {
+          setEditingMessageId(null);
+          setEditingMessageText("");
+        }
+      })
+      .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")))
+      .finally(() => setSending(false));
+  };
+
   if (loading) return <p style={styles.hint}>Загрузка чатов...</p>;
 
   const chat = selectedChatId != null ? chats.find((c) => c.id === selectedChatId) : null;
@@ -678,11 +714,47 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
                       style={{
                         ...supportBubbleStyle,
                         ...(m.sender_type === "admin" ? supportBubbleAdminStyle : supportBubbleUserStyle),
+                        position: "relative",
                       }}
                     >
-                      {m.image_url && <img src={m.image_url} alt="" style={{ display: "block", maxWidth: "100%", maxHeight: 200, borderRadius: 8, marginBottom: 4 }} />}
-                      {m.text ? <span style={{ display: "block", fontSize: 14 }}>{m.text}</span> : null}
-                      <span style={{ display: "block", fontSize: 11, opacity: 0.8, marginTop: 4 }}>{formatDate(m.created_at)}</span>
+                      {m.sender_type === "admin" && (
+                        <div style={{ position: "absolute", top: 6, right: 8, display: "flex", gap: 4 }}>
+                          {editingMessageId === m.id ? (
+                            <>
+                              <button type="button" onClick={handleUpdateMessage} disabled={sending} style={styles.supportMsgEditBtn}>
+                                Сохранить
+                              </button>
+                              <button type="button" onClick={() => { setEditingMessageId(null); setEditingMessageText(""); }} style={styles.supportMsgCancelBtn}>
+                                Отмена
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button type="button" onClick={() => { setEditingMessageId(m.id); setEditingMessageText(m.text || ""); }} style={styles.supportMsgEditBtn} title="Изменить">
+                                ✎
+                              </button>
+                              <button type="button" onClick={() => handleDeleteMessage(m.id)} disabled={sending} style={styles.supportMsgCancelBtn} title="Удалить">
+                                ×
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                      {editingMessageId === m.id ? (
+                        <input
+                          type="text"
+                          value={editingMessageText}
+                          onChange={(e) => setEditingMessageText(e.target.value)}
+                          style={{ width: "100%", padding: "8px 10px", marginTop: 4, marginBottom: 4, border: "1px solid rgba(255,255,255,0.5)", borderRadius: 8, background: "rgba(0,0,0,0.2)", color: "#fff", fontSize: 14 }}
+                          autoFocus
+                        />
+                      ) : (
+                        <>
+                          {m.image_url && <img src={m.image_url} alt="" style={{ display: "block", maxWidth: "100%", maxHeight: 200, borderRadius: 8, marginBottom: 4 }} />}
+                          {m.text ? <span style={{ display: "block", fontSize: 14, paddingRight: m.sender_type === "admin" ? 56 : 0 }}>{m.text}</span> : null}
+                          <span style={{ display: "block", fontSize: 11, opacity: 0.8, marginTop: 4 }}>{formatDate(m.created_at)}</span>
+                        </>
+                      )}
                     </div>
                   ))
                 )}
@@ -1327,4 +1399,6 @@ const styles: Record<string, React.CSSProperties> = {
   supportThreadHeader: { marginBottom: 12, paddingBottom: 12, borderBottom: "1px solid var(--border)" },
   supportInputRow: { display: "flex", gap: 10, marginTop: 12 },
   supportPlaceholder: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)" },
+  supportMsgEditBtn: { padding: "4px 8px", fontSize: 12, background: "rgba(255,255,255,0.25)", border: "none", borderRadius: 6, color: "#fff", cursor: "pointer" },
+  supportMsgCancelBtn: { padding: "4px 8px", fontSize: 12, background: "rgba(0,0,0,0.2)", border: "none", borderRadius: 6, color: "#fff", cursor: "pointer" },
 };

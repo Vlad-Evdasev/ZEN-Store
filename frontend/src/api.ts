@@ -609,6 +609,33 @@ export async function sendSupportMessageAdmin(
   return res.json();
 }
 
+export async function updateSupportMessageAdmin(
+  chatId: number,
+  messageId: number,
+  adminSecret: string,
+  data: { text: string }
+): Promise<SupportMessage> {
+  const res = await fetch(`${API_URL}/api/support/chats/${chatId}/messages/${messageId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to update message");
+  return res.json();
+}
+
+export async function deleteSupportMessageAdmin(
+  chatId: number,
+  messageId: number,
+  adminSecret: string
+): Promise<void> {
+  const res = await fetch(`${API_URL}/api/support/chats/${chatId}/messages/${messageId}`, {
+    method: "DELETE",
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) throw new Error("Failed to delete message");
+}
+
 export async function deleteSupportChat(chatId: number, userId: string): Promise<void> {
   const res = await fetch(`${API_URL}/api/support/chats/${chatId}?userId=${encodeURIComponent(userId)}`, {
     method: "DELETE",
