@@ -44,7 +44,7 @@ export function TelegramAuth({ onAuth }: TelegramAuthProps) {
 
   return (
     <div style={styles.wrap} className="telegram-auth-wrap">
-      <h2 style={styles.title}>ZΞN</h2>
+      <h2 style={styles.title}>RAW</h2>
       <p style={styles.text}>Войдите через Telegram для заказа</p>
       {BOT_USERNAME ? (
         <>

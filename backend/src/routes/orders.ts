@@ -39,7 +39,7 @@ ordersRouter.post("/:userId", async (req, res) => {
 
   const contact = user_username || user_phone || "";
   notifyAdminNewOrder(row.id, userId, user_name || "", contact, total, itemsCount).catch((err) => {
-    console.error("[ZEN] Ошибка отправки уведомления о заказе:", err);
+    console.error("[RAW] Ошибка отправки уведомления о заказе:", err);
   });
 
   res.status(201).json({ ok: true, orderId: row.id });

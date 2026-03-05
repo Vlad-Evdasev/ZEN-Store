@@ -76,7 +76,7 @@ function App() {
   const lang = settings.lang;
   const { userId, userName, firstName, isInTelegram, setBrowserAuth } = useTelegram();
   const { wishlistIds, toggleWishlist, hasInWishlist } = useWishlist(userId);
-  const DEFAULT_WELCOME_STORE: { category: string; name: string } = { category: "all", name: "ZEN" };
+  const DEFAULT_WELCOME_STORE: { category: string; name: string } = { category: "all", name: "RAW" };
 
   const [page, setPage] = useState<Page>("storeCatalog");
   const [productId, setProductId] = useState<number | null>(null);
@@ -289,7 +289,7 @@ function App() {
             </div>
             <div style={styles.headerCenter}>
               <button onClick={openCatalog} style={styles.logo} aria-label="На главную">
-                ZΞN
+                RAW
               </button>
             </div>
             <div style={styles.headerRight}>

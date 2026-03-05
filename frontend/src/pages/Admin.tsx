@@ -125,7 +125,7 @@ export function Admin() {
     <div className="zen-admin">
       <div className="admin-layout">
         <aside className="admin-sidebar">
-          <div className="admin-sidebar-title">ZEN Admin</div>
+          <div className="admin-sidebar-title">RAW Admin</div>
           <button type="button" onClick={() => setTabAndReset("products")} className={`admin-nav-btn ${tab === "products" ? "active" : ""}`}>
             Товары
           </button>

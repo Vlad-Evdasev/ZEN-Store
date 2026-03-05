@@ -1,4 +1,4 @@
-# ZΞN — Telegram Mini App магазин одежды
+# RAW — Telegram Mini App магазин одежды
 
 Telegram Mini App для магазина одежды на Node.js + React.
 
