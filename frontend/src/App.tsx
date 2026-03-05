@@ -15,6 +15,8 @@ import { DeliveryTerms } from "./pages/DeliveryTerms";
 import { Support } from "./pages/Support";
 import { Reviews } from "./pages/Reviews";
 import { StoreCatalog } from "./pages/StoreCatalog";
+import { StoreWelcome } from "./pages/StoreWelcome";
+import { CustomOrderPage } from "./pages/CustomOrderPage";
 import { Settings } from "./pages/Settings";
 import { History } from "./pages/History";
 import { Footer } from "./components/Footer";
@@ -77,6 +79,8 @@ function App() {
   const [storeCatalogStore, setStoreCatalogStore] = useState<
     { id: number; name: string } | { category: string; name: string } | null
   >(null);
+  type StoreCatalogView = "welcome" | "catalog" | "customOrder";
+  const [storeCatalogView, setStoreCatalogView] = useState<StoreCatalogView>("welcome");
   const [productReturnTo, setProductReturnTo] = useState<Page | null>(null);
   const mainScrollRef = useRef<HTMLElement | null>(null);
 
@@ -181,6 +185,7 @@ function App() {
   };
   const openStoreCatalog = (store: { id: number; name: string } | { category: string; name: string }) => {
     setStoreCatalogStore(store);
+    setStoreCatalogView("welcome");
     setPage("storeCatalog");
   };
   const openDeliveryTerms = () => {
@@ -201,6 +206,7 @@ function App() {
     setPage("catalog");
     setProductId(null);
     setStoreCatalogStore(null);
+    setStoreCatalogView("welcome");
   };
   const openCheckout = () => setPage("checkout");
 
@@ -302,14 +308,34 @@ function App() {
           </>
         )}
         {page === "storeCatalog" && storeCatalogStore && (
-          <StoreCatalog
-            store={storeCatalogStore}
-            products={products}
-            onProductClick={openProduct}
-            onBack={openCatalog}
-            wishlistIds={wishlistIds}
-            onToggleWishlist={toggleWishlist}
-          />
+          <>
+            {storeCatalogView === "welcome" && (
+              <StoreWelcome
+                store={storeCatalogStore}
+                onBack={openCatalog}
+                onGoToCatalog={() => setStoreCatalogView("catalog")}
+                onCustomOrder={() => setStoreCatalogView("customOrder")}
+              />
+            )}
+            {storeCatalogView === "catalog" && (
+              <StoreCatalog
+                store={storeCatalogStore}
+                products={products}
+                onProductClick={openProduct}
+                onBack={() => setStoreCatalogView("welcome")}
+                wishlistIds={wishlistIds}
+                onToggleWishlist={toggleWishlist}
+              />
+            )}
+            {storeCatalogView === "customOrder" && (
+              <CustomOrderPage
+                userId={userId || ""}
+                userName={userName}
+                firstName={firstName}
+                onBack={() => setStoreCatalogView("welcome")}
+              />
+            )}
+          </>
         )}
         {page === "product" && productId && (
           <ProductPage
