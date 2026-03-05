@@ -429,6 +429,8 @@ export interface SupportChat {
   user_username: string | null;
   title: string | null;
   created_at: string;
+  /** Present for user chats: number of unread messages from admin */
+  unread_count?: number;
 }
 
 export interface SupportMessage {
@@ -443,6 +445,12 @@ export interface SupportMessage {
 export async function getSupportChats(userId: string): Promise<SupportChat[]> {
   const res = await fetch(`${API_URL}/api/support/chats?userId=${encodeURIComponent(userId)}`);
   if (!res.ok) throw new Error("Failed to fetch chats");
+  return res.json();
+}
+
+export async function getSupportUnreadCount(userId: string): Promise<{ count: number }> {
+  const res = await fetch(`${API_URL}/api/support/unread-count?userId=${encodeURIComponent(userId)}`);
+  if (!res.ok) throw new Error("Failed to fetch unread count");
   return res.json();
 }
 

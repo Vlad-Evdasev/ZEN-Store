@@ -58,6 +58,7 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
           if (prev.some((m) => m.id < 0)) return prev;
           return fetched;
         });
+        if (!isPolling) loadChats();
       })
       .catch(console.error)
       .finally(() => { if (!isPolling) setMessagesLoading(false); });
@@ -308,6 +309,9 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
                   >
                     <span style={styles.chatItemTitle}>
                       {c.title && c.title.trim() ? c.title.trim() : `${t(lang, "supportChat")} #${c.id}`}
+                      {(c.unread_count ?? 0) > 0 && (
+                        <span style={styles.chatUnreadBadge} aria-label="Непрочитанные">{c.unread_count}</span>
+                      )}
                     </span>
                     <span style={styles.chatItemDate}>{formatDate(c.created_at)}</span>
                   </button>
@@ -390,6 +394,20 @@ const styles: Record<string, React.CSSProperties> = {
   chatList: { listStyle: "none", padding: 0, margin: 0 },
   chatItem: { marginBottom: 8 },
   chatItemCard: { display: "flex", alignItems: "center", gap: 4, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" },
+  chatUnreadBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 20,
+    height: 20,
+    padding: "0 6px",
+    marginLeft: 8,
+    borderRadius: 10,
+    background: "var(--accent)",
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: 600,
+  },
   chatItemBtn: {
     flex: 1,
     padding: "14px 16px",

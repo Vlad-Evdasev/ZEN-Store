@@ -26,10 +26,26 @@ supportRouter.get("/chats", (req, res) => {
   if (!userId) return res.status(400).json({ error: "userId required" });
   const rows = db
     .prepare(
-      "SELECT id, user_id, user_name, user_username, title, created_at FROM support_chats WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC"
+      `SELECT c.id, c.user_id, c.user_name, c.user_username, c.title, c.created_at,
+        (SELECT COUNT(*) FROM support_messages m WHERE m.chat_id = c.id AND m.sender_type = 'admin' AND m.id > COALESCE((SELECT r.last_read_message_id FROM support_chat_read r WHERE r.user_id = ? AND r.chat_id = c.id), 0)) AS unread_count
+       FROM support_chats c WHERE c.user_id = ? AND c.deleted_at IS NULL ORDER BY c.created_at DESC`
     )
-    .all(userId);
+    .all(userId, userId);
   res.json(rows);
+});
+
+supportRouter.get("/unread-count", (req, res) => {
+  const userId = req.query.userId as string | undefined;
+  if (!userId) return res.status(400).json({ error: "userId required" });
+  if (isAdmin(req)) return res.json({ count: 0 });
+  const row = db
+    .prepare(
+      `SELECT COALESCE(SUM(
+        (SELECT COUNT(*) FROM support_messages m WHERE m.chat_id = c.id AND m.sender_type = 'admin' AND m.id > COALESCE((SELECT r.last_read_message_id FROM support_chat_read r WHERE r.user_id = ? AND r.chat_id = c.id), 0))
+      ), 0) AS total FROM support_chats c WHERE c.user_id = ? AND c.deleted_at IS NULL`
+    )
+    .get(userId, userId) as { total: number };
+  res.json({ count: row?.total ?? 0 });
 });
 
 supportRouter.post("/chats", (req, res) => {
@@ -75,6 +91,12 @@ supportRouter.get("/chats/:id/messages", (req, res) => {
   const rows = db
     .prepare("SELECT id, chat_id, sender_type, text, image_url, created_at FROM support_messages WHERE chat_id = ? ORDER BY created_at ASC")
     .all(chatId);
+  if (!asAdmin && userId) {
+    const maxId = rows.length ? Math.max(...(rows as { id: number }[]).map((r) => r.id)) : 0;
+    db.prepare(
+      "INSERT INTO support_chat_read (user_id, chat_id, last_read_message_id) VALUES (?, ?, ?) ON CONFLICT(user_id, chat_id) DO UPDATE SET last_read_message_id = excluded.last_read_message_id"
+    ).run(userId, chatId, maxId);
+  }
   res.json(rows);
 });
 

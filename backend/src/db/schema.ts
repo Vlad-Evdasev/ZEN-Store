@@ -151,6 +151,18 @@ try {
   db.exec("ALTER TABLE support_messages ADD COLUMN image_url TEXT");
 } catch {}
 
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS support_chat_read (
+      user_id TEXT NOT NULL,
+      chat_id INTEGER NOT NULL,
+      last_read_message_id INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (user_id, chat_id),
+      FOREIGN KEY (chat_id) REFERENCES support_chats(id)
+    )
+  `);
+} catch {}
+
 // Add store_id to products if missing (migration)
 try {
   db.exec("ALTER TABLE products ADD COLUMN store_id INTEGER NOT NULL DEFAULT 1");

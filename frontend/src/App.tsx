@@ -3,7 +3,7 @@ import { flushSync } from "react-dom";
 import { useTelegram } from "./hooks/useTelegram";
 import { TelegramAuth } from "./components/TelegramAuth";
 import { useWishlist } from "./hooks/useWishlist";
-import { getProducts, getStores, getCart, getReviews, type Product, type Store } from "./api";
+import { getProducts, getStores, getCart, getReviews, getSupportUnreadCount, type Product, type Store } from "./api";
 import { Catalog } from "./pages/Catalog";
 import { StoresCarousel } from "./components/StoresCarousel";
 import { Cart } from "./pages/Cart";
@@ -71,6 +71,7 @@ function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
   const [cartCount, setCartCount] = useState(0);
+  const [supportUnreadCount, setSupportUnreadCount] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [avgRating, setAvgRating] = useState<number | null>(null);
   const [storeCatalogStore, setStoreCatalogStore] = useState<
@@ -94,6 +95,10 @@ function App() {
       if (!cancelled) setCartCount(items.reduce((a, i) => a + i.quantity, 0));
     }).catch(() => {});
 
+    getSupportUnreadCount(userId || "").then(({ count }) => {
+      if (!cancelled) setSupportUnreadCount(count);
+    }).catch(() => {});
+
     getReviews().then((reviews) => {
       if (!cancelled && reviews.length > 0) {
         const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
@@ -103,6 +108,11 @@ function App() {
 
     return () => { cancelled = true; };
   }, [userId]);
+
+  useEffect(() => {
+    if ((page !== "profile" && page !== "support") || !userId) return;
+    getSupportUnreadCount(userId).then(({ count }) => setSupportUnreadCount(count)).catch(() => {});
+  }, [page, userId]);
 
   useEffect(() => {
     if (page !== "product") return;
@@ -341,6 +351,7 @@ function App() {
             onBack={openCatalog}
             onOpenDeliveryTerms={openDeliveryTerms}
             onOpenSupport={openSupport}
+            supportUnreadCount={supportUnreadCount}
           />
         )}
         {page === "deliveryTerms" && (

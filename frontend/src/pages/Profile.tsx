@@ -7,9 +7,10 @@ interface ProfileProps {
   onBack: () => void;
   onOpenDeliveryTerms?: () => void;
   onOpenSupport?: () => void;
+  supportUnreadCount?: number;
 }
 
-export function Profile({ userName, firstName, onBack, onOpenDeliveryTerms, onOpenSupport }: ProfileProps) {
+export function Profile({ userName, firstName, onBack, onOpenDeliveryTerms, onOpenSupport, supportUnreadCount = 0 }: ProfileProps) {
   const { settings } = useSettings();
   const lang = settings.lang;
   return (
@@ -32,9 +33,12 @@ export function Profile({ userName, firstName, onBack, onOpenDeliveryTerms, onOp
             </button>
           )}
           {onOpenSupport && (
-            <button onClick={onOpenSupport} style={styles.actionBtn}>
+            <button onClick={onOpenSupport} style={{ ...styles.actionBtn, position: "relative" }}>
               <span style={styles.actionBtnIcon}>💬</span>
               {t(lang, "profileSupport")}
+              {supportUnreadCount > 0 && (
+                <span style={styles.supportBadge} aria-label="Непрочитанные">{supportUnreadCount > 99 ? "99+" : supportUnreadCount}</span>
+              )}
             </button>
           )}
         </div>
@@ -105,6 +109,22 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: 10,
+  },
+  supportBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    minWidth: 20,
+    height: 20,
+    padding: "0 6px",
+    borderRadius: 10,
+    background: "var(--accent)",
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: 600,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
   actionBtn: {
     display: "flex",
