@@ -446,7 +446,7 @@ function App() {
         </div>
       </main>
 
-      <Footer />
+      {page !== "support" && <Footer />}
     </div>
     </div>
   );
