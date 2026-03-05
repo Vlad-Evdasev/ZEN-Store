@@ -231,6 +231,8 @@ function App() {
     "category" in storeCatalogStore &&
     storeCatalogStore.category === DEFAULT_WELCOME_STORE.category;
   const isInitialWelcomeScreen = page === "storeCatalog" && storeCatalogView === "welcome" && isDefaultWelcomeStore;
+  const isCustomOrderForm = page === "storeCatalog" && storeCatalogView === "customOrder";
+  const hideHeader = isInitialWelcomeScreen || isCustomOrderForm;
   const openCheckout = () => setPage("checkout");
 
   const needsAuth = !isInTelegram && !userId;
@@ -248,7 +250,7 @@ function App() {
     <div style={styles.appWrapper}>
     <div className="zen-app" style={styles.app}>
       <SettingsSync />
-      {!isInitialWelcomeScreen && (
+      {!hideHeader && (
         <>
           <header style={styles.header}>
             <div style={styles.headerLeft}>
