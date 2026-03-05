@@ -286,13 +286,15 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
                 </svg>
               </span>
             </label>
-            <input
-              type="text"
+            <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
+              }}
               placeholder={t(lang, "supportMessagePlaceholder")}
-              style={styles.input}
+              style={styles.inputTextarea}
+              rows={2}
               disabled={sending}
             />
           </div>
@@ -486,6 +488,7 @@ const styles: Record<string, React.CSSProperties> = {
   bubble: {
     position: "relative",
     maxWidth: "85%",
+    minWidth: 0,
     padding: "10px 14px",
     borderRadius: 12,
     alignSelf: "flex-start",
@@ -499,10 +502,10 @@ const styles: Record<string, React.CSSProperties> = {
     background: "var(--border)",
     color: "var(--text)",
   },
-  messageEditBtnWrap: { position: "absolute", top: 0, right: 6 },
+  messageEditBtnWrap: { position: "absolute", top: -4, right: 6 },
   messageEditBtn: { padding: "8px 12px", background: "none", border: "none", cursor: "pointer", fontSize: 24, color: "#fff", opacity: 0.95 },
-  bubbleContent: { paddingRight: 38 },
-  bubbleText: { display: "block", fontSize: 16, lineHeight: 1.4 },
+  bubbleContent: { paddingRight: 38, minWidth: 0 },
+  bubbleText: { display: "block", fontSize: 16, lineHeight: 1.4, wordBreak: "break-word", overflowWrap: "break-word", whiteSpace: "pre-wrap" },
   bubbleTime: { display: "block", fontSize: 12, opacity: 0.8, marginTop: 4 },
   messageEditRow: { display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 },
   messageEditInput: { flex: "1 1 120px", minWidth: 0, padding: "6px 10px", border: "1px solid rgba(255,255,255,0.5)", borderRadius: 8, background: "rgba(0,0,0,0.15)", color: "#fff", fontSize: 14, fontFamily: "inherit" },
@@ -516,10 +519,10 @@ const styles: Record<string, React.CSSProperties> = {
   previewRow: { display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 8 },
   previewImg: { maxWidth: 80, maxHeight: 80, borderRadius: 8, objectFit: "cover" },
   previewRemove: { padding: "4px 10px", background: "var(--border)", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 18 },
-  inputRow: { display: "flex", alignItems: "center", gap: 6, minWidth: 0 },
+  inputRow: { display: "flex", alignItems: "flex-end", gap: 6, minWidth: 0 },
   inputWrapper: {
     display: "flex",
-    alignItems: "center",
+    alignItems: "flex-end",
     flex: 1,
     minWidth: 0,
     background: "var(--bg)",
@@ -549,6 +552,19 @@ const styles: Record<string, React.CSSProperties> = {
     background: "transparent",
     color: "var(--text)",
     caretColor: "var(--accent)",
+  },
+  inputTextarea: {
+    flex: 1,
+    minWidth: 0,
+    padding: "10px 12px 10px 0",
+    border: "none",
+    fontFamily: "inherit",
+    fontSize: 14,
+    background: "transparent",
+    color: "var(--text)",
+    caretColor: "var(--accent)",
+    resize: "none",
+    minHeight: 44,
   },
   sendBtn: {
     flexShrink: 0,
