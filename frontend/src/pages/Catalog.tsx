@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import type { Product, Store, ProductReviewStats } from "../api";
+import type { Product, Store, Category, ProductReviewStats } from "../api";
 import { getProductReviewStats } from "../api";
 import { ProductCard } from "../components/ProductCard";
 import { StoreCard } from "../components/StoreCard";
@@ -9,7 +9,7 @@ import { t } from "../i18n";
 interface CatalogProps {
   products: Product[];
   stores: Store[];
-  categoryLabels?: Record<string, string>;
+  categories?: Category[];
   onProductClick: (id: number) => void;
   onStoreClick: (store: { id: number; name: string } | { category: string; name: string }) => void;
   wishlistIds: Set<number>;
@@ -19,17 +19,19 @@ interface CatalogProps {
 
 const CATEGORIES = ["all", "tee", "hoodie", "pants", "jacket", "accessories"];
 
-const FALLBACK_STORES: { id: string; name: string; category: string; image: string; desc: string }[] = [
-  { id: "tee", name: "Футболки", category: "tee", image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400", desc: "Базовые и оверсайз" },
-  { id: "hoodie", name: "Худи", category: "hoodie", image: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=400", desc: "Худи и свитшоты" },
-  { id: "pants", name: "Штаны", category: "pants", image: "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=400", desc: "Карго и классика" },
-  { id: "jacket", name: "Верхняя одежда", category: "jacket", image: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400", desc: "Куртки и аксессуары" },
-];
+const FALLBACK_BY_CODE: Record<string, { image: string; desc: string }> = {
+  tee: { image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400", desc: "Базовые и оверсайз" },
+  hoodie: { image: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=400", desc: "Худи и свитшоты" },
+  pants: { image: "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=400", desc: "Карго и классика" },
+  jacket: { image: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400", desc: "Куртки и аксессуары" },
+  accessories: { image: "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=400", desc: "Аксессуары" },
+};
+const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400";
 
 export function Catalog({
   products,
   stores,
-  categoryLabels,
+  categories = [],
   onProductClick,
   onStoreClick,
   wishlistIds,
@@ -52,24 +54,41 @@ export function Catalog({
     | { id: string; name: string; image: string; desc: string; isReal: false; category: string };
 
   const displayStores = useMemo((): DisplayStore[] => {
-    if (stores.length > 0) {
-      return stores.map((s) => ({
-        id: s.id,
-        name: s.name,
-        image: s.image_url || "",
-        desc: s.description || "",
-        isReal: true as const,
-      }));
-    }
-    return FALLBACK_STORES.map((s) => ({
-      id: s.id,
-      name: (categoryLabels && categoryLabels[s.category]) || s.name,
-      image: s.image,
-      desc: s.desc,
-      isReal: false as const,
-      category: s.category,
-    }));
-  }, [stores, categoryLabels]);
+    const realStores: DisplayStore[] =
+      stores.length > 0
+        ? stores.map((s) => ({
+            id: s.id,
+            name: s.name,
+            image: s.image_url || "",
+            desc: s.description || "",
+            isReal: true as const,
+          }))
+        : [];
+    const categoryTiles: DisplayStore[] =
+      categories.length > 0
+        ? categories.map((c) => {
+            const fallback = FALLBACK_BY_CODE[c.code];
+            return {
+              id: c.code,
+              name: c.name,
+              image: fallback?.image ?? DEFAULT_IMAGE,
+              desc: fallback?.desc ?? "",
+              isReal: false as const,
+              category: c.code,
+            };
+          })
+        : realStores.length === 0
+          ? Object.entries(FALLBACK_BY_CODE).map(([code, { image, desc }]) => ({
+              id: code,
+              name: { tee: "Футболки", hoodie: "Худи", pants: "Штаны", jacket: "Куртки", accessories: "Аксессуары" }[code] ?? code,
+              image,
+              desc,
+              isReal: false as const,
+              category: code,
+            }))
+          : [];
+    return [...realStores, ...categoryTiles];
+  }, [stores, categories]);
 
   const pauseAndResume = () => {
     marqueePausedRef.current = true;

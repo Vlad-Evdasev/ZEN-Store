@@ -3,7 +3,7 @@ import { flushSync } from "react-dom";
 import { useTelegram } from "./hooks/useTelegram";
 import { TelegramAuth } from "./components/TelegramAuth";
 import { useWishlist } from "./hooks/useWishlist";
-import { getProducts, getStores, getCategories, getCart, getReviews, getSupportUnreadCount, type Product, type Store } from "./api";
+import { getProducts, getStores, getCategories, getCart, getReviews, getSupportUnreadCount, type Product, type Store, type Category } from "./api";
 import { Catalog } from "./pages/Catalog";
 import { StoresCarousel } from "./components/StoresCarousel";
 import { Cart } from "./pages/Cart";
@@ -82,7 +82,7 @@ function App() {
   const [productId, setProductId] = useState<number | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
-  const [categoryLabels, setCategoryLabels] = useState<Record<string, string>>({});
+  const [categories, setCategories] = useState<Category[]>([]);
   const [cartCount, setCartCount] = useState(0);
   const [supportUnreadCount, setSupportUnreadCount] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -106,7 +106,7 @@ function App() {
     getProducts().then((p) => { if (!cancelled) setProducts(p); }).catch(console.error);
     getStores().then((s) => { if (!cancelled) setStores(s); }).catch(console.error);
     getCategories().then((cats) => {
-      if (!cancelled) setCategoryLabels(Object.fromEntries(cats.map((c) => [c.code, c.name])));
+      if (!cancelled) setCategories(cats);
     }).catch(console.error);
 
     getCart(userId || "").then((items) => {
@@ -334,11 +334,11 @@ function App() {
         <div key={page} className={page === "cart" || page === "favorites" ? "zen-page-enter" : ""} style={styles.mainContent}>
         {page === "catalog" && (
           <>
-            <StoresCarousel stores={stores} categoryLabels={categoryLabels} onStoreClick={openStoreCatalog} />
+            <StoresCarousel stores={stores} categories={categories} onStoreClick={openStoreCatalog} />
             <Catalog
             products={products}
             stores={stores}
-            categoryLabels={categoryLabels}
+            categories={categories}
             onProductClick={openProduct}
             onStoreClick={openStoreCatalog}
             wishlistIds={wishlistIds}
@@ -352,7 +352,7 @@ function App() {
             {storeCatalogView === "welcome" && (
               <StoreWelcome
                 store={storeCatalogStore}
-                categoryLabels={categoryLabels}
+                categoryLabels={categories.length > 0 ? Object.fromEntries(categories.map((c) => [c.code, c.name])) : undefined}
                 showBack={!isDefaultWelcomeStore}
                 onBack={openCatalog}
                 onGoToCatalog={isDefaultWelcomeStore ? openCatalog : () => setStoreCatalogView("catalog")}
@@ -363,7 +363,7 @@ function App() {
               <StoreCatalog
                 store={storeCatalogStore}
                 products={products}
-                categoryLabels={categoryLabels}
+                categoryLabels={categories.length > 0 ? Object.fromEntries(categories.map((c) => [c.code, c.name])) : undefined}
                 onProductClick={openProduct}
                 onBack={openCatalog}
                 wishlistIds={wishlistIds}

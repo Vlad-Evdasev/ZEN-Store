@@ -1,13 +1,17 @@
 import { useRef, useEffect } from "react";
 import { StoreCard } from "./StoreCard";
-import type { Store } from "../api";
+import type { Store, Category } from "../api";
 
-const FALLBACK_STORES: { id: string; name: string; category: string; image: string; desc: string }[] = [
-  { id: "tee", name: "Футболки", category: "tee", image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400", desc: "Базовые и оверсайз" },
-  { id: "hoodie", name: "Худи", category: "hoodie", image: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=400", desc: "Худи и свитшоты" },
-  { id: "pants", name: "Штаны", category: "pants", image: "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=400", desc: "Карго и классика" },
-  { id: "jacket", name: "Верхняя одежда", category: "jacket", image: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400", desc: "Куртки и аксессуары" },
-];
+/** Картинка и описание по умолчанию для категорий из API (для известных кодов) */
+const FALLBACK_BY_CODE: Record<string, { image: string; desc: string }> = {
+  tee: { image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400", desc: "Базовые и оверсайз" },
+  hoodie: { image: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=400", desc: "Худи и свитшоты" },
+  pants: { image: "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=400", desc: "Карго и классика" },
+  jacket: { image: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400", desc: "Куртки и аксессуары" },
+  accessories: { image: "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=400", desc: "Аксессуары" },
+};
+const DEFAULT_CATEGORY_IMAGE = "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400";
+const DEFAULT_CATEGORY_DESC = "";
 
 type DisplayStore =
   | { id: number; name: string; image: string; desc: string; isReal: true }
@@ -15,11 +19,11 @@ type DisplayStore =
 
 interface StoresCarouselProps {
   stores: Store[];
-  categoryLabels?: Record<string, string>;
+  categories?: Category[];
   onStoreClick: (store: { id: number; name: string } | { category: string; name: string }) => void;
 }
 
-export function StoresCarousel({ stores, categoryLabels, onStoreClick }: StoresCarouselProps) {
+export function StoresCarousel({ stores, categories = [], onStoreClick }: StoresCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const marqueePausedRef = useRef(false);
   const pauseTimeoutRef = useRef<number | null>(null);
@@ -29,11 +33,11 @@ export function StoresCarousel({ stores, categoryLabels, onStoreClick }: StoresC
   const programmaticScrollRef = useRef(false);
   const touchActiveRef = useRef(false);
   const lastTouchRecenterRef = useRef(0);
-  const touchRecenterRafRef = useRef<number>(0);
+  const touchRecenterRafRef = useRef(0);
   const COPIES = 9;
   const CENTER_OFFSET = Math.floor(COPIES / 2);
 
-  const displayStores: DisplayStore[] =
+  const realStores: DisplayStore[] =
     stores.length > 0
       ? stores.map((s) => ({
           id: s.id,
@@ -42,14 +46,37 @@ export function StoresCarousel({ stores, categoryLabels, onStoreClick }: StoresC
           desc: s.description || "",
           isReal: true as const,
         }))
-      : FALLBACK_STORES.map((s) => ({
-          id: s.id,
-          name: (categoryLabels && categoryLabels[s.category]) || s.name,
-          image: s.image,
-          desc: s.desc,
-          isReal: false as const,
-          category: s.category,
-        }));
+      : [];
+
+  const categoryTiles: DisplayStore[] =
+    categories.length > 0
+      ? categories.map((c) => {
+          const fallback = FALLBACK_BY_CODE[c.code];
+          return {
+            id: c.code,
+            name: c.name,
+            image: fallback?.image ?? DEFAULT_CATEGORY_IMAGE,
+            desc: fallback?.desc ?? DEFAULT_CATEGORY_DESC,
+            isReal: false as const,
+            category: c.code,
+          };
+        })
+      : realStores.length === 0
+        ? (() => {
+            const entries = Object.entries(FALLBACK_BY_CODE);
+            const names: Record<string, string> = { tee: "Футболки", hoodie: "Худи", pants: "Штаны", jacket: "Куртки", accessories: "Аксессуары" };
+            return entries.map(([code, { image, desc }]) => ({
+              id: code,
+              name: names[code] ?? code,
+              image,
+              desc,
+              isReal: false as const,
+              category: code,
+            }));
+          })()
+        : [];
+
+  const displayStores: DisplayStore[] = [...realStores, ...categoryTiles];
 
   const pauseOnUserStart = () => {
     marqueePausedRef.current = true;
