@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { getCurrencyRate } from "../api";
 
 export type Lang = "ru" | "en";
 export type Theme = "dark" | "light";
@@ -44,9 +45,8 @@ const SettingsContext = createContext<{
   formatPrice: (price: number) => string;
 } | null>(null);
 
-/* Цены в БД хранятся в долларах; конвертация в BYN по курсу */
-const CURRENCY_RATES: Record<Currency, number> = { USD: 1, BYN: 3.2 };
 const CURRENCY_SYMBOLS: Record<Currency, string> = { USD: "$", BYN: "Br" };
+const DEFAULT_BYN_RATE = 3.2;
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<Settings>(() => {
@@ -56,6 +56,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }
     return s;
   });
+  const [currencyRateByn, setCurrencyRateByn] = useState<number>(DEFAULT_BYN_RATE);
+
+  useEffect(() => {
+    getCurrencyRate().then(({ rate }) => setCurrencyRateByn(rate)).catch(() => {});
+  }, []);
 
   useEffect(() => {
     saveSettings(settings);
@@ -68,10 +73,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   const formatPrice = useCallback(
     (price: number) => {
-      const converted = Math.round(price * CURRENCY_RATES[settings.currency]);
+      const rate = settings.currency === "BYN" ? currencyRateByn : 1;
+      const converted = Math.round(price * rate);
       return `${converted.toLocaleString()} ${CURRENCY_SYMBOLS[settings.currency]}`;
     },
-    [settings.currency]
+    [settings.currency, currencyRateByn]
   );
 
   return (

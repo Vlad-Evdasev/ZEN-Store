@@ -293,6 +293,13 @@ export async function getSettings(userId: string): Promise<{ lang: string; theme
   return data;
 }
 
+export async function getCurrencyRate(): Promise<{ rate: number }> {
+  const res = await fetch(`${API_URL}/api/settings/currency-rate`);
+  if (!res.ok) return { rate: 3.2 };
+  const data = await res.json();
+  return { rate: typeof data.rate === "number" ? data.rate : 3.2 };
+}
+
 export async function updateSettings(
   userId: string,
   data: { lang?: string; theme?: string; currency?: string }
@@ -515,6 +522,24 @@ export async function getSupportUnreadCountAdmin(adminSecret: string): Promise<{
     headers: { "X-Admin-Secret": adminSecret },
   });
   if (!res.ok) throw new Error("Failed to fetch unread count");
+  return res.json();
+}
+
+export async function getCurrencyRateAdmin(adminSecret: string): Promise<{ rate: number }> {
+  const res = await fetch(`${API_URL}/api/admin/currency-rate`, {
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) throw new Error("Failed to fetch currency rate");
+  return res.json();
+}
+
+export async function updateCurrencyRateAdmin(adminSecret: string, rate: number): Promise<{ rate: number }> {
+  const res = await fetch(`${API_URL}/api/admin/currency-rate`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
+    body: JSON.stringify({ rate }),
+  });
+  if (!res.ok) throw new Error("Failed to update currency rate");
   return res.json();
 }
 

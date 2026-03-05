@@ -3,6 +3,12 @@ import { db } from "../db/schema.js";
 
 export const settingsRouter = Router();
 
+settingsRouter.get("/currency-rate", (_req, res) => {
+  const row = db.prepare("SELECT value FROM app_settings WHERE key = ?").get("currency_rate_byn") as { value: string } | undefined;
+  const rate = row ? parseFloat(row.value) : 3.2;
+  res.json({ rate: Number.isFinite(rate) ? rate : 3.2 });
+});
+
 settingsRouter.get("/:userId", (req, res) => {
   const { userId } = req.params;
   const row = db.prepare("SELECT lang, theme, currency FROM user_settings WHERE user_id = ?").get(userId) as

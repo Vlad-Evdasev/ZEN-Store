@@ -24,6 +24,8 @@ import {
   sendSupportMessageAdmin,
   updateSupportMessageAdmin,
   deleteSupportMessageAdmin,
+  getCurrencyRateAdmin,
+  updateCurrencyRateAdmin,
   type Product,
   type Store,
   type Category,
@@ -35,7 +37,7 @@ import {
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
-type Tab = "products" | "stores" | "categories" | "orders" | "customOrders" | "support";
+type Tab = "products" | "stores" | "categories" | "orders" | "customOrders" | "support" | "currencyRate";
 
 export function Admin() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -145,6 +147,9 @@ export function Admin() {
               <span style={styles.supportNavBadge} aria-label="Непрочитанные">{supportUnreadCount > 99 ? "99+" : supportUnreadCount}</span>
             )}
           </button>
+          <button type="button" onClick={() => setTabAndReset("currencyRate")} className={`admin-nav-btn ${tab === "currencyRate" ? "active" : ""}`}>
+            Курс валюты
+          </button>
           <div style={{ flex: 1 }} />
           <div style={styles.sidebarFooter}>
             <button type="button" onClick={() => checkApiHealth().then(setApiStatus)} style={styles.checkBtn}>
@@ -215,6 +220,10 @@ export function Admin() {
             getSupportUnreadCountAdmin(adminSecret).then(({ count }) => setSupportUnreadCount(Number(count) || 0)).catch(() => {});
           }}
         />
+      )}
+
+      {tab === "currencyRate" && (
+        <CurrencyRateTab adminSecret={adminSecret} />
       )}
 
       {tab === "stores" && (
@@ -588,6 +597,66 @@ function CategoriesTab({
           </table>
         )}
       </div>
+    </>
+  );
+}
+
+function CurrencyRateTab({ adminSecret }: { adminSecret: string }) {
+  const [rate, setRate] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    getCurrencyRateAdmin(adminSecret)
+      .then(({ rate: r }) => setRate(String(r)))
+      .catch(() => setMessage("Не удалось загрузить курс"))
+      .finally(() => setLoading(false));
+  }, [adminSecret]);
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    const num = parseFloat(rate.replace(",", "."));
+    if (!Number.isFinite(num) || num <= 0 || num > 1000) {
+      setMessage("Введите число от 0.01 до 1000 (курс BYN за 1 USD)");
+      return;
+    }
+    setSaving(true);
+    setMessage("");
+    updateCurrencyRateAdmin(adminSecret, num)
+      .then(({ rate: r }) => {
+        setRate(String(r));
+        setMessage("Курс сохранён");
+      })
+      .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")))
+      .finally(() => setSaving(false));
+  };
+
+  if (loading) return <p style={styles.hint}>Загрузка...</p>;
+
+  return (
+    <>
+      {message && <p style={styles.message}>{message}</p>}
+      <h2 style={styles.pageTitle}>Курс валюты</h2>
+      <p style={{ ...styles.hint, marginBottom: 16 }}>Курс белорусского рубля (BYN) к 1 USD. Используется для отображения цен в приложении.</p>
+      <form onSubmit={handleSave} style={styles.form}>
+        <label style={styles.label}>
+          Курс BYN за 1 $
+          <input
+            type="text"
+            inputMode="decimal"
+            value={rate}
+            onChange={(e) => setRate(e.target.value)}
+            placeholder="3.2"
+            style={styles.input}
+          />
+        </label>
+        <div style={styles.formActions}>
+          <button type="submit" style={styles.submit} disabled={saving}>
+            {saving ? "Сохранение…" : "Сохранить"}
+          </button>
+        </div>
+      </form>
     </>
   );
 }
