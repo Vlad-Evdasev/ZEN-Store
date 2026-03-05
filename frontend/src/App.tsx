@@ -199,6 +199,7 @@ function App() {
           </button>
         </div>
       </header>
+      <div style={styles.headerSpacer} aria-hidden />
 
       {menuOpen && (
         <>
@@ -353,17 +354,25 @@ const styles: Record<string, React.CSSProperties> = {
     background: "var(--bg)",
   },
   header: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    maxWidth: 480,
+    margin: "0 auto",
     display: "flex",
     alignItems: "center",
-    position: "sticky",
     padding: "10px 12px",
     paddingLeft: "max(12px, env(safe-area-inset-left))",
     paddingRight: "max(12px, env(safe-area-inset-right))",
     borderBottom: "1px solid var(--border)",
-    top: 0,
     background: "var(--bg)",
     zIndex: 10,
     gap: 8,
+  },
+  headerSpacer: {
+    flexShrink: 0,
+    height: 56,
   },
   headerLeft: {
     flexShrink: 0,
