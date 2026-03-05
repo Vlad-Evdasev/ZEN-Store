@@ -140,7 +140,7 @@ const styles: Record<string, React.CSSProperties> = {
   itemInfo: { flex: 1 },
   itemName: { fontSize: 14, fontWeight: 500, marginBottom: 4 },
   itemMeta: { fontSize: 12, color: "var(--muted)", marginBottom: 4 },
-  itemPrice: { fontSize: 14, color: "var(--accent)" },
+  itemPrice: { fontSize: 14, color: "var(--text)" },
   remove: {
     width: 32,
     height: 32,

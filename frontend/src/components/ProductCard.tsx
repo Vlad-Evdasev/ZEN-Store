@@ -93,7 +93,7 @@ const styles: Record<string, React.CSSProperties> = {
   price: {
     padding: "0 14px 14px",
     fontSize: 15,
-    color: "var(--accent)",
+    color: "var(--text)",
     fontWeight: 700,
   },
   reviews: {

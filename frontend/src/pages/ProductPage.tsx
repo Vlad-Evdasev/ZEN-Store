@@ -535,7 +535,7 @@ const styles: Record<string, React.CSSProperties> = {
   price: {
     fontSize: 22,
     fontWeight: 700,
-    color: "var(--accent)",
+    color: "var(--text)",
   },
   addBtn: {
     flex: 1,
