@@ -551,6 +551,11 @@ export async function getSupportMessages(chatId: number, userId: string): Promis
   return res.json();
 }
 
+export async function markSupportChatRead(chatId: number, userId: string): Promise<void> {
+  const res = await fetch(`${API_URL}/api/support/chats/${chatId}/read?userId=${encodeURIComponent(userId)}`, { method: "POST" });
+  if (!res.ok) throw new Error("Failed to mark chat read");
+}
+
 export async function getSupportMessagesAdmin(chatId: number, adminSecret: string): Promise<SupportMessage[]> {
   const res = await fetch(`${API_URL}/api/support/chats/${chatId}/messages`, {
     headers: { "X-Admin-Secret": adminSecret },

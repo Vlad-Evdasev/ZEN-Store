@@ -451,6 +451,7 @@ function App() {
             userName={userName}
             firstName={firstName}
             onBack={openProfile}
+            onUnreadCountChange={userId ? () => getSupportUnreadCount(userId).then(({ count }) => setSupportUnreadCount(Number(count) || 0)).catch(() => {}) : undefined}
           />
         )}
         {page === "reviews" && (

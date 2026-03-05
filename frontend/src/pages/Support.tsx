@@ -4,6 +4,7 @@ import {
   createSupportChat,
   updateSupportChat,
   getSupportMessages,
+  markSupportChatRead,
   sendSupportMessage,
   updateSupportMessage,
   deleteSupportChat,
@@ -18,9 +19,10 @@ interface SupportProps {
   userName: string | null;
   firstName: string;
   onBack: () => void;
+  onUnreadCountChange?: () => void;
 }
 
-export function Support({ userId, userName, firstName, onBack }: SupportProps) {
+export function Support({ userId, userName, firstName, onBack, onUnreadCountChange }: SupportProps) {
   const { settings } = useSettings();
   const lang = settings.lang;
   const [chats, setChats] = useState<SupportChat[]>([]);
@@ -71,11 +73,20 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
           if (prev.some((m) => m.id < 0)) return prev;
           return fetched;
         });
-        if (!isPolling) loadChats();
+        if (!isPolling) {
+          markSupportChatRead(selectedChatId, userId)
+            .then(() => {
+              loadChats();
+              onUnreadCountChange?.();
+            })
+            .catch(() => { loadChats(); });
+          return;
+        }
+        loadChats();
       })
       .catch(console.error)
       .finally(() => { if (!isPolling) setMessagesLoading(false); });
-  }, [selectedChatId, userId]);
+  }, [selectedChatId, userId, onUnreadCountChange, loadChats]);
 
   useEffect(() => {
     loadMessages();

@@ -91,13 +91,24 @@ supportRouter.get("/chats/:id/messages", (req, res) => {
   const rows = db
     .prepare("SELECT id, chat_id, sender_type, text, image_url, created_at FROM support_messages WHERE chat_id = ? ORDER BY created_at ASC")
     .all(chatId);
-  if (!asAdmin && userId) {
-    const maxId = rows.length ? Math.max(...(rows as { id: number }[]).map((r) => r.id)) : 0;
-    db.prepare(
-      "INSERT INTO support_chat_read (user_id, chat_id, last_read_message_id) VALUES (?, ?, ?) ON CONFLICT(user_id, chat_id) DO UPDATE SET last_read_message_id = excluded.last_read_message_id"
-    ).run(userId, chatId, maxId);
-  }
   res.json(rows);
+});
+
+supportRouter.post("/chats/:id/read", (req, res) => {
+  const chatId = parseInt(req.params.id, 10);
+  const userId = req.query.userId as string | undefined;
+  if (!userId) return res.status(400).json({ error: "userId required" });
+  if (isAdmin(req)) return res.status(403).json({ error: "Admin cannot mark user read" });
+  const chat = db.prepare("SELECT id, user_id, deleted_at FROM support_chats WHERE id = ?").get(chatId) as { id: number; user_id: string; deleted_at: string | null } | undefined;
+  if (!chat) return res.status(404).json({ error: "Chat not found" });
+  if (chat.deleted_at) return res.status(404).json({ error: "Chat deleted" });
+  if (chat.user_id !== userId) return res.status(403).json({ error: "Forbidden" });
+  const rows = db.prepare("SELECT id FROM support_messages WHERE chat_id = ? ORDER BY id DESC LIMIT 1").all(chatId) as { id: number }[];
+  const maxId = rows.length ? rows[0].id : 0;
+  db.prepare(
+    "INSERT INTO support_chat_read (user_id, chat_id, last_read_message_id) VALUES (?, ?, ?) ON CONFLICT(user_id, chat_id) DO UPDATE SET last_read_message_id = excluded.last_read_message_id"
+  ).run(userId, chatId, maxId);
+  res.status(204).send();
 });
 
 supportRouter.post("/chats/:id/messages", (req, res) => {
