@@ -17,7 +17,9 @@ supportRouter.get("/chats", (req, res) => {
   if (asAdmin) {
     const rows = db
       .prepare(
-        "SELECT id, user_id, user_name, user_username, title, created_at FROM support_chats WHERE deleted_at IS NULL ORDER BY created_at DESC"
+        `SELECT c.id, c.user_id, c.user_name, c.user_username, c.title, c.created_at,
+          (SELECT COUNT(*) FROM support_messages m WHERE m.chat_id = c.id AND m.sender_type = 'user' AND m.id > COALESCE((SELECT r.last_read_message_id FROM support_chat_read_admin r WHERE r.chat_id = c.id), 0)) AS unread_count
+         FROM support_chats c WHERE c.deleted_at IS NULL ORDER BY c.created_at DESC`
       )
       .all();
     return res.json(rows);
@@ -36,8 +38,17 @@ supportRouter.get("/chats", (req, res) => {
 
 supportRouter.get("/unread-count", (req, res) => {
   const userId = req.query.userId as string | undefined;
+  if (isAdmin(req)) {
+    const row = db
+      .prepare(
+        `SELECT COALESCE(SUM(
+          (SELECT COUNT(*) FROM support_messages m WHERE m.chat_id = c.id AND m.sender_type = 'user' AND m.id > COALESCE((SELECT r.last_read_message_id FROM support_chat_read_admin r WHERE r.chat_id = c.id), 0))
+        ), 0) AS total FROM support_chats c WHERE c.deleted_at IS NULL`
+      )
+      .get() as { total: number };
+    return res.json({ count: row?.total ?? 0 });
+  }
   if (!userId) return res.status(400).json({ error: "userId required" });
-  if (isAdmin(req)) return res.json({ count: 0 });
   const row = db
     .prepare(
       `SELECT COALESCE(SUM(
@@ -92,6 +103,20 @@ supportRouter.get("/chats/:id/messages", (req, res) => {
     .prepare("SELECT id, chat_id, sender_type, text, image_url, created_at FROM support_messages WHERE chat_id = ? ORDER BY created_at ASC")
     .all(chatId);
   res.json(rows);
+});
+
+supportRouter.post("/chats/:id/read-admin", (req, res) => {
+  const chatId = parseInt(req.params.id, 10);
+  if (!isAdmin(req)) return res.status(403).json({ error: "Admin only" });
+  const chat = db.prepare("SELECT id, deleted_at FROM support_chats WHERE id = ?").get(chatId) as { id: number; deleted_at: string | null } | undefined;
+  if (!chat) return res.status(404).json({ error: "Chat not found" });
+  if (chat.deleted_at) return res.status(404).json({ error: "Chat deleted" });
+  const rows = db.prepare("SELECT id FROM support_messages WHERE chat_id = ? ORDER BY id DESC LIMIT 1").all(chatId) as { id: number }[];
+  const maxId = rows.length ? rows[0].id : 0;
+  db.prepare(
+    "INSERT INTO support_chat_read_admin (chat_id, last_read_message_id) VALUES (?, ?) ON CONFLICT(chat_id) DO UPDATE SET last_read_message_id = excluded.last_read_message_id"
+  ).run(chatId, maxId);
+  res.status(204).send();
 });
 
 supportRouter.post("/chats/:id/read", (req, res) => {

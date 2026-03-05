@@ -169,6 +169,16 @@ try {
   `);
 } catch {}
 
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS support_chat_read_admin (
+      chat_id INTEGER PRIMARY KEY,
+      last_read_message_id INTEGER NOT NULL DEFAULT 0,
+      FOREIGN KEY (chat_id) REFERENCES support_chats(id)
+    )
+  `);
+} catch {}
+
 // Add store_id to products if missing (migration)
 try {
   db.exec("ALTER TABLE products ADD COLUMN store_id INTEGER NOT NULL DEFAULT 1");

@@ -510,12 +510,28 @@ export async function getSupportUnreadCount(userId: string): Promise<{ count: nu
   return res.json();
 }
 
+export async function getSupportUnreadCountAdmin(adminSecret: string): Promise<{ count: number }> {
+  const res = await fetch(`${API_URL}/api/support/unread-count`, {
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) throw new Error("Failed to fetch unread count");
+  return res.json();
+}
+
 export async function getSupportChatsAdmin(adminSecret: string): Promise<SupportChat[]> {
   const res = await fetch(`${API_URL}/api/support/chats`, {
     headers: { "X-Admin-Secret": adminSecret },
   });
   if (!res.ok) throw new Error("Failed to fetch chats");
   return res.json();
+}
+
+export async function markSupportChatReadAdmin(chatId: number, adminSecret: string): Promise<void> {
+  const res = await fetch(`${API_URL}/api/support/chats/${chatId}/read-admin`, {
+    method: "POST",
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) throw new Error("Failed to mark chat read");
 }
 
 export async function createSupportChat(

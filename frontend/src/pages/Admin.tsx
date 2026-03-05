@@ -18,7 +18,9 @@ import {
   getCustomOrdersAdmin,
   updateOrderStatus,
   getSupportChatsAdmin,
+  getSupportUnreadCountAdmin,
   getSupportMessagesAdmin,
+  markSupportChatReadAdmin,
   sendSupportMessageAdmin,
   updateSupportMessageAdmin,
   deleteSupportMessageAdmin,
@@ -44,6 +46,7 @@ export function Admin() {
   const [stores, setStores] = useState<Store[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [tab, setTab] = useState<Tab>("products");
+  const [supportUnreadCount, setSupportUnreadCount] = useState(0);
   const [editingStoreId, setEditingStoreId] = useState<number | null>(null);
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
   const [showAddProductToStore, setShowAddProductToStore] = useState<number | null>(null);
@@ -60,6 +63,15 @@ export function Admin() {
   useEffect(() => {
     if (authenticated) refresh();
   }, [authenticated]);
+
+  useEffect(() => {
+    if (!adminSecret) return;
+    getSupportUnreadCountAdmin(adminSecret).then(({ count }) => setSupportUnreadCount(Number(count) || 0)).catch(() => {});
+    const t = setInterval(() => {
+      getSupportUnreadCountAdmin(adminSecret).then(({ count }) => setSupportUnreadCount(Number(count) || 0)).catch(() => {});
+    }, 25000);
+    return () => clearInterval(t);
+  }, [adminSecret]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,8 +138,11 @@ export function Admin() {
           <button type="button" onClick={() => setTabAndReset("customOrders")} className={`admin-nav-btn ${tab === "customOrders" ? "active" : ""}`}>
             Заявки не из каталога
           </button>
-          <button type="button" onClick={() => setTabAndReset("support")} className={`admin-nav-btn ${tab === "support" ? "active" : ""}`}>
+          <button type="button" onClick={() => setTabAndReset("support")} className={`admin-nav-btn ${tab === "support" ? "active" : ""}`} style={{ position: "relative" }}>
             Поддержка
+            {supportUnreadCount > 0 && (
+              <span style={styles.supportNavBadge} aria-label="Непрочитанные">{supportUnreadCount > 99 ? "99+" : supportUnreadCount}</span>
+            )}
           </button>
           <div style={{ flex: 1 }} />
           <div style={styles.sidebarFooter}>
@@ -190,7 +205,12 @@ export function Admin() {
       )}
 
       {tab === "support" && (
-        <SupportTab adminSecret={adminSecret} />
+        <SupportTab
+          adminSecret={adminSecret}
+          onUnreadCountChange={() => {
+            getSupportUnreadCountAdmin(adminSecret).then(({ count }) => setSupportUnreadCount(Number(count) || 0)).catch(() => {});
+          }}
+        />
       )}
 
       {tab === "stores" && (
@@ -568,7 +588,7 @@ function CategoriesTab({
   );
 }
 
-function SupportTab({ adminSecret }: { adminSecret: string }) {
+function SupportTab({ adminSecret, onUnreadCountChange }: { adminSecret: string; onUnreadCountChange?: () => void }) {
   const [chats, setChats] = useState<SupportChat[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedChatId, setSelectedChatId] = useState<number | null>(null);
@@ -612,7 +632,15 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
     if (!adminSecret || !selectedChatId) return;
     setMessagesLoading(true);
     getSupportMessagesAdmin(selectedChatId, adminSecret)
-      .then(setMessages)
+      .then((fetched) => {
+        setMessages(fetched);
+        markSupportChatReadAdmin(selectedChatId, adminSecret)
+          .then(() => {
+            getSupportChatsAdmin(adminSecret).then(setChats);
+            onUnreadCountChange?.();
+          })
+          .catch(() => {});
+      })
       .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")))
       .finally(() => setMessagesLoading(false));
   }, [adminSecret, selectedChatId]);
@@ -720,7 +748,12 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
                     ...(selectedChatId === c.id ? styles.chatListItemActive : {}),
                   }}
                 >
-                  <span style={styles.chatListItemTitle}>{c.title?.trim() || `Чат #${c.id}`}</span>
+                  <span style={styles.chatListItemTitle}>
+                    {c.title?.trim() || `Чат #${c.id}`}
+                    {Number(c.unread_count ?? 0) > 0 && (
+                      <span style={styles.adminChatUnreadBadge} aria-label="Непрочитанные">{Number(c.unread_count)}</span>
+                    )}
+                  </span>
                   <span style={styles.chatListItemMeta}>{c.user_name || c.user_username || "—"}</span>
                   <span style={styles.chatListItemDate}>{formatDate(c.created_at)}</span>
                 </button>
@@ -1367,6 +1400,22 @@ const styles: Record<string, React.CSSProperties> = {
   input: { padding: 12, background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text)", fontSize: 15, fontFamily: "inherit" },
   submit: { padding: 14, background: "var(--accent)", border: "none", borderRadius: 8, color: "#fff", fontSize: 15, fontWeight: 600, cursor: "pointer" },
   sidebarFooter: { paddingTop: 16, borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 8 },
+  supportNavBadge: {
+    position: "absolute",
+    top: 6,
+    right: 8,
+    minWidth: 18,
+    height: 18,
+    padding: "0 5px",
+    borderRadius: 9,
+    background: "#c62828",
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: 700,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   logoutBtn: { padding: "10px 14px", background: "none", border: "1px solid var(--border)", borderRadius: 8, color: "var(--muted)", fontSize: 13, cursor: "pointer", marginTop: 8 },
   checkBtn: { padding: "8px 12px", background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 6, color: "var(--text)", fontSize: 12, cursor: "pointer" },
   apiHint: { marginTop: 2, fontSize: 11, color: "var(--muted)" },
@@ -1445,6 +1494,22 @@ const styles: Record<string, React.CSSProperties> = {
   },
   chatListItemActive: { background: "var(--accent)", color: "#fff" },
   chatListItemTitle: { display: "block", fontWeight: 600, fontSize: 14 },
+  adminChatUnreadBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 18,
+    height: 18,
+    padding: "0 5px",
+    marginLeft: 6,
+    transform: "translateY(-2px)",
+    verticalAlign: "middle",
+    borderRadius: 9,
+    background: "rgba(255,255,255,0.9)",
+    color: "var(--accent)",
+    fontSize: 11,
+    fontWeight: 700,
+  },
   chatListItemMeta: { display: "block", fontSize: 12, opacity: 0.85, marginTop: 2 },
   chatListItemDate: { display: "block", fontSize: 11, opacity: 0.75, marginTop: 2 },
   supportThreadHeader: { marginBottom: 12, paddingBottom: 12, borderBottom: "1px solid var(--border)" },
