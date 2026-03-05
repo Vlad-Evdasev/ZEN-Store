@@ -579,6 +579,7 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
   const [message, setMessage] = useState("");
   const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
   const [editingMessageText, setEditingMessageText] = useState("");
+  const [expandedImageUrl, setExpandedImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!adminSecret) return;
@@ -717,41 +718,42 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
                         position: "relative",
                       }}
                     >
-                      {m.sender_type === "admin" && (
-                        <div style={{ position: "absolute", top: 6, right: 8, display: "flex", gap: 4 }}>
-                          {editingMessageId === m.id ? (
-                            <>
-                              <button type="button" onClick={handleUpdateMessage} disabled={sending} style={styles.supportMsgEditBtn}>
-                                Сохранить
-                              </button>
-                              <button type="button" onClick={() => { setEditingMessageId(null); setEditingMessageText(""); }} style={styles.supportMsgCancelBtn}>
-                                Отмена
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button type="button" onClick={() => { setEditingMessageId(m.id); setEditingMessageText(m.text || ""); }} style={styles.supportMsgEditBtn} title="Изменить">
-                                ✎
-                              </button>
-                              <button type="button" onClick={() => handleDeleteMessage(m.id)} disabled={sending} style={styles.supportMsgCancelBtn} title="Удалить">
-                                ×
-                              </button>
-                            </>
-                          )}
+                      {editingMessageId === m.id && m.sender_type === "admin" ? (
+                        <div style={styles.supportEditBlock}>
+                          <input
+                            type="text"
+                            value={editingMessageText}
+                            onChange={(e) => setEditingMessageText(e.target.value)}
+                            style={styles.supportEditInput}
+                            autoFocus
+                          />
+                          <div style={styles.supportEditActions}>
+                            <button type="button" onClick={handleUpdateMessage} disabled={sending} style={styles.supportMsgSaveBtn}>
+                              Сохранить
+                            </button>
+                            <button type="button" onClick={() => { setEditingMessageId(null); setEditingMessageText(""); }} style={styles.supportMsgCancelBtn}>
+                              Отмена
+                            </button>
+                          </div>
                         </div>
-                      )}
-                      {editingMessageId === m.id ? (
-                        <input
-                          type="text"
-                          value={editingMessageText}
-                          onChange={(e) => setEditingMessageText(e.target.value)}
-                          style={{ width: "100%", padding: "8px 10px", marginTop: 4, marginBottom: 4, border: "1px solid rgba(255,255,255,0.5)", borderRadius: 8, background: "rgba(0,0,0,0.2)", color: "#fff", fontSize: 14 }}
-                          autoFocus
-                        />
                       ) : (
                         <>
-                          {m.image_url && <img src={m.image_url} alt="" style={{ display: "block", maxWidth: "100%", maxHeight: 200, borderRadius: 8, marginBottom: 4 }} />}
-                          {m.text ? <span style={{ display: "block", fontSize: 14, paddingRight: m.sender_type === "admin" ? 56 : 0 }}>{m.text}</span> : null}
+                          {m.sender_type === "admin" && (
+                            <div style={styles.supportBubbleActions}>
+                              <button type="button" onClick={() => { setEditingMessageId(m.id); setEditingMessageText(m.text || ""); }} style={styles.supportMsgIconBtn} title="Изменить">
+                                ✎
+                              </button>
+                              <button type="button" onClick={() => handleDeleteMessage(m.id)} disabled={sending} style={styles.supportMsgIconBtn} title="Удалить">
+                                ×
+                              </button>
+                            </div>
+                          )}
+                          {m.image_url && (
+                            <button type="button" onClick={() => setExpandedImageUrl(m.image_url)} style={styles.supportBubbleImgBtn}>
+                              <img src={m.image_url} alt="" style={styles.supportBubbleImg} />
+                            </button>
+                          )}
+                          {m.text ? <span style={{ display: "block", fontSize: 14, paddingRight: m.sender_type === "admin" ? 48 : 0 }}>{m.text}</span> : null}
                           <span style={{ display: "block", fontSize: 11, opacity: 0.8, marginTop: 4 }}>{formatDate(m.created_at)}</span>
                         </>
                       )}
@@ -773,6 +775,11 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
                   Отправить
                 </button>
               </div>
+              {expandedImageUrl && (
+                <div style={styles.supportImageOverlay} onClick={() => setExpandedImageUrl(null)}>
+                  <img src={expandedImageUrl} alt="" style={styles.supportImageExpanded} onClick={(e) => e.stopPropagation()} />
+                </div>
+              )}
             </>
           ) : (
             <div style={styles.supportPlaceholder}>
@@ -1399,6 +1406,15 @@ const styles: Record<string, React.CSSProperties> = {
   supportThreadHeader: { marginBottom: 12, paddingBottom: 12, borderBottom: "1px solid var(--border)" },
   supportInputRow: { display: "flex", gap: 10, marginTop: 12 },
   supportPlaceholder: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)" },
-  supportMsgEditBtn: { padding: "4px 8px", fontSize: 12, background: "rgba(255,255,255,0.25)", border: "none", borderRadius: 6, color: "#fff", cursor: "pointer" },
-  supportMsgCancelBtn: { padding: "4px 8px", fontSize: 12, background: "rgba(0,0,0,0.2)", border: "none", borderRadius: 6, color: "#fff", cursor: "pointer" },
+  supportEditBlock: { width: "100%", minWidth: 0 },
+  supportEditInput: { width: "100%", boxSizing: "border-box", padding: "8px 10px", marginBottom: 8, border: "1px solid rgba(255,255,255,0.5)", borderRadius: 8, background: "rgba(0,0,0,0.2)", color: "#fff", fontSize: 14 },
+  supportEditActions: { display: "flex", gap: 8, flexWrap: "wrap" },
+  supportMsgSaveBtn: { padding: "6px 12px", fontSize: 13, background: "rgba(255,255,255,0.95)", color: "var(--accent)", border: "none", borderRadius: 6, fontWeight: 600, cursor: "pointer" },
+  supportMsgCancelBtn: { padding: "6px 12px", fontSize: 13, background: "rgba(255,255,255,0.25)", border: "none", borderRadius: 6, color: "#fff", cursor: "pointer" },
+  supportBubbleActions: { position: "absolute", top: 6, right: 8, display: "flex", gap: 4 },
+  supportMsgIconBtn: { padding: "4px 6px", fontSize: 14, background: "rgba(255,255,255,0.2)", border: "none", borderRadius: 4, color: "#fff", cursor: "pointer" },
+  supportBubbleImgBtn: { display: "block", padding: 0, margin: 0, marginBottom: 4, background: "none", border: "none", cursor: "pointer", textAlign: "left" },
+  supportBubbleImg: { display: "block", maxWidth: "100%", maxHeight: 200, borderRadius: 8 },
+  supportImageOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 },
+  supportImageExpanded: { maxWidth: "100%", maxHeight: "100%", objectFit: "contain" },
 };
