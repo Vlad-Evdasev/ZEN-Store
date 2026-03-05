@@ -352,8 +352,6 @@ function App() {
         {page === "cart" && (
           <Cart
             userId={userId}
-            userName={userName}
-            firstName={firstName}
             onBack={openCatalog}
             onCheckout={openCheckout}
             onCartChange={refreshCartCount}

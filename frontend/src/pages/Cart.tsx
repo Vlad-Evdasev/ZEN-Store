@@ -5,15 +5,13 @@ import { t } from "../i18n";
 
 interface CartProps {
   userId: string;
-  userName: string | null;
-  firstName: string;
   onBack: () => void;
   onCheckout: () => void;
   onCartChange?: () => void;
   onProductClick?: (productId: number) => void;
 }
 
-export function Cart({ userId, userName, firstName, onBack, onCheckout, onCartChange, onProductClick }: CartProps) {
+export function Cart({ userId, onBack, onCheckout, onCartChange, onProductClick }: CartProps) {
   const { formatPrice, settings } = useSettings();
   const lang = settings.lang;
   const [items, setItems] = useState<CartItem[]>([]);
