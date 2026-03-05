@@ -47,19 +47,24 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
     loadChats();
   }, [loadChats]);
 
-  const loadMessages = useCallback(() => {
+  const loadMessages = useCallback((isPolling?: boolean) => {
     if (selectedChatId == null) return;
-    setMessagesLoading(true);
+    if (!isPolling) setMessagesLoading(true);
     getSupportMessages(selectedChatId, userId)
-      .then(setMessages)
+      .then((fetched) => {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id < 0)) return prev;
+          return fetched;
+        });
+      })
       .catch(console.error)
-      .finally(() => setMessagesLoading(false));
+      .finally(() => { if (!isPolling) setMessagesLoading(false); });
   }, [selectedChatId, userId]);
 
   useEffect(() => {
     loadMessages();
-    const interval = selectedChatId ? setInterval(loadMessages, 5000) : undefined;
-    return () => clearInterval(interval);
+    const t = selectedChatId ? setInterval(() => loadMessages(true), 5000) : undefined;
+    return () => clearInterval(t);
   }, [loadMessages, selectedChatId]);
 
   const handleCreateChat = () => {
@@ -78,7 +83,8 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
     const text = input.trim();
     if ((!text && !photoDataUrl) || selectedChatId == null || sending) return;
     setSending(true);
-    const payload = { text: text || undefined, image_url: photoDataUrl || undefined };
+    const imageToSend = photoDataUrl;
+    const payload = { text: text || undefined, image_url: imageToSend || undefined };
     setInput("");
     setPhotoDataUrl(null);
     const tempId = -Date.now();
@@ -87,7 +93,7 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
       chat_id: selectedChatId,
       sender_type: "user",
       text: text || "",
-      image_url: photoDataUrl || null,
+      image_url: imageToSend || null,
       created_at: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, optimistic]);
@@ -115,7 +121,7 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
     const val = renameValue.trim();
     updateSupportChat(renameChatId, userId, { title: val || null })
       .then((updated) => {
-        setChats((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+        setChats((prev) => prev.map((c) => (c.id === updated.id ? { ...c, title: updated.title ?? null } : c)));
         setRenameChatId(null);
         setRenameValue("");
       })
@@ -198,19 +204,21 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
           </div>
         )}
         <div style={styles.inputRow}>
-          <label style={styles.attachLabel}>
-            <input type="file" accept="image/*" onChange={handlePhotoSelect} style={styles.hiddenInput} />
-            <span style={styles.attachBtn} aria-hidden>📷</span>
-          </label>
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-            placeholder={t(lang, "supportMessagePlaceholder")}
-            style={styles.input}
-            disabled={sending}
-          />
+          <div style={styles.inputWrapper}>
+            <label style={styles.attachLabel}>
+              <input type="file" accept="image/*" onChange={handlePhotoSelect} style={styles.hiddenInput} />
+              <span style={styles.attachBtn} aria-hidden>📎</span>
+            </label>
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+              placeholder={t(lang, "supportMessagePlaceholder")}
+              style={styles.input}
+              disabled={sending}
+            />
+          </div>
           <button
             onClick={handleSend}
             style={styles.sendBtn}
@@ -232,7 +240,7 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
               />
               <div style={styles.modalActions}>
                 <button type="button" onClick={() => setRenameChatId(null)} style={styles.cancelBtn}>{t(lang, "reviewsCancel")}</button>
-                <button type="button" onClick={handleRenameSubmit} style={styles.submitBtn}>{t(lang, "send")}</button>
+                <button type="button" onClick={handleRenameSubmit} style={styles.submitBtn}>{t(lang, "save")}</button>
               </div>
             </div>
           </div>
@@ -267,8 +275,8 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
                     placeholder={t(lang, "supportChatTitlePlaceholder")}
                     style={styles.renameInput}
                   />
-                  <button type="button" onClick={handleRenameSubmit} style={styles.smallBtn}>{t(lang, "send")}</button>
-                  <button type="button" onClick={() => { setRenameChatId(null); setRenameValue(""); }} style={styles.smallBtn}>{t(lang, "reviewsCancel")}</button>
+                  <button type="button" onClick={handleRenameSubmit} style={styles.renameSaveBtn}>{t(lang, "save")}</button>
+                  <button type="button" onClick={() => { setRenameChatId(null); setRenameValue(""); }} style={styles.renameCancelBtn}>{t(lang, "reviewsCancel")}</button>
                 </div>
               ) : (
                 <div style={styles.chatItemCard}>
@@ -364,8 +372,10 @@ const styles: Record<string, React.CSSProperties> = {
   chatItemDate: { display: "block", fontSize: 12, color: "var(--muted)", marginTop: 4 },
   chatItemDelete: { padding: "8px 10px", background: "none", border: "none", cursor: "pointer", fontSize: 16 },
   chatItemRename: { padding: "8px 10px", background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "var(--muted)" },
-  renameInline: { display: "flex", gap: 8, alignItems: "center", padding: 8, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12 },
-  renameInput: { flex: 1, padding: "8px 12px", border: "1px solid var(--border)", borderRadius: 8, fontFamily: "inherit", fontSize: 14 },
+  renameInline: { display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", padding: 8, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, minWidth: 0 },
+  renameInput: { flex: "1 1 120px", minWidth: 0, padding: "8px 10px", border: "1px solid var(--border)", borderRadius: 8, fontFamily: "inherit", fontSize: 14 },
+  renameSaveBtn: { flexShrink: 0, padding: "8px 12px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 8, fontFamily: "inherit", fontSize: 13, cursor: "pointer" },
+  renameCancelBtn: { flexShrink: 0, padding: "8px 12px", background: "var(--border)", color: "var(--text)", border: "none", borderRadius: 8, fontFamily: "inherit", fontSize: 13, cursor: "pointer" },
   smallBtn: { padding: "8px 12px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 8, fontFamily: "inherit", fontSize: 13, cursor: "pointer" },
   thread: {
     minHeight: 200,
@@ -401,26 +411,44 @@ const styles: Record<string, React.CSSProperties> = {
   previewRow: { display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 8 },
   previewImg: { maxWidth: 80, maxHeight: 80, borderRadius: 8, objectFit: "cover" },
   previewRemove: { padding: "4px 10px", background: "var(--border)", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 18 },
-  attachLabel: { flexShrink: 0, cursor: "pointer" },
+  inputRow: { display: "flex", alignItems: "center", gap: 6, minWidth: 0 },
+  inputWrapper: {
+    display: "flex",
+    alignItems: "center",
+    flex: 1,
+    minWidth: 0,
+    background: "var(--bg)",
+    border: "1px solid var(--border)",
+    borderRadius: 20,
+    overflow: "hidden",
+  },
+  attachLabel: { flexShrink: 0, cursor: "pointer", display: "flex", alignItems: "center" },
   hiddenInput: { display: "none" },
-  attachBtn: { display: "inline-block", padding: "12px 14px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, fontSize: 18, cursor: "pointer" },
-  inputRow: { display: "flex", gap: 8, alignItems: "center" },
+  attachBtn: {
+    padding: "10px 12px",
+    background: "none",
+    border: "none",
+    color: "var(--muted)",
+    fontSize: 20,
+    cursor: "pointer",
+  },
   input: {
     flex: 1,
-    padding: "12px 14px",
-    border: "1px solid var(--border)",
-    borderRadius: 12,
+    minWidth: 0,
+    padding: "10px 12px 10px 0",
+    border: "none",
     fontFamily: "inherit",
     fontSize: 14,
-    background: "var(--bg)",
+    background: "transparent",
     color: "var(--text)",
   },
   sendBtn: {
-    padding: "12px 18px",
+    flexShrink: 0,
+    padding: "10px 16px",
     background: "var(--accent)",
     color: "#fff",
     border: "none",
-    borderRadius: 12,
+    borderRadius: 20,
     fontFamily: "inherit",
     fontSize: 14,
     fontWeight: 500,

@@ -94,6 +94,7 @@ const texts: Record<Lang, Record<string, string>> = {
     supportRenameChat: "Название чата",
     supportChatTitlePlaceholder: "Введите название",
     send: "Отправить",
+    save: "Сохранить",
   },
   en: {
     search: "Search...",
@@ -188,6 +189,7 @@ const texts: Record<Lang, Record<string, string>> = {
     supportRenameChat: "Chat name",
     supportChatTitlePlaceholder: "Enter name",
     send: "Send",
+    save: "Save",
   },
 };
 
