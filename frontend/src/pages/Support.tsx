@@ -320,11 +320,13 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
           <div style={styles.imageOverlay} onClick={() => setExpandedImageUrl(null)}>
             <button
               type="button"
-              onClick={() => setExpandedImageUrl(null)}
+              onClick={(e) => { e.stopPropagation(); setExpandedImageUrl(null); }}
               style={styles.imageOverlayClose}
               aria-label={t(lang, "close")}
             >
-              ×
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}>
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
             </button>
             <img src={expandedImageUrl} alt="" style={styles.imageExpanded} onClick={(e) => e.stopPropagation()} />
           </div>
@@ -534,21 +536,23 @@ const styles: Record<string, React.CSSProperties> = {
   imageOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", zIndex: 40, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 },
   imageOverlayClose: {
     position: "fixed",
-    top: 12,
-    right: 12,
-    width: 44,
-    height: 44,
-    borderRadius: "50%",
+    top: "max(12px, env(safe-area-inset-top))",
+    left: "50%",
+    transform: "translateX(-50%)",
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     border: "none",
-    background: "rgba(255,255,255,0.2)",
-    color: "#fff",
-    fontSize: 28,
-    lineHeight: 1,
+    background: "rgba(255,255,255,0.12)",
+    backdropFilter: "blur(12px)",
+    WebkitBackdropFilter: "blur(12px)",
+    color: "rgba(255,255,255,0.95)",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     zIndex: 41,
+    transition: "background 0.2s ease",
   },
   imageExpanded: { maxWidth: "100%", maxHeight: "100%", objectFit: "contain" },
   emptyState: { fontSize: 14, color: "var(--muted)", textAlign: "center", padding: 24 },
