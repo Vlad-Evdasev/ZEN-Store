@@ -367,12 +367,6 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState("");
 
-  const loadChats = () => {
-    getSupportChatsAdmin(adminSecret)
-      .then(setChats)
-      .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")));
-  };
-
   useEffect(() => {
     if (!adminSecret) return;
     setLoading(true);
