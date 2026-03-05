@@ -182,14 +182,28 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
           </button>
         </div>
         <div style={styles.chatHeaderRow}>
-          <button
-            onClick={() => { setRenameChatId(selectedChatId); setRenameValue(selectedChat?.title ?? ""); }}
-            style={styles.titleButton}
-            className="zen-support-title-edit"
-          >
-            <h2 style={styles.title}>{displayTitle}</h2>
-            <span style={styles.editIcon}>✎</span>
-          </button>
+          {renameChatId === selectedChatId ? (
+            <div style={styles.renameInline}>
+              <input
+                type="text"
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                placeholder={t(lang, "supportChatTitlePlaceholder")}
+                style={styles.renameInput}
+              />
+              <button type="button" onClick={handleRenameSubmit} style={styles.renameSaveBtn}>{t(lang, "save")}</button>
+              <button type="button" onClick={() => { setRenameChatId(null); setRenameValue(""); }} style={styles.renameCancelBtn}>{t(lang, "reviewsCancel")}</button>
+            </div>
+          ) : (
+            <button
+              onClick={() => { setRenameChatId(selectedChatId); setRenameValue(selectedChat?.title ?? ""); }}
+              style={styles.titleButton}
+              className="zen-support-title-edit"
+            >
+              <h2 style={styles.title}>{displayTitle}</h2>
+              <span style={styles.editIcon}>✎</span>
+            </button>
+          )}
         </div>
         <div ref={threadRef} style={styles.thread}>
           {messagesLoading && messages.length === 0 ? (
@@ -290,24 +304,6 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
             {t(lang, "send")}
           </button>
         </div>
-        {renameChatId === selectedChatId && (
-          <div style={styles.modalOverlay} onClick={() => setRenameChatId(null)}>
-            <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-              <p style={styles.modalTitle}>{t(lang, "supportRenameChat")}</p>
-              <input
-                type="text"
-                value={renameValue}
-                onChange={(e) => setRenameValue(e.target.value)}
-                placeholder={t(lang, "supportChatTitlePlaceholder")}
-                style={styles.input}
-              />
-              <div style={styles.modalActions}>
-                <button type="button" className="zen-modal-cancel" onClick={() => setRenameChatId(null)} style={styles.cancelBtn}>{t(lang, "reviewsCancel")}</button>
-                <button type="button" onClick={handleRenameSubmit} style={styles.submitBtn}>{t(lang, "save")}</button>
-              </div>
-            </div>
-          </div>
-        )}
         {expandedImageUrl && (
           <div style={styles.imageOverlay} onClick={() => setExpandedImageUrl(null)}>
             <img src={expandedImageUrl} alt="" style={styles.imageExpanded} onClick={(e) => e.stopPropagation()} />
@@ -503,9 +499,9 @@ const styles: Record<string, React.CSSProperties> = {
     background: "var(--border)",
     color: "var(--text)",
   },
-  messageEditBtnWrap: { position: "absolute", top: 2, right: 6 },
-  messageEditBtn: { padding: "8px 12px", background: "none", border: "none", cursor: "pointer", fontSize: 22, color: "#fff", opacity: 0.95 },
-  bubbleContent: { paddingRight: 34 },
+  messageEditBtnWrap: { position: "absolute", top: 0, right: 6 },
+  messageEditBtn: { padding: "8px 12px", background: "none", border: "none", cursor: "pointer", fontSize: 24, color: "#fff", opacity: 0.95 },
+  bubbleContent: { paddingRight: 38 },
   bubbleText: { display: "block", fontSize: 16, lineHeight: 1.4 },
   bubbleTime: { display: "block", fontSize: 12, opacity: 0.8, marginTop: 4 },
   messageEditRow: { display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 },
