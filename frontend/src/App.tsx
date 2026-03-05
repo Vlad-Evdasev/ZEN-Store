@@ -211,6 +211,13 @@ function App() {
     setStoreCatalogView("welcome");
   };
 
+  const goToWelcome = () => {
+    setMenuOpen(false);
+    setPage("storeCatalog");
+    setStoreCatalogStore(DEFAULT_WELCOME_STORE);
+    setStoreCatalogView("welcome");
+  };
+
   const isDefaultWelcomeStore =
     storeCatalogStore &&
     "category" in storeCatalogStore &&
@@ -292,12 +299,15 @@ function App() {
                 <span>{t(lang, "reviews")}{avgRating != null ? ` ★ ${avgRating}` : ""}</span>
               </span>
             </button>
-            <div style={styles.menuSpacer} aria-hidden />
-            <button onClick={openSettings} className="zen-menu-item zen-menu-item-last" style={styles.menuItem}>
+            <button onClick={openSettings} className="zen-menu-item" style={styles.menuItem}>
               <span style={styles.menuItemContent}>
                 <MenuIconSettings />
                 <span>{t(lang, "settings")}</span>
               </span>
+            </button>
+            <div style={styles.menuSpacer} aria-hidden />
+            <button onClick={goToWelcome} type="button" style={styles.menuWelcomeBtn}>
+              {t(lang, "menuToWelcome")}
             </button>
           </div>
         </>
@@ -550,6 +560,20 @@ const styles: Record<string, React.CSSProperties> = {
   menuSpacer: {
     flex: 1,
     minHeight: 0,
+  },
+  menuWelcomeBtn: {
+    width: "100%",
+    padding: "14px 20px",
+    marginTop: 8,
+    background: "var(--accent)",
+    border: "none",
+    borderRadius: 10,
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: 600,
+    fontFamily: "inherit",
+    cursor: "pointer",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
   },
   logo: {
     fontFamily: "Unbounded, sans-serif",
