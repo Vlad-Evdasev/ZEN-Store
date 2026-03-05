@@ -11,6 +11,7 @@ const styles: Record<string, React.CSSProperties> = {
   footer: {
     marginTop: 32,
     padding: "24px 20px",
+    paddingBottom: "max(24px, env(safe-area-inset-bottom))",
     borderTop: "1px solid var(--border)",
     textAlign: "center",
     background: "var(--surface)",
