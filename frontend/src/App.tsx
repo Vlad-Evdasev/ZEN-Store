@@ -395,6 +395,7 @@ const styles: Record<string, React.CSSProperties> = {
     maxWidth: 400,
   },
   appWrapper: {
+    height: "100%",
     minHeight: "100dvh",
     display: "flex",
     justifyContent: "center",
@@ -404,6 +405,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: "100%",
     maxWidth: 480,
     overflowX: "hidden" as const,
+    height: "100%",
     minHeight: "100dvh",
     display: "flex",
     flexDirection: "column",
@@ -599,7 +601,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   main: {
     overflowX: "hidden",
-    overflowY: "visible",
+    overflowY: "auto",
+    WebkitOverflowScrolling: "touch",
     padding: "16px",
     paddingLeft: "max(16px, env(safe-area-inset-left))",
     paddingRight: "max(16px, env(safe-area-inset-right))",
