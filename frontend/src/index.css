@@ -90,6 +90,7 @@ button:active {
 .zen-app textarea:focus-visible {
   outline: none !important;
   box-shadow: none !important;
+  caret-color: var(--accent);
 }
 
 /* Кнопки категорий: без белых границ в тёмной теме */

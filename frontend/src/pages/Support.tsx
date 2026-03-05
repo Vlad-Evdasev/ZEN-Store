@@ -33,6 +33,7 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
   const [renameChatId, setRenameChatId] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
+  const [expandedImageUrl, setExpandedImageUrl] = useState<string | null>(null);
 
   const loadChats = useCallback(() => {
     if (!userId) return;
@@ -173,7 +174,7 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
             style={styles.titleButton}
           >
             <h2 style={styles.title}>{displayTitle}</h2>
-            <span style={styles.editHint}> ✎</span>
+            <span style={styles.editIcon}>✎</span>
           </button>
         </div>
         <div style={styles.thread}>
@@ -190,7 +191,11 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
                   ...(m.sender_type === "admin" ? styles.bubbleAdmin : styles.bubbleUser),
                 }}
               >
-                {m.image_url && <img src={m.image_url} alt="" style={styles.bubbleImg} />}
+                {m.image_url && (
+                  <button type="button" onClick={() => setExpandedImageUrl(m.image_url)} style={styles.bubbleImgBtn}>
+                    <img src={m.image_url} alt="" style={styles.bubbleImg} />
+                  </button>
+                )}
                 {m.text ? <span style={styles.bubbleText}>{m.text}</span> : null}
                 <span style={styles.bubbleTime}>{formatDate(m.created_at)}</span>
               </div>
@@ -245,6 +250,11 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
             </div>
           </div>
         )}
+        {expandedImageUrl && (
+          <div style={styles.imageOverlay} onClick={() => setExpandedImageUrl(null)}>
+            <img src={expandedImageUrl} alt="" style={styles.imageExpanded} onClick={(e) => e.stopPropagation()} />
+          </div>
+        )}
       </div>
     );
   }
@@ -295,7 +305,7 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
                     style={styles.chatItemRename}
                     aria-label={t(lang, "supportRenameChat")}
                   >
-                    ✎
+                    <span style={styles.listEditIcon}>✎</span>
                   </button>
                   <button
                     type="button"
@@ -303,7 +313,7 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
                     style={styles.chatItemDelete}
                     aria-label={t(lang, "supportDeleteChat")}
                   >
-                    🗑
+                    <span style={styles.listDeleteIcon}>🗑</span>
                   </button>
                 </div>
               )}
@@ -335,13 +345,14 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
   },
   chatHeaderRow: { marginBottom: 12 },
-  titleButton: { background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", textAlign: "left" },
-  editHint: { fontSize: 14, color: "var(--muted)", fontWeight: 400 },
+  titleButton: { background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", textAlign: "left", color: "#1a1a1a", display: "flex", alignItems: "center", gap: 8 },
+  editIcon: { fontSize: 22, color: "var(--accent)", fontWeight: 600 },
   title: {
     fontFamily: "Unbounded, sans-serif",
     fontSize: 20,
     fontWeight: 600,
-    marginBottom: 20,
+    marginBottom: 0,
+    color: "#1a1a1a",
   },
   newChatBtn: {
     width: "100%",
@@ -370,17 +381,19 @@ const styles: Record<string, React.CSSProperties> = {
   },
   chatItemTitle: { display: "block", fontSize: 15, fontWeight: 500, color: "var(--text)" },
   chatItemDate: { display: "block", fontSize: 12, color: "var(--muted)", marginTop: 4 },
-  chatItemDelete: { padding: "8px 10px", background: "none", border: "none", cursor: "pointer", fontSize: 16 },
-  chatItemRename: { padding: "8px 10px", background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "var(--muted)" },
+  chatItemDelete: { padding: "12px 14px", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center" },
+  chatItemRename: { padding: "12px 14px", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", color: "var(--accent)" },
+  listEditIcon: { fontSize: 22 },
+  listDeleteIcon: { fontSize: 22 },
   renameInline: { display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", padding: 8, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, minWidth: 0 },
-  renameInput: { flex: "1 1 120px", minWidth: 0, padding: "8px 10px", border: "1px solid var(--border)", borderRadius: 8, fontFamily: "inherit", fontSize: 14 },
+  renameInput: { flex: "1 1 120px", minWidth: 0, padding: "8px 10px", border: "1px solid var(--border)", borderRadius: 8, fontFamily: "inherit", fontSize: 14, caretColor: "var(--accent)" },
   renameSaveBtn: { flexShrink: 0, padding: "8px 12px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 8, fontFamily: "inherit", fontSize: 13, cursor: "pointer" },
   renameCancelBtn: { flexShrink: 0, padding: "8px 12px", background: "var(--border)", color: "var(--text)", border: "none", borderRadius: 8, fontFamily: "inherit", fontSize: 13, cursor: "pointer" },
   smallBtn: { padding: "8px 12px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 8, fontFamily: "inherit", fontSize: 13, cursor: "pointer" },
   thread: {
-    minHeight: 200,
-    maxHeight: 360,
+    height: 320,
     overflowY: "auto",
+    overflowX: "hidden",
     display: "flex",
     flexDirection: "column",
     gap: 8,
@@ -406,7 +419,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
   bubbleText: { display: "block", fontSize: 14, lineHeight: 1.4 },
   bubbleTime: { display: "block", fontSize: 11, opacity: 0.8, marginTop: 4 },
-  bubbleImg: { display: "block", maxWidth: "100%", maxHeight: 200, borderRadius: 8, marginBottom: 4 },
+  bubbleImgBtn: { display: "block", padding: 0, margin: 0, background: "none", border: "none", cursor: "pointer", textAlign: "left", marginBottom: 4 },
+  bubbleImg: { display: "block", maxWidth: "100%", maxHeight: 200, borderRadius: 8, verticalAlign: "top" },
+  imageOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", zIndex: 40, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 },
+  imageExpanded: { maxWidth: "100%", maxHeight: "100%", objectFit: "contain" },
   emptyState: { fontSize: 14, color: "var(--muted)", textAlign: "center", padding: 24 },
   previewRow: { display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 8 },
   previewImg: { maxWidth: 80, maxHeight: 80, borderRadius: 8, objectFit: "cover" },
@@ -441,6 +457,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     background: "transparent",
     color: "var(--text)",
+    caretColor: "var(--accent)",
   },
   sendBtn: {
     flexShrink: 0,
