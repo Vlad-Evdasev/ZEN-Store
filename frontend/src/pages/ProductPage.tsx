@@ -58,6 +58,8 @@ export function ProductPage({
     setImageIndex(0);
   }, [product?.id]);
 
+  const scrollAnimRef = useRef<number | null>(null);
+
   const syncIndexFromScroll = () => {
     const el = galleryScrollRef.current;
     if (!el || imageUrls.length <= 1) return;
@@ -71,7 +73,24 @@ export function ProductPage({
     const el = galleryScrollRef.current;
     if (!el || imageUrls.length <= 1) return;
     const targetLeft = imageIndex * el.clientWidth;
-    if (Math.abs(el.scrollLeft - targetLeft) > 2) el.scrollTo({ left: targetLeft, behavior: "smooth" });
+    const startLeft = el.scrollLeft;
+    if (Math.abs(startLeft - targetLeft) < 2) return;
+    const duration = 380;
+    const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
+    const startTime = performance.now();
+    const tick = (now: number) => {
+      const elapsed = now - startTime;
+      const t = Math.min(1, elapsed / duration);
+      const eased = easeOutCubic(t);
+      el.scrollLeft = startLeft + (targetLeft - startLeft) * eased;
+      if (t < 1) scrollAnimRef.current = requestAnimationFrame(tick);
+      else scrollAnimRef.current = null;
+    };
+    if (scrollAnimRef.current != null) cancelAnimationFrame(scrollAnimRef.current);
+    scrollAnimRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (scrollAnimRef.current != null) cancelAnimationFrame(scrollAnimRef.current);
+    };
   }, [imageIndex, imageUrls.length]);
 
   useEffect(() => {
@@ -388,13 +407,14 @@ const styles: Record<string, React.CSSProperties> = {
     WebkitOverflowScrolling: "touch",
     scrollbarWidth: "none",
     msOverflowStyle: "none",
+    willChange: "scroll-position",
   },
   gallerySlide: {
     flex: "0 0 100%",
     width: "100%",
     height: "100%",
     scrollSnapAlign: "start",
-    scrollSnapStop: "always",
+    scrollSnapStop: "normal",
     minWidth: 0,
   },
   gallerySegments: {
