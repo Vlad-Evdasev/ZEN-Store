@@ -277,7 +277,6 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
       <button onClick={onBack} style={styles.back}>
         ← {t(lang, "back")}
       </button>
-      <h2 style={styles.title}>{t(lang, "supportTitle")}</h2>
       <button onClick={handleCreateChat} style={styles.newChatBtn} disabled={creating}>
         {creating ? "..." : t(lang, "supportNewChat")}
       </button>
@@ -377,6 +376,7 @@ const styles: Record<string, React.CSSProperties> = {
   newChatBtn: {
     width: "100%",
     padding: "12px 16px",
+    marginTop: 8,
     marginBottom: 24,
     background: "var(--accent)",
     color: "#fff",
