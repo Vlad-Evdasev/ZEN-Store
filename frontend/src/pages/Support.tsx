@@ -485,6 +485,8 @@ const styles: Record<string, React.CSSProperties> = {
     height: 20,
     padding: "0 6px",
     marginLeft: 8,
+    transform: "translateY(-3px)",
+    verticalAlign: "middle",
     borderRadius: 10,
     background: "var(--accent)",
     color: "#fff",
