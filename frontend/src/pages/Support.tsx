@@ -318,6 +318,14 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
         </div>
         {expandedImageUrl && (
           <div style={styles.imageOverlay} onClick={() => setExpandedImageUrl(null)}>
+            <button
+              type="button"
+              onClick={() => setExpandedImageUrl(null)}
+              style={styles.imageOverlayClose}
+              aria-label={t(lang, "close")}
+            >
+              ×
+            </button>
             <img src={expandedImageUrl} alt="" style={styles.imageExpanded} onClick={(e) => e.stopPropagation()} />
           </div>
         )}
@@ -524,6 +532,24 @@ const styles: Record<string, React.CSSProperties> = {
   bubbleImgBtn: { display: "block", padding: 0, margin: 0, background: "none", border: "none", cursor: "pointer", textAlign: "left", marginBottom: 4 },
   bubbleImg: { display: "block", maxWidth: "100%", maxHeight: 200, borderRadius: 8, verticalAlign: "top" },
   imageOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", zIndex: 40, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 },
+  imageOverlayClose: {
+    position: "fixed",
+    top: 12,
+    right: 12,
+    width: 44,
+    height: 44,
+    borderRadius: "50%",
+    border: "none",
+    background: "rgba(255,255,255,0.2)",
+    color: "#fff",
+    fontSize: 28,
+    lineHeight: 1,
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 41,
+  },
   imageExpanded: { maxWidth: "100%", maxHeight: "100%", objectFit: "contain" },
   emptyState: { fontSize: 14, color: "var(--muted)", textAlign: "center", padding: 24 },
   previewRow: { display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 8 },
