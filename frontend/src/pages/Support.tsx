@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   getSupportChats,
   createSupportChat,
@@ -34,6 +34,7 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
   const [renameValue, setRenameValue] = useState("");
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const [expandedImageUrl, setExpandedImageUrl] = useState<string | null>(null);
+  const threadRef = useRef<HTMLDivElement>(null);
 
   const loadChats = useCallback(() => {
     if (!userId) return;
@@ -67,6 +68,14 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
     const t = selectedChatId ? setInterval(() => loadMessages(true), 5000) : undefined;
     return () => clearInterval(t);
   }, [loadMessages, selectedChatId]);
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      requestAnimationFrame(() => {
+        threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight, behavior: "smooth" });
+      });
+    }
+  }, [messages.length, messages[messages.length - 1]?.id]);
 
   const handleCreateChat = () => {
     if (!userId || creating) return;
@@ -165,7 +174,7 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
             ← {t(lang, "back")}
           </button>
           <button onClick={handleDeleteChat} style={styles.deleteBtn} aria-label={t(lang, "supportDeleteChat")}>
-            {t(lang, "supportDeleteChat")}
+            <span style={styles.deleteIcon}>🗑</span>
           </button>
         </div>
         <div style={styles.chatHeaderRow}>
@@ -177,7 +186,7 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
             <span style={styles.editIcon}>✎</span>
           </button>
         </div>
-        <div style={styles.thread}>
+        <div ref={threadRef} style={styles.thread}>
           {messagesLoading && messages.length === 0 ? (
             <p style={styles.muted}>{t(lang, "loading")}...</p>
           ) : messages.length === 0 ? (
@@ -244,7 +253,7 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
                 style={styles.input}
               />
               <div style={styles.modalActions}>
-                <button type="button" onClick={() => setRenameChatId(null)} style={styles.cancelBtn}>{t(lang, "reviewsCancel")}</button>
+                <button type="button" className="zen-modal-cancel" onClick={() => setRenameChatId(null)} style={styles.cancelBtn}>{t(lang, "reviewsCancel")}</button>
                 <button type="button" onClick={handleRenameSubmit} style={styles.submitBtn}>{t(lang, "save")}</button>
               </div>
             </div>
@@ -339,11 +348,13 @@ const styles: Record<string, React.CSSProperties> = {
   deleteBtn: {
     background: "none",
     border: "none",
-    color: "var(--accent)",
+    padding: "4px 0",
     fontFamily: "inherit",
-    fontSize: 13,
     cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
   },
+  deleteIcon: { fontSize: 22, color: "var(--accent)" },
   chatHeaderRow: { marginBottom: 12 },
   titleButton: { background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", textAlign: "left", color: "#1a1a1a", display: "flex", alignItems: "center", gap: 8 },
   editIcon: { fontSize: 22, color: "var(--accent)", fontWeight: 600 },
@@ -444,8 +455,8 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "10px 12px",
     background: "none",
     border: "none",
-    color: "var(--muted)",
-    fontSize: 20,
+    color: "var(--accent)",
+    fontSize: 22,
     cursor: "pointer",
   },
   input: {
@@ -476,6 +487,6 @@ const styles: Record<string, React.CSSProperties> = {
   modal: { background: "var(--surface)", borderRadius: 16, padding: 20, maxWidth: 360, width: "100%", boxShadow: "0 8px 32px rgba(0,0,0,0.2)" },
   modalTitle: { margin: "0 0 12px", fontSize: 16, fontWeight: 600 },
   modalActions: { display: "flex", gap: 8, marginTop: 16 },
-  cancelBtn: { padding: "10px 16px", background: "var(--border)", border: "none", borderRadius: 10, fontFamily: "inherit", fontSize: 14, cursor: "pointer" },
+  cancelBtn: { padding: "10px 16px", background: "var(--border)", border: "none", borderRadius: 10, fontFamily: "inherit", fontSize: 14, cursor: "pointer", color: "var(--text)" },
   submitBtn: { padding: "10px 16px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 10, fontFamily: "inherit", fontSize: 14, cursor: "pointer" },
 };
