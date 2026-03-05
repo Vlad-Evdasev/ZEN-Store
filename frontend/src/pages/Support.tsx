@@ -6,7 +6,6 @@ import {
   getSupportMessages,
   sendSupportMessage,
   updateSupportMessage,
-  deleteSupportMessage,
   deleteSupportChat,
   type SupportChat,
   type SupportMessage,
@@ -38,7 +37,6 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
   const [expandedImageUrl, setExpandedImageUrl] = useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
   const [editingMessageText, setEditingMessageText] = useState("");
-  const [deletingMessageId, setDeletingMessageId] = useState<number | null>(null);
   const threadRef = useRef<HTMLDivElement>(null);
 
   const loadChats = useCallback(() => {
@@ -242,14 +240,15 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
                     </div>
                   ) : (
                     <>
-                      {m.text ? <span style={styles.bubbleText}>{m.text}</span> : null}
-                      <span style={styles.bubbleTime}>{formatDate(m.created_at)}</span>
                       {m.sender_type === "user" && (
-                        <div style={styles.messageActions}>
-                          <button type="button" onClick={() => { setEditingMessageId(m.id); setEditingMessageText(m.text || ""); }} style={styles.messageActionBtn} aria-label={t(lang, "supportEditMessage")}>✎</button>
-                          <button type="button" onClick={() => setDeletingMessageId(m.id)} style={styles.messageActionBtn} aria-label={t(lang, "supportDeleteMessage")}>🗑</button>
+                        <div style={styles.messageEditBtnWrap}>
+                          <button type="button" onClick={() => { setEditingMessageId(m.id); setEditingMessageText(m.text || ""); }} style={styles.messageEditBtn} aria-label={t(lang, "supportEditMessage")}>✎</button>
                         </div>
                       )}
+                      <div style={styles.bubbleContent}>
+                        {m.text ? <span style={styles.bubbleText}>{m.text}</span> : null}
+                        <span style={styles.bubbleTime}>{formatDate(m.created_at)}</span>
+                      </div>
                     </>
                   )}
                 </div>
@@ -314,31 +313,7 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
             <img src={expandedImageUrl} alt="" style={styles.imageExpanded} onClick={(e) => e.stopPropagation()} />
           </div>
         )}
-        {deletingMessageId != null && selectedChatId != null && (
-          <div style={styles.modalOverlay} onClick={() => setDeletingMessageId(null)}>
-            <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-              <p style={styles.modalTitle}>{t(lang, "supportDeleteMessageConfirm")}</p>
-              <div style={styles.modalActions}>
-                <button type="button" className="zen-modal-cancel" onClick={() => setDeletingMessageId(null)} style={styles.cancelBtn}>{t(lang, "reviewsCancel")}</button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    deleteSupportMessage(selectedChatId, deletingMessageId, userId)
-                      .then(() => {
-                        setMessages((prev) => prev.filter((x) => x.id !== deletingMessageId));
-                        setDeletingMessageId(null);
-                      })
-                      .catch(console.error);
-                  }}
-                  style={styles.submitBtn}
-                >
-                  {t(lang, "supportDeleteMessage")}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+        </div>
     );
   }
 
@@ -513,6 +488,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   bubbleWrap: { display: "flex", flexDirection: "column", alignItems: "stretch" },
   bubble: {
+    position: "relative",
     maxWidth: "85%",
     padding: "10px 14px",
     borderRadius: 12,
@@ -527,10 +503,11 @@ const styles: Record<string, React.CSSProperties> = {
     background: "var(--border)",
     color: "var(--text)",
   },
-  bubbleText: { display: "block", fontSize: 14, lineHeight: 1.4 },
-  bubbleTime: { display: "block", fontSize: 11, opacity: 0.8, marginTop: 4 },
-  messageActions: { display: "flex", gap: 4, marginTop: 6 },
-  messageActionBtn: { padding: "4px 8px", background: "none", border: "none", cursor: "pointer", fontSize: 14, opacity: 0.9 },
+  messageEditBtnWrap: { position: "absolute", top: 6, right: 6 },
+  messageEditBtn: { padding: "6px 10px", background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#fff", opacity: 0.95 },
+  bubbleContent: { paddingRight: 28 },
+  bubbleText: { display: "block", fontSize: 16, lineHeight: 1.4 },
+  bubbleTime: { display: "block", fontSize: 12, opacity: 0.8, marginTop: 4 },
   messageEditRow: { display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 },
   messageEditInput: { flex: "1 1 120px", minWidth: 0, padding: "6px 10px", border: "1px solid rgba(255,255,255,0.5)", borderRadius: 8, background: "rgba(0,0,0,0.15)", color: "#fff", fontSize: 14, fontFamily: "inherit" },
   messageEditCancel: { padding: "6px 10px", background: "rgba(255,255,255,0.2)", border: "none", borderRadius: 8, color: "#fff", fontSize: 13, cursor: "pointer" },
