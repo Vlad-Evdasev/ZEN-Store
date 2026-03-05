@@ -122,6 +122,43 @@ supportRouter.post("/chats/:id/messages", (req, res) => {
   res.status(201).json(row);
 });
 
+supportRouter.patch("/chats/:id/messages/:messageId", (req, res) => {
+  const chatId = parseInt(req.params.id, 10);
+  const messageId = parseInt(req.params.messageId, 10);
+  const userId = req.query.userId as string | undefined;
+  const asAdmin = isAdmin(req);
+  const { text } = req.body;
+
+  const chat = db.prepare("SELECT id, user_id, deleted_at FROM support_chats WHERE id = ?").get(chatId) as { id: number; user_id: string; deleted_at: string | null } | undefined;
+  if (!chat) return res.status(404).json({ error: "Chat not found" });
+  if (chat.deleted_at) return res.status(404).json({ error: "Chat deleted" });
+  const msg = db.prepare("SELECT id, chat_id, sender_type, text FROM support_messages WHERE id = ? AND chat_id = ?").get(messageId, chatId) as { id: number; sender_type: string } | undefined;
+  if (!msg) return res.status(404).json({ error: "Message not found" });
+  if (msg.sender_type !== "user") return res.status(403).json({ error: "Can only edit own messages" });
+  if (!asAdmin && chat.user_id !== userId) return res.status(403).json({ error: "Forbidden" });
+  const textVal = typeof text === "string" ? text.trim() : "";
+  db.prepare("UPDATE support_messages SET text = ? WHERE id = ? AND chat_id = ?").run(textVal, messageId, chatId);
+  const row = db.prepare("SELECT id, chat_id, sender_type, text, image_url, created_at FROM support_messages WHERE id = ?").get(messageId) as Record<string, unknown>;
+  res.json(row);
+});
+
+supportRouter.delete("/chats/:id/messages/:messageId", (req, res) => {
+  const chatId = parseInt(req.params.id, 10);
+  const messageId = parseInt(req.params.messageId, 10);
+  const userId = req.query.userId as string | undefined;
+  const asAdmin = isAdmin(req);
+
+  const chat = db.prepare("SELECT id, user_id, deleted_at FROM support_chats WHERE id = ?").get(chatId) as { id: number; user_id: string; deleted_at: string | null } | undefined;
+  if (!chat) return res.status(404).json({ error: "Chat not found" });
+  if (chat.deleted_at) return res.status(404).json({ error: "Chat deleted" });
+  const msg = db.prepare("SELECT id, sender_type FROM support_messages WHERE id = ? AND chat_id = ?").get(messageId, chatId) as { sender_type: string } | undefined;
+  if (!msg) return res.status(404).json({ error: "Message not found" });
+  if (msg.sender_type !== "user") return res.status(403).json({ error: "Can only delete own messages" });
+  if (!asAdmin && chat.user_id !== userId) return res.status(403).json({ error: "Forbidden" });
+  db.prepare("DELETE FROM support_messages WHERE id = ? AND chat_id = ?").run(messageId, chatId);
+  res.json({ ok: true });
+});
+
 supportRouter.delete("/chats/:id", (req, res) => {
   const chatId = parseInt(req.params.id, 10);
   const userId = req.query.userId as string | undefined;

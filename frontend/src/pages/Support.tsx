@@ -5,6 +5,8 @@ import {
   updateSupportChat,
   getSupportMessages,
   sendSupportMessage,
+  updateSupportMessage,
+  deleteSupportMessage,
   deleteSupportChat,
   type SupportChat,
   type SupportMessage,
@@ -34,6 +36,9 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
   const [renameValue, setRenameValue] = useState("");
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const [expandedImageUrl, setExpandedImageUrl] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
+  const [editingMessageText, setEditingMessageText] = useState("");
+  const [deletingMessageId, setDeletingMessageId] = useState<number | null>(null);
   const threadRef = useRef<HTMLDivElement>(null);
 
   const loadChats = useCallback(() => {
@@ -169,7 +174,7 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
 
   if (selectedChatId != null) {
     return (
-      <div style={styles.wrap}>
+      <div className="zen-support" style={styles.wrap}>
         <div style={styles.topRow}>
           <button onClick={() => { setSelectedChatId(null); setPhotoDataUrl(null); }} style={styles.back}>
             ← {t(lang, "back")}
@@ -182,6 +187,7 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
           <button
             onClick={() => { setRenameChatId(selectedChatId); setRenameValue(selectedChat?.title ?? ""); }}
             style={styles.titleButton}
+            className="zen-support-title-edit"
           >
             <h2 style={styles.title}>{displayTitle}</h2>
             <span style={styles.editIcon}>✎</span>
@@ -194,20 +200,59 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
             <p style={styles.emptyState}>{t(lang, "supportNoMessages")}</p>
           ) : (
             messages.map((m) => (
-              <div
-                key={m.id}
-                style={{
-                  ...styles.bubble,
-                  ...(m.sender_type === "admin" ? styles.bubbleAdmin : styles.bubbleUser),
-                }}
-              >
-                {m.image_url && (
-                  <button type="button" onClick={() => setExpandedImageUrl(m.image_url)} style={styles.bubbleImgBtn}>
-                    <img src={m.image_url} alt="" style={styles.bubbleImg} />
-                  </button>
-                )}
-                {m.text ? <span style={styles.bubbleText}>{m.text}</span> : null}
-                <span style={styles.bubbleTime}>{formatDate(m.created_at)}</span>
+              <div key={m.id} style={styles.bubbleWrap}>
+                <div
+                  style={{
+                    ...styles.bubble,
+                    ...(m.sender_type === "admin" ? styles.bubbleAdmin : styles.bubbleUser),
+                  }}
+                >
+                  {m.image_url && (
+                    <button type="button" onClick={() => setExpandedImageUrl(m.image_url)} style={styles.bubbleImgBtn}>
+                      <img src={m.image_url} alt="" style={styles.bubbleImg} />
+                    </button>
+                  )}
+                  {editingMessageId === m.id ? (
+                    <div style={styles.messageEditRow}>
+                      <input
+                        value={editingMessageText}
+                        onChange={(e) => setEditingMessageText(e.target.value)}
+                        style={styles.messageEditInput}
+                        autoFocus
+                      />
+                      <button type="button" onClick={() => { setEditingMessageId(null); setEditingMessageText(""); }} style={styles.messageEditCancel}>{t(lang, "reviewsCancel")}</button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (selectedChatId == null) return;
+                          const text = editingMessageText.trim();
+                          if (!text) return;
+                          updateSupportMessage(selectedChatId, m.id, userId, { text })
+                            .then((updated) => {
+                              setMessages((prev) => prev.map((x) => (x.id === m.id ? updated : x)));
+                              setEditingMessageId(null);
+                              setEditingMessageText("");
+                            })
+                            .catch(console.error);
+                        }}
+                        style={styles.messageEditSave}
+                      >
+                        {t(lang, "save")}
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      {m.text ? <span style={styles.bubbleText}>{m.text}</span> : null}
+                      <span style={styles.bubbleTime}>{formatDate(m.created_at)}</span>
+                      {m.sender_type === "user" && (
+                        <div style={styles.messageActions}>
+                          <button type="button" onClick={() => { setEditingMessageId(m.id); setEditingMessageText(m.text || ""); }} style={styles.messageActionBtn} aria-label={t(lang, "supportEditMessage")}>✎</button>
+                          <button type="button" onClick={() => setDeletingMessageId(m.id)} style={styles.messageActionBtn} aria-label={t(lang, "supportDeleteMessage")}>🗑</button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
             ))
           )}
@@ -269,12 +314,36 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
             <img src={expandedImageUrl} alt="" style={styles.imageExpanded} onClick={(e) => e.stopPropagation()} />
           </div>
         )}
+        {deletingMessageId != null && selectedChatId != null && (
+          <div style={styles.modalOverlay} onClick={() => setDeletingMessageId(null)}>
+            <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+              <p style={styles.modalTitle}>{t(lang, "supportDeleteMessageConfirm")}</p>
+              <div style={styles.modalActions}>
+                <button type="button" className="zen-modal-cancel" onClick={() => setDeletingMessageId(null)} style={styles.cancelBtn}>{t(lang, "reviewsCancel")}</button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    deleteSupportMessage(selectedChatId, deletingMessageId, userId)
+                      .then(() => {
+                        setMessages((prev) => prev.filter((x) => x.id !== deletingMessageId));
+                        setDeletingMessageId(null);
+                      })
+                      .catch(console.error);
+                  }}
+                  style={styles.submitBtn}
+                >
+                  {t(lang, "supportDeleteMessage")}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
   return (
-    <div style={styles.wrap}>
+    <div className="zen-support" style={styles.wrap}>
       <button onClick={onBack} style={styles.back}>
         ← {t(lang, "back")}
       </button>
@@ -320,6 +389,7 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
                     onClick={(e) => { e.stopPropagation(); setRenameChatId(c.id); setRenameValue(c.title ?? ""); }}
                     style={styles.chatItemRename}
                     aria-label={t(lang, "supportRenameChat")}
+                    data-touch-area="chat-rename"
                   >
                     <span style={styles.listEditIcon}>✎</span>
                   </button>
@@ -328,6 +398,7 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
                     onClick={(e) => { e.stopPropagation(); deleteSupportChat(c.id, userId).then(loadChats).catch(console.error); }}
                     style={styles.chatItemDelete}
                     aria-label={t(lang, "supportDeleteChat")}
+                    data-touch-area="chat-delete"
                   >
                     <span style={styles.listDeleteIcon}>
                       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -440,6 +511,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: "var(--surface)",
     borderRadius: 12,
   },
+  bubbleWrap: { display: "flex", flexDirection: "column", alignItems: "stretch" },
   bubble: {
     maxWidth: "85%",
     padding: "10px 14px",
@@ -457,6 +529,12 @@ const styles: Record<string, React.CSSProperties> = {
   },
   bubbleText: { display: "block", fontSize: 14, lineHeight: 1.4 },
   bubbleTime: { display: "block", fontSize: 11, opacity: 0.8, marginTop: 4 },
+  messageActions: { display: "flex", gap: 4, marginTop: 6 },
+  messageActionBtn: { padding: "4px 8px", background: "none", border: "none", cursor: "pointer", fontSize: 14, opacity: 0.9 },
+  messageEditRow: { display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 },
+  messageEditInput: { flex: "1 1 120px", minWidth: 0, padding: "6px 10px", border: "1px solid rgba(255,255,255,0.5)", borderRadius: 8, background: "rgba(0,0,0,0.15)", color: "#fff", fontSize: 14, fontFamily: "inherit" },
+  messageEditCancel: { padding: "6px 10px", background: "rgba(255,255,255,0.2)", border: "none", borderRadius: 8, color: "#fff", fontSize: 13, cursor: "pointer" },
+  messageEditSave: { padding: "6px 12px", background: "rgba(255,255,255,0.95)", color: "var(--accent)", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" },
   bubbleImgBtn: { display: "block", padding: 0, margin: 0, background: "none", border: "none", cursor: "pointer", textAlign: "left", marginBottom: 4 },
   bubbleImg: { display: "block", maxWidth: "100%", maxHeight: 200, borderRadius: 8, verticalAlign: "top" },
   imageOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", zIndex: 40, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 },

@@ -233,3 +233,23 @@ button:active {
     box-shadow: 0 0 40px rgba(0,0,0,0.12);
   }
 }
+
+/* Кнопки редактирования/удаления чата — крупнее на телефоне */
+@media (max-width: 768px) {
+  .zen-support [data-touch-area="chat-rename"],
+  .zen-support [data-touch-area="chat-delete"] {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 14px !important;
+  }
+  .zen-support [data-touch-area="chat-rename"] span {
+    font-size: 28px !important;
+  }
+  .zen-support [data-touch-area="chat-delete"] svg {
+    width: 28px !important;
+    height: 28px !important;
+  }
+  .zen-support .zen-support-title-edit span:last-child {
+    font-size: 28px !important;
+  }
+}

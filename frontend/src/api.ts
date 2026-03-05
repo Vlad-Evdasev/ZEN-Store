@@ -517,6 +517,28 @@ export async function sendSupportMessage(
   return res.json();
 }
 
+export async function updateSupportMessage(
+  chatId: number,
+  messageId: number,
+  userId: string,
+  data: { text: string }
+): Promise<SupportMessage> {
+  const res = await fetch(
+    `${API_URL}/api/support/chats/${chatId}/messages/${messageId}?userId=${encodeURIComponent(userId)}`,
+    { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) }
+  );
+  if (!res.ok) throw new Error("Failed to update message");
+  return res.json();
+}
+
+export async function deleteSupportMessage(chatId: number, messageId: number, userId: string): Promise<void> {
+  const res = await fetch(
+    `${API_URL}/api/support/chats/${chatId}/messages/${messageId}?userId=${encodeURIComponent(userId)}`,
+    { method: "DELETE" }
+  );
+  if (!res.ok) throw new Error("Failed to delete message");
+}
+
 export async function sendSupportMessageAdmin(
   chatId: number,
   adminSecret: string,
