@@ -2,6 +2,8 @@ import { useSettings } from "../context/SettingsContext";
 import type { Currency } from "../context/SettingsContext";
 import { t } from "../i18n";
 
+const CURRENCY_OPTIONS: Currency[] = ["BYN", "USD"];
+
 interface SettingsProps {
   onBack: () => void;
 }
@@ -64,7 +66,7 @@ export function Settings({ onBack }: SettingsProps) {
       <div style={styles.section}>
         <p style={styles.label}>{t(lang, "currency")}</p>
         <div style={styles.row}>
-          {(["BYN", "USD"] as Currency[]).map((c) => (
+          {(CURRENCY_OPTIONS as Currency[]).map((c) => (
             <button
               key={c}
               type="button"

@@ -24,7 +24,8 @@ function loadSettings(): Settings {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaultSettings;
     const parsed = JSON.parse(raw) as Partial<Settings>;
-    const currency = parsed.currency === "RUB" ? "USD" : (parsed.currency === "BYN" || parsed.currency === "USD" ? parsed.currency : defaultSettings.currency);
+    const rawCurrency = parsed.currency as string | undefined;
+    const currency: Currency = rawCurrency === "RUB" ? "USD" : (rawCurrency === "BYN" || rawCurrency === "USD" ? rawCurrency : defaultSettings.currency);
     return { ...defaultSettings, ...parsed, currency };
   } catch {
     return defaultSettings;

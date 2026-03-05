@@ -19,8 +19,9 @@ export function SettingsSync() {
           if (data.lang) setLang(data.lang as "ru" | "en");
           if (data.theme) setTheme(data.theme as "dark" | "light");
           if (data.currency) {
-            const c = data.currency === "RUB" ? "USD" : (data.currency as "BYN" | "USD");
-            if (c === "BYN" || c === "USD") setCurrency(c);
+            const raw = data.currency as string | undefined;
+            const c = raw === "RUB" ? "USD" : (raw === "BYN" || raw === "USD" ? raw : null);
+            if (c) setCurrency(c);
           }
         }
       })
