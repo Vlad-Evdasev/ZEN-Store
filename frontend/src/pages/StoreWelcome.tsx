@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
-import { getCategoryLabel } from "../utils/categories";
 
 interface StoreWelcomeProps {
   store: { id: number; name: string } | { category: string; name: string };
@@ -12,11 +11,10 @@ interface StoreWelcomeProps {
   onCustomOrder: () => void;
 }
 
-export function StoreWelcome({ store, categoryLabels, showBack = true, onBack, onGoToCatalog, onCustomOrder }: StoreWelcomeProps) {
+export function StoreWelcome({ store: _store, categoryLabels: _categoryLabels, showBack = true, onBack, onGoToCatalog, onCustomOrder }: StoreWelcomeProps) {
   const { settings } = useSettings();
   const lang = settings.lang;
   const [visible, setVisible] = useState(false);
-  const storeName = "name" in store ? store.name : getCategoryLabel((store as { category: string }).category, categoryLabels);
 
   useEffect(() => {
     const id = requestAnimationFrame(() => {
@@ -24,6 +22,11 @@ export function StoreWelcome({ store, categoryLabels, showBack = true, onBack, o
     });
     return () => cancelAnimationFrame(id);
   }, []);
+
+  const fadeStyle = {
+    opacity: visible ? 1 : 0,
+    transition: "opacity 0.6s ease-out",
+  };
 
   return (
     <div style={{ ...styles.wrap, ...(showBack ? {} : styles.wrapNoHeader) }}>
@@ -35,23 +38,19 @@ export function StoreWelcome({ store, categoryLabels, showBack = true, onBack, o
       <h1
         style={{
           ...styles.title,
-          opacity: visible ? 1 : 0,
+          ...fadeStyle,
           transform: visible ? "translateY(0)" : "translateY(12px)",
           transition: "opacity 0.6s ease-out, transform 0.6s ease-out",
         }}
       >
         {t(lang, "storeWelcomeTitle")}
       </h1>
-      <p
-        style={{
-          ...styles.subtitle,
-          opacity: visible ? 1 : 0,
-          transition: "opacity 0.6s ease-out 0.15s",
-        }}
-      >
-        {storeName}
-      </p>
-      <div style={styles.buttons}>
+      <div style={{ ...styles.textBlock, ...fadeStyle, transition: "opacity 0.6s ease-out 0.1s" }}>
+        <p style={styles.paragraph}>{t(lang, "storeWelcomeIntro")}</p>
+        <p style={styles.paragraph}>{t(lang, "storeWelcomeCatalog")}</p>
+        <p style={styles.paragraph}>{t(lang, "storeWelcomeCustom")}</p>
+      </div>
+      <div style={{ ...styles.buttons, ...fadeStyle, transition: "opacity 0.6s ease-out 0.2s" }}>
         <button type="button" onClick={onGoToCatalog} style={styles.btn}>
           {t(lang, "storeWelcomeToCatalog")}
         </button>
@@ -80,14 +79,18 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 26,
     fontWeight: 600,
     color: "var(--text)",
-    marginBottom: 8,
+    marginBottom: 20,
     textAlign: "center",
   },
-  subtitle: {
-    fontSize: 16,
-    color: "var(--muted)",
-    textAlign: "center",
-    marginBottom: 40,
+  textBlock: {
+    marginBottom: 28,
+  },
+  paragraph: {
+    fontSize: 15,
+    lineHeight: 1.5,
+    color: "var(--text)",
+    marginBottom: 14,
+    textAlign: "left",
   },
   buttons: {
     display: "flex",
