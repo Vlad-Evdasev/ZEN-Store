@@ -46,7 +46,6 @@ export function ProductPage({
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [imageIndex, setImageIndex] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
-  const touchStartX = useRef<number | null>(null);
 
   const sizes = product ? product.sizes.split(",").map((s) => s.trim()) : [];
   const imageUrls = product
@@ -57,24 +56,6 @@ export function ProductPage({
   useEffect(() => {
     setImageIndex(0);
   }, [product?.id]);
-
-  const handleGallerySwipe = (e: React.TouchEvent) => {
-    const touch = e.changedTouches?.[0];
-    if (!touch) return;
-    const endX = touch.clientX;
-    const startX = touchStartX.current;
-    touchStartX.current = null;
-    if (startX == null || imageUrls.length <= 1) return;
-    const delta = startX - endX;
-    const threshold = 50;
-    if (delta > threshold) setImageIndex((i) => Math.min(i + 1, imageUrls.length - 1));
-    else if (delta < -threshold) setImageIndex((i) => Math.max(i - 1, 0));
-  };
-
-  const handleGalleryTouchStart = (e: React.TouchEvent) => {
-    const t = e.touches?.[0];
-    if (t) touchStartX.current = t.clientX;
-  };
 
   useEffect(() => {
     if (!product?.id) return;
@@ -171,11 +152,7 @@ export function ProductPage({
           />
         ) : (
           <>
-            <div
-              style={styles.galleryFrame}
-              onTouchStart={handleGalleryTouchStart}
-              onTouchEnd={handleGallerySwipe}
-            >
+            <div style={styles.galleryFrame}>
               {imageUrls.map((url, i) => (
                 <div
                   key={`${product.id}-${i}`}
@@ -189,6 +166,26 @@ export function ProductPage({
                 </div>
               ))}
             </div>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setImageIndex((i) => (i === 0 ? imageUrls.length - 1 : i - 1)); }}
+              style={styles.galleryPrev}
+              aria-label="Предыдущее фото"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setImageIndex((i) => (i === imageUrls.length - 1 ? 0 : i + 1)); }}
+              style={styles.galleryNext}
+              aria-label="Следующее фото"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
             <div style={styles.gallerySegments}>
               {imageUrls.map((_, i) => (
                 <button
@@ -395,6 +392,46 @@ const styles: Record<string, React.CSSProperties> = {
     width: "100%",
     height: "100%",
     transition: "opacity 0.5s cubic-bezier(0.25, 0.1, 0.25, 1)",
+  },
+  galleryPrev: {
+    position: "absolute",
+    left: 12,
+    top: "50%",
+    transform: "translateY(-50%)",
+    width: 44,
+    height: 44,
+    borderRadius: "50%",
+    border: "none",
+    background: "rgba(255,255,255,0.18)",
+    backdropFilter: "blur(10px)",
+    WebkitBackdropFilter: "blur(10px)",
+    color: "#fff",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 3,
+    boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
+  },
+  galleryNext: {
+    position: "absolute",
+    right: 12,
+    top: "50%",
+    transform: "translateY(-50%)",
+    width: 44,
+    height: 44,
+    borderRadius: "50%",
+    border: "none",
+    background: "rgba(255,255,255,0.18)",
+    backdropFilter: "blur(10px)",
+    WebkitBackdropFilter: "blur(10px)",
+    color: "#fff",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 3,
+    boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
   },
   gallerySegments: {
     position: "absolute",
