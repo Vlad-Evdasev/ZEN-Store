@@ -26,6 +26,41 @@ type Page = "catalog" | "cart" | "product" | "checkout" | "profile" | "reviews" 
 
 const SELLER_LINK = import.meta.env.VITE_SELLER_LINK || "";
 
+const iconSize = 22;
+const iconStyle: React.CSSProperties = { width: iconSize, height: iconSize, flexShrink: 0, color: "currentColor" };
+
+function MenuIconProfile() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={iconStyle} aria-hidden>
+      <circle cx="12" cy="8" r="2.5" />
+      <path d="M5 20v-2a5 5 0 0 1 10 0v2" />
+    </svg>
+  );
+}
+function MenuIconHistory() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={iconStyle} aria-hidden>
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+    </svg>
+  );
+}
+function MenuIconReviews() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={iconStyle} aria-hidden>
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  );
+}
+function MenuIconSettings() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={iconStyle} aria-hidden>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 2v2m0 16v2M2 12h2m16 0h2M5.64 5.64l1.41 1.41m11.32 11.32l1.41 1.41M5.64 18.36l1.41-1.41m11.32-11.32l1.41-1.41" />
+    </svg>
+  );
+}
+
 function App() {
   const { settings } = useSettings();
   const lang = settings.lang;
@@ -212,17 +247,29 @@ function App() {
           />
           <div className="zen-menu-panel" style={styles.menu}>
             <button onClick={openProfile} className="zen-menu-item" style={styles.menuItem}>
-              {t(lang, "profile")}
+              <span style={styles.menuItemContent}>
+                <MenuIconProfile />
+                <span>{t(lang, "profile")}</span>
+              </span>
             </button>
             <button onClick={openHistory} className="zen-menu-item" style={styles.menuItem}>
-              {t(lang, "history")}
+              <span style={styles.menuItemContent}>
+                <MenuIconHistory />
+                <span>{t(lang, "history")}</span>
+              </span>
             </button>
             <button onClick={openReviews} className="zen-menu-item" style={styles.menuItem}>
-              {t(lang, "reviews")} {avgRating != null ? `★ ${avgRating}` : ""}
+              <span style={styles.menuItemContent}>
+                <MenuIconReviews />
+                <span>{t(lang, "reviews")}{avgRating != null ? ` ★ ${avgRating}` : ""}</span>
+              </span>
             </button>
             <div style={styles.menuSpacer} aria-hidden />
             <button onClick={openSettings} className="zen-menu-item zen-menu-item-last" style={styles.menuItem}>
-              {t(lang, "settings")}
+              <span style={styles.menuItemContent}>
+                <MenuIconSettings />
+                <span>{t(lang, "settings")}</span>
+              </span>
             </button>
           </div>
         </>
@@ -445,6 +492,12 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 16,
     fontFamily: "inherit",
     cursor: "pointer",
+    width: "100%",
+  },
+  menuItemContent: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
   },
   menuSpacer: {
     flex: 1,
