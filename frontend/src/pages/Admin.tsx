@@ -580,6 +580,7 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
   const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
   const [editingMessageText, setEditingMessageText] = useState("");
   const [expandedImageUrl, setExpandedImageUrl] = useState<string | null>(null);
+  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesScrollRef = useRef<HTMLDivElement>(null);
   const ADMIN_INPUT_MIN_H = 40;
@@ -628,15 +629,27 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
     return () => clearInterval(t);
   }, [selectedChatId, adminSecret]);
 
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = () => setPhotoDataUrl(reader.result as string);
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
   const handleSend = () => {
     const text = input.trim();
-    if (!text || selectedChatId == null || sending) return;
+    if ((!text && !photoDataUrl) || selectedChatId == null || sending) return;
     setSending(true);
     setMessage("");
-    sendSupportMessageAdmin(selectedChatId, adminSecret, { text })
+    const imageToSend = photoDataUrl;
+    const payload = { text: text || undefined, image_url: imageToSend || undefined };
+    setInput("");
+    setPhotoDataUrl(null);
+    sendSupportMessageAdmin(selectedChatId, adminSecret, payload)
       .then((msg) => {
         setMessages((prev) => [...prev, msg]);
-        setInput("");
       })
       .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")))
       .finally(() => setSending(false));
@@ -778,7 +791,21 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
                   ))
                 )}
               </div>
+              {photoDataUrl && (
+                <div style={styles.supportPreviewRow}>
+                  <img src={photoDataUrl} alt="" style={styles.supportPreviewImg} />
+                  <button type="button" onClick={() => setPhotoDataUrl(null)} style={styles.supportPreviewRemove}>×</button>
+                </div>
+              )}
               <div style={styles.supportInputRow}>
+                <label style={styles.supportAttachLabel}>
+                  <input type="file" accept="image/*" onChange={handlePhotoSelect} style={styles.supportHiddenInput} />
+                  <span style={styles.supportAttachBtn} aria-hidden>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                    </svg>
+                  </span>
+                </label>
                 <textarea
                   ref={inputRef}
                   value={input}
@@ -788,7 +815,7 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
                   rows={1}
                   disabled={sending}
                 />
-                <button type="button" onClick={handleSend} style={styles.submit} disabled={sending || !input.trim()}>
+                <button type="button" onClick={handleSend} style={styles.submit} disabled={sending || (!input.trim() && !photoDataUrl)}>
                   Отправить
                 </button>
               </div>
@@ -1421,7 +1448,13 @@ const styles: Record<string, React.CSSProperties> = {
   chatListItemMeta: { display: "block", fontSize: 12, opacity: 0.85, marginTop: 2 },
   chatListItemDate: { display: "block", fontSize: 11, opacity: 0.75, marginTop: 2 },
   supportThreadHeader: { marginBottom: 12, paddingBottom: 12, borderBottom: "1px solid var(--border)" },
-  supportInputRow: { display: "flex", gap: 10, marginTop: 12, alignItems: "flex-end" },
+  supportPreviewRow: { display: "flex", alignItems: "flex-start", gap: 8, marginTop: 8 },
+  supportPreviewImg: { maxWidth: 80, maxHeight: 80, borderRadius: 8, objectFit: "cover" },
+  supportPreviewRemove: { padding: "4px 10px", background: "var(--border)", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 18 },
+  supportInputRow: { display: "flex", gap: 10, marginTop: 12, alignItems: "flex-end", minWidth: 0 },
+  supportAttachLabel: { flexShrink: 0, cursor: "pointer", display: "flex", alignItems: "center", color: "var(--accent)" },
+  supportHiddenInput: { display: "none" },
+  supportAttachBtn: { padding: 8, display: "flex", alignItems: "center", justifyContent: "center" },
   supportTextarea: {
     flex: 1,
     minWidth: 0,
