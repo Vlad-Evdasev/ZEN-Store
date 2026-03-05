@@ -112,6 +112,7 @@ db.exec(`
     user_id TEXT NOT NULL,
     user_name TEXT,
     user_username TEXT,
+    title TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     deleted_at DATETIME
   );
@@ -121,6 +122,7 @@ db.exec(`
     chat_id INTEGER NOT NULL,
     sender_type TEXT NOT NULL,
     text TEXT NOT NULL,
+    image_url TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (chat_id) REFERENCES support_chats(id)
   );
@@ -140,6 +142,13 @@ try {
 } catch {}
 try {
   db.exec("ALTER TABLE custom_orders ADD COLUMN user_address TEXT");
+} catch {}
+
+try {
+  db.exec("ALTER TABLE support_chats ADD COLUMN title TEXT");
+} catch {}
+try {
+  db.exec("ALTER TABLE support_messages ADD COLUMN image_url TEXT");
 } catch {}
 
 // Add store_id to products if missing (migration)

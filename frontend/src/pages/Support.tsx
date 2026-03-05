@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   getSupportChats,
   createSupportChat,
+  updateSupportChat,
   getSupportMessages,
   sendSupportMessage,
   deleteSupportChat,
@@ -29,6 +30,9 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [renameChatId, setRenameChatId] = useState<number | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
 
   const loadChats = useCallback(() => {
     if (!userId) return;
@@ -72,16 +76,54 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
 
   const handleSend = () => {
     const text = input.trim();
-    if (!text || selectedChatId == null || sending) return;
+    if ((!text && !photoDataUrl) || selectedChatId == null || sending) return;
     setSending(true);
-    sendSupportMessage(selectedChatId, userId, text)
+    const payload = { text: text || undefined, image_url: photoDataUrl || undefined };
+    setInput("");
+    setPhotoDataUrl(null);
+    const tempId = -Date.now();
+    const optimistic: SupportMessage = {
+      id: tempId,
+      chat_id: selectedChatId,
+      sender_type: "user",
+      text: text || "",
+      image_url: photoDataUrl || null,
+      created_at: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, optimistic]);
+    sendSupportMessage(selectedChatId, userId, payload)
       .then((msg) => {
-        setMessages((prev) => [...prev, msg]);
-        setInput("");
+        setMessages((prev) => prev.map((m) => (m.id === tempId ? msg : m)));
       })
-      .catch(console.error)
+      .catch(() => {
+        setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      })
       .finally(() => setSending(false));
   };
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = () => setPhotoDataUrl(reader.result as string);
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const handleRenameSubmit = () => {
+    if (renameChatId == null) return;
+    const val = renameValue.trim();
+    updateSupportChat(renameChatId, userId, { title: val || null })
+      .then((updated) => {
+        setChats((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+        setRenameChatId(null);
+        setRenameValue("");
+      })
+      .catch(console.error);
+  };
+
+  const selectedChat = selectedChatId != null ? chats.find((c) => c.id === selectedChatId) : null;
+  const displayTitle = selectedChat ? (selectedChat.title && selectedChat.title.trim() ? selectedChat.title.trim() : `${t(lang, "supportChat")} #${selectedChat.id}`) : "";
 
   const handleDeleteChat = () => {
     if (selectedChatId == null) return;
@@ -112,17 +154,27 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
     return (
       <div style={styles.wrap}>
         <div style={styles.topRow}>
-          <button onClick={() => setSelectedChatId(null)} style={styles.back}>
+          <button onClick={() => { setSelectedChatId(null); setPhotoDataUrl(null); }} style={styles.back}>
             ← {t(lang, "back")}
           </button>
           <button onClick={handleDeleteChat} style={styles.deleteBtn} aria-label={t(lang, "supportDeleteChat")}>
             {t(lang, "supportDeleteChat")}
           </button>
         </div>
-        <h2 style={styles.title}>{t(lang, "supportChat")}</h2>
+        <div style={styles.chatHeaderRow}>
+          <button
+            onClick={() => { setRenameChatId(selectedChatId); setRenameValue(selectedChat?.title ?? ""); }}
+            style={styles.titleButton}
+          >
+            <h2 style={styles.title}>{displayTitle}</h2>
+            <span style={styles.editHint}> ✎</span>
+          </button>
+        </div>
         <div style={styles.thread}>
           {messagesLoading && messages.length === 0 ? (
             <p style={styles.muted}>{t(lang, "loading")}...</p>
+          ) : messages.length === 0 ? (
+            <p style={styles.emptyState}>{t(lang, "supportNoMessages")}</p>
           ) : (
             messages.map((m) => (
               <div
@@ -132,26 +184,59 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
                   ...(m.sender_type === "admin" ? styles.bubbleAdmin : styles.bubbleUser),
                 }}
               >
-                <span style={styles.bubbleText}>{m.text}</span>
+                {m.image_url && <img src={m.image_url} alt="" style={styles.bubbleImg} />}
+                {m.text ? <span style={styles.bubbleText}>{m.text}</span> : null}
                 <span style={styles.bubbleTime}>{formatDate(m.created_at)}</span>
               </div>
             ))
           )}
         </div>
+        {photoDataUrl && (
+          <div style={styles.previewRow}>
+            <img src={photoDataUrl} alt="" style={styles.previewImg} />
+            <button type="button" onClick={() => setPhotoDataUrl(null)} style={styles.previewRemove}>×</button>
+          </div>
+        )}
         <div style={styles.inputRow}>
+          <label style={styles.attachLabel}>
+            <input type="file" accept="image/*" onChange={handlePhotoSelect} style={styles.hiddenInput} />
+            <span style={styles.attachBtn} aria-hidden>📷</span>
+          </label>
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
             placeholder={t(lang, "supportMessagePlaceholder")}
             style={styles.input}
             disabled={sending}
           />
-          <button onClick={handleSend} style={styles.sendBtn} disabled={sending || !input.trim()}>
+          <button
+            onClick={handleSend}
+            style={styles.sendBtn}
+            disabled={sending || (!input.trim() && !photoDataUrl)}
+          >
             {t(lang, "send")}
           </button>
         </div>
+        {renameChatId === selectedChatId && (
+          <div style={styles.modalOverlay} onClick={() => setRenameChatId(null)}>
+            <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+              <p style={styles.modalTitle}>{t(lang, "supportRenameChat")}</p>
+              <input
+                type="text"
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                placeholder={t(lang, "supportChatTitlePlaceholder")}
+                style={styles.input}
+              />
+              <div style={styles.modalActions}>
+                <button type="button" onClick={() => setRenameChatId(null)} style={styles.cancelBtn}>{t(lang, "reviewsCancel")}</button>
+                <button type="button" onClick={handleRenameSubmit} style={styles.submitBtn}>{t(lang, "send")}</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -173,15 +258,47 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
         <ul style={styles.chatList}>
           {chats.map((c) => (
             <li key={c.id} style={styles.chatItem}>
-              <button
-                style={styles.chatItemBtn}
-                onClick={() => setSelectedChatId(c.id)}
-              >
-                <span style={styles.chatItemTitle}>
-                  {t(lang, "supportChat")} #{c.id}
-                </span>
-                <span style={styles.chatItemDate}>{formatDate(c.created_at)}</span>
-              </button>
+              {renameChatId === c.id ? (
+                <div style={styles.renameInline}>
+                  <input
+                    type="text"
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    placeholder={t(lang, "supportChatTitlePlaceholder")}
+                    style={styles.renameInput}
+                  />
+                  <button type="button" onClick={handleRenameSubmit} style={styles.smallBtn}>{t(lang, "send")}</button>
+                  <button type="button" onClick={() => { setRenameChatId(null); setRenameValue(""); }} style={styles.smallBtn}>{t(lang, "reviewsCancel")}</button>
+                </div>
+              ) : (
+                <div style={styles.chatItemCard}>
+                  <button
+                    style={styles.chatItemBtn}
+                    onClick={() => setSelectedChatId(c.id)}
+                  >
+                    <span style={styles.chatItemTitle}>
+                      {c.title && c.title.trim() ? c.title.trim() : `${t(lang, "supportChat")} #${c.id}`}
+                    </span>
+                    <span style={styles.chatItemDate}>{formatDate(c.created_at)}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setRenameChatId(c.id); setRenameValue(c.title ?? ""); }}
+                    style={styles.chatItemRename}
+                    aria-label={t(lang, "supportRenameChat")}
+                  >
+                    ✎
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); deleteSupportChat(c.id, userId).then(loadChats).catch(console.error); }}
+                    style={styles.chatItemDelete}
+                    aria-label={t(lang, "supportDeleteChat")}
+                  >
+                    🗑
+                  </button>
+                </div>
+              )}
             </li>
           ))}
         </ul>
@@ -209,6 +326,9 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 13,
     cursor: "pointer",
   },
+  chatHeaderRow: { marginBottom: 12 },
+  titleButton: { background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", textAlign: "left" },
+  editHint: { fontSize: 14, color: "var(--muted)", fontWeight: 400 },
   title: {
     fontFamily: "Unbounded, sans-serif",
     fontSize: 20,
@@ -230,18 +350,23 @@ const styles: Record<string, React.CSSProperties> = {
   },
   chatList: { listStyle: "none", padding: 0, margin: 0 },
   chatItem: { marginBottom: 8 },
+  chatItemCard: { display: "flex", alignItems: "center", gap: 4, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" },
   chatItemBtn: {
-    width: "100%",
+    flex: 1,
     padding: "14px 16px",
     textAlign: "left",
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: 12,
+    background: "none",
+    border: "none",
     cursor: "pointer",
     fontFamily: "inherit",
   },
   chatItemTitle: { display: "block", fontSize: 15, fontWeight: 500, color: "var(--text)" },
   chatItemDate: { display: "block", fontSize: 12, color: "var(--muted)", marginTop: 4 },
+  chatItemDelete: { padding: "8px 10px", background: "none", border: "none", cursor: "pointer", fontSize: 16 },
+  chatItemRename: { padding: "8px 10px", background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "var(--muted)" },
+  renameInline: { display: "flex", gap: 8, alignItems: "center", padding: 8, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12 },
+  renameInput: { flex: 1, padding: "8px 12px", border: "1px solid var(--border)", borderRadius: 8, fontFamily: "inherit", fontSize: 14 },
+  smallBtn: { padding: "8px 12px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 8, fontFamily: "inherit", fontSize: 13, cursor: "pointer" },
   thread: {
     minHeight: 200,
     maxHeight: 360,
@@ -271,7 +396,15 @@ const styles: Record<string, React.CSSProperties> = {
   },
   bubbleText: { display: "block", fontSize: 14, lineHeight: 1.4 },
   bubbleTime: { display: "block", fontSize: 11, opacity: 0.8, marginTop: 4 },
-  inputRow: { display: "flex", gap: 8 },
+  bubbleImg: { display: "block", maxWidth: "100%", maxHeight: 200, borderRadius: 8, marginBottom: 4 },
+  emptyState: { fontSize: 14, color: "var(--muted)", textAlign: "center", padding: 24 },
+  previewRow: { display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 8 },
+  previewImg: { maxWidth: 80, maxHeight: 80, borderRadius: 8, objectFit: "cover" },
+  previewRemove: { padding: "4px 10px", background: "var(--border)", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 18 },
+  attachLabel: { flexShrink: 0, cursor: "pointer" },
+  hiddenInput: { display: "none" },
+  attachBtn: { display: "inline-block", padding: "12px 14px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, fontSize: 18, cursor: "pointer" },
+  inputRow: { display: "flex", gap: 8, alignItems: "center" },
   input: {
     flex: 1,
     padding: "12px 14px",
@@ -294,4 +427,10 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
   },
   muted: { fontSize: 14, color: "var(--muted)", marginTop: 8 },
+  modalOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 30, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 },
+  modal: { background: "var(--surface)", borderRadius: 16, padding: 20, maxWidth: 360, width: "100%", boxShadow: "0 8px 32px rgba(0,0,0,0.2)" },
+  modalTitle: { margin: "0 0 12px", fontSize: 16, fontWeight: 600 },
+  modalActions: { display: "flex", gap: 8, marginTop: 16 },
+  cancelBtn: { padding: "10px 16px", background: "var(--border)", border: "none", borderRadius: 10, fontFamily: "inherit", fontSize: 14, cursor: "pointer" },
+  submitBtn: { padding: "10px 16px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 10, fontFamily: "inherit", fontSize: 14, cursor: "pointer" },
 };

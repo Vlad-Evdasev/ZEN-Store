@@ -402,7 +402,7 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
     if (!text || selectedChatId == null || sending) return;
     setSending(true);
     setMessage("");
-    sendSupportMessageAdmin(selectedChatId, adminSecret, text)
+    sendSupportMessageAdmin(selectedChatId, adminSecret, { text })
       .then((msg) => {
         setMessages((prev) => [...prev, msg]);
         setInput("");
@@ -432,7 +432,7 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
             ← К списку чатов
           </button>
           <h3 style={styles.subtitle}>
-            Чат #{chat.id} — {chat.user_name || chat.user_username || chat.user_id}
+            {chat.title && chat.title.trim() ? chat.title.trim() : `Чат #${chat.id}`} — {chat.user_name || chat.user_username || chat.user_id}
           </h3>
           <div style={supportThreadStyle}>
             {messagesLoading && messages.length === 0 ? (
@@ -446,7 +446,8 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
                     ...(m.sender_type === "admin" ? supportBubbleAdminStyle : supportBubbleUserStyle),
                   }}
                 >
-                  <span style={{ display: "block", fontSize: 14 }}>{m.text}</span>
+                  {m.image_url && <img src={m.image_url} alt="" style={{ display: "block", maxWidth: "100%", maxHeight: 200, borderRadius: 8, marginBottom: 4 }} />}
+                  {m.text ? <span style={{ display: "block", fontSize: 14 }}>{m.text}</span> : null}
                   <span style={{ display: "block", fontSize: 11, opacity: 0.8, marginTop: 4 }}>{formatDate(m.created_at)}</span>
                 </div>
               ))
