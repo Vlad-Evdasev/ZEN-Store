@@ -105,9 +105,20 @@ function App() {
     let cancelled = false;
     getProducts().then((p) => { if (!cancelled) setProducts(p); }).catch(console.error);
     getStores().then((s) => { if (!cancelled) setStores(s); }).catch(console.error);
-    getCategories().then((cats) => {
-      if (!cancelled) setCategories(cats);
-    }).catch(console.error);
+    const loadCategories = () => {
+      getCategories()
+        .then((cats) => { if (!cancelled) setCategories(cats); })
+        .catch((e) => {
+          console.error("Categories load failed:", e);
+          if (cancelled) return;
+          setTimeout(() => {
+            getCategories()
+              .then((cats) => { if (!cancelled) setCategories(cats); })
+              .catch(() => {});
+          }, 2000);
+        });
+    };
+    loadCategories();
 
     getCart(userId || "").then((items) => {
       if (!cancelled) setCartCount(items.reduce((a, i) => a + i.quantity, 0));
@@ -350,14 +361,17 @@ function App() {
         {page === "storeCatalog" && storeCatalogStore && (
           <>
             {storeCatalogView === "welcome" && (
-              <StoreWelcome
-                store={storeCatalogStore}
-                categoryLabels={categories.length > 0 ? Object.fromEntries(categories.map((c) => [c.code, c.name])) : undefined}
-                showBack={!isDefaultWelcomeStore}
-                onBack={openCatalog}
-                onGoToCatalog={isDefaultWelcomeStore ? openCatalog : () => setStoreCatalogView("catalog")}
-                onCustomOrder={() => setStoreCatalogView("customOrder")}
-              />
+              <>
+                <StoresCarousel stores={stores} categories={categories} onStoreClick={openStoreCatalog} />
+                <StoreWelcome
+                  store={storeCatalogStore}
+                  categoryLabels={categories.length > 0 ? Object.fromEntries(categories.map((c) => [c.code, c.name])) : undefined}
+                  showBack={!isDefaultWelcomeStore}
+                  onBack={openCatalog}
+                  onGoToCatalog={isDefaultWelcomeStore ? openCatalog : () => setStoreCatalogView("catalog")}
+                  onCustomOrder={() => setStoreCatalogView("customOrder")}
+                />
+              </>
             )}
             {storeCatalogView === "catalog" && (
               <StoreCatalog
