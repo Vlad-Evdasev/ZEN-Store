@@ -11,7 +11,8 @@ interface Settings {
   currency: Currency;
 }
 
-const STORAGE_KEY = "zen-settings";
+export const SETTINGS_STORAGE_KEY = "zen-settings";
+const STORAGE_KEY = SETTINGS_STORAGE_KEY;
 
 const defaultSettings: Settings = {
   lang: "ru",
