@@ -62,6 +62,14 @@ function MenuIconSettings() {
     </svg>
   );
 }
+function MenuIconHome() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={iconStyle} aria-hidden>
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      <polyline points="9 22 9 12 15 12 15 22" />
+    </svg>
+  );
+}
 
 function App() {
   const { settings } = useSettings();
@@ -306,8 +314,11 @@ function App() {
               </span>
             </button>
             <div style={styles.menuSpacer} aria-hidden />
-            <button onClick={goToWelcome} type="button" style={styles.menuWelcomeBtn}>
-              {t(lang, "menuToWelcome")}
+            <button onClick={goToWelcome} type="button" className="zen-menu-item" style={styles.menuWelcomeItem}>
+              <span style={styles.menuItemContent}>
+                <MenuIconHome />
+                <span>{t(lang, "menuToWelcome")}</span>
+              </span>
             </button>
           </div>
         </>
@@ -561,19 +572,16 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     minHeight: 0,
   },
-  menuWelcomeBtn: {
-    width: "100%",
-    padding: "14px 20px",
-    marginTop: 8,
-    background: "var(--accent)",
+  menuWelcomeItem: {
+    padding: "14px 12px 14px 10px",
+    textAlign: "left",
+    background: "none",
     border: "none",
-    borderRadius: 10,
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: 600,
+    color: "var(--accent)",
+    fontSize: 16,
     fontFamily: "inherit",
     cursor: "pointer",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+    width: "100%",
   },
   logo: {
     fontFamily: "Unbounded, sans-serif",
