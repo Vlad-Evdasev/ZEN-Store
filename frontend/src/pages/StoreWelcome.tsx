@@ -5,17 +5,18 @@ import { getCategoryLabel } from "../utils/categories";
 
 interface StoreWelcomeProps {
   store: { id: number; name: string } | { category: string; name: string };
+  categoryLabels?: Record<string, string>;
   showBack?: boolean;
   onBack: () => void;
   onGoToCatalog: () => void;
   onCustomOrder: () => void;
 }
 
-export function StoreWelcome({ store, showBack = true, onBack, onGoToCatalog, onCustomOrder }: StoreWelcomeProps) {
+export function StoreWelcome({ store, categoryLabels, showBack = true, onBack, onGoToCatalog, onCustomOrder }: StoreWelcomeProps) {
   const { settings } = useSettings();
   const lang = settings.lang;
   const [visible, setVisible] = useState(false);
-  const storeName = "name" in store ? store.name : getCategoryLabel((store as { category: string }).category);
+  const storeName = "name" in store ? store.name : getCategoryLabel((store as { category: string }).category, categoryLabels);
 
   useEffect(() => {
     const id = requestAnimationFrame(() => {

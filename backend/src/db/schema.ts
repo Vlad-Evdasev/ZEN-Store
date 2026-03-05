@@ -107,6 +107,12 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
+  CREATE TABLE IF NOT EXISTS categories (
+    code TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0
+  );
+
   CREATE TABLE IF NOT EXISTS support_chats (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id TEXT NOT NULL,
@@ -194,6 +200,20 @@ try {
 try {
   db.exec("ALTER TABLE custom_orders ADD COLUMN user_address TEXT");
 } catch {}
+
+// Seed categories (редактируются в админке)
+const categoryCount = db.prepare("SELECT COUNT(*) as count FROM categories").get() as { count: number };
+if (categoryCount.count === 0) {
+  const insertCat = db.prepare("INSERT INTO categories (code, name, sort_order) VALUES (?, ?, ?)");
+  const defaultCategories: [string, string, number][] = [
+    ["tee", "Футболки", 1],
+    ["hoodie", "Худи", 2],
+    ["pants", "Штаны", 3],
+    ["jacket", "Куртки", 4],
+    ["accessories", "Аксессуары", 5],
+  ];
+  for (const c of defaultCategories) insertCat.run(...c);
+}
 
 // Seed stores — 4 нишевых магазина
 const storeCount = db.prepare("SELECT COUNT(*) as count FROM stores").get() as { count: number };

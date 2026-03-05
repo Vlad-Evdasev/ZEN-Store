@@ -8,6 +8,10 @@ import {
   deleteStore,
   getProducts,
   getStores,
+  getCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
   verifyAdmin,
   checkApiHealth,
   getOrdersAdmin,
@@ -18,6 +22,7 @@ import {
   sendSupportMessageAdmin,
   type Product,
   type Store,
+  type Category,
   type Order,
   type CustomOrderAdmin,
   type SupportChat,
@@ -26,7 +31,7 @@ import {
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
-type Tab = "products" | "stores" | "orders" | "customOrders" | "support";
+type Tab = "products" | "stores" | "categories" | "orders" | "customOrders" | "support";
 
 export function Admin() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -35,6 +40,7 @@ export function Admin() {
   const [authError, setAuthError] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [tab, setTab] = useState<Tab>("products");
   const [editingStoreId, setEditingStoreId] = useState<number | null>(null);
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
@@ -46,6 +52,7 @@ export function Admin() {
   const refresh = () => {
     getProducts().then(setProducts).catch(console.error);
     getStores().then(setStores).catch(console.error);
+    getCategories().then(setCategories).catch(console.error);
   };
 
   useEffect(() => {
@@ -108,6 +115,9 @@ export function Admin() {
           <button type="button" onClick={() => setTabAndReset("stores")} className={`admin-nav-btn ${tab === "stores" ? "active" : ""}`}>
             Магазины
           </button>
+          <button type="button" onClick={() => setTabAndReset("categories")} className={`admin-nav-btn ${tab === "categories" ? "active" : ""}`}>
+            Категории
+          </button>
           <button type="button" onClick={() => setTabAndReset("orders")} className={`admin-nav-btn ${tab === "orders" ? "active" : ""}`}>
             Заказы
           </button>
@@ -149,6 +159,7 @@ export function Admin() {
         <ProductsTab
           products={products}
           stores={stores}
+          categories={categories}
           adminSecret={adminSecret}
           editingId={editingProductId}
           onEdit={setEditingProductId}
@@ -157,6 +168,14 @@ export function Admin() {
           setMessage={setMessage}
           submitting={submitting}
           setSubmitting={setSubmitting}
+        />
+      )}
+
+      {tab === "categories" && (
+        <CategoriesTab
+          categories={categories}
+          adminSecret={adminSecret}
+          onRefresh={refresh}
         />
       )}
 
@@ -176,6 +195,7 @@ export function Admin() {
         <StoresTab
           products={products}
           stores={stores}
+          categories={categories}
           adminSecret={adminSecret}
           editingStoreId={editingStoreId}
           setEditingStoreId={setEditingStoreId}
@@ -354,6 +374,198 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
   );
 }
 
+function CategoriesTab({
+  categories,
+  adminSecret,
+  onRefresh,
+}: {
+  categories: Category[];
+  adminSecret: string;
+  onRefresh: () => void;
+}) {
+  const [message, setMessage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [newCode, setNewCode] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newSortOrder, setNewSortOrder] = useState(0);
+  const [editingCode, setEditingCode] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editSortOrder, setEditSortOrder] = useState(0);
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCode.trim() || !newName.trim()) {
+      setMessage("Укажите code и название");
+      return;
+    }
+    setSubmitting(true);
+    setMessage("");
+    try {
+      await createCategory({ code: newCode.trim(), name: newName.trim(), sort_order: newSortOrder }, adminSecret);
+      setMessage("Категория добавлена");
+      setNewCode("");
+      setNewName("");
+      setNewSortOrder(categories.length + 1);
+      onRefresh();
+    } catch (err) {
+      setMessage("Ошибка: " + (err instanceof Error ? err.message : ""));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const startEdit = (c: Category) => {
+    setEditingCode(c.code);
+    setEditName(c.name);
+    setEditSortOrder(c.sort_order);
+  };
+
+  const handleUpdate = async () => {
+    if (editingCode == null) return;
+    setSubmitting(true);
+    setMessage("");
+    try {
+      await updateCategory(editingCode, { name: editName.trim(), sort_order: editSortOrder }, adminSecret);
+      setMessage("Категория обновлена");
+      setEditingCode(null);
+      onRefresh();
+    } catch (err) {
+      setMessage("Ошибка: " + (err instanceof Error ? err.message : ""));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (code: string) => {
+    if (!confirm(`Удалить категорию «${code}»? Товары с этой категорией нужно будет переназначить.`)) return;
+    setSubmitting(true);
+    setMessage("");
+    try {
+      await deleteCategory(code, adminSecret);
+      setMessage("Категория удалена");
+      if (editingCode === code) setEditingCode(null);
+      onRefresh();
+    } catch (err) {
+      setMessage("Ошибка: " + (err instanceof Error ? err.message : ""));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <>
+      {message && <p style={styles.message}>{message}</p>}
+      <h2 style={styles.pageTitle}>Категории товаров</h2>
+      <p style={styles.hint}>Названия категорий отображаются в каталоге. Код (code) используется в товарах.</p>
+      <form onSubmit={handleCreate} style={styles.form}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end" }}>
+          <label style={styles.label}>
+            Код (латиница)
+            <input
+              type="text"
+              value={newCode}
+              onChange={(e) => setNewCode(e.target.value)}
+              placeholder="hoodie"
+              style={{ ...styles.input, width: 120 }}
+            />
+          </label>
+          <label style={styles.label}>
+            Название
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="Худи"
+              style={{ ...styles.input, width: 160 }}
+            />
+          </label>
+          <label style={styles.label}>
+            Порядок
+            <input
+              type="number"
+              value={newSortOrder}
+              onChange={(e) => setNewSortOrder(Number(e.target.value))}
+              style={{ ...styles.input, width: 72 }}
+            />
+          </label>
+          <button type="submit" disabled={submitting} style={styles.submit}>
+            Добавить категорию
+          </button>
+        </div>
+      </form>
+      <div style={styles.list}>
+        <h3 style={styles.subtitle}>Список ({categories.length})</h3>
+        {categories.length === 0 ? (
+          <p style={styles.hint}>Нет категорий. Добавьте первую.</p>
+        ) : (
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Код</th>
+                <th>Название</th>
+                <th>Порядок</th>
+                <th>Действия</th>
+              </tr>
+            </thead>
+            <tbody>
+              {categories.map((c) => (
+                <tr key={c.code}>
+                  <td style={{ fontWeight: 600 }}>{c.code}</td>
+                  <td>
+                    {editingCode === c.code ? (
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        style={{ ...styles.input, width: "100%", maxWidth: 200 }}
+                      />
+                    ) : (
+                      c.name
+                    )}
+                  </td>
+                  <td>
+                    {editingCode === c.code ? (
+                      <input
+                        type="number"
+                        value={editSortOrder}
+                        onChange={(e) => setEditSortOrder(Number(e.target.value))}
+                        style={{ ...styles.input, width: 72 }}
+                      />
+                    ) : (
+                      c.sort_order
+                    )}
+                  </td>
+                  <td>
+                    {editingCode === c.code ? (
+                      <>
+                        <button type="button" onClick={handleUpdate} disabled={submitting} style={styles.smallBtn}>
+                          Сохранить
+                        </button>
+                        <button type="button" onClick={() => setEditingCode(null)} style={styles.cancelBtn}>
+                          Отмена
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button type="button" onClick={() => startEdit(c)} style={styles.smallBtn}>
+                          Изменить
+                        </button>
+                        <button type="button" onClick={() => handleDelete(c.code)} style={styles.deleteBtn}>
+                          Удалить
+                        </button>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </>
+  );
+}
+
 function SupportTab({ adminSecret }: { adminSecret: string }) {
   const [chats, setChats] = useState<SupportChat[]>([]);
   const [loading, setLoading] = useState(true);
@@ -526,6 +738,7 @@ const supportBubbleUserStyle: React.CSSProperties = { ...supportBubbleStyle, bac
 function ProductsTab({
   products,
   stores,
+  categories,
   adminSecret,
   editingId,
   onEdit,
@@ -537,6 +750,7 @@ function ProductsTab({
 }: {
   products: Product[];
   stores: Store[];
+  categories: Category[];
   adminSecret: string;
   editingId: number | null;
   onEdit: (id: number | null) => void;
@@ -546,13 +760,20 @@ function ProductsTab({
   submitting: boolean;
   setSubmitting: (v: boolean) => void;
 }) {
+  const defaultCategory = categories.length > 0 ? categories[0].code : "tee";
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [imageUrls, setImageUrls] = useState<string[]>(["", "", "", "", ""]);
-  const [category, setCategory] = useState("tee");
+  const [category, setCategory] = useState(defaultCategory);
   const [storeId, setStoreId] = useState(1);
   const [sizes, setSizes] = useState("S,M,L,XL");
+
+  useEffect(() => {
+    if (categories.length > 0 && !categories.some((c) => c.code === category)) {
+      setCategory(categories[0].code);
+    }
+  }, [categories]);
 
   const startEdit = (p: Product) => {
     onEdit(p.id);
@@ -562,7 +783,7 @@ function ProductsTab({
     const urls = (p.image_urls && p.image_urls.length > 0) ? p.image_urls : (p.image_url ? [p.image_url] : []);
     setImageUrls([...urls, "", "", "", "", ""].slice(0, 5));
     setStoreId(p.store_id ?? 1);
-    setCategory(p.category || "tee");
+    setCategory(categories.some((c) => c.code === p.category) ? p.category : defaultCategory);
     setSizes(p.sizes || "S,M,L,XL");
   };
 
@@ -573,7 +794,7 @@ function ProductsTab({
     setPrice("");
     setImageUrls(["", "", "", "", ""]);
     setStoreId(1);
-    setCategory("tee");
+    setCategory(defaultCategory);
     setSizes("S,M,L,XL");
   };
 
@@ -659,11 +880,13 @@ function ProductsTab({
         </select>
         <label style={styles.label}>Категория</label>
         <select value={category} onChange={(e) => setCategory(e.target.value)} style={styles.input}>
-          <option value="tee">Футболки</option>
-          <option value="hoodie">Худи</option>
-          <option value="pants">Штаны</option>
-          <option value="jacket">Куртки</option>
-          <option value="accessories">Аксессуары</option>
+          {categories.length === 0 ? (
+            <option value="tee">Футболки (загрузка…)</option>
+          ) : (
+            categories.map((c) => (
+              <option key={c.code} value={c.code}>{c.name}</option>
+            ))
+          )}
         </select>
         <label style={styles.label}>Размеры</label>
         <input type="text" value={sizes} onChange={(e) => setSizes(e.target.value)} placeholder="S,M,L,XL" style={styles.input} />
@@ -699,6 +922,7 @@ function ProductsTab({
 function StoresTab({
   products,
   stores,
+  categories,
   adminSecret,
   editingStoreId,
   setEditingStoreId,
@@ -712,6 +936,7 @@ function StoresTab({
 }: {
   products: Product[];
   stores: Store[];
+  categories: Category[];
   adminSecret: string;
   editingStoreId: number | null;
   setEditingStoreId: (id: number | null) => void;
@@ -904,6 +1129,7 @@ function StoresTab({
         <ProductFormModal
           storeId={productFormStoreId}
           stores={stores}
+          categories={categories}
           adminSecret={adminSecret}
           onClose={() => setProductFormStoreId(null)}
           onSaved={() => {
@@ -924,6 +1150,7 @@ function StoresTab({
 function ProductFormModal({
   storeId,
   stores,
+  categories,
   adminSecret,
   onClose,
   onSaved,
@@ -932,17 +1159,19 @@ function ProductFormModal({
 }: {
   storeId: number;
   stores: Store[];
+  categories: Category[];
   adminSecret: string;
   onClose: () => void;
   onSaved: () => void;
   setSubmitting: (v: boolean) => void;
   setMessage: (m: string) => void;
 }) {
+  const defaultCat = categories.length > 0 ? categories[0].code : "tee";
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [imageUrls, setImageUrls] = useState<string[]>(["", "", "", "", ""]);
-  const [category, setCategory] = useState("tee");
+  const [category, setCategory] = useState(defaultCat);
   const [sizes, setSizes] = useState("S,M,L,XL");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -988,12 +1217,11 @@ function ProductFormModal({
               style={styles.input}
             />
           ))}
+          <label style={styles.label}>Категория</label>
           <select value={category} onChange={(e) => setCategory(e.target.value)} style={styles.input}>
-            <option value="tee">Футболки</option>
-            <option value="hoodie">Худи</option>
-            <option value="pants">Штаны</option>
-            <option value="jacket">Куртки</option>
-            <option value="accessories">Аксессуары</option>
+            {categories.map((c) => (
+              <option key={c.code} value={c.code}>{c.name}</option>
+            ))}
           </select>
           <input type="text" value={sizes} onChange={(e) => setSizes(e.target.value)} placeholder="Размеры" style={styles.input} />
           <div style={styles.formActions}>

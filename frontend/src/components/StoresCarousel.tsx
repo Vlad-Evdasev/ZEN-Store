@@ -15,10 +15,11 @@ type DisplayStore =
 
 interface StoresCarouselProps {
   stores: Store[];
+  categoryLabels?: Record<string, string>;
   onStoreClick: (store: { id: number; name: string } | { category: string; name: string }) => void;
 }
 
-export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
+export function StoresCarousel({ stores, categoryLabels, onStoreClick }: StoresCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const marqueePausedRef = useRef(false);
   const pauseTimeoutRef = useRef<number | null>(null);
@@ -43,7 +44,7 @@ export function StoresCarousel({ stores, onStoreClick }: StoresCarouselProps) {
         }))
       : FALLBACK_STORES.map((s) => ({
           id: s.id,
-          name: s.name,
+          name: (categoryLabels && categoryLabels[s.category]) || s.name,
           image: s.image,
           desc: s.desc,
           isReal: false as const,

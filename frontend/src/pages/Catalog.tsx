@@ -9,6 +9,7 @@ import { t } from "../i18n";
 interface CatalogProps {
   products: Product[];
   stores: Store[];
+  categoryLabels?: Record<string, string>;
   onProductClick: (id: number) => void;
   onStoreClick: (store: { id: number; name: string } | { category: string; name: string }) => void;
   wishlistIds: Set<number>;
@@ -28,6 +29,7 @@ const FALLBACK_STORES: { id: string; name: string; category: string; image: stri
 export function Catalog({
   products,
   stores,
+  categoryLabels,
   onProductClick,
   onStoreClick,
   wishlistIds,
@@ -61,13 +63,13 @@ export function Catalog({
     }
     return FALLBACK_STORES.map((s) => ({
       id: s.id,
-      name: s.name,
+      name: (categoryLabels && categoryLabels[s.category]) || s.name,
       image: s.image,
       desc: s.desc,
       isReal: false as const,
       category: s.category,
     }));
-  }, [stores]);
+  }, [stores, categoryLabels]);
 
   const pauseAndResume = () => {
     marqueePausedRef.current = true;

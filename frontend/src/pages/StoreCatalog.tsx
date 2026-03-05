@@ -6,6 +6,7 @@ import { getCategoryLabel } from "../utils/categories";
 interface StoreCatalogProps {
   store: { id: number; name: string } | { category: string; name: string };
   products: Product[];
+  categoryLabels?: Record<string, string>;
   onProductClick: (id: number) => void;
   onBack: () => void;
   wishlistIds: Set<number>;
@@ -15,6 +16,7 @@ interface StoreCatalogProps {
 export function StoreCatalog({
   store,
   products,
+  categoryLabels,
   onProductClick,
   onBack,
   wishlistIds,
@@ -44,7 +46,7 @@ export function StoreCatalog({
   return (
     <div style={styles.wrap}>
       <button onClick={onBack} style={styles.back}>
-        ← {isStoreById ? store.name : getCategoryLabel(store.category)}
+        ← {isStoreById ? store.name : getCategoryLabel(store.category, categoryLabels)}
       </button>
       <div style={styles.searchWrap}>
         <input

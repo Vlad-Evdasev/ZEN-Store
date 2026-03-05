@@ -28,6 +28,62 @@ export interface Store {
   description: string;
 }
 
+export interface Category {
+  code: string;
+  name: string;
+  sort_order: number;
+}
+
+export async function getCategories(): Promise<Category[]> {
+  const res = await fetch(`${API_URL}/api/categories`);
+  if (!res.ok) throw new Error("Failed to fetch categories");
+  return res.json();
+}
+
+export async function createCategory(
+  data: { code: string; name: string; sort_order?: number },
+  adminSecret: string
+): Promise<Category> {
+  const res = await fetch(`${API_URL}/api/categories`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+  return res.json();
+}
+
+export async function updateCategory(
+  code: string,
+  data: { name?: string; sort_order?: number },
+  adminSecret: string
+): Promise<Category> {
+  const res = await fetch(`${API_URL}/api/categories/${encodeURIComponent(code)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+  return res.json();
+}
+
+export async function deleteCategory(code: string, adminSecret: string): Promise<void> {
+  const res = await fetch(`${API_URL}/api/categories/${encodeURIComponent(code)}`, {
+    method: "DELETE",
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+}
+
 export async function getStores(): Promise<Store[]> {
   const res = await fetch(`${API_URL}/api/stores`);
   if (!res.ok) throw new Error("Failed to fetch stores");
