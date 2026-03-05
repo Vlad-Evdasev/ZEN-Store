@@ -95,7 +95,8 @@ a {
 
 .zen-admin .admin-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .zen-admin .admin-sidebar {
@@ -107,6 +108,7 @@ a {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow-y: auto;
 }
 
 .zen-admin .admin-sidebar-title {
@@ -143,8 +145,10 @@ a {
 .zen-admin .admin-main {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   padding: 24px 32px;
   overflow-x: auto;
+  overflow-y: auto;
 }
 
 .zen-admin .admin-content {
@@ -155,6 +159,9 @@ a {
 @media (max-width: 900px) {
   .zen-admin .admin-layout {
     flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
   }
   .zen-admin .admin-sidebar {
     width: 100%;
@@ -174,6 +181,7 @@ a {
   }
   .zen-admin .admin-main {
     padding: 16px;
+    min-height: 0;
   }
 }
 

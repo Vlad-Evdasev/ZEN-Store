@@ -53,6 +53,7 @@ export function Admin() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [apiStatus, setApiStatus] = useState<{ ok: boolean; url: string; error?: string } | null>(null);
+  const adminMainRef = useRef<HTMLElement | null>(null);
 
   const refresh = () => {
     getProducts().then(setProducts).catch(console.error);
@@ -170,7 +171,7 @@ export function Admin() {
             </button>
           </div>
         </aside>
-        <main className="admin-main">
+        <main ref={adminMainRef} className="admin-main">
           <div className="admin-content">
       {tab === "products" && (
         <ProductsTab
@@ -179,7 +180,10 @@ export function Admin() {
           categories={categories}
           adminSecret={adminSecret}
           editingId={editingProductId}
-          onEdit={setEditingProductId}
+          onEdit={(id) => {
+            setEditingProductId(id);
+            adminMainRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+          }}
           onRefresh={refresh}
           message={message}
           setMessage={setMessage}
