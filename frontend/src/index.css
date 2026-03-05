@@ -49,15 +49,7 @@ body {
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   letter-spacing: -0.02em;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
-  box-sizing: border-box;
-}
-
-/* Нижний safe-area внутри приложения, чтобы под футером не было лишнего скролла и чёрной полосы */
-.zen-app {
-  height: 100dvh;
-  max-height: 100dvh;
-  padding-bottom: env(safe-area-inset-bottom);
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   box-sizing: border-box;
 }
 

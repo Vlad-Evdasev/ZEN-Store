@@ -173,8 +173,8 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
           <button onClick={() => { setSelectedChatId(null); setPhotoDataUrl(null); }} style={styles.back}>
             ← {t(lang, "back")}
           </button>
-          <button onClick={handleDeleteChat} style={styles.deleteBtn} aria-label={t(lang, "supportDeleteChat")}>
-            <span style={styles.deleteIcon}>🗑</span>
+          <button onClick={handleDeleteChat} style={styles.deleteBtn}>
+            {t(lang, "supportDeleteChat")}
           </button>
         </div>
         <div style={styles.chatHeaderRow}>
@@ -221,7 +221,11 @@ export function Support({ userId, userName, firstName, onBack }: SupportProps) {
           <div style={styles.inputWrapper}>
             <label style={styles.attachLabel}>
               <input type="file" accept="image/*" onChange={handlePhotoSelect} style={styles.hiddenInput} />
-              <span style={styles.attachBtn} aria-hidden>📎</span>
+              <span style={styles.attachBtn} aria-hidden>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}>
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                </svg>
+              </span>
             </label>
             <input
               type="text"
@@ -348,13 +352,11 @@ const styles: Record<string, React.CSSProperties> = {
   deleteBtn: {
     background: "none",
     border: "none",
-    padding: "4px 0",
     fontFamily: "inherit",
+    fontSize: 13,
     cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
+    color: "var(--accent)",
   },
-  deleteIcon: { fontSize: 22, color: "var(--accent)" },
   chatHeaderRow: { marginBottom: 12 },
   titleButton: { background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", textAlign: "left", color: "#1a1a1a", display: "flex", alignItems: "center", gap: 8 },
   editIcon: { fontSize: 22, color: "var(--accent)", fontWeight: 600 },
@@ -455,9 +457,11 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "10px 12px",
     background: "none",
     border: "none",
-    color: "var(--accent)",
-    fontSize: 22,
     cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "var(--accent)",
   },
   input: {
     flex: 1,
