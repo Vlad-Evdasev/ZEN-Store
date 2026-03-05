@@ -579,7 +579,7 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: "left",
     background: "none",
     border: "none",
-    color: "var(--accent)",
+    color: "#b91c1c",
     fontSize: 16,
     fontFamily: "inherit",
     cursor: "pointer",
