@@ -361,17 +361,14 @@ function App() {
         {page === "storeCatalog" && storeCatalogStore && (
           <>
             {storeCatalogView === "welcome" && (
-              <>
-                <StoresCarousel stores={stores} categories={categories} onStoreClick={openStoreCatalog} />
-                <StoreWelcome
-                  store={storeCatalogStore}
-                  categoryLabels={categories.length > 0 ? Object.fromEntries(categories.map((c) => [c.code, c.name])) : undefined}
-                  showBack={!isDefaultWelcomeStore}
-                  onBack={openCatalog}
-                  onGoToCatalog={isDefaultWelcomeStore ? openCatalog : () => setStoreCatalogView("catalog")}
-                  onCustomOrder={() => setStoreCatalogView("customOrder")}
-                />
-              </>
+              <StoreWelcome
+                store={storeCatalogStore}
+                categoryLabels={categories.length > 0 ? Object.fromEntries(categories.map((c) => [c.code, c.name])) : undefined}
+                showBack={!isDefaultWelcomeStore}
+                onBack={openCatalog}
+                onGoToCatalog={isDefaultWelcomeStore ? openCatalog : () => setStoreCatalogView("catalog")}
+                onCustomOrder={() => setStoreCatalogView("customOrder")}
+              />
             )}
             {storeCatalogView === "catalog" && (
               <StoreCatalog

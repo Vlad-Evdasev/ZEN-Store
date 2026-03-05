@@ -17,7 +17,8 @@ interface CatalogProps {
   hideStores?: boolean;
 }
 
-const CATEGORIES = ["all", "tee", "hoodie", "pants", "jacket", "accessories"];
+/** Теги категорий в каталоге: «Всё» + категории из API (синхронизированы с админкой) */
+const FALLBACK_CATEGORY_CODES = ["all", "tee", "hoodie", "pants", "jacket", "accessories"];
 
 const FALLBACK_BY_CODE: Record<string, { image: string; desc: string }> = {
   tee: { image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400", desc: "Базовые и оверсайз" },
@@ -144,6 +145,13 @@ export function Catalog({
     };
   }, [displayStores.length, isTouchOnly]);
 
+  const categoryTabs = useMemo(() => {
+    if (categories.length > 0) {
+      return [{ code: "all", label: t(lang, "all") }, ...categories.map((c) => ({ code: c.code, label: c.name }))];
+    }
+    return FALLBACK_CATEGORY_CODES.map((code) => ({ code, label: t(lang, code) }));
+  }, [categories, lang]);
+
   const filtered = useMemo(() => {
     let list = products;
     if (!selectedCategories.has("all")) {
@@ -254,14 +262,14 @@ export function Catalog({
       </div>
 
       <div style={styles.tabsWrap} className="hide-scrollbar">
-        {CATEGORIES.map((cat) => {
-          const isSelected = cat === "all" ? selectedCategories.has("all") : selectedCategories.has(cat);
+        {categoryTabs.map(({ code, label }) => {
+          const isSelected = code === "all" ? selectedCategories.has("all") : selectedCategories.has(code);
           return (
             <button
-              key={cat}
+              key={code}
               type="button"
               className="catalog-tab-btn"
-              onClick={() => handleCategoryClick(cat)}
+              onClick={() => handleCategoryClick(code)}
               style={{
                 ...styles.tab,
                 ...(isSelected ? styles.tabActive : {}),
@@ -270,7 +278,7 @@ export function Catalog({
                 WebkitTapHighlightColor: "transparent",
               }}
             >
-              {t(lang, cat)}
+              {label}
             </button>
           );
         })}
