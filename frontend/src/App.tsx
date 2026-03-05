@@ -541,6 +541,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
+    transform: "translateX(-8px)",
   },
   headerRight: {
     flexShrink: 0,
