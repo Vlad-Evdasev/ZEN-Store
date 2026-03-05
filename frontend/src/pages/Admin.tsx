@@ -581,8 +581,14 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
   const [editingMessageText, setEditingMessageText] = useState("");
   const [expandedImageUrl, setExpandedImageUrl] = useState<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const messagesScrollRef = useRef<HTMLDivElement>(null);
   const ADMIN_INPUT_MIN_H = 40;
   const ADMIN_INPUT_MAX_H = 160;
+
+  useEffect(() => {
+    const el = messagesScrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages, selectedChatId]);
 
   useEffect(() => {
     const el = inputRef.current;
@@ -716,7 +722,7 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
                 <h3 style={{ margin: 0, fontSize: 16 }}>{chat.title?.trim() || `Чат #${chat.id}`}</h3>
                 <span style={{ fontSize: 13, color: "var(--muted)" }}>{chat.user_name || chat.user_username || chat.user_id}</span>
               </div>
-              <div style={supportThreadStyle}>
+              <div ref={messagesScrollRef} style={supportThreadStyle}>
                 {messagesLoading && messages.length === 0 ? (
                   <p style={styles.hint}>Загрузка сообщений...</p>
                 ) : (
@@ -764,7 +770,7 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
                               <img src={m.image_url} alt="" style={styles.supportBubbleImg} />
                             </button>
                           )}
-                          {m.text ? <span style={{ display: "block", fontSize: 14, paddingRight: m.sender_type === "admin" ? 48 : 0 }}>{m.text}</span> : null}
+                          {m.text ? <span style={{ display: "block", fontSize: 14, paddingRight: m.sender_type === "admin" ? 48 : 0, whiteSpace: "pre-wrap", wordBreak: "break-word", overflowWrap: "break-word" }}>{m.text}</span> : null}
                           <span style={{ display: "block", fontSize: 11, opacity: 0.8, marginTop: 4 }}>{formatDate(m.created_at)}</span>
                         </>
                       )}
