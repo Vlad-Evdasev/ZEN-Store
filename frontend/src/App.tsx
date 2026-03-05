@@ -68,7 +68,9 @@ function App() {
   const lang = settings.lang;
   const { userId, userName, firstName, isInTelegram, setBrowserAuth } = useTelegram();
   const { wishlistIds, toggleWishlist, hasInWishlist } = useWishlist(userId);
-  const [page, setPage] = useState<Page>("catalog");
+  const DEFAULT_WELCOME_STORE: { category: string; name: string } = { category: "all", name: "ZEN" };
+
+  const [page, setPage] = useState<Page>("storeCatalog");
   const [productId, setProductId] = useState<number | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
@@ -78,7 +80,7 @@ function App() {
   const [avgRating, setAvgRating] = useState<number | null>(null);
   const [storeCatalogStore, setStoreCatalogStore] = useState<
     { id: number; name: string } | { category: string; name: string } | null
-  >(null);
+  >(DEFAULT_WELCOME_STORE);
   type StoreCatalogView = "welcome" | "catalog" | "customOrder";
   const [storeCatalogView, setStoreCatalogView] = useState<StoreCatalogView>("welcome");
   const [productReturnTo, setProductReturnTo] = useState<Page | null>(null);
@@ -208,6 +210,11 @@ function App() {
     setStoreCatalogStore(null);
     setStoreCatalogView("welcome");
   };
+
+  const isDefaultWelcomeStore =
+    storeCatalogStore &&
+    "category" in storeCatalogStore &&
+    storeCatalogStore.category === DEFAULT_WELCOME_STORE.category;
   const openCheckout = () => setPage("checkout");
 
   const needsAuth = !isInTelegram && !userId;
@@ -313,7 +320,7 @@ function App() {
               <StoreWelcome
                 store={storeCatalogStore}
                 onBack={openCatalog}
-                onGoToCatalog={() => setStoreCatalogView("catalog")}
+                onGoToCatalog={isDefaultWelcomeStore ? openCatalog : () => setStoreCatalogView("catalog")}
                 onCustomOrder={() => setStoreCatalogView("customOrder")}
               />
             )}
