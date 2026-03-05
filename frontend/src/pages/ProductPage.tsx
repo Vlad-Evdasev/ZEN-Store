@@ -46,7 +46,7 @@ export function ProductPage({
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [imageIndex, setImageIndex] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
-  const galleryScrollRef = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef<number | null>(null);
 
   const sizes = product ? product.sizes.split(",").map((s) => s.trim()) : [];
   const imageUrls = product
@@ -58,40 +58,23 @@ export function ProductPage({
     setImageIndex(0);
   }, [product?.id]);
 
-  const scrollAnimRef = useRef<number | null>(null);
-
-  const syncIndexFromScroll = () => {
-    const el = galleryScrollRef.current;
-    if (!el || imageUrls.length <= 1) return;
-    const w = el.clientWidth;
-    const index = Math.round(el.scrollLeft / w);
-    const clamped = Math.max(0, Math.min(index, imageUrls.length - 1));
-    if (clamped !== imageIndex) setImageIndex(clamped);
+  const handleGallerySwipe = (e: React.TouchEvent) => {
+    const touch = e.changedTouches?.[0];
+    if (!touch) return;
+    const endX = touch.clientX;
+    const startX = touchStartX.current;
+    touchStartX.current = null;
+    if (startX == null || imageUrls.length <= 1) return;
+    const delta = startX - endX;
+    const threshold = 50;
+    if (delta > threshold) setImageIndex((i) => Math.min(i + 1, imageUrls.length - 1));
+    else if (delta < -threshold) setImageIndex((i) => Math.max(i - 1, 0));
   };
 
-  useEffect(() => {
-    const el = galleryScrollRef.current;
-    if (!el || imageUrls.length <= 1) return;
-    const targetLeft = imageIndex * el.clientWidth;
-    const startLeft = el.scrollLeft;
-    if (Math.abs(startLeft - targetLeft) < 2) return;
-    const duration = 380;
-    const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
-    const startTime = performance.now();
-    const tick = (now: number) => {
-      const elapsed = now - startTime;
-      const t = Math.min(1, elapsed / duration);
-      const eased = easeOutCubic(t);
-      el.scrollLeft = startLeft + (targetLeft - startLeft) * eased;
-      if (t < 1) scrollAnimRef.current = requestAnimationFrame(tick);
-      else scrollAnimRef.current = null;
-    };
-    if (scrollAnimRef.current != null) cancelAnimationFrame(scrollAnimRef.current);
-    scrollAnimRef.current = requestAnimationFrame(tick);
-    return () => {
-      if (scrollAnimRef.current != null) cancelAnimationFrame(scrollAnimRef.current);
-    };
-  }, [imageIndex, imageUrls.length]);
+  const handleGalleryTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches?.[0];
+    if (t) touchStartX.current = t.clientX;
+  };
 
   useEffect(() => {
     if (!product?.id) return;
@@ -189,14 +172,19 @@ export function ProductPage({
         ) : (
           <>
             <div
-              ref={galleryScrollRef}
-              className="hide-scrollbar"
-              style={styles.galleryScroll}
-              onScroll={syncIndexFromScroll}
-              onTouchEnd={syncIndexFromScroll}
+              style={styles.galleryFrame}
+              onTouchStart={handleGalleryTouchStart}
+              onTouchEnd={handleGallerySwipe}
             >
               {imageUrls.map((url, i) => (
-                <div key={`${product.id}-${i}`} style={styles.gallerySlide}>
+                <div
+                  key={`${product.id}-${i}`}
+                  style={{
+                    ...styles.galleryLayer,
+                    opacity: i === imageIndex ? 1 : 0,
+                    pointerEvents: i === imageIndex ? "auto" : "none",
+                  }}
+                >
                   <img src={url} alt={`${product.name} — ${i + 1}`} style={styles.image} />
                 </div>
               ))}
@@ -396,26 +384,17 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 24,
   },
   image: { width: "100%", height: "100%", objectFit: "cover" },
-  galleryScroll: {
-    display: "flex",
-    width: "100%",
-    height: "100%",
-    overflowX: "auto",
-    overflowY: "hidden",
-    scrollSnapType: "x mandatory",
-    scrollBehavior: "smooth",
-    WebkitOverflowScrolling: "touch",
-    scrollbarWidth: "none",
-    msOverflowStyle: "none",
-    willChange: "scroll-position",
+  galleryFrame: {
+    position: "absolute",
+    inset: 0,
+    overflow: "hidden",
   },
-  gallerySlide: {
-    flex: "0 0 100%",
+  galleryLayer: {
+    position: "absolute",
+    inset: 0,
     width: "100%",
     height: "100%",
-    scrollSnapAlign: "start",
-    scrollSnapStop: "normal",
-    minWidth: 0,
+    transition: "opacity 0.5s cubic-bezier(0.25, 0.1, 0.25, 1)",
   },
   gallerySegments: {
     position: "absolute",
