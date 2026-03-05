@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 
 export type Lang = "ru" | "en";
 export type Theme = "dark" | "light";
-export type Currency = "BYN" | "RUB" | "USD";
+export type Currency = "BYN" | "USD";
 
 interface Settings {
   lang: Lang;
@@ -23,7 +23,8 @@ function loadSettings(): Settings {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaultSettings;
     const parsed = JSON.parse(raw) as Partial<Settings>;
-    return { ...defaultSettings, ...parsed };
+    const currency = parsed.currency === "RUB" ? "USD" : (parsed.currency === "BYN" || parsed.currency === "USD" ? parsed.currency : defaultSettings.currency);
+    return { ...defaultSettings, ...parsed, currency };
   } catch {
     return defaultSettings;
   }
@@ -43,9 +44,9 @@ const SettingsContext = createContext<{
   formatPrice: (price: number) => string;
 } | null>(null);
 
-/* Цены в БД хранятся в долларах; конвертация в другие валюты */
-const CURRENCY_RATES: Record<Currency, number> = { USD: 1, RUB: 90, BYN: 3.2 };
-const CURRENCY_SYMBOLS: Record<Currency, string> = { USD: "$", RUB: "₽", BYN: "Br" };
+/* Цены в БД хранятся в долларах; конвертация в BYN по курсу */
+const CURRENCY_RATES: Record<Currency, number> = { USD: 1, BYN: 3.2 };
+const CURRENCY_SYMBOLS: Record<Currency, string> = { USD: "$", BYN: "Br" };
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<Settings>(() => {

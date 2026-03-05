@@ -18,7 +18,10 @@ export function SettingsSync() {
           skipNextSave.current = true;
           if (data.lang) setLang(data.lang as "ru" | "en");
           if (data.theme) setTheme(data.theme as "dark" | "light");
-          if (data.currency) setCurrency(data.currency as "BYN" | "RUB" | "USD");
+          if (data.currency) {
+            const c = data.currency === "RUB" ? "USD" : (data.currency as "BYN" | "USD");
+            if (c === "BYN" || c === "USD") setCurrency(c);
+          }
         }
       })
       .catch(() => { hasFetched.current = true; });

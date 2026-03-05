@@ -64,7 +64,7 @@ export function Settings({ onBack }: SettingsProps) {
       <div style={styles.section}>
         <p style={styles.label}>{t(lang, "currency")}</p>
         <div style={styles.row}>
-          {(["BYN", "RUB", "USD"] as Currency[]).map((c) => (
+          {(["BYN", "USD"] as Currency[]).map((c) => (
             <button
               key={c}
               type="button"
