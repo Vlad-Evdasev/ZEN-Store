@@ -94,11 +94,11 @@ const styles: Record<string, React.CSSProperties> = {
   grid: {
     display: "grid",
     gridTemplateColumns: "2fr 1fr",
-    gridTemplateRows: "1fr",
+    gridTemplateRows: `${GRID_HEIGHT}px`,
     gap: GRID_GAP,
-    height: GRID_HEIGHT,
     paddingLeft: 4,
     paddingRight: 4,
+    alignItems: "stretch",
   },
   cardBig: {
     minWidth: 0,
@@ -107,6 +107,7 @@ const styles: Record<string, React.CSSProperties> = {
     height: "100%",
     display: "flex",
     flexDirection: "column",
+    alignSelf: "stretch",
   },
   titleArrow: {
     color: "var(--accent)",
