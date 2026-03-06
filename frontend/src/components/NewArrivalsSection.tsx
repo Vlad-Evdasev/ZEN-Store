@@ -51,7 +51,8 @@ export function NewArrivalsSection({
   return (
     <div style={styles.wrap}>
       <button type="button" onClick={onViewAll} style={styles.titleBtn} aria-label={t(lang, "newArrivalsViewAll")}>
-        {t(lang, "newArrivals")} →
+        <span>{t(lang, "newArrivals")}</span>
+        <span style={styles.titleArrow} aria-hidden>→</span>
       </button>
       <div style={styles.grid}>
         {first && renderCard(first, styles.cardBig)}
@@ -104,6 +105,13 @@ const styles: Record<string, React.CSSProperties> = {
     minHeight: 0,
     width: "100%",
     height: "100%",
+    display: "flex",
+    flexDirection: "column",
+  },
+  titleArrow: {
+    color: "var(--accent)",
+    fontSize: 20,
+    lineHeight: 1,
   },
   rightColumn: {
     display: "flex",
@@ -124,9 +132,9 @@ const styles: Record<string, React.CSSProperties> = {
     width: "100%",
   },
   cardInner: {
-    width: "100%",
-    height: "100%",
+    flex: 1,
     minHeight: 0,
+    width: "100%",
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",
