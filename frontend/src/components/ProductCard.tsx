@@ -114,7 +114,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--muted)",
   },
   cardCompact: { borderRadius: 10 },
-  cardFillHeight: { flex: 1, minHeight: 0, height: "100%", borderRadius: 0 },
+  cardFillHeight: { flex: 1, minHeight: 0, height: "100%" },
   imageWrapCompact: {},
   imageWrapFillHeight: { flex: 1, minHeight: 0, aspectRatio: "unset" as const },
   wishlistBtnCompact: { top: 8, right: 8, width: 30, height: 30, fontSize: 15 },
