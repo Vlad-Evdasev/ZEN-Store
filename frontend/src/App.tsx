@@ -366,7 +366,6 @@ function App() {
         <div key={page} className={page === "cart" || page === "favorites" ? "zen-page-enter" : ""} style={styles.mainContent}>
         {page === "catalog" && (
           <>
-            <StoresCarousel stores={stores} categories={categories} onStoreClick={openStoreCatalog} />
             <NewArrivalsSection
               products={newArrivals}
               onProductClick={(id) => openProduct(id, "catalog")}
@@ -374,6 +373,7 @@ function App() {
               wishlistIds={wishlistIds}
               onToggleWishlist={toggleWishlist}
             />
+            <StoresCarousel stores={stores} categories={categories} onStoreClick={openStoreCatalog} compact />
             <Catalog
             products={products}
             stores={stores}

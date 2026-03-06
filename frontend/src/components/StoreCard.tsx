@@ -4,15 +4,21 @@ interface StoreCardProps {
   store: Store;
   onClick: () => void;
   selected?: boolean;
+  /** Уменьшенный размер (70%) для карусели под новинками */
+  compact?: boolean;
 }
 
-export function StoreCard({ store, onClick, selected }: StoreCardProps) {
+export function StoreCard({ store, onClick, selected, compact }: StoreCardProps) {
+  const cardStyle = compact ? { ...styles.card, ...styles.cardCompact } : styles.card;
+  const overlayStyle = compact ? { ...styles.overlay, ...styles.overlayCompact } : styles.overlay;
+  const titleStyle = compact ? { ...styles.title, ...styles.titleCompact } : styles.title;
+  const descStyle = compact ? { ...styles.desc, ...styles.descCompact } : styles.desc;
   return (
     <button
       onClick={onClick}
       type="button"
       style={{
-        ...styles.card,
+        ...cardStyle,
         ...(selected ? styles.cardSelected : {}),
         outline: "none",
       }}
@@ -23,9 +29,9 @@ export function StoreCard({ store, onClick, selected }: StoreCardProps) {
           alt=""
           style={styles.image}
         />
-        <div style={styles.overlay}>
-          <p style={styles.title}>{store.name}</p>
-          <p style={styles.desc}>{store.description}</p>
+        <div style={overlayStyle}>
+          <p style={titleStyle}>{store.name}</p>
+          <p style={descStyle}>{store.description}</p>
         </div>
       </div>
     </button>
@@ -44,6 +50,10 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: "left",
     cursor: "pointer",
     padding: 0,
+  },
+  cardCompact: {
+    width: 147,
+    borderRadius: 10,
   },
   cardSelected: {
     borderColor: "var(--accent)",
@@ -69,14 +79,24 @@ const styles: Record<string, React.CSSProperties> = {
     background: "linear-gradient(transparent, rgba(0,0,0,0.85))",
     color: "#fff",
   },
+  overlayCompact: {
+    padding: "16px 7px 7px",
+  },
   title: {
     fontSize: 13,
     fontWeight: 600,
     marginBottom: 2,
   },
+  titleCompact: {
+    fontSize: 9,
+    marginBottom: 1,
+  },
   desc: {
     fontSize: 11,
     opacity: 0.9,
     lineHeight: 1.3,
+  },
+  descCompact: {
+    fontSize: 8,
   },
 };

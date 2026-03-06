@@ -21,9 +21,11 @@ interface StoresCarouselProps {
   stores: Store[];
   categories?: Category[];
   onStoreClick: (store: { id: number; name: string } | { category: string; name: string }) => void;
+  /** Уменьшенные карточки (70%) */
+  compact?: boolean;
 }
 
-export function StoresCarousel({ stores, categories = [], onStoreClick }: StoresCarouselProps) {
+export function StoresCarousel({ stores, categories = [], onStoreClick, compact }: StoresCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const marqueePausedRef = useRef(false);
   const pauseTimeoutRef = useRef<number | null>(null);
@@ -285,6 +287,7 @@ export function StoresCarousel({ stores, categories = [], onStoreClick }: Stores
               description: s.desc,
             }}
             onClick={() => handleStoreClick(s)}
+            compact={compact}
           />
         ))}
       </div>
