@@ -1358,7 +1358,7 @@ function StoresTab({
     setSubmitting(true);
     setMessage("");
     try {
-      await updateStore(editingStoreId, { name: storeName.trim(), image_url: storeImage.trim() || undefined, description: storeDesc.trim() || undefined }, adminSecret);
+      await updateStore(editingStoreId, { name: storeName.trim(), image_url: storeImage.trim() || undefined, description: storeDesc.trim() }, adminSecret);
       setMessage("Магазин обновлён");
       onRefresh();
     } catch (err) {
@@ -1373,7 +1373,7 @@ function StoresTab({
     setSubmitting(true);
     setMessage("");
     try {
-      await createStore({ name: newStoreName.trim() || undefined, image_url: newStoreImage.trim(), description: newStoreDesc.trim() || undefined }, adminSecret);
+      await createStore({ image_url: newStoreImage.trim(), name: newStoreName.trim(), description: newStoreDesc.trim() }, adminSecret);
       setMessage("Магазин создан");
       setNewStoreName("");
       setNewStoreImage("");

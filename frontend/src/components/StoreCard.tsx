@@ -10,10 +10,6 @@ interface StoreCardProps {
 
 export function StoreCard({ store, onClick, selected, compact }: StoreCardProps) {
   const cardStyle = compact ? { ...styles.card, ...styles.cardCompact } : styles.card;
-  const overlayStyle = compact ? { ...styles.overlay, ...styles.overlayCompact } : styles.overlay;
-  const titleStyle = compact ? { ...styles.title, ...styles.titleCompact } : styles.title;
-  const descStyle = compact ? { ...styles.desc, ...styles.descCompact } : styles.desc;
-  const hasOverlayText = (store.name && store.name.trim()) || (store.description && store.description.trim());
   return (
     <button
       onClick={onClick}
@@ -30,12 +26,6 @@ export function StoreCard({ store, onClick, selected, compact }: StoreCardProps)
           alt=""
           style={styles.image}
         />
-        {hasOverlayText && (
-          <div style={overlayStyle}>
-            {store.name?.trim() && <p style={titleStyle}>{store.name}</p>}
-            {store.description?.trim() && <p style={descStyle}>{store.description}</p>}
-          </div>
-        )}
       </div>
     </button>
   );
@@ -72,34 +62,5 @@ const styles: Record<string, React.CSSProperties> = {
     width: "100%",
     height: "100%",
     objectFit: "cover",
-  },
-  overlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: "24px 10px 10px",
-    background: "linear-gradient(transparent, rgba(0,0,0,0.85))",
-    color: "#fff",
-  },
-  overlayCompact: {
-    padding: "16px 7px 7px",
-  },
-  title: {
-    fontSize: 13,
-    fontWeight: 600,
-    marginBottom: 2,
-  },
-  titleCompact: {
-    fontSize: 9,
-    marginBottom: 1,
-  },
-  desc: {
-    fontSize: 11,
-    opacity: 0.9,
-    lineHeight: 1.3,
-  },
-  descCompact: {
-    fontSize: 8,
   },
 };

@@ -98,7 +98,7 @@ export async function getProductsByStore(storeId: number): Promise<Product[]> {
 }
 
 export async function createStore(
-  data: { name: string; image_url?: string; description?: string },
+  data: { image_url: string; name?: string; description?: string },
   adminSecret?: string
 ) {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
