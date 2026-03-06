@@ -9,14 +9,20 @@ interface ProductCardProps {
   compact?: boolean;
   reviewCount?: number;
   reviewAvg?: number;
+  /** Заполнять высоту ячейки (сетка новинок) */
+  fillHeight?: boolean;
 }
 
-export function ProductCard({ product, onClick, inWishlist, onWishlistClick, compact, reviewCount, reviewAvg }: ProductCardProps) {
+export function ProductCard({ product, onClick, inWishlist, onWishlistClick, compact, reviewCount, reviewAvg, fillHeight }: ProductCardProps) {
   const { formatPrice } = useSettings();
-  const cardStyle = compact ? { ...styles.card, ...styles.cardCompact } : styles.card;
+  const cardStyle = compact
+    ? { ...styles.card, ...styles.cardCompact, ...(fillHeight ? styles.cardFillHeight : {}) }
+    : { ...styles.card, ...(fillHeight ? styles.cardFillHeight : {}) };
   const nameStyle = compact ? { ...styles.name, ...styles.nameCompact } : styles.name;
   const priceStyle = compact ? { ...styles.price, ...styles.priceCompact } : styles.price;
-  const imageWrapStyle = compact ? { ...styles.imageWrap, ...styles.imageWrapCompact } : styles.imageWrap;
+  const imageWrapStyle = compact
+    ? { ...styles.imageWrap, ...styles.imageWrapCompact, ...(fillHeight ? styles.imageWrapFillHeight : {}) }
+    : { ...styles.imageWrap, ...(fillHeight ? styles.imageWrapFillHeight : {}) };
   const wishlistBtnStyle = compact ? { ...styles.wishlistBtn, ...styles.wishlistBtnCompact } : styles.wishlistBtn;
   const hasReviews = reviewCount != null && reviewCount > 0;
   return (
@@ -107,7 +113,9 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--muted)",
   },
   cardCompact: { borderRadius: 10 },
+  cardFillHeight: { flex: 1, minHeight: 0, height: "100%" },
   imageWrapCompact: {},
+  imageWrapFillHeight: { flex: 1, minHeight: 0, aspectRatio: "unset" as const },
   wishlistBtnCompact: { top: 8, right: 8, width: 30, height: 30, fontSize: 15 },
   nameCompact: { padding: "10px 10px 2px", fontSize: 12 },
   priceCompact: { padding: "0 10px 10px", fontSize: 13 },

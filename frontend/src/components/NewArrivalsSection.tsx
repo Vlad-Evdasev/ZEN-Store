@@ -34,6 +34,7 @@ export function NewArrivalsSection({
         <ProductCard
         product={p}
         compact
+        fillHeight
         onClick={() => onProductClick(p.id)}
         inWishlist={wishlistIds.has(p.id)}
         onWishlistClick={(e) => {
@@ -50,7 +51,7 @@ export function NewArrivalsSection({
   return (
     <div style={styles.wrap}>
       <button type="button" onClick={onViewAll} style={styles.titleBtn} aria-label={t(lang, "newArrivalsViewAll")}>
-        {t(lang, "newArrivals")}
+        {t(lang, "newArrivals")} →
       </button>
       <div style={styles.grid}>
         {first && renderCard(first, styles.cardBig)}
@@ -75,7 +76,9 @@ const styles: Record<string, React.CSSProperties> = {
     marginRight: "auto",
   },
   titleBtn: {
-    display: "block",
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
     width: "100%",
     padding: "0 4px 12px",
     background: "none",
