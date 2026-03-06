@@ -96,6 +96,7 @@ const styles: Record<string, React.CSSProperties> = {
     gridTemplateColumns: "2fr 1fr",
     gridTemplateRows: "1fr",
     height: GRID_HEIGHT,
+    minHeight: GRID_HEIGHT,
     gap: GRID_GAP,
     paddingLeft: 4,
     paddingRight: 4,
@@ -108,6 +109,7 @@ const styles: Record<string, React.CSSProperties> = {
     height: "100%",
     display: "flex",
     flexDirection: "column",
+    overflow: "hidden",
   },
   titleArrow: {
     color: "var(--accent)",
@@ -126,11 +128,15 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     minHeight: 0,
     width: "100%",
+    display: "flex",
+    flexDirection: "column",
   },
   cardSmallBottom: {
     flex: 1,
     minHeight: 0,
     width: "100%",
+    display: "flex",
+    flexDirection: "column",
   },
   cardInner: {
     flex: 1,
