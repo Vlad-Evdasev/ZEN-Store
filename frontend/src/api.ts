@@ -19,6 +19,7 @@ export interface Product {
   image_urls?: string[];
   category: string;
   sizes: string;
+  new_arrival_sort_order?: number | null;
 }
 
 export interface Store {
@@ -213,6 +214,7 @@ export async function updateProduct(
     image_urls: string[];
     category: string;
     sizes: string;
+    new_arrival_sort_order: number | null;
   }>,
   adminSecret?: string
 ) {

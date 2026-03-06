@@ -203,6 +203,13 @@ try {
   // column already exists
 }
 
+// New arrivals: NULL = not in section, 0,1,2... = order in "Новинки"
+try {
+  db.exec("ALTER TABLE products ADD COLUMN new_arrival_sort_order INTEGER");
+} catch {
+  // column already exists
+}
+
 // Add user_username to orders (instead of/in addition to phone)
 try {
   db.exec("ALTER TABLE orders ADD COLUMN user_username TEXT");

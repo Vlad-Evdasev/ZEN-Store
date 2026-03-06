@@ -37,7 +37,7 @@ import {
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
-type Tab = "products" | "stores" | "categories" | "orders" | "customOrders" | "support" | "currencyRate";
+type Tab = "products" | "stores" | "categories" | "orders" | "customOrders" | "support" | "currencyRate" | "newArrivals";
 
 export function Admin() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -150,6 +150,9 @@ export function Admin() {
           <button type="button" onClick={() => setTabAndReset("currencyRate")} className={`admin-nav-btn ${tab === "currencyRate" ? "active" : ""}`}>
             Курс валюты
           </button>
+          <button type="button" onClick={() => setTabAndReset("newArrivals")} className={`admin-nav-btn ${tab === "newArrivals" ? "active" : ""}`}>
+            Новинки
+          </button>
           <div style={{ flex: 1 }} />
           <div style={styles.sidebarFooter}>
             <button type="button" onClick={() => checkApiHealth().then(setApiStatus)} style={styles.checkBtn}>
@@ -224,6 +227,15 @@ export function Admin() {
 
       {tab === "currencyRate" && (
         <CurrencyRateTab adminSecret={adminSecret} />
+      )}
+
+      {tab === "newArrivals" && (
+        <NewArrivalsTab
+          products={products}
+          stores={stores}
+          adminSecret={adminSecret}
+          onRefresh={refresh}
+        />
       )}
 
       {tab === "stores" && (
@@ -597,6 +609,143 @@ function CategoriesTab({
           </table>
         )}
       </div>
+    </>
+  );
+}
+
+function NewArrivalsTab({
+  products,
+  stores,
+  adminSecret,
+  onRefresh,
+}: {
+  products: Product[];
+  stores: Store[];
+  adminSecret: string;
+  onRefresh: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [addProductId, setAddProductId] = useState<string>("");
+
+  const newArrivals = products
+    .filter((p) => p.new_arrival_sort_order != null)
+    .sort((a, b) => (a.new_arrival_sort_order ?? 0) - (b.new_arrival_sort_order ?? 0));
+  const notInNewArrivals = products.filter((p) => p.new_arrival_sort_order == null);
+
+  const run = async (fn: () => Promise<void>) => {
+    setBusy(true);
+    setMessage("");
+    try {
+      await fn();
+      onRefresh();
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Ошибка");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const addToNewArrivals = () => {
+    const id = parseInt(addProductId, 10);
+    if (!Number.isFinite(id)) return;
+    run(async () => {
+      await updateProduct(id, { new_arrival_sort_order: newArrivals.length }, adminSecret);
+      setAddProductId("");
+    });
+  };
+
+  const removeFromNewArrivals = (product: Product) => {
+    run(async () => {
+      await updateProduct(product.id, { new_arrival_sort_order: null }, adminSecret);
+      const rest = newArrivals.filter((p) => p.id !== product.id);
+      for (let i = 0; i < rest.length; i++) {
+        await updateProduct(rest[i].id, { new_arrival_sort_order: i }, adminSecret);
+      }
+    });
+  };
+
+  const moveUp = (index: number) => {
+    if (index <= 0) return;
+    const a = newArrivals[index];
+    const b = newArrivals[index - 1];
+    run(async () => {
+      await updateProduct(a.id, { new_arrival_sort_order: index - 1 }, adminSecret);
+      await updateProduct(b.id, { new_arrival_sort_order: index }, adminSecret);
+    });
+  };
+
+  const moveDown = (index: number) => {
+    if (index >= newArrivals.length - 1) return;
+    const a = newArrivals[index];
+    const b = newArrivals[index + 1];
+    run(async () => {
+      await updateProduct(a.id, { new_arrival_sort_order: index + 1 }, adminSecret);
+      await updateProduct(b.id, { new_arrival_sort_order: index }, adminSecret);
+    });
+  };
+
+  return (
+    <>
+      <h2 style={styles.pageTitle}>Новинки</h2>
+      <p style={{ ...styles.hint, marginBottom: 16 }}>
+        Товары в блоке «Новинки» на главной. Порядок отображается сверху вниз.
+      </p>
+      {message && <p style={styles.message}>{message}</p>}
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16, flexWrap: "wrap" }}>
+        <select
+          value={addProductId}
+          onChange={(e) => setAddProductId(e.target.value)}
+          style={styles.input}
+          disabled={busy || notInNewArrivals.length === 0}
+        >
+          <option value="">Добавить товар в новинки</option>
+          {notInNewArrivals.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name} ({stores.find((s) => s.id === (p.store_id ?? 1))?.name ?? "—"})
+            </option>
+          ))}
+        </select>
+        <button type="button" onClick={addToNewArrivals} style={styles.submit} disabled={busy || !addProductId}>
+          Добавить
+        </button>
+      </div>
+      {newArrivals.length === 0 ? (
+        <p style={styles.hint}>Пока нет товаров в новинках. Добавьте товары выше.</p>
+      ) : (
+        <div style={{ overflowX: "auto" }}>
+          <table className="admin-table" style={styles.table}>
+            <thead>
+              <tr>
+                <th style={styles.th}>#</th>
+                <th style={styles.th}>Товар</th>
+                <th style={styles.th}>Магазин</th>
+                <th style={styles.th}>Действия</th>
+              </tr>
+            </thead>
+            <tbody>
+              {newArrivals.map((p, i) => (
+                <tr key={p.id}>
+                  <td style={styles.td}>{i + 1}</td>
+                  <td style={styles.td}>{p.name}</td>
+                  <td style={styles.td}>{stores.find((s) => s.id === (p.store_id ?? 1))?.name ?? "—"}</td>
+                  <td style={{ ...styles.td, display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    <button type="button" onClick={() => moveUp(i)} disabled={busy || i === 0} style={styles.smallBtn} title="Выше">
+                      ↑
+                    </button>
+                    <button type="button" onClick={() => moveDown(i)} disabled={busy || i === newArrivals.length - 1} style={styles.smallBtn} title="Ниже">
+                      ↓
+                    </button>
+                    <button type="button" onClick={() => removeFromNewArrivals(p)} disabled={busy} style={{ ...styles.smallBtn, color: "#c62828" }} title="Убрать из новинок">
+                      ✕
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </>
   );
 }
@@ -1620,4 +1769,7 @@ const styles: Record<string, React.CSSProperties> = {
   supportBubbleImg: { display: "block", maxWidth: "100%", maxHeight: 200, borderRadius: 8 },
   supportImageOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 },
   supportImageExpanded: { maxWidth: "100%", maxHeight: "100%", objectFit: "contain" },
+  table: { width: "100%", borderCollapse: "collapse" as const },
+  th: { textAlign: "left", padding: "10px 12px", borderBottom: "1px solid var(--border)", fontSize: 13, fontWeight: 600 },
+  td: { padding: "10px 12px", borderBottom: "1px solid var(--border)", fontSize: 14 },
 };

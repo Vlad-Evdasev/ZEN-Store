@@ -40,6 +40,13 @@ productsRouter.get("/reviews/stats", (_req, res) => {
   res.json(stats);
 });
 
+productsRouter.get("/new-arrivals", (_req, res) => {
+  const rows = db
+    .prepare("SELECT * FROM products WHERE new_arrival_sort_order IS NOT NULL ORDER BY new_arrival_sort_order ASC, id ASC")
+    .all() as ProductRow[];
+  res.json(rows.map(toProduct));
+});
+
 productsRouter.get("/:id", (req, res) => {
   const id = parseInt(req.params.id, 10);
   const row = db.prepare("SELECT * FROM products WHERE id = ?").get(id) as ProductRow | undefined;
@@ -80,7 +87,7 @@ productsRouter.patch("/:id", (req, res) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
   const id = parseInt(req.params.id, 10);
-  const { store_id, name, description, price, image_url, image_urls, category, sizes } = req.body;
+  const { store_id, name, description, price, image_url, image_urls, category, sizes, new_arrival_sort_order } = req.body;
   const row = db.prepare("SELECT id FROM products WHERE id = ?").get(id) as { id: number } | undefined;
   if (!row) return res.status(404).json({ error: "Product not found" });
 
@@ -90,6 +97,10 @@ productsRouter.patch("/:id", (req, res) => {
   if (name != null) { updates.push("name = ?"); values.push(name); }
   if (description != null) { updates.push("description = ?"); values.push(description); }
   if (price != null) { updates.push("price = ?"); values.push(Number(price)); }
+  if (new_arrival_sort_order !== undefined) {
+    updates.push("new_arrival_sort_order = ?");
+    values.push(new_arrival_sort_order === null || new_arrival_sort_order === "" ? null : Number(new_arrival_sort_order));
+  }
   if (image_urls !== undefined) {
     const urls = Array.isArray(image_urls) ? image_urls.slice(0, MAX_IMAGES).filter(Boolean) : [];
     const firstUrl = urls[0] ?? null;

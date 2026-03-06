@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { flushSync } from "react-dom";
 import { useTelegram } from "./hooks/useTelegram";
 import { TelegramAuth } from "./components/TelegramAuth";
@@ -6,6 +6,7 @@ import { useWishlist } from "./hooks/useWishlist";
 import { getProducts, getStores, getCategories, getCart, getReviews, getSupportUnreadCount, type Product, type Store, type Category } from "./api";
 import { Catalog } from "./pages/Catalog";
 import { StoresCarousel } from "./components/StoresCarousel";
+import { NewArrivalsSection } from "./components/NewArrivalsSection";
 import { Cart } from "./pages/Cart";
 import { Favorites } from "./pages/Favorites";
 import { ProductPage } from "./pages/ProductPage";
@@ -94,6 +95,14 @@ function App() {
   const [storeCatalogView, setStoreCatalogView] = useState<StoreCatalogView>("welcome");
   const [productReturnTo, setProductReturnTo] = useState<Page | null>(null);
   const mainScrollRef = useRef<HTMLElement | null>(null);
+
+  const newArrivals = useMemo(
+    () =>
+      products
+        .filter((p) => p.new_arrival_sort_order != null)
+        .sort((a, b) => (a.new_arrival_sort_order ?? 0) - (b.new_arrival_sort_order ?? 0)),
+    [products]
+  );
 
   useEffect(() => {
     if (typeof history !== "undefined" && "scrollRestoration" in history) {
@@ -356,6 +365,12 @@ function App() {
         {page === "catalog" && (
           <>
             <StoresCarousel stores={stores} categories={categories} onStoreClick={openStoreCatalog} />
+            <NewArrivalsSection
+              products={newArrivals}
+              onProductClick={(id) => openProduct(id, "catalog")}
+              wishlistIds={wishlistIds}
+              onToggleWishlist={toggleWishlist}
+            />
             <Catalog
             products={products}
             stores={stores}
