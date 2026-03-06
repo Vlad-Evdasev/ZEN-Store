@@ -49,22 +49,22 @@ export function NewArrivalsSection({
 
   return (
     <div style={styles.wrap}>
-      <h2 style={styles.title}>{t(lang, "newArrivals")}</h2>
+      <button type="button" onClick={onViewAll} style={styles.titleBtn} aria-label={t(lang, "newArrivalsViewAll")}>
+        {t(lang, "newArrivals")}
+      </button>
       <div style={styles.grid}>
         {first && renderCard(first, styles.cardBig)}
-        {second && renderCard(second, styles.cardSmall)}
-        {third && renderCard(third, styles.cardSmallBottom)}
+        <div style={styles.rightColumn}>
+          {second && renderCard(second, styles.cardSmall)}
+          {third && renderCard(third, styles.cardSmallBottom)}
+        </div>
       </div>
-      <button type="button" onClick={onViewAll} style={styles.viewAllBtn} aria-label={t(lang, "newArrivalsViewAll")}>
-        {t(lang, "newArrivalsViewAll")} →
-      </button>
     </div>
   );
 }
 
-const ROW_HEIGHT = 156;
 const GRID_GAP = 8;
-const GRID_HEIGHT = ROW_HEIGHT * 2 + GRID_GAP;
+const GRID_HEIGHT = 320;
 
 const styles: Record<string, React.CSSProperties> = {
   wrap: {
@@ -74,45 +74,51 @@ const styles: Record<string, React.CSSProperties> = {
     marginLeft: "auto",
     marginRight: "auto",
   },
-  title: {
+  titleBtn: {
+    display: "block",
+    width: "100%",
+    padding: "0 4px 12px",
+    background: "none",
+    border: "none",
+    fontFamily: "inherit",
     fontSize: 18,
     fontWeight: 700,
     color: "var(--text)",
-    margin: "0 0 12px",
-    paddingLeft: 4,
+    textAlign: "left",
+    cursor: "pointer",
   },
   grid: {
     display: "grid",
     gridTemplateColumns: "2fr 1fr",
-    gridTemplateRows: `${ROW_HEIGHT}px ${ROW_HEIGHT}px`,
+    gridTemplateRows: "1fr",
     gap: GRID_GAP,
     height: GRID_HEIGHT,
     paddingLeft: 4,
     paddingRight: 4,
   },
   cardBig: {
-    gridColumn: 1,
-    gridRow: "1 / -1",
     minWidth: 0,
     minHeight: 0,
     width: "100%",
+    height: "100%",
+  },
+  rightColumn: {
+    display: "flex",
+    flexDirection: "column",
+    gap: GRID_GAP,
+    minWidth: 0,
+    minHeight: 0,
     height: "100%",
   },
   cardSmall: {
-    gridColumn: 2,
-    gridRow: 1,
-    minWidth: 0,
+    flex: 1,
     minHeight: 0,
     width: "100%",
-    height: "100%",
   },
   cardSmallBottom: {
-    gridColumn: 2,
-    gridRow: 2,
-    minWidth: 0,
+    flex: 1,
     minHeight: 0,
     width: "100%",
-    height: "100%",
   },
   cardInner: {
     width: "100%",
@@ -121,18 +127,5 @@ const styles: Record<string, React.CSSProperties> = {
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",
-  },
-  viewAllBtn: {
-    marginTop: 12,
-    marginLeft: 4,
-    padding: "8px 0",
-    background: "none",
-    border: "none",
-    color: "var(--accent)",
-    fontSize: 14,
-    fontWeight: 600,
-    cursor: "pointer",
-    fontFamily: "inherit",
-    textAlign: "left",
   },
 };
