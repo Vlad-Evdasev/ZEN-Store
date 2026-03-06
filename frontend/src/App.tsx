@@ -17,6 +17,7 @@ import { Support } from "./pages/Support";
 import { Reviews } from "./pages/Reviews";
 import { StoreCatalog } from "./pages/StoreCatalog";
 import { StoreWelcome } from "./pages/StoreWelcome";
+import { NewArrivalsPage } from "./pages/NewArrivalsPage";
 import { CustomOrderPage } from "./pages/CustomOrderPage";
 import { Settings } from "./pages/Settings";
 import { History } from "./pages/History";
@@ -25,7 +26,7 @@ import { SettingsSync } from "./components/SettingsSync";
 import { useSettings } from "./context/SettingsContext";
 import { t } from "./i18n";
 
-type Page = "catalog" | "cart" | "product" | "checkout" | "profile" | "reviews" | "favorites" | "storeCatalog" | "settings" | "history" | "deliveryTerms" | "support";
+type Page = "catalog" | "cart" | "product" | "checkout" | "profile" | "reviews" | "favorites" | "storeCatalog" | "newArrivals" | "settings" | "history" | "deliveryTerms" | "support";
 
 const SELLER_LINK = import.meta.env.VITE_SELLER_LINK || "";
 
@@ -232,6 +233,7 @@ function App() {
     setStoreCatalogView("catalog");
     setPage("storeCatalog");
   };
+  const openNewArrivals = () => setPage("newArrivals");
   const openDeliveryTerms = () => {
     setMenuOpen(false);
     setPage("deliveryTerms");
@@ -368,6 +370,7 @@ function App() {
             <NewArrivalsSection
               products={newArrivals}
               onProductClick={(id) => openProduct(id, "catalog")}
+              onViewAll={openNewArrivals}
               wishlistIds={wishlistIds}
               onToggleWishlist={toggleWishlist}
             />
@@ -415,6 +418,15 @@ function App() {
               />
             )}
           </>
+        )}
+        {page === "newArrivals" && (
+          <NewArrivalsPage
+            products={newArrivals}
+            onBack={openCatalog}
+            onProductClick={(id) => openProduct(id, "newArrivals")}
+            wishlistIds={wishlistIds}
+            onToggleWishlist={toggleWishlist}
+          />
         )}
         {page === "product" && productId && (
           <ProductPage
