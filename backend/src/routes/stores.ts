@@ -25,12 +25,13 @@ storesRouter.post("/", (req, res) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
   const { name, image_url, description } = req.body;
-  if (!name || typeof name !== "string") return res.status(400).json({ error: "name required" });
+  const img = typeof image_url === "string" && image_url.trim();
+  if (!img) return res.status(400).json({ error: "image_url required" });
   try {
     db.prepare("INSERT INTO stores (name, image_url, description) VALUES (?, ?, ?)").run(
-      name.trim(),
-      image_url?.trim() || null,
-      description?.trim() || null
+      typeof name === "string" ? name.trim() : "",
+      img,
+      typeof description === "string" ? description.trim() || null : null
     );
     const row = db.prepare("SELECT last_insert_rowid() as id").get() as { id: number };
     return res.status(201).json({ id: row.id, ok: true });

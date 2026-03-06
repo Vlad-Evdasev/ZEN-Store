@@ -1354,7 +1354,7 @@ function StoresTab({
   };
 
   const handleSaveStore = async () => {
-    if (!editingStoreId || !storeName.trim()) return;
+    if (!editingStoreId) return;
     setSubmitting(true);
     setMessage("");
     try {
@@ -1369,11 +1369,11 @@ function StoresTab({
   };
 
   const handleAddStore = async () => {
-    if (!newStoreName.trim()) return;
+    if (!newStoreImage.trim()) return;
     setSubmitting(true);
     setMessage("");
     try {
-      await createStore({ name: newStoreName.trim(), image_url: newStoreImage.trim() || undefined, description: newStoreDesc.trim() || undefined }, adminSecret);
+      await createStore({ name: newStoreName.trim() || undefined, image_url: newStoreImage.trim(), description: newStoreDesc.trim() || undefined }, adminSecret);
       setMessage("Магазин создан");
       setNewStoreName("");
       setNewStoreImage("");
@@ -1423,12 +1423,12 @@ function StoresTab({
           <button type="button" onClick={() => setEditingStoreId(null)} style={styles.backBtn}>← К списку магазинов</button>
           <h3 style={styles.subtitle}>{editingStore.name}</h3>
           <div style={styles.form}>
-            <label style={styles.label}>Название</label>
-            <input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} style={styles.input} />
-            <label style={styles.label}>URL картинки</label>
+            <label style={styles.label}>Название (необязательно)</label>
+            <input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} style={styles.input} placeholder="Название магазина" />
+            <label style={styles.label}>URL картинки *</label>
             <input type="text" value={storeImage} onChange={(e) => setStoreImage(e.target.value)} placeholder="https://..." style={styles.input} />
-            <label style={styles.label}>Описание</label>
-            <input type="text" value={storeDesc} onChange={(e) => setStoreDesc(e.target.value)} style={styles.input} />
+            <label style={styles.label}>Описание (необязательно)</label>
+            <input type="text" value={storeDesc} onChange={(e) => setStoreDesc(e.target.value)} style={styles.input} placeholder="Краткое описание" />
             <div style={styles.formActions}>
               <button type="button" onClick={handleSaveStore} disabled={submitting} style={styles.submit}>Сохранить</button>
               <button type="button" onClick={() => handleDeleteStore(editingStoreId)} style={styles.deleteBtn}>Удалить магазин</button>
@@ -1477,10 +1477,13 @@ function StoresTab({
       ) : (
         <>
           <h2 style={styles.pageTitle}>Магазины</h2>
-          <p style={styles.hint}>Добавить магазин</p>
+          <p style={styles.hint}>Добавить магазин (обязательно только поле картинки)</p>
           <div style={styles.form}>
+            <label style={styles.label}>URL картинки *</label>
+            <input type="text" value={newStoreImage} onChange={(e) => setNewStoreImage(e.target.value)} placeholder="https://..." style={styles.input} />
+            <label style={styles.label}>Название (необязательно)</label>
             <input type="text" value={newStoreName} onChange={(e) => setNewStoreName(e.target.value)} placeholder="Название магазина" style={styles.input} />
-            <input type="text" value={newStoreImage} onChange={(e) => setNewStoreImage(e.target.value)} placeholder="URL картинки" style={styles.input} />
+            <label style={styles.label}>Описание (необязательно)</label>
             <input type="text" value={newStoreDesc} onChange={(e) => setNewStoreDesc(e.target.value)} placeholder="Описание" style={styles.input} />
             <button type="button" onClick={handleAddStore} disabled={submitting} style={styles.submit}>Создать магазин</button>
           </div>

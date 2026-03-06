@@ -13,6 +13,7 @@ export function StoreCard({ store, onClick, selected, compact }: StoreCardProps)
   const overlayStyle = compact ? { ...styles.overlay, ...styles.overlayCompact } : styles.overlay;
   const titleStyle = compact ? { ...styles.title, ...styles.titleCompact } : styles.title;
   const descStyle = compact ? { ...styles.desc, ...styles.descCompact } : styles.desc;
+  const hasOverlayText = (store.name && store.name.trim()) || (store.description && store.description.trim());
   return (
     <button
       onClick={onClick}
@@ -29,10 +30,12 @@ export function StoreCard({ store, onClick, selected, compact }: StoreCardProps)
           alt=""
           style={styles.image}
         />
-        <div style={overlayStyle}>
-          <p style={titleStyle}>{store.name}</p>
-          <p style={descStyle}>{store.description}</p>
-        </div>
+        {hasOverlayText && (
+          <div style={overlayStyle}>
+            {store.name?.trim() && <p style={titleStyle}>{store.name}</p>}
+            {store.description?.trim() && <p style={descStyle}>{store.description}</p>}
+          </div>
+        )}
       </div>
     </button>
   );
