@@ -66,20 +66,20 @@ export function Catalog({
           }))
         : [];
     const categoryTiles: DisplayStore[] =
-      categories.length > 0
-        ? categories.map((c) => {
-            const fallback = FALLBACK_BY_CODE[c.code];
-            return {
-              id: c.code,
-              name: c.name,
-              image: fallback?.image ?? DEFAULT_IMAGE,
-              desc: fallback?.desc ?? "",
-              isReal: false as const,
-              category: c.code,
-            };
-          })
-        : realStores.length === 0
-          ? Object.entries(FALLBACK_BY_CODE).map(([code, { image, desc }]) => ({
+      realStores.length === 0
+        ? categories.length > 0
+          ? categories.map((c) => {
+              const fallback = FALLBACK_BY_CODE[c.code];
+              return {
+                id: c.code,
+                name: c.name,
+                image: fallback?.image ?? DEFAULT_IMAGE,
+                desc: fallback?.desc ?? "",
+                isReal: false as const,
+                category: c.code,
+              };
+            })
+          : Object.entries(FALLBACK_BY_CODE).map(([code, { image, desc }]) => ({
               id: code,
               name: { tee: "Футболки", hoodie: "Худи", pants: "Штаны", jacket: "Куртки", accessories: "Аксессуары" }[code] ?? code,
               image,
@@ -87,8 +87,8 @@ export function Catalog({
               isReal: false as const,
               category: code,
             }))
-          : [];
-    return [...realStores, ...categoryTiles];
+        : [];
+    return realStores.length > 0 ? realStores : categoryTiles;
   }, [stores, categories]);
 
   const pauseAndResume = () => {

@@ -51,20 +51,20 @@ export function StoresCarousel({ stores, categories = [], onStoreClick, compact 
       : [];
 
   const categoryTiles: DisplayStore[] =
-    categories.length > 0
-      ? categories.map((c) => {
-          const fallback = FALLBACK_BY_CODE[c.code];
-          return {
-            id: c.code,
-            name: c.name,
-            image: fallback?.image ?? DEFAULT_CATEGORY_IMAGE,
-            desc: fallback?.desc ?? DEFAULT_CATEGORY_DESC,
-            isReal: false as const,
-            category: c.code,
-          };
-        })
-      : realStores.length === 0
-        ? (() => {
+    realStores.length === 0
+      ? categories.length > 0
+        ? categories.map((c) => {
+            const fallback = FALLBACK_BY_CODE[c.code];
+            return {
+              id: c.code,
+              name: c.name,
+              image: fallback?.image ?? DEFAULT_CATEGORY_IMAGE,
+              desc: fallback?.desc ?? DEFAULT_CATEGORY_DESC,
+              isReal: false as const,
+              category: c.code,
+            };
+          })
+        : (() => {
             const entries = Object.entries(FALLBACK_BY_CODE);
             const names: Record<string, string> = { tee: "Футболки", hoodie: "Худи", pants: "Штаны", jacket: "Куртки", accessories: "Аксессуары" };
             return entries.map(([code, { image, desc }]) => ({
@@ -76,9 +76,9 @@ export function StoresCarousel({ stores, categories = [], onStoreClick, compact 
               category: code,
             }));
           })()
-        : [];
+      : [];
 
-  const displayStores: DisplayStore[] = [...realStores, ...categoryTiles];
+  const displayStores: DisplayStore[] = realStores.length > 0 ? realStores : categoryTiles;
 
   const pauseOnUserStart = () => {
     marqueePausedRef.current = true;
