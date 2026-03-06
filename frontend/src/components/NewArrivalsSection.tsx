@@ -94,7 +94,8 @@ const styles: Record<string, React.CSSProperties> = {
   grid: {
     display: "grid",
     gridTemplateColumns: "2fr 1fr",
-    gridTemplateRows: `${GRID_HEIGHT}px`,
+    gridTemplateRows: "1fr",
+    height: GRID_HEIGHT,
     gap: GRID_GAP,
     paddingLeft: 4,
     paddingRight: 4,
@@ -107,7 +108,6 @@ const styles: Record<string, React.CSSProperties> = {
     height: "100%",
     display: "flex",
     flexDirection: "column",
-    alignSelf: "stretch",
   },
   titleArrow: {
     color: "var(--accent)",

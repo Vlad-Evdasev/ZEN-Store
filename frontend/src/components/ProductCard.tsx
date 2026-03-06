@@ -18,8 +18,9 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
   const cardStyle = compact
     ? { ...styles.card, ...styles.cardCompact, ...(fillHeight ? styles.cardFillHeight : {}) }
     : { ...styles.card, ...(fillHeight ? styles.cardFillHeight : {}) };
-  const nameStyle = compact ? { ...styles.name, ...styles.nameCompact } : styles.name;
-  const priceStyle = compact ? { ...styles.price, ...styles.priceCompact } : styles.price;
+  const noShrink = fillHeight ? { flexShrink: 0 as const } : {};
+  const nameStyle = compact ? { ...styles.name, ...styles.nameCompact, ...noShrink } : { ...styles.name, ...noShrink };
+  const priceStyle = compact ? { ...styles.price, ...styles.priceCompact, ...noShrink } : { ...styles.price, ...noShrink };
   const imageWrapStyle = compact
     ? { ...styles.imageWrap, ...styles.imageWrapCompact, ...(fillHeight ? styles.imageWrapFillHeight : {}) }
     : { ...styles.imageWrap, ...(fillHeight ? styles.imageWrapFillHeight : {}) };
@@ -45,7 +46,7 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
       </div>
       <p style={nameStyle}>{product.name}</p>
       {hasReviews && (
-        <p style={compact ? styles.reviewsCompact : styles.reviews}>
+        <p style={{ ...(compact ? styles.reviewsCompact : styles.reviews), ...noShrink }}>
           ★ {reviewAvg?.toFixed(1) ?? "—"} {reviewCount !== undefined && `(${reviewCount})`}
         </p>
       )}
