@@ -86,8 +86,9 @@ function HeaderIconFavorites() {
 
 function HeaderIconCart() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
-      <path d="M6 2v4M18 2v4M4 6h16l-1.5 12a2 2 0 01-2 2H7.5a2 2 0 01-2-2L4 6z" />
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
+      <path d="M5 8h14l-1.2 9.6a1.5 1.5 0 01-1.5 1.2H7.7a1.5 1.5 0 01-1.5-1.2L5 8z" />
+      <path d="M9 8V5a3 3 0 016 0v3" />
     </svg>
   );
 }
@@ -323,11 +324,11 @@ function App() {
               </button>
             </div>
             <div style={styles.headerRight}>
-              <button onClick={openFavorites} style={styles.headerLinkWithBadge} aria-label={t(lang, "favorites")}>
+              <button onClick={openFavorites} style={styles.headerIconBtn} aria-label={t(lang, "favorites")}>
                 <HeaderIconFavorites />
                 <span style={{ ...styles.favBadge, ...styles.headerBadgePos, visibility: wishlistIds.size > 0 ? "visible" : "hidden" }}>{wishlistIds.size || "0"}</span>
               </button>
-              <button onClick={openCart} style={styles.headerBtnWrapper} aria-label={t(lang, "cart")}>
+              <button onClick={openCart} style={styles.headerIconBtnCart} aria-label={t(lang, "cart")}>
                 <HeaderIconCart />
                 <span style={{ ...styles.cartBadge, ...styles.headerBadgePos, visibility: cartCount > 0 ? "visible" : "hidden" }}>{cartCount || "0"}</span>
               </button>
@@ -681,6 +682,30 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 13,
     cursor: "pointer",
   },
+  headerIconBtn: {
+    position: "relative",
+    padding: 8,
+    background: "none",
+    border: "none",
+    color: "var(--text)",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
+  },
+  headerIconBtnCart: {
+    position: "relative",
+    padding: 8,
+    background: "none",
+    border: "none",
+    color: "var(--accent)",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
+  },
   headerLinkWithBadge: {
     position: "relative",
     paddingLeft: 10,
@@ -702,13 +727,12 @@ const styles: Record<string, React.CSSProperties> = {
   },
   headerBtnLabel: {
     display: "block",
-    /* сдвиг вправо на половину разницы padding, чтобы надпись по центру кнопки */
     marginLeft: 4,
   },
   headerBadgePos: {
     position: "absolute",
-    right: 4,
-    top: 4,
+    right: 2,
+    top: 2,
   },
   favBadge: {
     minWidth: 16,
