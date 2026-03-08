@@ -396,33 +396,31 @@ export function Support({ userId, userName, firstName, onBack, onUnreadCountChan
                     </span>
                     <span style={styles.chatItemDate}>{formatDate(c.created_at)}</span>
                   </button>
-                  <div style={styles.chatItemActions}>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); setRenameChatId(c.id); setRenameValue(c.title ?? ""); }}
-                      style={styles.chatItemRename}
-                      aria-label={t(lang, "supportRenameChat")}
-                      data-touch-area="chat-rename"
-                    >
-                      <span style={styles.listEditIcon}>✎</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); deleteSupportChat(c.id, userId).then(loadChats).catch(console.error); }}
-                      style={styles.chatItemDelete}
-                      aria-label={t(lang, "supportDeleteChat")}
-                      data-touch-area="chat-delete"
-                    >
-                      <span style={styles.listDeleteIcon}>
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="3 6 5 6 21 6" />
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                          <line x1="10" y1="11" x2="10" y2="17" />
-                          <line x1="14" y1="11" x2="14" y2="17" />
-                        </svg>
-                      </span>
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setRenameChatId(c.id); setRenameValue(c.title ?? ""); }}
+                    style={styles.chatItemRename}
+                    aria-label={t(lang, "supportRenameChat")}
+                    data-touch-area="chat-rename"
+                  >
+                    <span style={styles.listEditIcon}>✎</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); deleteSupportChat(c.id, userId).then(loadChats).catch(console.error); }}
+                    style={styles.chatItemDelete}
+                    aria-label={t(lang, "supportDeleteChat")}
+                    data-touch-area="chat-delete"
+                  >
+                    <span style={styles.listDeleteIcon}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        <line x1="10" y1="11" x2="10" y2="17" />
+                        <line x1="14" y1="11" x2="14" y2="17" />
+                      </svg>
+                    </span>
+                  </button>
                 </div>
               )}
             </li>
@@ -478,8 +476,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   chatList: { listStyle: "none", padding: 0, margin: 0 },
   chatItem: { marginBottom: 8 },
-  chatItemCard: { display: "flex", alignItems: "flex-start", gap: 4, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" },
-  chatItemActions: { display: "flex", flexDirection: "column", flexShrink: 0 },
+  chatItemCard: { display: "flex", alignItems: "center", gap: 4, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" },
   chatUnreadBadge: {
     display: "inline-flex",
     alignItems: "center",
