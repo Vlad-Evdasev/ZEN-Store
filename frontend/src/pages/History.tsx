@@ -78,7 +78,7 @@ export function History({ userId, onBack, onProductClick }: HistoryProps) {
   if (loading) {
     return (
       <div style={styles.wrap}>
-        <button onClick={onBack} style={styles.back} type="button">← {t(lang, "back")}</button>
+        <button onClick={onBack} style={styles.back} type="button">← {t(lang, "backToCatalog")}</button>
         <p style={styles.loading}>{t(lang, "loading")}</p>
       </div>
     );
@@ -88,7 +88,7 @@ export function History({ userId, onBack, onProductClick }: HistoryProps) {
     <div style={styles.wrap}>
       <header style={styles.header}>
         <button onClick={onBack} style={styles.back} type="button">
-          ← {t(lang, "back")}
+          ← {t(lang, "backToCatalog")}
         </button>
         <div style={styles.titleAndFilterWrap}>
           <h1 style={styles.title}>{t(lang, "historyTitle")}</h1>

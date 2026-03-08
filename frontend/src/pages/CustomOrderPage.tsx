@@ -74,7 +74,7 @@ export function CustomOrderPage({ userId, userName, firstName, onBack }: CustomO
   if (customSuccess) {
     return (
       <div style={styles.wrap}>
-        <button onClick={onBack} style={styles.back}>← {t(lang, "back")}</button>
+        <button onClick={onBack} style={styles.back}>← {t(lang, "backToMain")}</button>
         <div style={styles.card}>
           <h3 style={styles.title}>{t(lang, "customOrderTitle")}</h3>
           <p style={styles.success}>{t(lang, "customOrderSuccess")}</p>
@@ -89,7 +89,7 @@ export function CustomOrderPage({ userId, userName, firstName, onBack }: CustomO
 
   return (
     <div style={styles.wrap}>
-      <button onClick={onBack} style={styles.back}>← {t(lang, "back")}</button>
+      <button onClick={onBack} style={styles.back}>← {t(lang, "backToMain")}</button>
       <div style={styles.card}>
         <h3 style={styles.title}>{t(lang, "customOrderTitle")}</h3>
         <form onSubmit={handleSubmit} style={styles.form}>

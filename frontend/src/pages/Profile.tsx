@@ -16,7 +16,7 @@ export function Profile({ userName, firstName, onBack, onOpenDeliveryTerms, onOp
   return (
     <div style={styles.wrap}>
       <button onClick={onBack} style={styles.back}>
-        ← {t(lang, "back")}
+        ← {t(lang, "backToCatalog")}
       </button>
 
       <div style={styles.avatar}>{firstName[0]?.toUpperCase() || "?"}</div>

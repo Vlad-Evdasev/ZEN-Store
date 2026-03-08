@@ -103,7 +103,7 @@ export function Reviews({ userId, firstName, onBack }: ReviewsProps) {
   return (
     <div style={styles.wrap}>
       <button onClick={onBack} style={styles.back}>
-        ← {t(lang, "back")}
+        ← {t(lang, "backToCatalog")}
       </button>
 
       <h2 style={styles.title}>{t(lang, "reviewsTitle")}</h2>
