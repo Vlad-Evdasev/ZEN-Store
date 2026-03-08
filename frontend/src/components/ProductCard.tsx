@@ -123,6 +123,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     lineHeight: 1.25,
+    minHeight: 52,
   },
   descWrapCompact: {
     borderBottomLeftRadius: 10,
@@ -130,7 +131,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   descWrapCompactSmall: {},
   name: {
-    padding: "5px calc(8px + var(--card-desc-bleed, 2px)) 0 calc(8px + var(--card-desc-bleed, 2px))",
+    padding: "6px calc(8px + var(--card-desc-bleed, 2px)) 2px calc(8px + var(--card-desc-bleed, 2px))",
     margin: 0,
     fontSize: 14,
     fontWeight: 600,
@@ -146,7 +147,7 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: "space-between",
     alignItems: "baseline",
     gap: 8,
-    padding: "2px calc(8px + var(--card-desc-bleed, 2px)) 5px calc(8px + var(--card-desc-bleed, 2px))",
+    padding: "0 calc(8px + var(--card-desc-bleed, 2px)) 8px calc(8px + var(--card-desc-bleed, 2px))",
     minHeight: 0,
     margin: 0,
     lineHeight: 1.25,
@@ -157,7 +158,7 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: "space-between",
     alignItems: "baseline",
     gap: 6,
-    padding: "2px calc(6px + var(--card-desc-bleed, 2px)) 4px calc(6px + var(--card-desc-bleed, 2px))",
+    padding: "0 calc(6px + var(--card-desc-bleed, 2px)) 6px calc(6px + var(--card-desc-bleed, 2px))",
     minHeight: 0,
     margin: 0,
     lineHeight: 1.25,
@@ -191,6 +192,6 @@ const styles: Record<string, React.CSSProperties> = {
   imageWrapCompact: {},
   imageWrapFillHeight: { flex: 1, minHeight: 0, aspectRatio: "unset" as const },
   wishlistBtnCompact: { top: 8, right: 8, width: 30, height: 30, fontSize: 15 },
-  nameCompact: { padding: "4px calc(6px + var(--card-desc-bleed, 2px)) 0 calc(6px + var(--card-desc-bleed, 2px))", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.25 },
+  nameCompact: { padding: "5px calc(6px + var(--card-desc-bleed, 2px)) 2px calc(6px + var(--card-desc-bleed, 2px))", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.25 },
   priceCompact: { padding: 0, margin: 0, fontSize: 13, lineHeight: 1.25 },
 };
