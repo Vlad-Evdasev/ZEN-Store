@@ -185,7 +185,6 @@ function App() {
   }, [userId]);
 
   useEffect(() => {
-    if (page !== "product") return;
     const scrollToTop = () => {
       window.scrollTo(0, 0);
       document.documentElement.scrollTop = 0;
