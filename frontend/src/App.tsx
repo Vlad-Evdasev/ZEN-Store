@@ -740,6 +740,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 7,
     background: "var(--accent)",
     color: "#fff",
+    border: "1px solid var(--text)",
     fontSize: 10,
     fontWeight: 600,
     display: "inline-flex",
