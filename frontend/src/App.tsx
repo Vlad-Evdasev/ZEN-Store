@@ -544,7 +544,7 @@ const styles: Record<string, React.CSSProperties> = {
     minHeight: "100dvh",
     display: "flex",
     justifyContent: "center",
-    background: "var(--bg)",
+    background: "var(--bg-gradient, var(--bg))",
   },
   app: {
     width: "100%",
@@ -553,7 +553,7 @@ const styles: Record<string, React.CSSProperties> = {
     minHeight: "100dvh",
     display: "flex",
     flexDirection: "column",
-    background: "var(--bg)",
+    background: "var(--bg-gradient, var(--bg))",
   },
   header: {
     position: "fixed",
