@@ -372,7 +372,6 @@ function App() {
                 <span>{t(lang, "settings")}</span>
               </span>
             </button>
-            <div style={styles.menuSpacer} aria-hidden />
             <button onClick={goToWelcome} type="button" className="zen-menu-item" style={styles.menuWelcomeItem}>
               <span style={styles.menuItemContent}>
                 <MenuIconHome />
@@ -625,7 +624,9 @@ const styles: Record<string, React.CSSProperties> = {
     bottom: 0,
     width: 280,
     maxWidth: "85vw",
-    background: "var(--surface)",
+    background: "var(--menu-panel-bg)",
+    backdropFilter: "blur(12px)",
+    WebkitBackdropFilter: "blur(12px)",
     borderRight: "1px solid var(--border)",
     zIndex: 21,
     paddingTop: "max(16px, env(safe-area-inset-top))",
@@ -650,11 +651,8 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     gap: 12,
   },
-  menuSpacer: {
-    flex: 1,
-    minHeight: 0,
-  },
   menuWelcomeItem: {
+    marginTop: 8,
     padding: "14px 12px 14px 10px",
     textAlign: "left",
     background: "none",
