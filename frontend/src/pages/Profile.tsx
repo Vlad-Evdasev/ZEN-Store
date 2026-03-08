@@ -23,35 +23,37 @@ export function Profile({ userName, firstName, onBack, onOpenDeliveryTerms, onOp
       <h2 style={styles.name}>{firstName}</h2>
       {userName && <p style={styles.username}>{userName}</p>}
 
-      <div style={styles.section}>
-        <p style={styles.sectionTitle}>{t(lang, "profileQuickActions")}</p>
-        <div style={styles.actions}>
-          {onOpenDeliveryTerms && (
-            <button onClick={onOpenDeliveryTerms} style={styles.actionBtn}>
-              <span style={styles.actionBtnIcon}>📋</span>
-              {t(lang, "profileDeliveryTerms")}
-            </button>
-          )}
-          {onOpenSupport && (
-            <button onClick={onOpenSupport} style={{ ...styles.actionBtn, position: "relative" }}>
-              <span style={styles.actionBtnIcon}>💬</span>
-              {t(lang, "profileSupport")}
-              {supportUnreadCount > 0 && (
-                <span style={styles.supportBadge} aria-label="Непрочитанные">{supportUnreadCount > 99 ? "99+" : supportUnreadCount}</span>
-              )}
-            </button>
-          )}
+      <div style={styles.sections}>
+        <div style={styles.section}>
+          <p style={styles.sectionTitle}>{t(lang, "profileQuickActions")}</p>
+          <div style={styles.actions}>
+            {onOpenDeliveryTerms && (
+              <button onClick={onOpenDeliveryTerms} style={styles.actionBtn}>
+                <span style={styles.actionBtnIcon}>📋</span>
+                {t(lang, "profileDeliveryTerms")}
+              </button>
+            )}
+            {onOpenSupport && (
+              <button onClick={onOpenSupport} style={{ ...styles.actionBtn, position: "relative" }}>
+                <span style={styles.actionBtnIcon}>💬</span>
+                {t(lang, "profileSupport")}
+                {supportUnreadCount > 0 && (
+                  <span style={styles.supportBadge} aria-label="Непрочитанные">{supportUnreadCount > 99 ? "99+" : supportUnreadCount}</span>
+                )}
+              </button>
+            )}
+          </div>
         </div>
-      </div>
 
-      <div style={styles.section}>
-        <p style={styles.sectionTitle}>{t(lang, "profileAboutTitle")}</p>
-        <p style={styles.text}>{t(lang, "profileAboutText")}</p>
-      </div>
+        <div style={styles.section}>
+          <p style={styles.sectionTitle}>{t(lang, "profileAboutTitle")}</p>
+          <p style={styles.text}>{t(lang, "profileAboutText")}</p>
+        </div>
 
-      <div style={styles.section}>
-        <p style={styles.sectionTitle}>{t(lang, "profileSupport")}</p>
-        <p style={styles.text}>{t(lang, "profileSupportText")}</p>
+        <div style={styles.section}>
+          <p style={styles.sectionTitle}>{t(lang, "profileSupport")}</p>
+          <p style={styles.text}>{t(lang, "profileSupportText")}</p>
+        </div>
       </div>
     </div>
   );
@@ -91,6 +93,11 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--muted)",
     fontSize: 14,
     marginBottom: 32,
+  },
+  sections: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 16,
   },
   section: {
     padding: 20,
