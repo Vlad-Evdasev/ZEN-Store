@@ -333,12 +333,15 @@ function ImagePreviewModal({ src, onClose }: { src: string; onClose: () => void 
   );
 }
 
+type StatusFilter = "all" | "pending" | "in_transit" | "delivered" | "completed";
+
 function OrdersTab({ adminSecret }: { adminSecret: string }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   const load = () => {
     setLoading(true);
@@ -378,15 +381,35 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
     }
   };
 
+  const filteredOrders = statusFilter === "all" ? orders : orders.filter((o) => o.status === statusFilter);
+
   if (loading) return <p style={styles.hint}>Загрузка заказов...</p>;
 
   return (
     <>
       {message && <p style={styles.message}>{message}</p>}
       <h2 style={styles.pageTitle}>Заказы</h2>
+      <p style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+        <label style={{ fontSize: 14 }}>Статус:</label>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+          style={styles.statusSelect}
+        >
+          <option value="all">Все</option>
+          <option value="pending">Ожидает</option>
+          <option value="in_transit">В пути</option>
+          <option value="delivered">Доставлено</option>
+          <option value="completed">Выполнен</option>
+        </select>
+      </p>
       {orders.length === 0 ? (
         <div style={styles.emptyBlock}>
           <p style={styles.hint}>Нет заказов</p>
+        </div>
+      ) : filteredOrders.length === 0 ? (
+        <div style={styles.emptyBlock}>
+          <p style={styles.hint}>Нет заказов с выбранным статусом</p>
         </div>
       ) : (
         <div style={styles.tableWrap}>
@@ -403,7 +426,7 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
               </tr>
             </thead>
             <tbody>
-              {orders.map((o) => {
+              {filteredOrders.map((o) => {
                 let orderItems: { name?: string; size?: string; quantity?: number; image_url?: string | null }[] = [];
                 try {
                   orderItems = typeof o.items === "string" ? JSON.parse(o.items) : o.items;
@@ -485,6 +508,7 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
   const [message, setMessage] = useState("");
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   const load = () => {
     setLoading(true);
@@ -524,18 +548,36 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
     }
   };
 
+  const filteredList = statusFilter === "all" ? list : list.filter((c) => (c.status || "pending") === statusFilter);
+
   if (loading) return <p style={styles.hint}>Загрузка заявок...</p>;
 
   return (
     <>
       {message && <p style={styles.message}>{message}</p>}
       <h2 style={styles.pageTitle}>Заявки не из каталога</h2>
+      <p style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+        <label style={{ fontSize: 14 }}>Статус:</label>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+          style={styles.statusSelect}
+        >
+          <option value="all">Все</option>
+          <option value="pending">Ожидает</option>
+          <option value="in_transit">В пути</option>
+          <option value="delivered">Доставлено</option>
+          <option value="completed">Выполнен</option>
+        </select>
+      </p>
       <div style={styles.list}>
-        <h3 style={styles.subtitle}>Список ({list.length})</h3>
+        <h3 style={styles.subtitle}>Список ({filteredList.length}{statusFilter !== "all" ? ` из ${list.length}` : ""})</h3>
         {list.length === 0 ? (
           <p style={styles.hint}>Нет заявок</p>
+        ) : filteredList.length === 0 ? (
+          <p style={styles.hint}>Нет заявок с выбранным статусом</p>
         ) : (
-          list.map((c) => (
+          filteredList.map((c) => (
             <div key={c.id} style={styles.orderCard}>
               <div style={styles.orderHeader}>
                 <span style={styles.orderId}>#{c.id}</span>
