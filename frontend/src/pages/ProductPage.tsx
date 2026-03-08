@@ -46,6 +46,7 @@ export function ProductPage({
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [imageIndex, setImageIndex] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef(0);
 
   const sizes = product ? product.sizes.split(",").map((s) => s.trim()) : [];
   const imageUrls = product
@@ -111,6 +112,21 @@ export function ProductPage({
     ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10) / 10
     : null;
 
+  const goPrevImage = () => setImageIndex((i) => (i === 0 ? imageUrls.length - 1 : i - 1));
+  const goNextImage = () => setImageIndex((i) => (i === imageUrls.length - 1 ? 0 : i + 1));
+
+  const handleGalleryTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  const handleGalleryTouchEnd = (e: React.TouchEvent) => {
+    if (imageUrls.length <= 1) return;
+    const endX = e.changedTouches[0].clientX;
+    const dx = endX - touchStartX.current;
+    const minSwipe = 50;
+    if (dx > minSwipe) goPrevImage();
+    else if (dx < -minSwipe) goNextImage();
+  };
+
   if (!product) {
     return (
       <div style={styles.loading}>
@@ -152,7 +168,11 @@ export function ProductPage({
           />
         ) : (
           <>
-            <div style={styles.galleryFrame}>
+            <div
+              style={styles.galleryFrame}
+              onTouchStart={handleGalleryTouchStart}
+              onTouchEnd={handleGalleryTouchEnd}
+            >
               {imageUrls.map((url, i) => (
                 <div
                   key={`${product.id}-${i}`}
@@ -168,7 +188,7 @@ export function ProductPage({
             </div>
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); setImageIndex((i) => (i === 0 ? imageUrls.length - 1 : i - 1)); }}
+              onClick={(e) => { e.stopPropagation(); goPrevImage(); }}
               style={styles.galleryPrev}
               aria-label="Предыдущее фото"
             >
@@ -178,7 +198,7 @@ export function ProductPage({
             </button>
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); setImageIndex((i) => (i === imageUrls.length - 1 ? 0 : i + 1)); }}
+              onClick={(e) => { e.stopPropagation(); goNextImage(); }}
               style={styles.galleryNext}
               aria-label="Следующее фото"
             >
