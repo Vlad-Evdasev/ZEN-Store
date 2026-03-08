@@ -54,7 +54,7 @@ export function NewArrivalsSection({
   return (
     <div style={styles.wrap}>
       <button type="button" onClick={onViewAll} style={styles.titleBtn} aria-label={t(lang, "newArrivalsViewAll")}>
-        <span>NEW</span>
+        <span>{t(lang, "newArrivals")}</span>
         <span style={styles.titleArrow} aria-hidden>
           <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}>
             <circle cx="16" cy="16" r="12" />
