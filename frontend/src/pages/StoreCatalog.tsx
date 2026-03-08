@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
 import type { Product } from "../api";
 import { ProductCard } from "../components/ProductCard";
+import { useSettings } from "../context/SettingsContext";
+import { t } from "../i18n";
 import { getCategoryLabel } from "../utils/categories";
 
 interface StoreCatalogProps {
@@ -22,8 +24,13 @@ export function StoreCatalog({
   wishlistIds,
   onToggleWishlist,
 }: StoreCatalogProps) {
+  const { settings } = useSettings();
+  const lang = settings.lang;
   const [search, setSearch] = useState("");
   const isStoreById = "id" in store;
+  const backLabel =
+    (isStoreById ? store.name : getCategoryLabel(store.category, categoryLabels)).trim() ||
+    t(lang, "back");
 
   const filtered = useMemo(() => {
     let list = products;
@@ -46,7 +53,7 @@ export function StoreCatalog({
   return (
     <div style={styles.wrap}>
       <button onClick={onBack} style={styles.back}>
-        ← {isStoreById ? store.name : getCategoryLabel(store.category, categoryLabels)}
+        ← {backLabel}
       </button>
       <div style={styles.searchWrap}>
         <input
