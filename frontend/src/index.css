@@ -15,17 +15,17 @@
   --accent-dim: #8b0000;
 }
 
-/* Sand / Mediterranean — светлый «песок», уютные землистые тона */
+/* Frost / Minimal tech — холодный минимализм, синеватые серые */
 html[data-theme="light"] {
-  --bg: #f6f3ee;
-  --surface: #fdfcfa;
-  --surface-elevated: #ffffff;
-  --border: #e8e4dc;
-  --text: #2d2926;
-  --muted: #6d6863;
-  --accent: #b84343;
-  --accent-hover: #c95a5a;
-  --accent-dim: #8b3636;
+  --bg: #f0f2f5;
+  --surface: #ffffff;
+  --surface-elevated: #f8f9fc;
+  --border: #e1e4e9;
+  --text: #1a1d21;
+  --muted: #5c6370;
+  --accent: #c62828;
+  --accent-hover: #d43838;
+  --accent-dim: #8b2632;
 }
 
 * {
@@ -78,17 +78,17 @@ a {
   transition: opacity var(--transition-normal), transform var(--transition-normal);
 }
 
-/* Админ-панель: светлая тема Sand / Mediterranean */
+/* Админ-панель: светлая тема Frost / Minimal tech */
 .zen-admin {
-  --bg: #f6f3ee;
-  --surface: #fdfcfa;
-  --surface-elevated: #ffffff;
-  --border: #e8e4dc;
-  --text: #2d2926;
-  --muted: #6d6863;
-  --accent: #b84343;
-  --accent-hover: #c95a5a;
-  --accent-dim: #8b3636;
+  --bg: #f0f2f5;
+  --surface: #ffffff;
+  --surface-elevated: #f8f9fc;
+  --border: #e1e4e9;
+  --text: #1a1d21;
+  --muted: #5c6370;
+  --accent: #c62828;
+  --accent-hover: #d43838;
+  --accent-dim: #8b2632;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
