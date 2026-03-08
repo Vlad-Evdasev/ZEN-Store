@@ -15,7 +15,7 @@
   --accent-hover: #e53935;
   --accent-dim: #8b0000;
   --header-bg: rgba(0,0,0,0.72);
-  --card-desc-bg: rgba(28,28,30,0.82);
+  --card-desc-bg: rgba(28,28,30,0.92);
 }
 
 /* True white / Apple — чистый белый, чёткие серые, как в интерфейсах Apple */
@@ -30,7 +30,7 @@ html[data-theme="light"] {
   --accent-hover: #e53935;
   --accent-dim: #8b0000;
   --header-bg: rgba(255,255,255,0.72);
-  --card-desc-bg: rgba(249,249,249,0.78);
+  --card-desc-bg: rgba(249,249,249,0.88);
 }
 
 * {
