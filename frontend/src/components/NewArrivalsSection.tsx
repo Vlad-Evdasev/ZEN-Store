@@ -28,7 +28,7 @@ export function NewArrivalsSection({
   if (products.length === 0) return null;
 
   const [first, second, third] = products.slice(0, PREVIEW_COUNT);
-  const DESC_BLOCK_MIN_HEIGHT = 56;
+  const DESC_BLOCK_MIN_HEIGHT = 48;
   const renderCard = (p: Product, wrapStyle: React.CSSProperties) => (
     <div key={p.id} style={wrapStyle}>
       <div style={styles.cardInner}>
@@ -37,6 +37,7 @@ export function NewArrivalsSection({
         compact
         fillHeight
         descBlockMinHeight={DESC_BLOCK_MIN_HEIGHT}
+        smallDescBlock
         onClick={() => onProductClick(p.id)}
         inWishlist={wishlistIds.has(p.id)}
         onWishlistClick={(e) => {

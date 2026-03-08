@@ -13,9 +13,11 @@ interface ProductCardProps {
   fillHeight?: boolean;
   /** Минимальная высота блока с названием и ценой (для одинаковой высоты в сетке новинок) */
   descBlockMinHeight?: number;
+  /** Ещё компактнее блок описания (новинки) */
+  smallDescBlock?: boolean;
 }
 
-export function ProductCard({ product, onClick, inWishlist, onWishlistClick, compact, reviewCount, reviewAvg, fillHeight, descBlockMinHeight }: ProductCardProps) {
+export function ProductCard({ product, onClick, inWishlist, onWishlistClick, compact, reviewCount, reviewAvg, fillHeight, descBlockMinHeight, smallDescBlock }: ProductCardProps) {
   const { formatPrice } = useSettings();
   const cardStyle = compact
     ? { ...styles.card, ...styles.cardCompact, ...(fillHeight ? styles.cardFillHeight : {}) }
@@ -31,6 +33,7 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
   const descWrapStyle: React.CSSProperties = {
     ...styles.descWrap,
     ...(compact ? styles.descWrapCompact : {}),
+    ...(compact && smallDescBlock ? styles.descWrapCompactSmall : {}),
     ...(descBlockMinHeight != null ? { minHeight: descBlockMinHeight } : {}),
   };
   return (
@@ -110,6 +113,9 @@ const styles: Record<string, React.CSSProperties> = {
   },
   descWrapCompact: {
     padding: 8,
+  },
+  descWrapCompactSmall: {
+    padding: 6,
   },
   name: {
     padding: "0 0 4px",
