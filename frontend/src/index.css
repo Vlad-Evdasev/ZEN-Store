@@ -15,12 +15,12 @@
   --accent-dim: #8b0000;
 }
 
-/* Cream / Butter — мягкий кремовый фон, тёплый и уютный */
+/* Cream / Butter — заметный кремовый фон, тёплый и уютный */
 html[data-theme="light"] {
-  --bg: #faf8f5;
-  --surface: #fffefb;
-  --surface-elevated: #ffffff;
-  --border: #ede9e3;
+  --bg: #f2ebe0;
+  --surface: #faf5ee;
+  --surface-elevated: #fffcf7;
+  --border: #e5ddd2;
   --text: #2b2825;
   --muted: #6b6560;
   --accent: #c62828;
@@ -80,10 +80,10 @@ a {
 
 /* Админ-панель: светлая тема Cream / Butter */
 .zen-admin {
-  --bg: #faf8f5;
-  --surface: #fffefb;
-  --surface-elevated: #ffffff;
-  --border: #ede9e3;
+  --bg: #f2ebe0;
+  --surface: #faf5ee;
+  --surface-elevated: #fffcf7;
+  --border: #e5ddd2;
   --text: #2b2825;
   --muted: #6b6560;
   --accent: #c62828;
