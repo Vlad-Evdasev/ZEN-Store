@@ -10,6 +10,9 @@ interface CatalogProps {
   products: Product[];
   stores: Store[];
   categories?: Category[];
+  /** Выбранные категории (если заданы — каталог в режиме controlled, выбор сохраняется при уходе на товар и назад) */
+  selectedCategories?: Set<string>;
+  onSelectedCategoriesChange?: React.Dispatch<React.SetStateAction<Set<string>>>;
   onProductClick: (id: number) => void;
   onStoreClick: (store: { id: number; name: string } | { category: string; name: string }) => void;
   wishlistIds: Set<number>;
@@ -33,6 +36,8 @@ export function Catalog({
   products,
   stores,
   categories = [],
+  selectedCategories: selectedCategoriesProp,
+  onSelectedCategoriesChange,
   onProductClick,
   onStoreClick,
   wishlistIds,
@@ -42,7 +47,9 @@ export function Catalog({
   const { settings } = useSettings();
   const lang = settings.lang;
   const [search, setSearch] = useState("");
-  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set(["all"]));
+  const [internalCategories, setInternalCategories] = useState<Set<string>>(new Set(["all"]));
+  const selectedCategories = selectedCategoriesProp ?? internalCategories;
+  const setSelectedCategories = onSelectedCategoriesChange ?? setInternalCategories;
   const [reviewStats, setReviewStats] = useState<ProductReviewStats>({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const marqueePausedRef = useRef(false);

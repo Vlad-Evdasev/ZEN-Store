@@ -116,6 +116,7 @@ function App() {
   type StoreCatalogView = "welcome" | "catalog" | "customOrder";
   const [storeCatalogView, setStoreCatalogView] = useState<StoreCatalogView>("welcome");
   const [productReturnTo, setProductReturnTo] = useState<Page | null>(null);
+  const [catalogSelectedCategories, setCatalogSelectedCategories] = useState<Set<string>>(() => new Set(["all"]));
   const mainScrollRef = useRef<HTMLElement | null>(null);
   const savedScrollTopRef = useRef(0);
 
@@ -419,6 +420,8 @@ function App() {
             products={products}
             stores={stores}
             categories={categories}
+            selectedCategories={catalogSelectedCategories}
+            onSelectedCategoriesChange={setCatalogSelectedCategories}
             onProductClick={openProduct}
             onStoreClick={openStoreCatalog}
             wishlistIds={wishlistIds}
