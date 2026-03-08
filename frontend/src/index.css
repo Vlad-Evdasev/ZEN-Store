@@ -15,17 +15,17 @@
   --accent-dim: #8b0000;
 }
 
-/* Slate / Notion-style — серый с лёгким синим, спокойный интерфейс */
+/* Cream / Butter — мягкий кремовый фон, тёплый и уютный */
 html[data-theme="light"] {
-  --bg: #f8fafc;
-  --surface: #ffffff;
-  --surface-elevated: #f1f5f9;
-  --border: #e2e8f0;
-  --text: #0f172a;
-  --muted: #64748b;
+  --bg: #faf8f5;
+  --surface: #fffefb;
+  --surface-elevated: #ffffff;
+  --border: #ede9e3;
+  --text: #2b2825;
+  --muted: #6b6560;
   --accent: #c62828;
-  --accent-hover: #dc2626;
-  --accent-dim: #8b2632;
+  --accent-hover: #e53935;
+  --accent-dim: #8b0000;
 }
 
 * {
@@ -78,17 +78,17 @@ a {
   transition: opacity var(--transition-normal), transform var(--transition-normal);
 }
 
-/* Админ-панель: светлая тема Slate / Notion-style */
+/* Админ-панель: светлая тема Cream / Butter */
 .zen-admin {
-  --bg: #f8fafc;
-  --surface: #ffffff;
-  --surface-elevated: #f1f5f9;
-  --border: #e2e8f0;
-  --text: #0f172a;
-  --muted: #64748b;
+  --bg: #faf8f5;
+  --surface: #fffefb;
+  --surface-elevated: #ffffff;
+  --border: #ede9e3;
+  --text: #2b2825;
+  --muted: #6b6560;
   --accent: #c62828;
-  --accent-hover: #dc2626;
-  --accent-dim: #8b2632;
+  --accent-hover: #e53935;
+  --accent-dim: #8b0000;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
