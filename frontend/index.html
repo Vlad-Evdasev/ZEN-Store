@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="ru">
   <head>
+    <script>
+      try {
+        var s = localStorage.getItem('zen-settings');
+        var t = (s && JSON.parse(s).theme) || 'light';
+        document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      } catch (e) { document.documentElement.setAttribute('data-theme', 'light'); }
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#0a0a0a" />
@@ -10,7 +17,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Unbounded:wght@500;600;700&display=swap" rel="stylesheet">
   </head>
-  <body style="margin:0;background:#0a0a0a">
+  <body style="margin:0">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

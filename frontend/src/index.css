@@ -15,12 +15,12 @@
   --accent-dim: #8b0000;
 }
 
-/* Mint / Fresh — лёгкий зелёный подтон, свежий современный светлый фон */
-[data-theme="light"] {
-  --bg: #f2f6f4;
+/* Mint / Fresh — светлая тема: селектор html[] чтобы гарантированно перекрыть :root */
+html[data-theme="light"] {
+  --bg: #e5efe8;
   --surface: #ffffff;
-  --surface-elevated: #f7faf8;
-  --border: #e0e8e4;
+  --surface-elevated: #f0f7f3;
+  --border: #d4e2db;
   --text: #1a211e;
   --muted: #4d5c56;
   --accent: #c62828;
@@ -80,10 +80,10 @@ a {
 
 /* Админ-панель: светлая тема Mint / Fresh */
 .zen-admin {
-  --bg: #f2f6f4;
+  --bg: #e5efe8;
   --surface: #ffffff;
-  --surface-elevated: #f7faf8;
-  --border: #e0e8e4;
+  --surface-elevated: #f0f7f3;
+  --border: #d4e2db;
   --text: #1a211e;
   --muted: #4d5c56;
   --accent: #c62828;
