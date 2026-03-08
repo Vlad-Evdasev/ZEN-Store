@@ -109,8 +109,8 @@ const styles: Record<string, React.CSSProperties> = {
     left: 0,
     right: 0,
     background: "var(--card-desc-bg)",
-    backdropFilter: "blur(12px)",
-    WebkitBackdropFilter: "blur(12px)",
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
     padding: 14,
   },
   descWrapCompact: {
