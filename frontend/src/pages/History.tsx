@@ -90,8 +90,9 @@ export function History({ userId, onBack, onProductClick }: HistoryProps) {
         <button onClick={onBack} style={styles.back} type="button">
           ← {t(lang, "back")}
         </button>
-        <h1 style={styles.title}>{t(lang, "historyTitle")}</h1>
-        <div style={styles.filterDropdownWrap} ref={filterDropdownRef} role="group" aria-label={t(lang, "historyTitle")}>
+        <div style={styles.titleAndFilterWrap}>
+          <h1 style={styles.title}>{t(lang, "historyTitle")}</h1>
+          <div style={styles.filterDropdownWrap} ref={filterDropdownRef} role="group" aria-label={t(lang, "historyTitle")}>
           <button
             type="button"
             className="settings-opt-btn"
@@ -125,6 +126,7 @@ export function History({ userId, onBack, onProductClick }: HistoryProps) {
               ))}
             </ul>
           )}
+          </div>
         </div>
       </header>
 
@@ -259,10 +261,14 @@ const styles: Record<string, React.CSSProperties> = {
     flexWrap: "wrap",
     gap: 8,
   },
+  titleAndFilterWrap: {
+    display: "inline-block",
+    maxWidth: "100%",
+    width: "fit-content",
+  },
   filterDropdownWrap: {
     position: "relative",
     width: "100%",
-    maxWidth: 280,
   },
   filterDropdownTrigger: {
     display: "flex",
