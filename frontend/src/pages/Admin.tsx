@@ -37,6 +37,16 @@ import {
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
+/** Ссылка для открытия диалога с пользователем в Telegram */
+function telegramChatLink(username?: string | null, userId?: string): string {
+  if (username && String(username).trim()) {
+    const u = String(username).trim().replace(/^@/, "");
+    if (u) return `https://t.me/${u}`;
+  }
+  if (userId) return `tg://user?id=${userId}`;
+  return "#";
+}
+
 type Tab = "products" | "stores" | "categories" | "orders" | "customOrders" | "support" | "currencyRate" | "newArrivals";
 
 export function Admin() {
@@ -332,7 +342,6 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
                 <th>ID</th>
                 <th>Дата</th>
                 <th>Клиент</th>
-                <th>Телефон</th>
                 <th>Товары</th>
                 <th>Сумма</th>
                 <th>Статус</th>
@@ -341,20 +350,38 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
             </thead>
             <tbody>
               {orders.map((o) => {
-                let items: { name?: string; size?: string; quantity?: number; image_url?: string | null }[] = [];
+                let orderItems: { name?: string; size?: string; quantity?: number; image_url?: string | null }[] = [];
                 try {
-                  items = typeof o.items === "string" ? JSON.parse(o.items) : o.items;
+                  orderItems = typeof o.items === "string" ? JSON.parse(o.items) : o.items;
                 } catch {}
-                const itemsStr = Array.isArray(items)
-                  ? items.map((i) => `${i.name || "Товар"} × ${i.quantity || 1} (${i.size || "—"})`).join(", ")
+                const itemsStr = Array.isArray(orderItems)
+                  ? orderItems.map((i) => `${i.name || "Товар"} × ${i.quantity || 1} (${i.size || "—"})`).join(", ")
                   : String(o.items);
                 return (
                   <tr key={o.id}>
                     <td style={{ fontWeight: 600 }}>#{o.id}</td>
                     <td style={{ fontSize: 13, color: "var(--muted)" }}>{new Date(o.created_at).toLocaleString("ru")}</td>
                     <td>{o.user_name || "—"}</td>
-                    <td>{o.user_phone || "—"}</td>
-                    <td style={{ maxWidth: 200, fontSize: 13 }}>{itemsStr}</td>
+                    <td style={{ maxWidth: 280, fontSize: 13 }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {Array.isArray(orderItems) ? (
+                          orderItems.map((i, idx) => (
+                            <div key={idx} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              {i.image_url && (
+                                <img
+                                  src={i.image_url}
+                                  alt=""
+                                  style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 6 }}
+                                />
+                              )}
+                              <span>{`${i.name || "Товар"} × ${i.quantity || 1} (${i.size || "—"})`}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <span>{itemsStr}</span>
+                        )}
+                      </div>
+                    </td>
                     <td style={{ fontWeight: 600 }}>{o.total} $</td>
                     <td>
                       <select
@@ -370,7 +397,7 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
                       </select>
                     </td>
                     <td>
-                      <a href={`tg://user?id=${o.user_id}`} target="_blank" rel="noopener noreferrer" style={styles.contactLink}>
+                      <a href={telegramChatLink(o.user_username ?? null, o.user_id)} target="_blank" rel="noopener noreferrer" style={styles.contactLink}>
                         Telegram
                       </a>
                     </td>
@@ -425,11 +452,13 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
               {c.size && <p style={styles.orderField}>📐 Размер: {c.size}</p>}
               {c.image_data && (
                 <p style={styles.orderField}>
-                  <img src={c.image_data} alt="" style={{ maxWidth: 120, maxHeight: 120, objectFit: "cover", borderRadius: 8 }} />
+                  <a href={c.image_data} target="_blank" rel="noopener noreferrer" style={{ display: "inline-block" }} title="Открыть фото в полном размере">
+                    <img src={c.image_data} alt="Фото товара" style={{ maxWidth: 120, maxHeight: 120, objectFit: "cover", borderRadius: 8, cursor: "pointer" }} />
+                  </a>
                 </p>
               )}
               <p style={styles.orderDate}>{new Date(c.created_at).toLocaleString("ru")}</p>
-              <a href={`tg://user?id=${c.user_id}`} target="_blank" rel="noopener noreferrer" style={styles.contactLink}>
+              <a href={telegramChatLink(c.user_username ?? null, c.user_id)} target="_blank" rel="noopener noreferrer" style={styles.contactLink}>
                 Написать в Telegram
               </a>
             </div>

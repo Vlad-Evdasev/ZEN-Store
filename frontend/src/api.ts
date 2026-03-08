@@ -427,6 +427,7 @@ export interface Order {
   user_id: string;
   user_name: string | null;
   user_phone: string | null;
+  user_username: string | null;
   user_address: string | null;
   items: string;
   total: number;
