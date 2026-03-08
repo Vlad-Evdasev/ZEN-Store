@@ -18,6 +18,8 @@ interface CatalogProps {
   wishlistIds: Set<number>;
   onToggleWishlist: (id: number) => void;
   hideStores?: boolean;
+  /** Показывать фильтр по цене (для страницы полного каталога) */
+  showPriceFilter?: boolean;
 }
 
 /** Теги категорий в каталоге: «Всё» + категории из API (синхронизированы с админкой) */
@@ -43,10 +45,13 @@ export function Catalog({
   wishlistIds,
   onToggleWishlist,
   hideStores = false,
+  showPriceFilter = false,
 }: CatalogProps) {
   const { settings } = useSettings();
   const lang = settings.lang;
   const [search, setSearch] = useState("");
+  const [priceMin, setPriceMin] = useState("");
+  const [priceMax, setPriceMax] = useState("");
   const [internalCategories, setInternalCategories] = useState<Set<string>>(new Set(["all"]));
   const selectedCategories = selectedCategoriesProp ?? internalCategories;
   const setSelectedCategories = onSelectedCategoriesChange ?? setInternalCategories;
@@ -172,8 +177,16 @@ export function Catalog({
           (p.description && p.description.toLowerCase().includes(q))
       );
     }
+    if (showPriceFilter && priceMin.trim() !== "") {
+      const min = Number(priceMin.trim());
+      if (!Number.isNaN(min)) list = list.filter((p) => p.price >= min);
+    }
+    if (showPriceFilter && priceMax.trim() !== "") {
+      const max = Number(priceMax.trim());
+      if (!Number.isNaN(max)) list = list.filter((p) => p.price <= max);
+    }
     return list;
-  }, [products, selectedCategories, search]);
+  }, [products, selectedCategories, search, showPriceFilter, priceMin, priceMax]);
 
   const handleCategoryClick = (cat: string) => {
     if (cat === "all") {
@@ -268,6 +281,30 @@ export function Catalog({
         />
       </div>
 
+      {showPriceFilter && (
+        <div style={styles.priceFilterWrap}>
+          <span style={styles.priceFilterLabel}>{t(lang, "priceFilter")}:</span>
+          <input
+            type="number"
+            min={0}
+            step={100}
+            placeholder={t(lang, "priceFrom")}
+            value={priceMin}
+            onChange={(e) => setPriceMin(e.target.value)}
+            style={styles.priceInput}
+          />
+          <input
+            type="number"
+            min={0}
+            step={100}
+            placeholder={t(lang, "priceTo")}
+            value={priceMax}
+            onChange={(e) => setPriceMax(e.target.value)}
+            style={styles.priceInput}
+          />
+        </div>
+      )}
+
       <div style={styles.tabsWrap} className="hide-scrollbar">
         {categoryTabs.map(({ code, label }) => {
           const isSelected = code === "all" ? selectedCategories.has("all") : selectedCategories.has(code);
@@ -296,7 +333,7 @@ export function Catalog({
           <p>{t(lang, "nothingFound")}</p>
         </div>
       ) : (
-        <div style={styles.grid}>
+        <div className="catalog-grid" style={styles.grid}>
           {filtered.map((p) => (
             <ProductCard
               key={p.id}
@@ -350,6 +387,28 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
   },
   searchWrap: { marginBottom: 16 },
+  priceFilterWrap: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 16,
+    flexWrap: "wrap",
+  },
+  priceFilterLabel: {
+    fontSize: 14,
+    color: "var(--muted)",
+    fontWeight: 500,
+  },
+  priceInput: {
+    width: 100,
+    padding: "8px 12px",
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: 8,
+    color: "var(--text)",
+    fontSize: 14,
+    fontFamily: "inherit",
+  },
   search: {
     width: "100%",
     padding: "12px 16px",

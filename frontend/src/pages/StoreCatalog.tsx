@@ -69,7 +69,7 @@ export function StoreCatalog({
           <p>Ничего не найдено</p>
         </div>
       ) : (
-        <div style={styles.grid}>
+        <div className="catalog-grid" style={styles.grid}>
           {filtered.map((p) => (
             <ProductCard
               key={p.id}

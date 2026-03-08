@@ -7,6 +7,7 @@ import { getProducts, getStores, getCategories, getCart, getReviews, getSupportU
 import { Catalog } from "./pages/Catalog";
 import { StoresCarousel } from "./components/StoresCarousel";
 import { NewArrivalsSection } from "./components/NewArrivalsSection";
+import { CatalogPreviewSection } from "./components/CatalogPreviewSection";
 import { Cart } from "./pages/Cart";
 import { Favorites } from "./pages/Favorites";
 import { ProductPage } from "./pages/ProductPage";
@@ -26,7 +27,7 @@ import { SettingsSync } from "./components/SettingsSync";
 import { useSettings } from "./context/SettingsContext";
 import { t } from "./i18n";
 
-type Page = "catalog" | "cart" | "product" | "checkout" | "profile" | "reviews" | "favorites" | "storeCatalog" | "newArrivals" | "settings" | "history" | "deliveryTerms" | "support";
+type Page = "catalog" | "fullCatalog" | "cart" | "product" | "checkout" | "profile" | "reviews" | "favorites" | "storeCatalog" | "newArrivals" | "settings" | "history" | "deliveryTerms" | "support";
 
 const SELLER_LINK = import.meta.env.VITE_SELLER_LINK || "";
 
@@ -186,7 +187,7 @@ function App() {
     return () => clearInterval(t);
   }, [userId]);
 
-  const scrollableCatalogPages: Page[] = ["catalog", "storeCatalog", "newArrivals"];
+  const scrollableCatalogPages: Page[] = ["catalog", "fullCatalog", "storeCatalog", "newArrivals"];
   useEffect(() => {
     const scrollToTop = () => {
       window.scrollTo(0, 0);
@@ -277,6 +278,7 @@ function App() {
     setPage("storeCatalog");
   };
   const openNewArrivals = () => setPage("newArrivals");
+  const openFullCatalog = () => setPage("fullCatalog");
   const openDeliveryTerms = () => {
     setMenuOpen(false);
     setPage("deliveryTerms");
@@ -416,19 +418,34 @@ function App() {
               onToggleWishlist={toggleWishlist}
             />
             <StoresCarousel stores={stores} categories={categories} onStoreClick={openStoreCatalog} compact />
-            <Catalog
-            products={products}
-            stores={stores}
-            categories={categories}
-            selectedCategories={catalogSelectedCategories}
-            onSelectedCategoriesChange={setCatalogSelectedCategories}
-            onProductClick={openProduct}
-            onStoreClick={openStoreCatalog}
-            wishlistIds={wishlistIds}
-            onToggleWishlist={toggleWishlist}
-            hideStores
-          />
+            <CatalogPreviewSection
+              products={products}
+              onProductClick={(id) => openProduct(id, "catalog")}
+              onViewAll={openFullCatalog}
+              wishlistIds={wishlistIds}
+              onToggleWishlist={toggleWishlist}
+            />
           </>
+        )}
+        {page === "fullCatalog" && (
+          <div style={styles.fullCatalogWrap}>
+            <button onClick={openCatalog} style={styles.backBtn} type="button">
+              ← {t(lang, "back")}
+            </button>
+            <Catalog
+              products={products}
+              stores={stores}
+              categories={categories}
+              selectedCategories={catalogSelectedCategories}
+              onSelectedCategoriesChange={setCatalogSelectedCategories}
+              onProductClick={(id) => openProduct(id, "fullCatalog")}
+              onStoreClick={openStoreCatalog}
+              wishlistIds={wishlistIds}
+              onToggleWishlist={toggleWishlist}
+              hideStores
+              showPriceFilter
+            />
+          </div>
         )}
         {page === "storeCatalog" && storeCatalogStore && (
           <>
@@ -565,6 +582,20 @@ const styles: Record<string, React.CSSProperties> = {
     width: "100%",
     maxWidth: 400,
   },
+  fullCatalogWrap: {
+    paddingBottom: 24,
+    minWidth: 0,
+  },
+  backBtn: {
+    background: "none",
+    border: "none",
+    color: "var(--muted)",
+    fontFamily: "inherit",
+    fontSize: 14,
+    cursor: "pointer",
+    marginBottom: 16,
+    padding: "4px 0",
+  },
   appWrapper: {
     minHeight: "100dvh",
     display: "flex",
@@ -573,7 +604,6 @@ const styles: Record<string, React.CSSProperties> = {
   },
   app: {
     width: "100%",
-    maxWidth: 480,
     overflowX: "hidden" as const,
     minHeight: "100dvh",
     display: "flex",
@@ -585,7 +615,7 @@ const styles: Record<string, React.CSSProperties> = {
     top: 0,
     left: 0,
     right: 0,
-    maxWidth: 480,
+    maxWidth: "100%",
     margin: "0 auto",
     display: "flex",
     alignItems: "center",

@@ -76,6 +76,13 @@ body {
   box-sizing: border-box;
 }
 
+/* Контейнер приложения: мобильная ширина по умолчанию */
+.zen-app {
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 button {
   outline: none;
   -webkit-tap-highlight-color: transparent;
@@ -397,18 +404,53 @@ button:active {
   100% { transform: translateX(-50%); }
 }
 
-/* Адаптивная вёрстка для ноутбука и десктопа */
+/* Адаптивная вёрстка: планшет */
 @media (min-width: 768px) {
+  :root, [data-theme="dark"], html[data-theme="light"] {
+    --content-padding: 20px;
+  }
   .telegram-auth-wrap {
     padding: 48px !important;
   }
+  .zen-app .catalog-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+  }
 }
 
-@media (min-width: 900px) {
-  .zen-app {
-    max-width: 560px !important;
-    box-shadow: 0 0 40px rgba(0,0,0,0.12);
+/* Адаптивная вёрстка: ноутбук и десктоп */
+@media (min-width: 1024px) {
+  :root, [data-theme="dark"], html[data-theme="light"] {
+    --content-padding: 24px;
   }
+  .zen-app {
+    max-width: 1280px !important;
+    box-shadow: 0 0 48px rgba(0,0,0,0.12);
+  }
+  .zen-app .catalog-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
+}
+
+/* Карточка товара: hover на устройствах с мышью */
+@media (hover: hover) {
+  .zen-app .product-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  }
+  .zen-app .product-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.15s ease;
+  }
+}
+
+/* Фокус для доступности */
+.zen-app button:focus-visible,
+.zen-app a:focus-visible,
+.zen-app input:focus-visible,
+.zen-app [role="button"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* Кнопки редактирования/удаления чата — крупнее на телефоне */

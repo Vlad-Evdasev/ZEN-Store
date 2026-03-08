@@ -37,7 +37,7 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
     ...(descBlockMinHeight != null ? { minHeight: descBlockMinHeight } : {}),
   };
   return (
-    <button onClick={onClick} style={cardStyle}>
+    <button className="product-card" onClick={onClick} style={cardStyle}>
       <div style={imageWrapStyle}>
         <img
           src={(product.image_urls && product.image_urls[0]) || product.image_url || "https://via.placeholder.com/200"}
