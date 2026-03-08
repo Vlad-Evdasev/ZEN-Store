@@ -106,13 +106,13 @@ export function CustomOrderPage({ userId, userName, firstName, onBack }: CustomO
           <label style={styles.label}>{t(lang, "customOrderUsername")}</label>
           <input type="text" value={userName ?? ""} readOnly onFocus={scrollFieldIntoView} style={{ ...styles.input, opacity: 0.9 }} />
           <label style={styles.label}>{t(lang, "customOrderAddress")} *</label>
-          <input
-            type="text"
+          <textarea
             value={customAddress}
             onChange={(e) => setCustomAddress(e.target.value)}
             onFocus={scrollFieldIntoView}
             placeholder={t(lang, "customOrderPlaceholderAddress")}
-            style={styles.input}
+            rows={3}
+            style={styles.textarea}
             required
           />
           <label style={styles.label}>{t(lang, "customOrderPhoto")}</label>
