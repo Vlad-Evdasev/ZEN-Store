@@ -54,7 +54,7 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
           </button>
         )}
       </div>
-      <div style={descWrapStyle}>
+      <div className="product-card-desc" style={descWrapStyle}>
         <p style={nameStyle} title={product.name}>{product.name}</p>
         {hasReviews && (
           <p style={{ ...(compact ? styles.reviewsCompact : styles.reviews), ...noShrink }}>

@@ -41,8 +41,19 @@ html[data-theme="light"] {
 
 @media (max-width: 768px) {
   :root, [data-theme="dark"], html[data-theme="light"] {
-    --card-desc-bleed: 18px;
-    --card-desc-outer: 0 0 0 2px var(--card-desc-bg);
+    --card-desc-bleed: 24px;
+    --card-desc-outer: 0 0 0 4px var(--card-desc-bg-solid);
+  }
+  :root, [data-theme="dark"] {
+    --card-desc-bg-solid: #242322;
+  }
+  html[data-theme="light"] {
+    --card-desc-bg-solid: #ebe9e6;
+  }
+  .product-card-desc {
+    background: var(--card-desc-bg-solid) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
   }
 }
 
