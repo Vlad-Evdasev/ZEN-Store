@@ -54,7 +54,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   imageWrap: {
     position: "relative",
-    aspectRatio: "1",
+    aspectRatio: "4/3",
     overflow: "hidden",
     background: "var(--bg)",
   },
