@@ -652,7 +652,6 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 12,
   },
   menuWelcomeItem: {
-    marginTop: 8,
     padding: "14px 12px 14px 10px",
     textAlign: "left",
     background: "none",
