@@ -15,17 +15,17 @@
   --accent-dim: #8b0000;
 }
 
-/* Mint / Fresh — светлая тема: селектор html[] чтобы гарантированно перекрыть :root */
+/* Paper / Editorial — тёплый «бумажный» светлый фон, мягкий контраст */
 html[data-theme="light"] {
-  --bg: #e5efe8;
-  --surface: #ffffff;
-  --surface-elevated: #f0f7f3;
-  --border: #d4e2db;
-  --text: #1a211e;
-  --muted: #4d5c56;
+  --bg: #f4f1eb;
+  --surface: #fefdf9;
+  --surface-elevated: #ffffff;
+  --border: #e2ddd4;
+  --text: #2c2825;
+  --muted: #6b6560;
   --accent: #c62828;
-  --accent-hover: #d93838;
-  --accent-dim: #8b2020;
+  --accent-hover: #e53935;
+  --accent-dim: #8b0000;
 }
 
 * {
@@ -78,17 +78,17 @@ a {
   transition: opacity var(--transition-normal), transform var(--transition-normal);
 }
 
-/* Админ-панель: светлая тема Mint / Fresh */
+/* Админ-панель: светлая тема Paper / Editorial */
 .zen-admin {
-  --bg: #e5efe8;
-  --surface: #ffffff;
-  --surface-elevated: #f0f7f3;
-  --border: #d4e2db;
-  --text: #1a211e;
-  --muted: #4d5c56;
+  --bg: #f4f1eb;
+  --surface: #fefdf9;
+  --surface-elevated: #ffffff;
+  --border: #e2ddd4;
+  --text: #2c2825;
+  --muted: #6b6560;
   --accent: #c62828;
-  --accent-hover: #d93838;
-  --accent-dim: #8b2020;
+  --accent-hover: #e53935;
+  --accent-dim: #8b0000;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
