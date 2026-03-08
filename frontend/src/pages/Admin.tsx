@@ -292,11 +292,40 @@ export function Admin() {
   );
 }
 
+function ImagePreviewModal({ src, onClose }: { src: string; onClose: () => void }) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Увеличить фото"
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.85)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 10000,
+        cursor: "pointer",
+      }}
+    >
+      <img
+        src={src}
+        alt=""
+        onClick={(e) => e.stopPropagation()}
+        style={{ maxWidth: "90vw", maxHeight: "90vh", objectFit: "contain", borderRadius: 8 }}
+      />
+    </div>
+  );
+}
+
 function OrdersTab({ adminSecret }: { adminSecret: string }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [updatingId, setUpdatingId] = useState<number | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -368,11 +397,18 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
                           orderItems.map((i, idx) => (
                             <div key={idx} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                               {i.image_url && (
-                                <img
-                                  src={i.image_url}
-                                  alt=""
-                                  style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 6 }}
-                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewImage(i.image_url!)}
+                                  style={{ padding: 0, border: "none", background: "none", cursor: "pointer" }}
+                                  title="Открыть фото"
+                                >
+                                  <img
+                                    src={i.image_url}
+                                    alt=""
+                                    style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 6 }}
+                                  />
+                                </button>
                               )}
                               <span>{`${i.name || "Товар"} × ${i.quantity || 1} (${i.size || "—"})`}</span>
                             </div>
@@ -408,6 +444,7 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
           </table>
         </div>
       )}
+      {previewImage && <ImagePreviewModal src={previewImage} onClose={() => setPreviewImage(null)} />}
     </>
   );
 }
@@ -416,6 +453,7 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
   const [list, setList] = useState<CustomOrderAdmin[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -452,9 +490,14 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
               {c.size && <p style={styles.orderField}>📐 Размер: {c.size}</p>}
               {c.image_data && (
                 <p style={styles.orderField}>
-                  <a href={c.image_data} target="_blank" rel="noopener noreferrer" style={{ display: "inline-block" }} title="Открыть фото в полном размере">
-                    <img src={c.image_data} alt="Фото товара" style={{ maxWidth: 120, maxHeight: 120, objectFit: "cover", borderRadius: 8, cursor: "pointer" }} />
-                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewImage(c.image_data!)}
+                    style={{ padding: 0, border: "none", background: "none", cursor: "pointer" }}
+                    title="Открыть фото в полном размере"
+                  >
+                    <img src={c.image_data} alt="Фото товара" style={{ maxWidth: 120, maxHeight: 120, objectFit: "cover", borderRadius: 8 }} />
+                  </button>
                 </p>
               )}
               <p style={styles.orderDate}>{new Date(c.created_at).toLocaleString("ru")}</p>
@@ -465,6 +508,7 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
           ))
         )}
       </div>
+      {previewImage && <ImagePreviewModal src={previewImage} onClose={() => setPreviewImage(null)} />}
     </>
   );
 }
