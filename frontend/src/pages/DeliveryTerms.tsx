@@ -1,24 +1,23 @@
+import { useSettings } from "../context/SettingsContext";
+import { t } from "../i18n";
+
 interface DeliveryTermsProps {
   onBack: () => void;
 }
 
 export function DeliveryTerms({ onBack }: DeliveryTermsProps) {
+  const { settings } = useSettings();
+  const lang = settings.lang;
   return (
     <div style={styles.wrap}>
       <button onClick={onBack} style={styles.back}>
-        ← Назад
+        ← {t(lang, "back")}
       </button>
-      <h2 style={styles.title}>Условия доставки</h2>
+      <h2 style={styles.title}>{t(lang, "deliveryTermsTitle")}</h2>
       <div style={styles.content}>
-        <p style={styles.p}>
-          Доставка осуществляется по всей Беларуси. Сроки и стоимость зависят от выбранного способа и населённого пункта.
-        </p>
-        <p style={styles.p}>
-          После оформления заказа с вами свяжется менеджер для уточнения адреса и вариантов доставки.
-        </p>
-        <p style={styles.p}>
-          По вопросам доставки и заказов пишите в Telegram — мы ответим в течение 24 часов.
-        </p>
+        <p style={styles.p}>{t(lang, "deliveryTermsP1")}</p>
+        <p style={styles.p}>{t(lang, "deliveryTermsP2")}</p>
+        <p style={styles.p}>{t(lang, "deliveryTermsP3")}</p>
       </div>
     </div>
   );
