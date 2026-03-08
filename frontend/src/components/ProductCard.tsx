@@ -158,7 +158,7 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: "space-between",
     alignItems: "baseline",
     gap: 6,
-    padding: "0 calc(6px + var(--card-desc-bleed, 2px)) 10px calc(6px + var(--card-desc-bleed, 2px))",
+    padding: "0 calc(6px + var(--card-desc-bleed, 2px)) 14px calc(6px + var(--card-desc-bleed, 2px))",
     minHeight: 0,
     margin: 0,
     lineHeight: 1.25,
