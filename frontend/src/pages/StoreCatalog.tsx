@@ -74,6 +74,7 @@ export function StoreCatalog({
             <ProductCard
               key={p.id}
               product={p}
+              compact
               onClick={() => onProductClick(p.id)}
               inWishlist={wishlistIds.has(p.id)}
               onWishlistClick={(e) => {
