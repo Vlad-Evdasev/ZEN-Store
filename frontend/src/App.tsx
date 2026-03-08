@@ -75,8 +75,7 @@ function MenuIconHome() {
 
 const headerIconSize = 22;
 const headerIconStyle: React.CSSProperties = { width: headerIconSize, height: headerIconSize, flexShrink: 0, color: "currentColor", display: "block" };
-const headerIconCartSize = 25;
-const headerIconCartStyle: React.CSSProperties = { width: headerIconCartSize, height: headerIconCartSize, flexShrink: 0, color: "currentColor", display: "block" };
+const headerIconCartStyle: React.CSSProperties = { width: headerIconSize, height: headerIconSize, flexShrink: 0, color: "currentColor", display: "block", transform: "scale(1.22)" };
 
 function HeaderIconFavorites() {
   return (
