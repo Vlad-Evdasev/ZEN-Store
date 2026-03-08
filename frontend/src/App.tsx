@@ -75,6 +75,8 @@ function MenuIconHome() {
 
 const headerIconSize = 22;
 const headerIconStyle: React.CSSProperties = { width: headerIconSize, height: headerIconSize, flexShrink: 0, color: "currentColor", display: "block" };
+const headerIconCartSize = 25;
+const headerIconCartStyle: React.CSSProperties = { width: headerIconCartSize, height: headerIconCartSize, flexShrink: 0, color: "currentColor", display: "block" };
 
 function HeaderIconFavorites() {
   return (
@@ -86,7 +88,7 @@ function HeaderIconFavorites() {
 
 function HeaderIconCart() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={headerIconCartStyle} aria-hidden>
       <path d="M5 8h14l-1.2 9.6a1.5 1.5 0 01-1.5 1.2H7.7a1.5 1.5 0 01-1.5-1.2L5 8z" />
       <path d="M9 8V5a3 3 0 016 0v3" />
     </svg>
@@ -731,7 +733,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   headerBadgePos: {
     position: "absolute",
-    right: 2,
+    right: -2,
     top: 2,
   },
   favBadge: {
