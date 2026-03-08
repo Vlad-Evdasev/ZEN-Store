@@ -22,13 +22,28 @@ export function CustomOrderPage({ userId, userName, firstName, onBack }: CustomO
   const { settings } = useSettings();
   const lang = settings.lang;
   const [customName, setCustomName] = useState("");
-  const [customAddress, setCustomAddress] = useState("");
+  const [addressRecipientName, setAddressRecipientName] = useState("");
+  const [addressFull, setAddressFull] = useState("");
+  const [addressPostcode, setAddressPostcode] = useState("");
+  const [addressLocality, setAddressLocality] = useState("");
+  const [addressRegion, setAddressRegion] = useState("");
+  const [addressPhone, setAddressPhone] = useState("");
   const [customDesc, setCustomDesc] = useState("");
   const [customSize, setCustomSize] = useState("");
   const [customPhoto, setCustomPhoto] = useState<string | null>(null);
   const [customSubmitting, setCustomSubmitting] = useState(false);
   const [customSuccess, setCustomSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const addressLines = [
+    addressRecipientName.trim(),
+    addressFull.trim(),
+    addressPostcode.trim(),
+    addressLocality.trim(),
+    addressRegion.trim(),
+    addressPhone.trim(),
+  ].filter(Boolean);
+  const customAddress = addressLines.join("\n");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,14 +54,19 @@ export function CustomOrderPage({ userId, userName, firstName, onBack }: CustomO
       await submitCustomOrder(userId, {
         user_name: customName.trim() || undefined,
         user_username: userName ?? undefined,
-        user_address: customAddress.trim() || undefined,
+        user_address: customAddress || undefined,
         description: customDesc.trim(),
         size: customSize.trim(),
         image_data: customPhoto || undefined,
       });
       setCustomSuccess(true);
       setCustomName("");
-      setCustomAddress("");
+      setAddressRecipientName("");
+      setAddressFull("");
+      setAddressPostcode("");
+      setAddressLocality("");
+      setAddressRegion("");
+      setAddressPhone("");
       setCustomDesc("");
       setCustomSize("");
       setCustomPhoto(null);
@@ -106,14 +126,53 @@ export function CustomOrderPage({ userId, userName, firstName, onBack }: CustomO
           <label style={styles.label}>{t(lang, "customOrderUsername")}</label>
           <input type="text" value={userName ?? ""} readOnly onFocus={scrollFieldIntoView} style={{ ...styles.input, opacity: 0.9 }} />
           <label style={styles.label}>{t(lang, "customOrderAddress")} *</label>
-          <textarea
-            value={customAddress}
-            onChange={(e) => setCustomAddress(e.target.value)}
+          <input
+            type="text"
+            value={addressRecipientName}
+            onChange={(e) => setAddressRecipientName(e.target.value)}
             onFocus={scrollFieldIntoView}
-            placeholder={t(lang, "customOrderPlaceholderAddress")}
-            rows={3}
-            style={styles.textarea}
-            required
+            placeholder={t(lang, "customOrderAddressRecipientName")}
+            style={styles.input}
+          />
+          <input
+            type="text"
+            value={addressFull}
+            onChange={(e) => setAddressFull(e.target.value)}
+            onFocus={scrollFieldIntoView}
+            placeholder={t(lang, "customOrderAddressFull")}
+            style={styles.input}
+          />
+          <input
+            type="text"
+            value={addressPostcode}
+            onChange={(e) => setAddressPostcode(e.target.value)}
+            onFocus={scrollFieldIntoView}
+            placeholder={t(lang, "customOrderAddressPostcode")}
+            style={styles.input}
+          />
+          <input
+            type="text"
+            value={addressLocality}
+            onChange={(e) => setAddressLocality(e.target.value)}
+            onFocus={scrollFieldIntoView}
+            placeholder={t(lang, "customOrderAddressLocality")}
+            style={styles.input}
+          />
+          <input
+            type="text"
+            value={addressRegion}
+            onChange={(e) => setAddressRegion(e.target.value)}
+            onFocus={scrollFieldIntoView}
+            placeholder={t(lang, "customOrderAddressRegion")}
+            style={styles.input}
+          />
+          <input
+            type="text"
+            value={addressPhone}
+            onChange={(e) => setAddressPhone(e.target.value)}
+            onFocus={scrollFieldIntoView}
+            placeholder={t(lang, "customOrderAddressPhone")}
+            style={styles.input}
           />
           <label style={styles.label}>{t(lang, "customOrderPhoto")}</label>
           <div style={styles.photoBlock}>
