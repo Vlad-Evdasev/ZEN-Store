@@ -56,8 +56,9 @@ export function NewArrivalsSection({
       <button type="button" onClick={onViewAll} style={styles.titleBtn} aria-label={t(lang, "newArrivalsViewAll")}>
         <span>NEW</span>
         <span style={styles.titleArrow} aria-hidden>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}>
-            <path d="M5 12h14M12 5l7 7-7 7" />
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}>
+            <circle cx="16" cy="16" r="12" />
+            <path d="M14 11l6 5-6 5" />
           </svg>
         </span>
       </button>
