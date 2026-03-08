@@ -36,6 +36,10 @@ export function StoresCarousel({ stores, categories = [], onStoreClick, compact 
   const touchActiveRef = useRef(false);
   const lastTouchRecenterRef = useRef(0);
   const touchRecenterRafRef = useRef(0);
+  const touchStartXRef = useRef(0);
+  const touchStartYRef = useRef(0);
+  const gestureHorizontalRef = useRef<boolean | null>(null);
+  const GESTURE_THRESHOLD = 6;
   const COPIES = 9;
   const CENTER_OFFSET = Math.floor(COPIES / 2);
 
@@ -243,25 +247,42 @@ export function StoresCarousel({ stores, categories = [], onStoreClick, compact 
         ref={scrollRef}
         style={styles.scrollArea}
         className="hide-scrollbar"
-        onTouchStart={() => {
-          touchActiveRef.current = true;
-          userScrollingRef.current = true;
-          pauseOnUserStart();
-          startTouchRecenterLoop();
+        onTouchStart={(e) => {
+          touchStartXRef.current = e.touches[0].clientX;
+          touchStartYRef.current = e.touches[0].clientY;
+          gestureHorizontalRef.current = null;
         }}
-        onTouchMove={onTouchMoveRecenter}
+        onTouchMove={(e) => {
+          if (gestureHorizontalRef.current === null) {
+            const dx = e.touches[0].clientX - touchStartXRef.current;
+            const dy = e.touches[0].clientY - touchStartYRef.current;
+            if (Math.abs(dx) + Math.abs(dy) >= GESTURE_THRESHOLD) {
+              gestureHorizontalRef.current = Math.abs(dx) > Math.abs(dy);
+              if (gestureHorizontalRef.current) {
+                touchActiveRef.current = true;
+                userScrollingRef.current = true;
+                pauseOnUserStart();
+                startTouchRecenterLoop();
+              }
+            }
+          }
+          if (gestureHorizontalRef.current === true) onTouchMoveRecenter();
+        }}
         onTouchEnd={() => {
           touchActiveRef.current = false;
           if (touchRecenterRafRef.current) {
             cancelAnimationFrame(touchRecenterRafRef.current);
             touchRecenterRafRef.current = 0;
           }
-          requestAnimationFrame(() => {
+          if (gestureHorizontalRef.current === true) {
             requestAnimationFrame(() => {
-              doSeamJumpIfAtEdge();
-              resumeAfterUserEnd();
+              requestAnimationFrame(() => {
+                doSeamJumpIfAtEdge();
+                resumeAfterUserEnd();
+              });
             });
-          });
+          }
+          gestureHorizontalRef.current = null;
         }}
         onMouseDown={() => { userScrollingRef.current = true; pauseOnUserStart(); }}
         onMouseUp={() => resumeAfterUserEnd()}
