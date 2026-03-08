@@ -17,15 +17,15 @@ export function Cart({ userId, onBack, onCheckout, onCartChange, onProductClick 
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const refresh = () => {
-    setLoading(true);
+  const refresh = (silent = false) => {
+    if (!silent) setLoading(true);
     getCart(userId)
       .then((data) => {
         setItems(data);
         onCartChange?.();
       })
       .catch(console.error)
-      .finally(() => setLoading(false));
+      .finally(() => { if (!silent) setLoading(false); });
   };
 
   useEffect(() => {
@@ -33,11 +33,15 @@ export function Cart({ userId, onBack, onCheckout, onCartChange, onProductClick 
   }, [userId]);
 
   const remove = async (id: number) => {
+    const prev = items;
+    setItems((list) => list.filter((i) => i.id !== id));
     try {
       await removeFromCart(userId, id);
-      refresh();
+      refresh(true);
     } catch (e) {
       console.error(e);
+      setItems(prev);
+      refresh();
     }
   };
 
