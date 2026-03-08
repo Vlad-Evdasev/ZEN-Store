@@ -11,9 +11,11 @@ interface ProductCardProps {
   reviewAvg?: number;
   /** Заполнять высоту ячейки (сетка новинок) */
   fillHeight?: boolean;
+  /** Минимальная высота блока с названием и ценой (для одинаковой высоты в сетке новинок) */
+  descBlockMinHeight?: number;
 }
 
-export function ProductCard({ product, onClick, inWishlist, onWishlistClick, compact, reviewCount, reviewAvg, fillHeight }: ProductCardProps) {
+export function ProductCard({ product, onClick, inWishlist, onWishlistClick, compact, reviewCount, reviewAvg, fillHeight, descBlockMinHeight }: ProductCardProps) {
   const { formatPrice } = useSettings();
   const cardStyle = compact
     ? { ...styles.card, ...styles.cardCompact, ...(fillHeight ? styles.cardFillHeight : {}) }
@@ -26,6 +28,11 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
     : { ...styles.imageWrap, ...(fillHeight ? styles.imageWrapFillHeight : {}) };
   const wishlistBtnStyle = compact ? { ...styles.wishlistBtn, ...styles.wishlistBtnCompact } : styles.wishlistBtn;
   const hasReviews = reviewCount != null && reviewCount > 0;
+  const descWrapStyle: React.CSSProperties = {
+    ...styles.descWrap,
+    ...(compact ? styles.descWrapCompact : {}),
+    ...(descBlockMinHeight != null ? { minHeight: descBlockMinHeight } : {}),
+  };
   return (
     <button onClick={onClick} style={cardStyle}>
       <div style={imageWrapStyle}>
@@ -44,13 +51,15 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
           </button>
         )}
       </div>
-      <p style={nameStyle}>{product.name}</p>
-      {hasReviews && (
-        <p style={{ ...(compact ? styles.reviewsCompact : styles.reviews), ...noShrink }}>
-          ★ {reviewAvg?.toFixed(1) ?? "—"} {reviewCount !== undefined && `(${reviewCount})`}
-        </p>
-      )}
-      <p style={priceStyle}>{formatPrice(product.price)}</p>
+      <div style={descWrapStyle}>
+        <p style={nameStyle}>{product.name}</p>
+        {hasReviews && (
+          <p style={{ ...(compact ? styles.reviewsCompact : styles.reviews), ...noShrink }}>
+            ★ {reviewAvg?.toFixed(1) ?? "—"} {reviewCount !== undefined && `(${reviewCount})`}
+          </p>
+        )}
+        <p style={priceStyle}>{formatPrice(product.price)}</p>
+      </div>
     </button>
   );
 }
@@ -59,7 +68,7 @@ const styles: Record<string, React.CSSProperties> = {
   card: {
     display: "flex",
     flexDirection: "column",
-    background: "var(--surface)",
+    background: "transparent",
     border: "1px solid var(--border)",
     borderRadius: 12,
     overflow: "hidden",
@@ -91,25 +100,32 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 18,
     cursor: "pointer",
   },
+  descWrap: {
+    background: "var(--card-desc-bg)",
+    padding: 14,
+  },
+  descWrapCompact: {
+    padding: 10,
+  },
   name: {
-    padding: "14px 14px 4px",
+    padding: "0 0 4px",
     fontSize: 14,
     fontWeight: 600,
     color: "var(--text)",
   },
   price: {
-    padding: "0 14px 14px",
+    padding: 0,
     fontSize: 15,
     color: "var(--text)",
     fontWeight: 700,
   },
   reviews: {
-    padding: "0 14px 4px",
+    padding: "0 0 4px",
     fontSize: 12,
     color: "var(--muted)",
   },
   reviewsCompact: {
-    padding: "0 10px 2px",
+    padding: "0 0 2px",
     fontSize: 11,
     color: "var(--muted)",
   },
@@ -118,6 +134,6 @@ const styles: Record<string, React.CSSProperties> = {
   imageWrapCompact: {},
   imageWrapFillHeight: { flex: 1, minHeight: 0, aspectRatio: "unset" as const },
   wishlistBtnCompact: { top: 8, right: 8, width: 30, height: 30, fontSize: 15 },
-  nameCompact: { padding: "10px 10px 2px", fontSize: 12 },
-  priceCompact: { padding: "0 10px 10px", fontSize: 13 },
+  nameCompact: { padding: 0, paddingBottom: 2, fontSize: 12 },
+  priceCompact: { padding: 0, fontSize: 13 },
 };
