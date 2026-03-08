@@ -39,7 +39,7 @@ html[data-theme="light"] {
 
 @media (max-width: 768px) {
   :root, [data-theme="dark"], html[data-theme="light"] {
-    --card-desc-bleed: 10px;
+    --card-desc-bleed: 12px;
   }
 }
 

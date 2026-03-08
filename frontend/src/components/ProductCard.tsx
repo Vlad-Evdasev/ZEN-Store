@@ -133,7 +133,7 @@ const styles: Record<string, React.CSSProperties> = {
     whiteSpace: "nowrap",
   },
   price: {
-    padding: "0 calc(8px + var(--card-desc-bleed, 2px)) 8px calc(8px + var(--card-desc-bleed, 2px))",
+    padding: "0 calc(8px + var(--card-desc-bleed, 2px)) calc(8px + var(--card-desc-bleed, 2px)) calc(8px + var(--card-desc-bleed, 2px))",
     fontSize: 15,
     color: "var(--text)",
     fontWeight: 700,
@@ -154,5 +154,5 @@ const styles: Record<string, React.CSSProperties> = {
   imageWrapFillHeight: { flex: 1, minHeight: 0, aspectRatio: "unset" as const },
   wishlistBtnCompact: { top: 8, right: 8, width: 30, height: 30, fontSize: 15 },
   nameCompact: { padding: "4px calc(6px + var(--card-desc-bleed, 2px)) 2px calc(6px + var(--card-desc-bleed, 2px))", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
-  priceCompact: { padding: "0 calc(6px + var(--card-desc-bleed, 2px)) 4px calc(6px + var(--card-desc-bleed, 2px))", fontSize: 13 },
+  priceCompact: { padding: "0 calc(6px + var(--card-desc-bleed, 2px)) calc(4px + var(--card-desc-bleed, 2px)) calc(6px + var(--card-desc-bleed, 2px))", fontSize: 13 },
 };
