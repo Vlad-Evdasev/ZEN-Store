@@ -1,9 +1,28 @@
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
+const RETRY_ATTEMPTS = 3;
+const RETRY_DELAY_MS = 600;
+
+async function fetchWithRetry(url: string, options?: RequestInit): Promise<Response> {
+  let lastErr: Error | null = null;
+  for (let i = 0; i < RETRY_ATTEMPTS; i++) {
+    try {
+      const res = await fetch(url, options);
+      if (res.ok || res.status === 404 || res.status === 401) return res;
+      lastErr = new Error(res.statusText || `HTTP ${res.status}`);
+    } catch (e) {
+      lastErr = e instanceof Error ? e : new Error(String(e));
+    }
+    if (i < RETRY_ATTEMPTS - 1) await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+  }
+  throw lastErr ?? new Error("Request failed");
+}
+
 export async function checkApiHealth(): Promise<{ ok: boolean; url: string; error?: string }> {
   try {
     const res = await fetch(`${API_URL}/api/health`);
-    return { ok: res.ok, url: API_URL };
+    const data = res.ok ? await res.json().catch(() => ({})) : {};
+    return { ok: res.ok, url: API_URL, error: data.error };
   } catch (e) {
     return { ok: false, url: API_URL, error: e instanceof Error ? e.message : "Ошибка" };
   }
@@ -36,7 +55,7 @@ export interface Category {
 }
 
 export async function getCategories(): Promise<Category[]> {
-  const res = await fetch(`${API_URL}/api/categories`);
+  const res = await fetchWithRetry(`${API_URL}/api/categories`);
   if (!res.ok) throw new Error("Failed to fetch categories");
   return res.json();
 }
@@ -86,13 +105,20 @@ export async function deleteCategory(code: string, adminSecret: string): Promise
 }
 
 export async function getStores(): Promise<Store[]> {
-  const res = await fetch(`${API_URL}/api/stores`);
+  const res = await fetchWithRetry(`${API_URL}/api/stores`);
   if (!res.ok) throw new Error("Failed to fetch stores");
   return res.json();
 }
 
+export async function getStore(id: number): Promise<Store | null> {
+  const res = await fetchWithRetry(`${API_URL}/api/stores/${id}`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error("Failed to fetch store");
+  return res.json();
+}
+
 export async function getProductsByStore(storeId: number): Promise<Product[]> {
-  const res = await fetch(`${API_URL}/api/stores/${storeId}/products`);
+  const res = await fetchWithRetry(`${API_URL}/api/stores/${storeId}/products`);
   if (!res.ok) throw new Error("Failed to fetch products");
   return res.json();
 }
@@ -158,7 +184,7 @@ export interface CartItem {
 }
 
 export async function getProducts(): Promise<Product[]> {
-  const res = await fetch(`${API_URL}/api/products`);
+  const res = await fetchWithRetry(`${API_URL}/api/products`);
   if (!res.ok) throw new Error("Failed to fetch products");
   return res.json();
 }
@@ -296,7 +322,7 @@ export async function getSettings(userId: string): Promise<{ lang: string; theme
 }
 
 export async function getCurrencyRate(): Promise<{ rate: number }> {
-  const res = await fetch(`${API_URL}/api/settings/currency-rate`);
+  const res = await fetchWithRetry(`${API_URL}/api/settings/currency-rate`);
   if (!res.ok) return { rate: 3.2 };
   const data = await res.json();
   return { rate: typeof data.rate === "number" ? data.rate : 3.2 };

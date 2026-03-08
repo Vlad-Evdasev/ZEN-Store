@@ -4,6 +4,10 @@ import { join } from "path";
 const dbPath = join(process.cwd(), "zen.db");
 export const db = new Database(dbPath);
 
+// Улучшение работы при одновременном доступе: WAL и ожидание при занятости БД
+db.pragma("journal_mode = WAL");
+db.pragma("busy_timeout = 10000");
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS stores (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

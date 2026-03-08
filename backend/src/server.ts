@@ -11,7 +11,7 @@ import { reviewsRouter } from "./routes/reviews.js";
 import { adminRouter } from "./routes/admin.js";
 import { supportRouter } from "./routes/support.js";
 import { categoriesRouter } from "./routes/categories.js";
-import "./db/schema.js";
+import { db } from "./db/schema.js";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
@@ -31,7 +31,20 @@ app.use("/api/admin", adminRouter);
 app.use("/api/categories", categoriesRouter);
 app.use("/api/support", supportRouter);
 
-app.get("/api/health", (_req, res) => res.json({ ok: true }));
+app.get("/api/health", (_req, res) => {
+  try {
+    db.prepare("SELECT 1").get();
+    return res.json({ ok: true, db: "ok" });
+  } catch (e) {
+    return res.status(503).json({ ok: false, db: "error", error: e instanceof Error ? e.message : "Database unavailable" });
+  }
+});
+
+// Централизованная обработка ошибок (необработанные исключения в маршрутах)
+app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error("Unhandled error:", err);
+  res.status(500).json({ error: err instanceof Error ? err.message : "Internal server error" });
+});
 
 export function startServer() {
   app.listen(PORT, () => {

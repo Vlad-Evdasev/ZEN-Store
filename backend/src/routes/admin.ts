@@ -41,5 +41,7 @@ adminRouter.patch("/currency-rate", requireAdmin, (req, res) => {
     return res.status(400).json({ error: "Invalid rate" });
   }
   db.prepare("INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("currency_rate_byn", String(rate));
-  res.json({ rate });
+  const row = db.prepare("SELECT value FROM app_settings WHERE key = ?").get("currency_rate_byn") as { value: string } | undefined;
+  const savedRate = row ? parseFloat(row.value) : 3.2;
+  res.json({ rate: Number.isFinite(savedRate) ? savedRate : 3.2 });
 });

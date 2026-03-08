@@ -13,10 +13,19 @@ storesRouter.get("/", (_req, res) => {
 
 storesRouter.get("/:id/products", (req, res) => {
   const id = parseInt(req.params.id, 10);
+  if (Number.isNaN(id)) return res.status(400).json({ error: "Invalid store id" });
   const products = db
     .prepare("SELECT * FROM products WHERE store_id = ? ORDER BY id")
     .all(id) as Product[];
   res.json(products);
+});
+
+storesRouter.get("/:id", (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (Number.isNaN(id)) return res.status(400).json({ error: "Invalid store id" });
+  const row = db.prepare("SELECT * FROM stores WHERE id = ?").get(id);
+  if (!row) return res.status(404).json({ error: "Store not found" });
+  res.json(row);
 });
 
 storesRouter.post("/", (req, res) => {

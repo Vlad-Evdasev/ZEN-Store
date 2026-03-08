@@ -55,12 +55,25 @@ export function Admin() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [apiStatus, setApiStatus] = useState<{ ok: boolean; url: string; error?: string } | null>(null);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
   const adminMainRef = useRef<HTMLElement | null>(null);
 
   const refresh = () => {
-    getProducts().then(setProducts).catch(console.error);
-    getStores().then(setStores).catch(console.error);
-    getCategories().then(setCategories).catch(console.error);
+    setRefreshError(null);
+    Promise.allSettled([
+      getProducts().then((r) => ({ ok: true as const, data: r })),
+      getStores().then((r) => ({ ok: true as const, data: r })),
+      getCategories().then((r) => ({ ok: true as const, data: r })),
+    ]).then(([p, s, c]) => {
+      if (p.status === "fulfilled" && p.value.ok) setProducts(p.value.data);
+      if (s.status === "fulfilled" && s.value.ok) setStores(s.value.data);
+      if (c.status === "fulfilled" && c.value.ok) setCategories(c.value.data);
+      const errs: string[] = [];
+      if (p.status === "rejected") errs.push("товары");
+      if (s.status === "rejected") errs.push("магазины");
+      if (c.status === "rejected") errs.push("категории");
+      if (errs.length) setRefreshError("Не загружено: " + errs.join(", ") + ". Повторите обновление.");
+    });
   };
 
   useEffect(() => {
@@ -181,6 +194,12 @@ export function Admin() {
         </aside>
         <main ref={adminMainRef} className="admin-main">
           <div className="admin-content">
+      {refreshError && (
+        <div style={{ marginBottom: 12, padding: 12, background: "rgba(198,40,40,0.1)", borderRadius: 8, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <span style={{ color: "#c62828" }}>{refreshError}</span>
+          <button type="button" onClick={refresh} style={styles.submit}>Повторить</button>
+        </div>
+      )}
       {tab === "products" && (
         <ProductsTab
           products={products}
@@ -756,11 +775,21 @@ function CurrencyRateTab({ adminSecret }: { adminSecret: string }) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
-  useEffect(() => {
+  const loadRate = () => {
     getCurrencyRateAdmin(adminSecret)
       .then(({ rate: r }) => setRate(String(r)))
       .catch(() => setMessage("Не удалось загрузить курс"))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadRate();
+  }, [adminSecret]);
+
+  useEffect(() => {
+    const onFocus = () => loadRate();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
   }, [adminSecret]);
 
   const handleSave = (e: React.FormEvent) => {
