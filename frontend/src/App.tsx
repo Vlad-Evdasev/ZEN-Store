@@ -73,6 +73,25 @@ function MenuIconHome() {
   );
 }
 
+const headerIconSize = 22;
+const headerIconStyle: React.CSSProperties = { width: headerIconSize, height: headerIconSize, flexShrink: 0, color: "currentColor", display: "block" };
+
+function HeaderIconFavorites() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+    </svg>
+  );
+}
+
+function HeaderIconCart() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
+      <path d="M6 2v4M18 2v4M4 6h16l-1.5 12a2 2 0 01-2 2H7.5a2 2 0 01-2-2L4 6z" />
+    </svg>
+  );
+}
+
 function App() {
   const { settings } = useSettings();
   const lang = settings.lang;
@@ -304,12 +323,12 @@ function App() {
               </button>
             </div>
             <div style={styles.headerRight}>
-              <button onClick={openFavorites} style={styles.headerLinkWithBadge}>
-                <span style={styles.headerBtnLabel}>{t(lang, "favorites")}</span>
+              <button onClick={openFavorites} style={styles.headerLinkWithBadge} aria-label={t(lang, "favorites")}>
+                <HeaderIconFavorites />
                 <span style={{ ...styles.favBadge, ...styles.headerBadgePos, visibility: wishlistIds.size > 0 ? "visible" : "hidden" }}>{wishlistIds.size || "0"}</span>
               </button>
-              <button onClick={openCart} style={styles.headerBtnWrapper}>
-                <span style={styles.headerBtnLabel}>{t(lang, "cart")}</span>
+              <button onClick={openCart} style={styles.headerBtnWrapper} aria-label={t(lang, "cart")}>
+                <HeaderIconCart />
                 <span style={{ ...styles.cartBadge, ...styles.headerBadgePos, visibility: cartCount > 0 ? "visible" : "hidden" }}>{cartCount || "0"}</span>
               </button>
             </div>
@@ -664,8 +683,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   headerLinkWithBadge: {
     position: "relative",
-    paddingLeft: 14,
-    paddingRight: 22,
+    paddingLeft: 10,
+    paddingRight: 18,
     paddingTop: 8,
     paddingBottom: 8,
     background: "var(--surface-elevated)",
@@ -706,8 +725,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   headerBtnWrapper: {
     position: "relative",
-    paddingLeft: 14,
-    paddingRight: 22,
+    paddingLeft: 10,
+    paddingRight: 18,
     paddingTop: 8,
     paddingBottom: 8,
     background: "var(--accent)",
