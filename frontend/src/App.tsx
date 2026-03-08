@@ -197,11 +197,16 @@ function App() {
     if (shouldRestore) {
       const saved = savedScrollTopRef.current;
       savedScrollTopRef.current = 0;
+      const restore = () => {
+        window.scrollTo(0, saved);
+        document.documentElement.scrollTop = saved;
+        document.body.scrollTop = saved;
+      };
       requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          if (mainScrollRef.current) mainScrollRef.current.scrollTop = saved;
-        });
+        requestAnimationFrame(restore);
       });
+      setTimeout(restore, 0);
+      setTimeout(restore, 100);
       return undefined;
     }
     scrollToTop();
@@ -220,7 +225,7 @@ function App() {
   const openProduct = (id: number, from?: Page) => {
     const returnTo = from ?? page;
     if (scrollableCatalogPages.includes(returnTo)) {
-      savedScrollTopRef.current = mainScrollRef.current?.scrollTop ?? 0;
+      savedScrollTopRef.current = window.scrollY ?? document.documentElement?.scrollTop ?? document.body?.scrollTop ?? 0;
     }
     setProductId(id);
     setProductReturnTo(returnTo);
