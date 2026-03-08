@@ -16,7 +16,7 @@ const STORAGE_KEY = SETTINGS_STORAGE_KEY;
 
 const defaultSettings: Settings = {
   lang: "ru",
-  theme: "light",
+  theme: "dark",
   currency: "USD",
 };
 
