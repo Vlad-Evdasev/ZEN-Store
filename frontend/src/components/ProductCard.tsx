@@ -53,15 +53,15 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
             {inWishlist ? "♥" : "♡"}
           </button>
         )}
-        <div style={descWrapStyle}>
-          <p style={nameStyle} title={product.name}>{product.name}</p>
-          {hasReviews && (
-            <p style={{ ...(compact ? styles.reviewsCompact : styles.reviews), ...noShrink }}>
-              ★ {reviewAvg?.toFixed(1) ?? "—"} {reviewCount !== undefined && `(${reviewCount})`}
-            </p>
-          )}
-          <p style={priceStyle}>{formatPrice(product.price)}</p>
-        </div>
+      </div>
+      <div style={descWrapStyle}>
+        <p style={nameStyle} title={product.name}>{product.name}</p>
+        {hasReviews && (
+          <p style={{ ...(compact ? styles.reviewsCompact : styles.reviews), ...noShrink }}>
+            ★ {reviewAvg?.toFixed(1) ?? "—"} {reviewCount !== undefined && `(${reviewCount})`}
+          </p>
+        )}
+        <p style={priceStyle}>{formatPrice(product.price)}</p>
       </div>
     </button>
   );
@@ -69,6 +69,7 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
 
 const styles: Record<string, React.CSSProperties> = {
   card: {
+    position: "relative",
     display: "flex",
     flexDirection: "column",
     background: "transparent",
@@ -108,14 +109,14 @@ const styles: Record<string, React.CSSProperties> = {
     bottom: 0,
     left: 0,
     right: 0,
+    width: "100%",
+    boxSizing: "border-box",
     background: "var(--card-desc-bg)",
     backdropFilter: "blur(8px)",
     WebkitBackdropFilter: "blur(8px)",
     padding: 0,
     borderBottomLeftRadius: 12,
     borderBottomRightRadius: 12,
-    marginTop: -1,
-    boxSizing: "border-box",
   },
   descWrapCompact: {
     borderBottomLeftRadius: 10,
