@@ -54,8 +54,12 @@ export function NewArrivalsSection({
   return (
     <div style={styles.wrap}>
       <button type="button" onClick={onViewAll} style={styles.titleBtn} aria-label={t(lang, "newArrivalsViewAll")}>
-        <span>{t(lang, "newArrivals")}</span>
-        <span style={styles.titleArrow} aria-hidden>→</span>
+        <span>NEW</span>
+        <span style={styles.titleArrow} aria-hidden>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}>
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg>
+        </span>
       </button>
       <div style={styles.grid}>
         {first && renderCard(first, styles.cardBig)}
@@ -116,8 +120,9 @@ const styles: Record<string, React.CSSProperties> = {
   },
   titleArrow: {
     color: "var(--accent)",
-    fontSize: 20,
     lineHeight: 1,
+    display: "flex",
+    alignItems: "center",
   },
   rightColumn: {
     display: "flex",
