@@ -17,6 +17,7 @@
   --header-bg: rgba(26,25,24,0.88);
   --card-desc-bg: rgba(36,35,34,0.9);
   --menu-panel-bg: rgba(36,35,34,0.88);
+  --card-desc-bleed: 2px;
 }
 
 /* Светлая тема: тёплый светло-серый/бежевый (тот же базовый тон) */
@@ -33,6 +34,13 @@ html[data-theme="light"] {
   --header-bg: rgba(245,243,240,0.88);
   --card-desc-bg: rgba(235,233,230,0.9);
   --menu-panel-bg: rgba(235,233,230,0.88);
+  --card-desc-bleed: 2px;
+}
+
+@media (max-width: 768px) {
+  :root, [data-theme="dark"], html[data-theme="light"] {
+    --card-desc-bleed: 5px;
+  }
 }
 
 * {
