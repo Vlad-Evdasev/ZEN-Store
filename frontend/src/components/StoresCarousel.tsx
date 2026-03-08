@@ -311,7 +311,7 @@ const styles: Record<string, React.CSSProperties> = {
     paddingLeft: 0,
     paddingRight: 0,
     WebkitOverflowScrolling: "touch",
-    touchAction: "pan-x",
+    touchAction: "auto",
     minWidth: 0,
   },
 };
