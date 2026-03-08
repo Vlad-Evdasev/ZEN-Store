@@ -5,18 +5,18 @@
   --transition-normal: 0.25s ease;
   --transition-slow: 0.35s ease;
   /* Тёмная тема: тот же тёплый тон, затемнённый */
-  --bg: #1a1918;
-  --surface: #242322;
-  --surface-elevated: #2e2d2b;
-  --border: #3d3c3a;
+  --bg: #0f0e0e;
+  --surface: #1c1b1a;
+  --surface-elevated: #262524;
+  --border: #353432;
   --text: #f0efec;
   --muted: #9a9895;
   --accent: #c62828;
   --accent-hover: #e53935;
   --accent-dim: #8b0000;
-  --header-bg: rgba(26,25,24,0.88);
-  --card-desc-bg: rgba(36,35,34,0.9);
-  --menu-panel-bg: rgba(36,35,34,0.88);
+  --header-bg: rgba(15,14,14,0.92);
+  --card-desc-bg: rgba(28,27,26,0.92);
+  --menu-panel-bg: rgba(28,27,26,0.92);
   --card-desc-bleed: 2px;
   --card-desc-outer: none;
 }
