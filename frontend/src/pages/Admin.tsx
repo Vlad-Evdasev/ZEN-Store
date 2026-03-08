@@ -40,6 +40,16 @@ import {
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
+function TrashIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" />
+      <line x1="10" y1="11" x2="10" y2="17" />
+      <line x1="14" y1="11" x2="14" y2="17" />
+    </svg>
+  );
+}
+
 /** Ссылка для открытия диалога с пользователем в Telegram */
 function telegramChatLink(username?: string | null, userId?: string): string {
   if (username && String(username).trim()) {
@@ -448,12 +458,12 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
                       </select>
                     </td>
                     <td>
-                      <span style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: 16 }}>
                         <a href={telegramChatLink(o.user_username ?? null, o.user_id)} target="_blank" rel="noopener noreferrer" style={styles.contactLink}>
                           Telegram
                         </a>
-                        <button type="button" onClick={() => handleDelete(o.id)} style={styles.deleteOrderBtn}>
-                          Удалить
+                        <button type="button" onClick={() => handleDelete(o.id)} style={styles.deleteOrderIconBtn} aria-label="Удалить заказ" title="Удалить">
+                          <TrashIcon />
                         </button>
                       </span>
                     </td>
@@ -529,6 +539,9 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
             <div key={c.id} style={styles.orderCard}>
               <div style={styles.orderHeader}>
                 <span style={styles.orderId}>#{c.id}</span>
+                <button type="button" onClick={() => handleDelete(c.id)} style={styles.deleteOrderIconBtn} aria-label="Удалить заявку" title="Удалить">
+                  <TrashIcon />
+                </button>
               </div>
               <p style={styles.orderField}>👤 {c.user_name || "—"}</p>
               <p style={styles.orderField}>📱 {c.user_username || "—"}</p>
@@ -562,14 +575,9 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
                   <option value="completed">Выполнен</option>
                 </select>
               </p>
-              <span style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <a href={telegramChatLink(c.user_username ?? null, c.user_id)} target="_blank" rel="noopener noreferrer" style={styles.contactLink}>
-                  Написать в Telegram
-                </a>
-                <button type="button" onClick={() => handleDelete(c.id)} style={styles.deleteOrderBtn}>
-                  Удалить
-                </button>
-              </span>
+              <a href={telegramChatLink(c.user_username ?? null, c.user_id)} target="_blank" rel="noopener noreferrer" style={styles.contactLink}>
+                Написать в Telegram
+              </a>
             </div>
           ))
         )}
@@ -1864,6 +1872,17 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 12,
     fontFamily: "inherit",
     cursor: "pointer",
+  },
+  deleteOrderIconBtn: {
+    padding: 6,
+    border: "none",
+    background: "none",
+    color: "var(--accent)",
+    cursor: "pointer",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 6,
   },
   supportListPanel: {
     background: "var(--surface)",
