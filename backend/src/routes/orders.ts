@@ -60,3 +60,15 @@ ordersRouter.patch("/order/:orderId/status", (req, res) => {
   if (result.changes === 0) return res.status(404).json({ error: "Order not found" });
   res.json({ ok: true });
 });
+
+ordersRouter.delete("/order/:orderId", (req, res) => {
+  const ADMIN_SECRET = process.env.ADMIN_SECRET || "";
+  const secret = req.headers["x-admin-secret"] as string | undefined;
+  if (ADMIN_SECRET && secret !== ADMIN_SECRET) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  const orderId = parseInt(req.params.orderId, 10);
+  const result = db.prepare("DELETE FROM orders WHERE id = ?").run(orderId);
+  if (result.changes === 0) return res.status(404).json({ error: "Order not found" });
+  res.json({ ok: true });
+});

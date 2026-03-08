@@ -17,6 +17,9 @@ import {
   getOrdersAdmin,
   getCustomOrdersAdmin,
   updateOrderStatus,
+  deleteOrderAdmin,
+  updateCustomOrderStatusAdmin,
+  deleteCustomOrderAdmin,
   getSupportChatsAdmin,
   getSupportUnreadCountAdmin,
   getSupportMessagesAdmin,
@@ -353,6 +356,18 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
     }
   };
 
+  const handleDelete = async (id: number) => {
+    if (!window.confirm(`Удалить заказ #${id}? Это действие нельзя отменить.`)) return;
+    setMessage("");
+    try {
+      await deleteOrderAdmin(id, adminSecret);
+      setMessage("Заказ удалён");
+      load();
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    }
+  };
+
   if (loading) return <p style={styles.hint}>Загрузка заказов...</p>;
 
   return (
@@ -433,9 +448,14 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
                       </select>
                     </td>
                     <td>
-                      <a href={telegramChatLink(o.user_username ?? null, o.user_id)} target="_blank" rel="noopener noreferrer" style={styles.contactLink}>
-                        Telegram
-                      </a>
+                      <span style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <a href={telegramChatLink(o.user_username ?? null, o.user_id)} target="_blank" rel="noopener noreferrer" style={styles.contactLink}>
+                          Telegram
+                        </a>
+                        <button type="button" onClick={() => handleDelete(o.id)} style={styles.deleteOrderBtn}>
+                          Удалить
+                        </button>
+                      </span>
                     </td>
                   </tr>
                 );
@@ -454,6 +474,7 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [updatingId, setUpdatingId] = useState<number | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -466,6 +487,32 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
   useEffect(() => {
     if (adminSecret) load();
   }, [adminSecret]);
+
+  const handleStatus = async (id: number, status: "pending" | "in_transit" | "delivered" | "completed") => {
+    setUpdatingId(id);
+    setMessage("");
+    try {
+      await updateCustomOrderStatusAdmin(id, status, adminSecret);
+      setMessage("Статус обновлён");
+      load();
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!window.confirm(`Удалить заявку #${id}? Это действие нельзя отменить.`)) return;
+    setMessage("");
+    try {
+      await deleteCustomOrderAdmin(id, adminSecret);
+      setMessage("Заявка удалена");
+      load();
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    }
+  };
 
   if (loading) return <p style={styles.hint}>Загрузка заявок...</p>;
 
@@ -501,9 +548,28 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
                 </p>
               )}
               <p style={styles.orderDate}>{new Date(c.created_at).toLocaleString("ru")}</p>
-              <a href={telegramChatLink(c.user_username ?? null, c.user_id)} target="_blank" rel="noopener noreferrer" style={styles.contactLink}>
-                Написать в Telegram
-              </a>
+              <p style={styles.orderField}>
+                <label style={{ marginRight: 8 }}>Статус:</label>
+                <select
+                  value={c.status || "pending"}
+                  onChange={(e) => handleStatus(c.id, e.target.value as "pending" | "in_transit" | "delivered" | "completed")}
+                  disabled={updatingId === c.id}
+                  style={styles.statusSelect}
+                >
+                  <option value="pending">Ожидает</option>
+                  <option value="in_transit">В пути</option>
+                  <option value="delivered">Доставлено</option>
+                  <option value="completed">Выполнен</option>
+                </select>
+              </p>
+              <span style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <a href={telegramChatLink(c.user_username ?? null, c.user_id)} target="_blank" rel="noopener noreferrer" style={styles.contactLink}>
+                  Написать в Telegram
+                </a>
+                <button type="button" onClick={() => handleDelete(c.id)} style={styles.deleteOrderBtn}>
+                  Удалить
+                </button>
+              </span>
             </div>
           ))
         )}
@@ -1786,6 +1852,16 @@ const styles: Record<string, React.CSSProperties> = {
     border: "1px solid var(--border)",
     borderRadius: 6,
     fontSize: 13,
+    fontFamily: "inherit",
+    cursor: "pointer",
+  },
+  deleteOrderBtn: {
+    padding: "6px 10px",
+    background: "rgba(196, 30, 58, 0.1)",
+    border: "1px solid var(--accent)",
+    borderRadius: 6,
+    color: "var(--accent)",
+    fontSize: 12,
     fontFamily: "inherit",
     cursor: "pointer",
   },

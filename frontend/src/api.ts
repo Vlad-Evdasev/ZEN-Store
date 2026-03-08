@@ -349,6 +349,7 @@ export interface CustomOrderAdmin {
   description: string | null;
   size: string | null;
   image_data: string | null;
+  status: string;
   created_at: string;
 }
 
@@ -357,6 +358,29 @@ export async function getCustomOrdersAdmin(adminSecret: string): Promise<CustomO
     headers: { "X-Admin-Secret": adminSecret },
   });
   if (!res.ok) throw new Error("Failed to fetch custom orders");
+  return res.json();
+}
+
+export async function updateCustomOrderStatusAdmin(
+  id: number,
+  status: "pending" | "in_transit" | "delivered" | "completed",
+  adminSecret: string
+) {
+  const res = await fetch(`${API_URL}/api/custom-orders/admin/order/${id}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) throw new Error("Failed to update custom order status");
+  return res.json();
+}
+
+export async function deleteCustomOrderAdmin(id: number, adminSecret: string) {
+  const res = await fetch(`${API_URL}/api/custom-orders/admin/order/${id}`, {
+    method: "DELETE",
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) throw new Error("Failed to delete custom order");
   return res.json();
 }
 
@@ -460,6 +484,15 @@ export async function updateOrderStatus(
     body: JSON.stringify({ status }),
   });
   if (!res.ok) throw new Error("Failed to update order");
+  return res.json();
+}
+
+export async function deleteOrderAdmin(orderId: number, adminSecret: string) {
+  const res = await fetch(`${API_URL}/api/orders/order/${orderId}`, {
+    method: "DELETE",
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) throw new Error("Failed to delete order");
   return res.json();
 }
 

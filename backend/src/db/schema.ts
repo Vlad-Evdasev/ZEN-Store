@@ -153,6 +153,9 @@ try {
 try {
   db.exec("ALTER TABLE custom_orders ADD COLUMN user_address TEXT");
 } catch {}
+try {
+  db.exec("ALTER TABLE custom_orders ADD COLUMN status TEXT DEFAULT 'pending'");
+} catch {}
 
 try {
   db.exec("ALTER TABLE support_chats ADD COLUMN title TEXT");
