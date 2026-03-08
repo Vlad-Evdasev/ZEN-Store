@@ -105,7 +105,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 14,
   },
   descWrapCompact: {
-    padding: 10,
+    padding: 8,
   },
   name: {
     padding: "0 0 4px",
