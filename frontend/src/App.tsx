@@ -117,6 +117,7 @@ function App() {
   const [storeCatalogView, setStoreCatalogView] = useState<StoreCatalogView>("welcome");
   const [productReturnTo, setProductReturnTo] = useState<Page | null>(null);
   const mainScrollRef = useRef<HTMLElement | null>(null);
+  const savedScrollTopRef = useRef(0);
 
   const newArrivals = useMemo(
     () =>
@@ -184,6 +185,7 @@ function App() {
     return () => clearInterval(t);
   }, [userId]);
 
+  const scrollableCatalogPages: Page[] = ["catalog", "storeCatalog", "newArrivals"];
   useEffect(() => {
     const scrollToTop = () => {
       window.scrollTo(0, 0);
@@ -191,6 +193,17 @@ function App() {
       document.body.scrollTop = 0;
       mainScrollRef.current?.scrollTo(0, 0);
     };
+    const shouldRestore = scrollableCatalogPages.includes(page) && savedScrollTopRef.current > 0;
+    if (shouldRestore) {
+      const saved = savedScrollTopRef.current;
+      savedScrollTopRef.current = 0;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (mainScrollRef.current) mainScrollRef.current.scrollTop = saved;
+        });
+      });
+      return undefined;
+    }
     scrollToTop();
     const t1 = setTimeout(scrollToTop, 0);
     const t2 = setTimeout(scrollToTop, 50);
@@ -205,8 +218,12 @@ function App() {
   }, [page]);
 
   const openProduct = (id: number, from?: Page) => {
+    const returnTo = from ?? page;
+    if (scrollableCatalogPages.includes(returnTo)) {
+      savedScrollTopRef.current = mainScrollRef.current?.scrollTop ?? 0;
+    }
     setProductId(id);
-    setProductReturnTo(from ?? page);
+    setProductReturnTo(returnTo);
     setPage("product");
     flushSync(() => {});
     mainScrollRef.current?.scrollTo(0, 0);
