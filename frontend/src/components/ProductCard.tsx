@@ -112,8 +112,15 @@ const styles: Record<string, React.CSSProperties> = {
     backdropFilter: "blur(8px)",
     WebkitBackdropFilter: "blur(8px)",
     padding: 0,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    marginTop: -1,
+    boxSizing: "border-box",
   },
-  descWrapCompact: {},
+  descWrapCompact: {
+    borderBottomLeftRadius: 10,
+    borderBottomRightRadius: 10,
+  },
   descWrapCompactSmall: {},
   name: {
     padding: "8px 8px 2px 8px",
