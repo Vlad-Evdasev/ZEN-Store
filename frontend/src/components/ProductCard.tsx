@@ -72,13 +72,13 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     background: "transparent",
-    border: "1px solid var(--border)",
+    border: "none",
     borderRadius: 12,
     overflow: "hidden",
     textAlign: "left",
     cursor: "pointer",
     padding: 0,
-    transition: "border-color var(--transition-fast), transform var(--transition-normal), box-shadow var(--transition-normal)",
+    transition: "transform var(--transition-normal), box-shadow var(--transition-normal)",
   },
   imageWrap: {
     position: "relative",
@@ -111,13 +111,13 @@ const styles: Record<string, React.CSSProperties> = {
     background: "var(--card-desc-bg)",
     backdropFilter: "blur(8px)",
     WebkitBackdropFilter: "blur(8px)",
-    padding: 14,
+    padding: "10px 10px 10px",
   },
   descWrapCompact: {
-    padding: 8,
+    padding: "6px 6px 6px",
   },
   descWrapCompactSmall: {
-    padding: 6,
+    padding: "4px 6px 4px",
   },
   name: {
     padding: "0 0 4px",
