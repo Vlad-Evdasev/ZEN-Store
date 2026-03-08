@@ -56,12 +56,14 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
       </div>
       <div className="product-card-desc" style={descWrapStyle}>
         <p style={nameStyle} title={product.name}>{product.name}</p>
-        {hasReviews && (
-          <p style={{ ...(compact ? styles.reviewsCompact : styles.reviews), ...noShrink }}>
-            ★ {reviewAvg?.toFixed(1) ?? "—"} {reviewCount !== undefined && `(${reviewCount})`}
-          </p>
-        )}
-        <p style={priceStyle}>{formatPrice(product.price)}</p>
+        <div style={compact ? styles.descBottomRowCompact : styles.descBottomRow}>
+          <p style={priceStyle}>{formatPrice(product.price)}</p>
+          {hasReviews && (
+            <p style={{ ...(compact ? styles.reviewsCompact : styles.reviews), ...noShrink }}>
+              ★ {reviewAvg?.toFixed(1) ?? "—"} {reviewCount !== undefined && `(${reviewCount})`}
+            </p>
+          )}
+        </div>
       </div>
     </button>
   );
@@ -133,19 +135,39 @@ const styles: Record<string, React.CSSProperties> = {
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   },
-  price: {
+  descBottomRow: {
+    display: "flex",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    gap: 8,
     padding: "0 calc(8px + var(--card-desc-bleed, 2px)) calc(8px + var(--card-desc-bleed, 2px)) calc(8px + var(--card-desc-bleed, 2px))",
+    minHeight: 0,
+  },
+  descBottomRowCompact: {
+    display: "flex",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    gap: 6,
+    padding: "0 calc(6px + var(--card-desc-bleed, 2px)) calc(4px + var(--card-desc-bleed, 2px)) calc(6px + var(--card-desc-bleed, 2px))",
+    minHeight: 0,
+  },
+  price: {
+    padding: 0,
     fontSize: 15,
     color: "var(--text)",
     fontWeight: 700,
   },
   reviews: {
-    padding: "0 calc(8px + var(--card-desc-bleed, 2px)) 2px calc(8px + var(--card-desc-bleed, 2px))",
+    padding: 0,
+    flexShrink: 0,
     fontSize: 12,
     color: "var(--muted)",
   },
   reviewsCompact: {
-    padding: "0 calc(6px + var(--card-desc-bleed, 2px)) 2px calc(6px + var(--card-desc-bleed, 2px))",
+    padding: 0,
+    flexShrink: 0,
     fontSize: 11,
     color: "var(--muted)",
   },
