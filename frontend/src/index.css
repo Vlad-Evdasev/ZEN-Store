@@ -17,6 +17,7 @@
   --header-bg: rgba(0,0,0,0.72);
   --card-desc-bg: rgba(28,28,30,0.85);
   --menu-panel-bg: rgba(28,28,30,0.82);
+  --bg-gradient: linear-gradient(to bottom, #000000 0%, #080808 100%);
 }
 
 /* True white / Apple — чистый белый, чёткие серые, как в интерфейсах Apple */
@@ -33,6 +34,7 @@ html[data-theme="light"] {
   --header-bg: rgba(255,255,255,0.72);
   --card-desc-bg: rgba(249,249,249,0.82);
   --menu-panel-bg: rgba(249,249,249,0.78);
+  --bg-gradient: linear-gradient(to bottom, #ffffff 0%, #f5f5f5 100%);
 }
 
 * {
@@ -53,7 +55,7 @@ html, body, #root {
 
 body {
   font-family: "Inter", "SF Pro Display", system-ui, sans-serif;
-  background: var(--bg);
+  background: var(--bg-gradient, var(--bg));
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   letter-spacing: -0.02em;
