@@ -15,14 +15,14 @@
   --accent-dim: #8b0000;
 }
 
-/* Cream / Butter — заметный кремовый фон, тёплый и уютный */
+/* True white / Apple — чистый белый, чёткие серые, как в интерфейсах Apple */
 html[data-theme="light"] {
-  --bg: #f2ebe0;
-  --surface: #faf5ee;
-  --surface-elevated: #fffcf7;
-  --border: #e5ddd2;
-  --text: #2b2825;
-  --muted: #6b6560;
+  --bg: #ffffff;
+  --surface: #f9f9f9;
+  --surface-elevated: #f2f2f2;
+  --border: #d1d1d6;
+  --text: #1d1d1f;
+  --muted: #86868b;
   --accent: #c62828;
   --accent-hover: #e53935;
   --accent-dim: #8b0000;
@@ -78,14 +78,14 @@ a {
   transition: opacity var(--transition-normal), transform var(--transition-normal);
 }
 
-/* Админ-панель: светлая тема Cream / Butter */
+/* Админ-панель: светлая тема True white / Apple */
 .zen-admin {
-  --bg: #f2ebe0;
-  --surface: #faf5ee;
-  --surface-elevated: #fffcf7;
-  --border: #e5ddd2;
-  --text: #2b2825;
-  --muted: #6b6560;
+  --bg: #ffffff;
+  --surface: #f9f9f9;
+  --surface-elevated: #f2f2f2;
+  --border: #d1d1d6;
+  --text: #1d1d1f;
+  --muted: #86868b;
   --accent: #c62828;
   --accent-hover: #e53935;
   --accent-dim: #8b0000;
