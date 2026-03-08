@@ -41,6 +41,7 @@ export function useTelegram() {
   if (tg) {
     tg.ready();
     tg.expand();
+    tg.disableVerticalSwipes?.();
   }
 
   return { tg, userId, userName, firstName, isInTelegram, setBrowserAuth };

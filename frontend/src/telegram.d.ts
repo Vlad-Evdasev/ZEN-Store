@@ -7,6 +7,7 @@ declare global {
         ready: () => void;
         expand: () => void;
         close: () => void;
+        disableVerticalSwipes?: () => void;
         themeParams: { bg_color?: string; text_color?: string };
       };
     };
