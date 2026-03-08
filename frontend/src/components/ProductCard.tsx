@@ -50,15 +50,15 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
             {inWishlist ? "♥" : "♡"}
           </button>
         )}
-      </div>
-      <div style={descWrapStyle}>
-        <p style={nameStyle}>{product.name}</p>
-        {hasReviews && (
-          <p style={{ ...(compact ? styles.reviewsCompact : styles.reviews), ...noShrink }}>
-            ★ {reviewAvg?.toFixed(1) ?? "—"} {reviewCount !== undefined && `(${reviewCount})`}
-          </p>
-        )}
-        <p style={priceStyle}>{formatPrice(product.price)}</p>
+        <div style={descWrapStyle}>
+          <p style={nameStyle} title={product.name}>{product.name}</p>
+          {hasReviews && (
+            <p style={{ ...(compact ? styles.reviewsCompact : styles.reviews), ...noShrink }}>
+              ★ {reviewAvg?.toFixed(1) ?? "—"} {reviewCount !== undefined && `(${reviewCount})`}
+            </p>
+          )}
+          <p style={priceStyle}>{formatPrice(product.price)}</p>
+        </div>
       </div>
     </button>
   );
@@ -101,6 +101,10 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
   },
   descWrap: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
     background: "var(--card-desc-bg)",
     padding: 14,
   },
@@ -112,6 +116,9 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     fontWeight: 600,
     color: "var(--text)",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
   },
   price: {
     padding: 0,
@@ -134,6 +141,6 @@ const styles: Record<string, React.CSSProperties> = {
   imageWrapCompact: {},
   imageWrapFillHeight: { flex: 1, minHeight: 0, aspectRatio: "unset" as const },
   wishlistBtnCompact: { top: 8, right: 8, width: 30, height: 30, fontSize: 15 },
-  nameCompact: { padding: 0, paddingBottom: 2, fontSize: 12 },
+  nameCompact: { padding: 0, paddingBottom: 2, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
   priceCompact: { padding: 0, fontSize: 13 },
 };
