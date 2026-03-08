@@ -367,7 +367,7 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0,
     padding: "10px 16px",
     background: "var(--surface)",
-    border: "1px solid var(--surface)",
+    border: "1px solid var(--border)",
     borderRadius: 20,
     color: "var(--muted)",
     fontSize: 13,
