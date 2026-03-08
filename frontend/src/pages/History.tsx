@@ -24,7 +24,7 @@ function formatDate(s: string) {
   }
 }
 
-type HistoryFilter = "all" | "in_progress" | "delivered";
+type HistoryFilter = "all" | "processing" | "in_progress" | "delivered";
 
 export function History({ userId, onBack, onProductClick }: HistoryProps) {
   const { formatPrice, settings } = useSettings();
@@ -37,16 +37,19 @@ export function History({ userId, onBack, onProductClick }: HistoryProps) {
     getOrders(userId).then(setOrders).catch(console.error).finally(() => setLoading(false));
   }, [userId]);
 
-  const inProgressStatuses = ["pending", "in_transit"];
+  const processingStatuses = ["pending"];
+  const inTransitStatuses = ["in_transit"];
   const deliveredStatuses = ["delivered", "completed"];
 
   const filtered = orders.filter((o) => {
     if (filter === "all") return true;
-    if (filter === "in_progress") return inProgressStatuses.includes(o.status);
+    if (filter === "processing") return processingStatuses.includes(o.status);
+    if (filter === "in_progress") return inTransitStatuses.includes(o.status);
     return deliveredStatuses.includes(o.status);
   });
 
-  const inProgressOrders = orders.filter((o) => inProgressStatuses.includes(o.status));
+  const processingOrders = orders.filter((o) => processingStatuses.includes(o.status));
+  const inTransitOrders = orders.filter((o) => inTransitStatuses.includes(o.status));
   const deliveredOrders = orders.filter((o) => deliveredStatuses.includes(o.status));
 
   if (loading) {
@@ -66,7 +69,7 @@ export function History({ userId, onBack, onProductClick }: HistoryProps) {
         </button>
         <h1 style={styles.title}>{t(lang, "historyTitle")}</h1>
         <div style={styles.filterRow} role="group" aria-label={t(lang, "historyTitle")}>
-          {(["all", "in_progress", "delivered"] as const).map((value) => (
+          {(["all", "processing", "in_progress", "delivered"] as const).map((value) => (
             <button
               key={value}
               type="button"
@@ -77,7 +80,13 @@ export function History({ userId, onBack, onProductClick }: HistoryProps) {
                 ...(filter === value ? styles.filterTabActive : {}),
               }}
             >
-              {value === "all" ? t(lang, "historyFilterAll") : value === "in_progress" ? t(lang, "historyFilterInProgress") : t(lang, "historyFilterDelivered")}
+              {value === "all"
+                ? t(lang, "historyFilterAll")
+                : value === "processing"
+                  ? t(lang, "historyFilterProcessing")
+                  : value === "in_progress"
+                    ? t(lang, "historyFilterInProgress")
+                    : t(lang, "historyFilterDelivered")}
             </button>
           ))}
         </div>
@@ -85,10 +94,15 @@ export function History({ userId, onBack, onProductClick }: HistoryProps) {
 
       {filter === "all" && (
         <>
-          {inProgressOrders.length > 0 && (
+          {(processingOrders.length > 0 || inTransitOrders.length > 0) && (
             <section style={styles.section}>
-              <h3 style={styles.sectionTitle}>{t(lang, "historyOrdered")} ({inProgressOrders.length})</h3>
-              {inProgressOrders.map((o) => (
+              <h3 style={styles.sectionTitle}>
+                {t(lang, "historyOrdered")} ({processingOrders.length + inTransitOrders.length})
+              </h3>
+              {processingOrders.map((o) => (
+                <OrderCard key={o.id} order={o} formatPrice={formatPrice} lang={lang} t={t} onProductClick={onProductClick} />
+              ))}
+              {inTransitOrders.map((o) => (
                 <OrderCard key={o.id} order={o} formatPrice={formatPrice} lang={lang} t={t} onProductClick={onProductClick} />
               ))}
             </section>
