@@ -114,6 +114,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: "var(--card-desc-bg)",
     backdropFilter: "blur(8px)",
     WebkitBackdropFilter: "blur(8px)",
+    boxShadow: "var(--card-desc-outer, none)",
     padding: 0,
     borderBottomLeftRadius: 12,
     borderBottomRightRadius: 12,

@@ -18,6 +18,7 @@
   --card-desc-bg: rgba(36,35,34,0.9);
   --menu-panel-bg: rgba(36,35,34,0.88);
   --card-desc-bleed: 2px;
+  --card-desc-outer: none;
 }
 
 /* Светлая тема: тёплый светло-серый/бежевый (тот же базовый тон) */
@@ -35,11 +36,13 @@ html[data-theme="light"] {
   --card-desc-bg: rgba(235,233,230,0.9);
   --menu-panel-bg: rgba(235,233,230,0.88);
   --card-desc-bleed: 2px;
+  --card-desc-outer: none;
 }
 
 @media (max-width: 768px) {
   :root, [data-theme="dark"], html[data-theme="light"] {
-    --card-desc-bleed: 12px;
+    --card-desc-bleed: 18px;
+    --card-desc-outer: 0 0 0 2px var(--card-desc-bg);
   }
 }
 
