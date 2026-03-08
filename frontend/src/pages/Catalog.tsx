@@ -291,20 +291,19 @@ export function Catalog({
       ) : (
         <div style={styles.grid}>
           {filtered.map((p) => (
-            <div key={p.id} style={styles.gridCardWrap}>
-              <ProductCard
-                product={p}
-                compact
-                onClick={() => onProductClick(p.id)}
-                inWishlist={wishlistIds.has(p.id)}
-                onWishlistClick={(e) => {
-                  e.stopPropagation();
-                  onToggleWishlist(p.id);
-                }}
-                reviewCount={reviewStats[p.id]?.count}
-                reviewAvg={reviewStats[p.id]?.avg}
-              />
-            </div>
+            <ProductCard
+              key={p.id}
+              product={p}
+              compact
+              onClick={() => onProductClick(p.id)}
+              inWishlist={wishlistIds.has(p.id)}
+              onWishlistClick={(e) => {
+                e.stopPropagation();
+                onToggleWishlist(p.id);
+              }}
+              reviewCount={reviewStats[p.id]?.count}
+              reviewAvg={reviewStats[p.id]?.avg}
+            />
           ))}
         </div>
       )}
@@ -388,13 +387,6 @@ const styles: Record<string, React.CSSProperties> = {
     display: "grid",
     gridTemplateColumns: "repeat(2, 1fr)",
     gap: 16,
-  },
-  gridCardWrap: {
-    width: "100%",
-    minWidth: 0,
-    aspectRatio: "1",
-    overflow: "hidden",
-    borderRadius: 12,
   },
   empty: {
     textAlign: "center",
