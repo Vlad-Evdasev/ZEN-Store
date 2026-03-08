@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getOrders, type Order } from "../api";
 import { useSettings } from "../context/SettingsContext";
 import type { Lang } from "../context/SettingsContext";
@@ -32,6 +32,29 @@ export function History({ userId, onBack, onProductClick }: HistoryProps) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<HistoryFilter>("all");
+  const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
+
+  const filterOptions: { value: HistoryFilter; labelKey: string }[] = [
+    { value: "all", labelKey: "historyFilterAll" },
+    { value: "processing", labelKey: "historyFilterProcessing" },
+    { value: "in_progress", labelKey: "historyFilterInProgress" },
+    { value: "delivered", labelKey: "historyFilterDelivered" },
+  ];
+
+  const currentFilterLabel = filterOptions.find((o) => o.value === filter)?.labelKey ?? "historyFilterAll";
+
+  useEffect(() => {
+    const close = (e: MouseEvent) => {
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(e.target as Node)) {
+        setFilterDropdownOpen(false);
+      }
+    };
+    if (filterDropdownOpen) {
+      document.addEventListener("click", close);
+      return () => document.removeEventListener("click", close);
+    }
+  }, [filterDropdownOpen]);
 
   useEffect(() => {
     getOrders(userId).then(setOrders).catch(console.error).finally(() => setLoading(false));
@@ -68,27 +91,40 @@ export function History({ userId, onBack, onProductClick }: HistoryProps) {
           ← {t(lang, "back")}
         </button>
         <h1 style={styles.title}>{t(lang, "historyTitle")}</h1>
-        <div style={styles.filterRow} role="group" aria-label={t(lang, "historyTitle")}>
-          {(["all", "processing", "in_progress", "delivered"] as const).map((value) => (
-            <button
-              key={value}
-              type="button"
-              className="settings-opt-btn"
-              onClick={() => setFilter(value)}
-              style={{
-                ...styles.filterTab,
-                ...(filter === value ? styles.filterTabActive : {}),
-              }}
-            >
-              {value === "all"
-                ? t(lang, "historyFilterAll")
-                : value === "processing"
-                  ? t(lang, "historyFilterProcessing")
-                  : value === "in_progress"
-                    ? t(lang, "historyFilterInProgress")
-                    : t(lang, "historyFilterDelivered")}
-            </button>
-          ))}
+        <div style={styles.filterDropdownWrap} ref={filterDropdownRef} role="group" aria-label={t(lang, "historyTitle")}>
+          <button
+            type="button"
+            className="settings-opt-btn"
+            onClick={() => setFilterDropdownOpen((v) => !v)}
+            style={{ ...styles.filterDropdownTrigger, ...(filterDropdownOpen ? styles.filterTabActive : {}) }}
+            aria-expanded={filterDropdownOpen}
+            aria-haspopup="listbox"
+          >
+            {t(lang, currentFilterLabel)}
+            <span style={styles.filterDropdownChevron}>{filterDropdownOpen ? "▲" : "▼"}</span>
+          </button>
+          {filterDropdownOpen && (
+            <ul style={styles.filterDropdownList} role="listbox">
+              {filterOptions.map((opt) => (
+                <li key={opt.value} role="option" aria-selected={filter === opt.value}>
+                  <button
+                    type="button"
+                    className="settings-opt-btn"
+                    style={{
+                      ...styles.filterDropdownItem,
+                      ...(filter === opt.value ? styles.filterTabActive : {}),
+                    }}
+                    onClick={() => {
+                      setFilter(opt.value);
+                      setFilterDropdownOpen(false);
+                    }}
+                  >
+                    {t(lang, opt.labelKey)}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </header>
 
@@ -222,6 +258,62 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexWrap: "wrap",
     gap: 8,
+  },
+  filterDropdownWrap: {
+    position: "relative",
+    width: "100%",
+    maxWidth: 280,
+  },
+  filterDropdownTrigger: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    padding: "10px 16px",
+    background: "var(--surface)",
+    border: "1px solid var(--surface)",
+    borderRadius: 20,
+    color: "var(--muted)",
+    fontSize: 13,
+    fontFamily: "inherit",
+    cursor: "pointer",
+    boxShadow: "none",
+    outline: "none",
+  },
+  filterDropdownChevron: {
+    marginLeft: 8,
+    fontSize: 10,
+    opacity: 0.8,
+  },
+  filterDropdownList: {
+    position: "absolute",
+    top: "100%",
+    left: 0,
+    right: 0,
+    margin: 0,
+    marginTop: 6,
+    padding: 6,
+    listStyle: "none",
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: 12,
+    boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+    zIndex: 10,
+  },
+  filterDropdownItem: {
+    display: "block",
+    width: "100%",
+    padding: "10px 14px",
+    background: "transparent",
+    border: "none",
+    borderRadius: 8,
+    color: "var(--muted)",
+    fontSize: 13,
+    fontFamily: "inherit",
+    cursor: "pointer",
+    boxShadow: "none",
+    outline: "none",
+    textAlign: "left",
   },
   filterTab: {
     padding: "10px 16px",
