@@ -418,18 +418,44 @@ button:active {
   }
 }
 
-/* Адаптивная вёрстка: ноутбук и десктоп */
+/* Адаптивная вёрстка: ноутбук и десктоп — используем ширину экрана, аккуратные отступы */
 @media (min-width: 1024px) {
   :root, [data-theme="dark"], html[data-theme="light"] {
-    --content-padding: 24px;
+    --content-padding: 32px;
   }
   .zen-app {
-    max-width: 1280px !important;
-    box-shadow: 0 0 48px rgba(0,0,0,0.12);
+    max-width: 1440px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding-left: 48px !important;
+    padding-right: 48px !important;
+    box-sizing: border-box !important;
+    box-shadow: 0 0 60px rgba(0,0,0,0.15);
   }
   .zen-app .catalog-grid {
     grid-template-columns: repeat(4, 1fr);
-    gap: 20px;
+    gap: 24px;
+  }
+}
+
+/* Секция каталога на главной — отступ сверху для визуального разделения */
+.zen-app .zen-catalog-section {
+  margin-top: 24px;
+}
+@media (min-width: 1024px) {
+  .zen-app .zen-catalog-section {
+    margin-top: 48px;
+  }
+}
+
+/* Очень широкие экраны — больше колонок, больше воздуха */
+@media (min-width: 1280px) {
+  :root, [data-theme="dark"], html[data-theme="light"] {
+    --content-padding: 40px;
+  }
+  .zen-app .catalog-grid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 24px;
   }
 }
 

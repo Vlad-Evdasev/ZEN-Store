@@ -80,9 +80,7 @@ const styles: Record<string, React.CSSProperties> = {
   wrap: {
     marginBottom: 24,
     minWidth: 0,
-    maxWidth: 480,
-    marginLeft: "auto",
-    marginRight: "auto",
+    maxWidth: "100%",
   },
   titleBtn: {
     display: "flex",
