@@ -4,37 +4,35 @@
   --transition-fast: 0.15s ease;
   --transition-normal: 0.25s ease;
   --transition-slow: 0.35s ease;
-  /* Dark theme: Apple-style (парная к True white / Apple) */
-  --bg: #000000;
-  --surface: #1c1c1e;
-  --surface-elevated: #2c2c2e;
-  --border: #38383a;
-  --text: #f5f5f7;
-  --muted: #98989d;
+  /* Тёмная тема: тот же тёплый тон, затемнённый */
+  --bg: #1a1918;
+  --surface: #242322;
+  --surface-elevated: #2e2d2b;
+  --border: #3d3c3a;
+  --text: #f0efec;
+  --muted: #9a9895;
   --accent: #c62828;
   --accent-hover: #e53935;
   --accent-dim: #8b0000;
-  --header-bg: rgba(0,0,0,0.72);
-  --card-desc-bg: rgba(28,28,30,0.85);
-  --menu-panel-bg: rgba(28,28,30,0.82);
-  --bg-gradient: linear-gradient(to bottom, #000000 0%, #1a1a1a 100%);
+  --header-bg: rgba(26,25,24,0.88);
+  --card-desc-bg: rgba(36,35,34,0.9);
+  --menu-panel-bg: rgba(36,35,34,0.88);
 }
 
-/* True white / Apple — чистый белый, чёткие серые, как в интерфейсах Apple */
+/* Светлая тема: тёплый светло-серый/бежевый (тот же базовый тон) */
 html[data-theme="light"] {
-  --bg: #ffffff;
-  --surface: #f9f9f9;
-  --surface-elevated: #f2f2f2;
-  --border: #d1d1d6;
-  --text: #1d1d1f;
-  --muted: #86868b;
+  --bg: #f5f3f0;
+  --surface: #ebe9e6;
+  --surface-elevated: #e5e2de;
+  --border: #d4d1cc;
+  --text: #1c1b19;
+  --muted: #7a7875;
   --accent: #c62828;
   --accent-hover: #e53935;
   --accent-dim: #8b0000;
-  --header-bg: rgba(255,255,255,0.72);
-  --card-desc-bg: rgba(249,249,249,0.82);
-  --menu-panel-bg: rgba(249,249,249,0.78);
-  --bg-gradient: linear-gradient(to bottom, #ffffff 0%, #e8e8e8 100%);
+  --header-bg: rgba(245,243,240,0.88);
+  --card-desc-bg: rgba(235,233,230,0.9);
+  --menu-panel-bg: rgba(235,233,230,0.88);
 }
 
 * {
@@ -55,7 +53,7 @@ html, body, #root {
 
 body {
   font-family: "Inter", "SF Pro Display", system-ui, sans-serif;
-  background: var(--bg-gradient, var(--bg));
+  background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   letter-spacing: -0.02em;
