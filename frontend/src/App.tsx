@@ -75,7 +75,7 @@ function MenuIconHome() {
 const headerIconSize = 22;
 const headerIconStyle: React.CSSProperties = { width: headerIconSize, height: headerIconSize, flexShrink: 0, color: "currentColor", display: "block" };
 const headerIconCartStyle: React.CSSProperties = { width: headerIconSize, height: headerIconSize, flexShrink: 0, color: "currentColor", display: "block", transform: "scale(1.38)" };
-const headerIconHamburgerSize = 28;
+const headerIconHamburgerSize = 32;
 const headerIconHamburgerStyle: React.CSSProperties = { width: headerIconHamburgerSize, height: headerIconHamburgerSize, flexShrink: 0, color: "currentColor", display: "block" };
 
 function HeaderIconHamburger() {
@@ -343,9 +343,11 @@ function App() {
       {!hideHeader && (
         <>
           <header style={styles.header}>
-            <div style={styles.headerLeft}>
+            <div style={styles.headerLeft} className="zen-header-left">
               <button
+                type="button"
                 onClick={() => setMenuOpen(!menuOpen)}
+                className="zen-header-hamburger"
                 style={styles.hamburger}
                 aria-label="Меню"
               >
@@ -620,7 +622,6 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0,
     display: "flex",
     alignItems: "center",
-    marginLeft: -6,
   },
   headerCenter: {
     position: "absolute",
@@ -641,8 +642,6 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 6,
   },
   hamburger: {
-    width: 52,
-    height: 52,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -650,7 +649,6 @@ const styles: Record<string, React.CSSProperties> = {
     border: "none",
     color: "var(--text)",
     cursor: "pointer",
-    borderRadius: 8,
   },
   menuOverlay: {
     position: "fixed",

@@ -1248,6 +1248,22 @@ html[data-theme="light"] .zen-app .product-card-price {
   border-bottom-color: var(--border);
 }
 
+/* Кнопка меню (гамбургер): крупнее и сдвиг влево */
+.zen-app .zen-header-left {
+  margin-left: -10px !important;
+}
+.zen-app .zen-header-hamburger {
+  width: 56px !important;
+  min-width: 56px !important;
+  height: 56px !important;
+  min-height: 56px !important;
+  border-radius: 8px;
+}
+.zen-app .zen-header-hamburger svg {
+  width: 32px !important;
+  height: 32px !important;
+}
+
 /* Фокус для доступности: только ссылки и инпуты (кнопки — без обводки глобально) */
 .zen-app a:focus-visible,
 .zen-app input:focus-visible,
