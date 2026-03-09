@@ -381,22 +381,28 @@ html[data-theme="light"] .zen-app .product-card-price {
 }
 .zen-app .product-card-desc {
   background: var(--surface);
+  font-family: inherit;
 }
-/* Карточка с текстом под фото: убираем любые overlay-стили */
 .zen-app .product-card--text-below .product-card-desc {
   border-radius: 0;
   box-shadow: none;
 }
+.zen-app .product-card-wishlist-btn {
+  -webkit-tap-highlight-color: transparent;
+}
+.zen-app .product-card-wishlist-btn:focus {
+  outline: none;
+}
 
-/* Сетка каталога: masonry-ощущение (разная высота), больше воздуха */
+/* Сетка каталога: masonry (разная высота), больше воздуха */
 .zen-app .catalog-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 22px;
+  gap: 24px;
   grid-auto-rows: auto;
 }
 .zen-app .catalog-grid.catalog-grid--masonry {
-  gap: 24px;
+  gap: 26px;
 }
 
 /* Кнопка «Отмена» в модалках — явный цвет текста (на iOS иначе синий) */
@@ -884,15 +890,26 @@ html[data-theme="light"] .zen-app .product-card-price {
   letter-spacing: 0.02em;
 }
 
-/* Сворачиваемый поиск: иконка по умолчанию, раскрытие с анимацией */
-.zen-app .zen-search-toggle-wrap {
+/* Строка поиска + иконка фильтра */
+.zen-app .zen-catalog-search-row {
   display: flex;
   align-items: center;
-  gap: 0;
+  gap: 12px;
   margin-bottom: 20px;
-  min-height: 48px;
 }
-.zen-app .zen-search-toggle-btn {
+.zen-app .zen-catalog-search-input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--input-height);
+  padding: var(--input-padding);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 15px;
+  letter-spacing: 0.02em;
+}
+.zen-app .zen-filter-icon-btn {
   flex-shrink: 0;
   width: 48px;
   height: 48px;
@@ -905,37 +922,18 @@ html[data-theme="light"] .zen-app .product-card-price {
   color: var(--muted);
   cursor: pointer;
   transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
 }
-.zen-app .zen-search-toggle-btn:hover {
+.zen-app .zen-filter-icon-btn:hover {
   color: var(--text);
   border-color: var(--muted);
 }
-.zen-app .zen-search-input-wrap {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  transition: max-width 0.3s cubic-bezier(0.25, 0.1, 0.25, 1), opacity 0.25s ease;
+.zen-app .zen-filter-icon-btn:focus {
+  outline: none;
 }
-.zen-app .zen-search-input-wrap.zen-search-input-wrap--collapsed {
-  max-width: 0;
-  opacity: 0;
-  margin-left: 0;
-}
-.zen-app .zen-search-input-wrap.zen-search-input-wrap--expanded {
-  max-width: 400px;
-  opacity: 1;
-  margin-left: 12px;
-}
-.zen-app .zen-search-input-wrap input {
-  width: 100%;
-  min-height: 48px;
-  padding: 0 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  color: var(--text);
-  font-size: 15px;
-  letter-spacing: 0.02em;
+.zen-app .zen-filter-icon-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* Панель фильтров (мобил): выезжает снизу */

@@ -3,7 +3,6 @@ import type { Product, Store, Category, ProductReviewStats } from "../api";
 import { getProductReviewStats } from "../api";
 import { ProductCard } from "../components/ProductCard";
 import { StoreCard } from "../components/StoreCard";
-import { CollapsibleSearch } from "../components/CollapsibleSearch";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 
@@ -35,6 +34,14 @@ const FALLBACK_BY_CODE: Record<string, { image: string; desc: string }> = {
 };
 const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400";
 
+function FilterIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+    </svg>
+  );
+}
+
 export function Catalog({
   products,
   stores,
@@ -58,23 +65,12 @@ export function Catalog({
   const selectedCategories = selectedCategoriesProp ?? internalCategories;
   const setSelectedCategories = onSelectedCategoriesChange ?? setInternalCategories;
   const [reviewStats, setReviewStats] = useState<ProductReviewStats>({});
-  const [searchExpanded, setSearchExpanded] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia("(max-width: 768px)").matches : false
-  );
   const scrollRef = useRef<HTMLDivElement>(null);
   const marqueePausedRef = useRef(false);
   const pauseTimeoutRef = useRef<number | null>(null);
   const lastAutoScrollRef = useRef(0);
   const isTouchOnly = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
-
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 768px)");
-    const handler = () => setIsMobile(mq.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
 
   type DisplayStore =
     | { id: number; name: string; image: string; desc: string; isReal: true }
@@ -232,7 +228,7 @@ export function Catalog({
   };
 
   return (
-    <div style={{ ...styles.wrap, paddingBottom: isMobile && showPriceFilter ? 88 : 24 }}>
+    <div style={styles.wrap}>
       {!hideStores && displayStores.length > 0 && (
         <div style={styles.storesRowWrap}>
           <button
@@ -291,103 +287,32 @@ export function Catalog({
         </div>
       )}
 
-      <CollapsibleSearch
-        value={search}
-        onChange={setSearch}
-        placeholder={t(lang, "search")}
-        expanded={searchExpanded}
-        onExpand={() => setSearchExpanded(true)}
-        onCollapse={() => setSearchExpanded(false)}
-        aria-label={t(lang, "search")}
-      />
-
-      {showPriceFilter && !isMobile && (
-        <div className="zen-catalog-filters">
-          <div className="zen-price-filter-wrap">
-            <span className="zen-price-filter-label">{t(lang, "priceFilter")}</span>
-            <div
-              className="zen-price-sort-segmented"
-              role="group"
-              aria-label={t(lang, "priceFilter")}
-            >
-              <div
-                className={`zen-price-sort-segment ${priceSort === "asc" ? "zen-price-sort-segment-active" : ""}`}
-                onClick={() => setPriceSort((s) => (s === "asc" ? "none" : "asc"))}
-                title={t(lang, "sortPriceAsc")}
-                aria-hidden
-              >
-                ↑
-              </div>
-              <div
-                className={`zen-price-sort-segment ${priceSort === "desc" ? "zen-price-sort-segment-active" : ""}`}
-                onClick={() => setPriceSort((s) => (s === "desc" ? "none" : "desc"))}
-                title={t(lang, "sortPriceDesc")}
-                aria-hidden
-              >
-                ↓
-              </div>
-            </div>
-            <div className="zen-price-inputs">
-              <input
-                type="number"
-                className="zen-price-input"
-                min={0}
-                step={100}
-                placeholder={t(lang, "priceFrom")}
-                value={priceMin}
-                onChange={(e) => setPriceMin(e.target.value)}
-              />
-              <input
-                type="number"
-                className="zen-price-input"
-                min={0}
-                step={100}
-                placeholder={t(lang, "priceTo")}
-                value={priceMax}
-                onChange={(e) => setPriceMax(e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {!isMobile && (
-        <div style={styles.tabsWrap} className="catalog-tabs-wrap hide-scrollbar">
-          {categoryTabs.map(({ code, label }) => {
-            const isSelected = code === "all" ? selectedCategories.has("all") : selectedCategories.has(code);
-            return (
-              <button
-                key={code}
-                type="button"
-                className="catalog-tab-btn"
-                onClick={(e) => {
-                  handleCategoryClick(code);
-                  (e.currentTarget as HTMLButtonElement).blur();
-                }}
-                style={{
-                  ...styles.tab,
-                  ...(isSelected ? styles.tabActive : {}),
-                  outline: "none",
-                  boxShadow: "none",
-                  WebkitTapHighlightColor: "transparent",
-                }}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {showPriceFilter && isMobile && (
-        <>
-          <button type="button" className="zen-filters-fab" onClick={() => setFiltersOpen(true)}>
-            {t(lang, "filters")}
+      <div className="zen-catalog-search-row">
+        <input
+          type="search"
+          className="zen-input zen-catalog-search-input"
+          placeholder={t(lang, "search")}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          aria-label={t(lang, "search")}
+        />
+        {showPriceFilter && (
+          <button
+            type="button"
+            className="zen-filter-icon-btn"
+            onClick={() => setFiltersOpen(true)}
+            aria-label={t(lang, "filters")}
+            title={t(lang, "filters")}
+          >
+            <FilterIcon />
           </button>
-          {filtersOpen && (
-            <>
-              <div className="zen-filters-overlay" onClick={() => setFiltersOpen(false)} aria-hidden />
-              <div className="zen-filters-panel" role="dialog" aria-label={t(lang, "priceFilter")}>
+        )}
+      </div>
+
+      {showPriceFilter && filtersOpen && (
+        <>
+          <div className="zen-filters-overlay" onClick={() => setFiltersOpen(false)} aria-hidden />
+          <div className="zen-filters-panel" role="dialog" aria-label={t(lang, "priceFilter")}>
                 <h3 className="zen-filters-panel-title">{t(lang, "filters")}</h3>
                 <div className="zen-price-filter-wrap" style={{ flexDirection: "column", alignItems: "stretch", border: "none", padding: 0 }}>
                   <span className="zen-price-filter-label" style={{ marginBottom: 8 }}>{t(lang, "priceFilter")}</span>
@@ -430,12 +355,10 @@ export function Catalog({
                     );
                   })}
                 </div>
-                <button type="button" className="zen-filters-apply-btn" onClick={() => setFiltersOpen(false)}>
-                  {t(lang, "apply")}
-                </button>
-              </div>
-            </>
-          )}
+            <button type="button" className="zen-filters-apply-btn" onClick={() => setFiltersOpen(false)}>
+              {t(lang, "apply")}
+            </button>
+          </div>
         </>
       )}
 

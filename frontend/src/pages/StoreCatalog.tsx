@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react";
 import type { Product } from "../api";
 import { ProductCard } from "../components/ProductCard";
-import { CollapsibleSearch } from "../components/CollapsibleSearch";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 import { getCategoryLabel } from "../utils/categories";
@@ -28,7 +27,6 @@ export function StoreCatalog({
   const { settings } = useSettings();
   const lang = settings.lang;
   const [search, setSearch] = useState("");
-  const [searchExpanded, setSearchExpanded] = useState(false);
   const isStoreById = "id" in store;
   const backLabel =
     (isStoreById ? store.name : getCategoryLabel(store.category, categoryLabels)).trim() ||
@@ -57,15 +55,16 @@ export function StoreCatalog({
       <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
         ← {backLabel}
       </button>
-      <CollapsibleSearch
-        value={search}
-        onChange={setSearch}
-        placeholder={t(lang, "search")}
-        expanded={searchExpanded}
-        onExpand={() => setSearchExpanded(true)}
-        onCollapse={() => setSearchExpanded(false)}
-        aria-label={t(lang, "search")}
-      />
+      <div className="zen-catalog-search-row">
+        <input
+          type="search"
+          className="zen-input zen-catalog-search-input"
+          placeholder={t(lang, "search")}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          aria-label={t(lang, "search")}
+        />
+      </div>
       {filtered.length === 0 ? (
         <div className="zen-empty-state" style={styles.empty}>
           <strong>{t(lang, "nothingFound")}</strong>

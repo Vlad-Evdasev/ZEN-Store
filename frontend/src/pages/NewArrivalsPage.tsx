@@ -2,11 +2,18 @@ import { useState, useMemo, useEffect } from "react";
 import type { Product, Category } from "../api";
 import { getProductReviewStats, type ProductReviewStats } from "../api";
 import { ProductCard } from "../components/ProductCard";
-import { CollapsibleSearch } from "../components/CollapsibleSearch";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 
 const FALLBACK_CATEGORY_CODES = ["all", "tee", "hoodie", "pants", "jacket", "accessories"];
+
+function FilterIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+    </svg>
+  );
+}
 
 interface NewArrivalsPageProps {
   products: Product[];
@@ -28,25 +35,15 @@ export function NewArrivalsPage({
   const { settings } = useSettings();
   const lang = settings.lang;
   const [search, setSearch] = useState("");
-  const [searchExpanded, setSearchExpanded] = useState(false);
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
   const [priceSort, setPriceSort] = useState<"none" | "asc" | "desc">("none");
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set(["all"]));
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [reviewStats, setReviewStats] = useState<ProductReviewStats>({});
-  const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia("(max-width: 768px)").matches : false
-  );
 
   useEffect(() => {
     getProductReviewStats().then(setReviewStats).catch(console.error);
-  }, []);
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 768px)");
-    const handler = () => setIsMobile(mq.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
   }, []);
 
   const categoryTabs = useMemo(() => {
@@ -126,65 +123,27 @@ export function NewArrivalsPage({
       </button>
       <h1 className="zen-new-arrivals-title" style={styles.title}>{t(lang, "newArrivals")}</h1>
 
-      <CollapsibleSearch
-        value={search}
-        onChange={setSearch}
-        placeholder={t(lang, "search")}
-        expanded={searchExpanded}
-        onExpand={() => setSearchExpanded(true)}
-        onCollapse={() => setSearchExpanded(false)}
-        aria-label={t(lang, "search")}
-      />
+      <div className="zen-catalog-search-row">
+        <input
+          type="search"
+          className="zen-input zen-catalog-search-input"
+          placeholder={t(lang, "search")}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          aria-label={t(lang, "search")}
+        />
+        <button
+          type="button"
+          className="zen-filter-icon-btn"
+          onClick={() => setFiltersOpen(true)}
+          aria-label={t(lang, "filters")}
+          title={t(lang, "filters")}
+        >
+          <FilterIcon />
+        </button>
+      </div>
 
-      {!isMobile && (
-        <div className="zen-catalog-filters">
-          <div className="zen-price-filter-wrap">
-            <span className="zen-price-filter-label">{t(lang, "priceFilter")}</span>
-            <div className="zen-price-sort-segmented" role="group">
-              <div
-                className={`zen-price-sort-segment ${priceSort === "asc" ? "zen-price-sort-segment-active" : ""}`}
-                onClick={() => setPriceSort((s) => (s === "asc" ? "none" : "asc"))}
-                title={t(lang, "sortPriceAsc")}
-              >↑</div>
-              <div
-                className={`zen-price-sort-segment ${priceSort === "desc" ? "zen-price-sort-segment-active" : ""}`}
-                onClick={() => setPriceSort((s) => (s === "desc" ? "none" : "desc"))}
-                title={t(lang, "sortPriceDesc")}
-              >↓</div>
-            </div>
-            <div className="zen-price-inputs">
-              <input type="number" className="zen-price-input" min={0} step={100} placeholder={t(lang, "priceFrom")} value={priceMin} onChange={(e) => setPriceMin(e.target.value)} />
-              <input type="number" className="zen-price-input" min={0} step={100} placeholder={t(lang, "priceTo")} value={priceMax} onChange={(e) => setPriceMax(e.target.value)} />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {!isMobile && (
-        <div className="catalog-tabs-wrap hide-scrollbar" style={{ WebkitOverflowScrolling: "touch" }}>
-          {categoryTabs.map(({ code, label }) => {
-            const isSelected = code === "all" ? selectedCategories.has("all") : selectedCategories.has(code);
-            return (
-              <button
-                key={code}
-                type="button"
-                className="catalog-tab-btn"
-                onClick={() => handleCategoryClick(code)}
-                style={{ ...tabStyles.tab, ...(isSelected ? tabStyles.tabActive : {}) }}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {isMobile && (
-        <>
-          <button type="button" className="zen-filters-fab" onClick={() => setFiltersOpen(true)}>
-            {t(lang, "filters")}
-          </button>
-          {filtersOpen && (
+      {filtersOpen && (
             <>
               <div className="zen-filters-overlay" onClick={() => setFiltersOpen(false)} aria-hidden />
               <div className="zen-filters-panel" role="dialog">
@@ -211,10 +170,8 @@ export function NewArrivalsPage({
                     );
                   })}
                 </div>
-                <button type="button" className="zen-filters-apply-btn" onClick={() => setFiltersOpen(false)}>{t(lang, "apply")}</button>
-              </div>
-            </>
-          )}
+            <button type="button" className="zen-filters-apply-btn" onClick={() => setFiltersOpen(false)}>{t(lang, "apply")}</button>
+          </div>
         </>
       )}
 
@@ -247,7 +204,7 @@ export function NewArrivalsPage({
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  wrap: { paddingBottom: 80 },
+  wrap: { paddingBottom: 24 },
   back: { marginBottom: 8 },
   title: { margin: "0 0 20px" },
   empty: {},
