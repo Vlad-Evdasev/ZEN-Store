@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 import { getSiteContent } from "../api";
@@ -18,6 +18,11 @@ export function Landing({ onGoToCatalog, onCustomOrder, onGoToArrived }: Landing
   const lang = settings.lang;
   const [content, setContent] = useState<Record<string, string>>({});
   const [visible, setVisible] = useState(false);
+  const tilesRef = useRef<HTMLDivElement>(null);
+
+  const scrollToTiles = () => {
+    tilesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   useEffect(() => {
     getSiteContent().then(setContent).catch(() => {});
@@ -62,16 +67,22 @@ export function Landing({ onGoToCatalog, onCustomOrder, onGoToArrived }: Landing
         <div style={{ ...styles.heroContent, ...fadeStyle }}>
           <h1 style={heroImageUrl ? styles.heroTitle : styles.heroTitleNoImage}>{heroTitle}</h1>
           <p style={heroImageUrl ? styles.heroSubtitle : styles.heroSubtitleNoImage}>{heroSubtitle}</p>
-          <div style={styles.heroCtaWrap}>
-            <button type="button" onClick={onGoToCatalog} style={styles.heroCta}>
-              {catalogCta}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={scrollToTiles}
+            className="landing-hero-scroll"
+            style={{ ...styles.heroScrollBtn, ...(heroImageUrl ? {} : styles.heroScrollBtnNoImage) }}
+            aria-label="К карточкам ниже"
+          >
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={styles.heroScrollIcon} aria-hidden>
+              <path d="M12 5v14M19 12l-7 7-7-7" />
+            </svg>
+          </button>
         </div>
       </section>
 
       {/* Два блока рядом: Каталог и Заказать не из каталога */}
-      <div className="landing-tiles landing-tiles-two" style={{ ...styles.tilesWrap, ...styles.sectionGap, ...fadeStyle, transition: "opacity 0.8s ease-out 0.2s" }}>
+      <div ref={tilesRef} className="landing-tiles landing-tiles-two" style={{ ...styles.tilesWrap, ...styles.sectionGap, ...fadeStyle, transition: "opacity 0.8s ease-out 0.2s" }}>
         <button type="button" onClick={onGoToCatalog} className="landing-tile" style={tileStyle(catalogImageUrl)}>
           <span className="landing-tile-overlay" />
           <span style={styles.tileInner}>
@@ -205,6 +216,25 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     letterSpacing: "0.22em",
     textTransform: "uppercase",
+  },
+  heroScrollBtn: {
+    marginTop: 24,
+    padding: 12,
+    background: "transparent",
+    border: "1px solid rgba(255,255,255,0.6)",
+    borderRadius: "50%",
+    color: "rgba(255,255,255,0.95)",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroScrollIcon: {
+    display: "block",
+  },
+  heroScrollBtnNoImage: {
+    borderColor: "var(--border)",
+    color: "var(--text)",
   },
   heroTitleNoImage: {
     fontFamily: "Georgia, 'Times New Roman', serif",

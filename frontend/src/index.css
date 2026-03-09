@@ -537,6 +537,24 @@ button:active {
   }
 }
 
+/* Hero: стрелка вниз в премиальном стиле */
+.zen-landing .landing-hero-scroll {
+  transition: transform 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+.zen-landing .landing-hero-scroll:hover {
+  transform: scale(1.05);
+}
+.zen-landing .landing-hero-scroll:active {
+  transform: scale(0.98);
+}
+@keyframes landing-scroll-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(4px); }
+}
+.zen-landing .landing-hero-scroll svg {
+  animation: landing-scroll-bounce 2s ease-in-out infinite;
+}
+
 /* Главная: два блока рядом, затем один на всю ширину + отступы между секциями */
 .zen-landing .landing-tiles-two {
   display: grid;
