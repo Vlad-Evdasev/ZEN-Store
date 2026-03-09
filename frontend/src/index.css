@@ -934,17 +934,18 @@ html[data-theme="light"] .zen-app .product-card-price {
   letter-spacing: 0.02em;
 }
 
-/* Строка поиска + иконка фильтра — минимал «линия» */
+/* Строка поиска + иконка фильтра — премиальный минимал */
 .zen-app .zen-catalog-search-row {
   display: flex;
   align-items: center;
   gap: 12px;
   margin-bottom: 24px;
-  padding-bottom: 12px;
+  padding-bottom: 14px;
   border-bottom: 1px solid var(--border);
-  transition: border-color 0.2s ease;
+  transition: border-color 0.25s ease, border-width 0.2s ease;
 }
 .zen-app .zen-catalog-search-row:focus-within {
+  border-bottom-width: 2px;
   border-bottom-color: var(--accent);
 }
 .zen-app .zen-catalog-search-input {
@@ -957,11 +958,16 @@ html[data-theme="light"] .zen-app .product-card-price {
   border-radius: 0;
   background: transparent;
   color: var(--text);
-  font-size: 15px;
-  letter-spacing: 0.02em;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 16px;
+  letter-spacing: 0.04em;
+  caret-color: var(--accent);
+  transition: color 0.2s ease;
 }
 .zen-app .zen-catalog-search-input::placeholder {
   color: var(--muted);
+  opacity: 0.85;
+  letter-spacing: 0.03em;
 }
 .zen-app .zen-catalog-search-input:focus {
   outline: none;
