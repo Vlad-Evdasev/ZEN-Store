@@ -291,6 +291,32 @@ export function Catalog({
       {showPriceFilter && (
         <div style={styles.priceFilterWrap}>
           <span style={styles.priceFilterLabel}>{t(lang, "priceFilter")}:</span>
+          <div style={styles.priceSortWrap} role="group" aria-label={t(lang, "priceFilter")}>
+            <button
+              type="button"
+              className={`catalog-price-sort-btn ${priceSort === "desc" ? "catalog-price-sort-btn--active" : ""}`}
+              onClick={() => setPriceSort((s) => (s === "desc" ? "none" : "desc"))}
+              style={{ ...styles.priceSortBtn, ...(priceSort === "desc" ? styles.priceSortBtnActive : {}) }}
+              aria-label={t(lang, "sortPriceDesc")}
+              title={t(lang, "sortPriceDesc")}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M18 15l-6-6-6 6" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className={`catalog-price-sort-btn ${priceSort === "asc" ? "catalog-price-sort-btn--active" : ""}`}
+              onClick={() => setPriceSort((s) => (s === "asc" ? "none" : "asc"))}
+              style={{ ...styles.priceSortBtn, ...(priceSort === "asc" ? styles.priceSortBtnActive : {}) }}
+              aria-label={t(lang, "sortPriceAsc")}
+              title={t(lang, "sortPriceAsc")}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+          </div>
           <input
             type="number"
             min={0}
@@ -309,32 +335,6 @@ export function Catalog({
             onChange={(e) => setPriceMax(e.target.value)}
             style={styles.priceInput}
           />
-          <div style={styles.priceSortWrap} role="group" aria-label={t(lang, "priceFilter")}>
-            <button
-              type="button"
-              className={`catalog-price-sort-btn ${priceSort === "asc" ? "catalog-price-sort-btn--active" : ""}`}
-              onClick={() => setPriceSort((s) => (s === "asc" ? "none" : "asc"))}
-              style={{ ...styles.priceSortBtn, ...(priceSort === "asc" ? styles.priceSortBtnActive : {}) }}
-              aria-label={t(lang, "sortPriceAsc")}
-              title={t(lang, "sortPriceAsc")}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M12 19V5M5 12l7-7 7 7" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              className={`catalog-price-sort-btn ${priceSort === "desc" ? "catalog-price-sort-btn--active" : ""}`}
-              onClick={() => setPriceSort((s) => (s === "desc" ? "none" : "desc"))}
-              style={{ ...styles.priceSortBtn, ...(priceSort === "desc" ? styles.priceSortBtnActive : {}) }}
-              aria-label={t(lang, "sortPriceDesc")}
-              title={t(lang, "sortPriceDesc")}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M12 5v14M5 12l7 7 7-7" />
-              </svg>
-            </button>
-          </div>
         </div>
       )}
 
@@ -445,8 +445,7 @@ const styles: Record<string, React.CSSProperties> = {
   priceSortWrap: {
     display: "flex",
     alignItems: "center",
-    gap: 4,
-    marginLeft: "auto",
+    gap: 6,
   },
   priceSortBtn: {
     width: 40,
