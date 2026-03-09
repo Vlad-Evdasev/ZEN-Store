@@ -29,7 +29,8 @@ export function Landing({ onGoToCatalog, onCustomOrder, onGoToArrived }: Landing
     const startY = window.scrollY;
     const distance = targetY - startY;
     const duration = 1100;
-    const startTime = performance.now();
+    const now = performance.now();
+    const startTime = now - 40;
 
     function easeInOutQuart(t: number): number {
       return t < 0.5 ? 8 * t * t * t * t : 1 - (-2 * t + 2) ** 4 / 2;
@@ -43,7 +44,7 @@ export function Landing({ onGoToCatalog, onCustomOrder, onGoToArrived }: Landing
       if (progress < 1) requestAnimationFrame(tick);
     }
 
-    requestAnimationFrame(tick);
+    tick(now);
   };
 
   useEffect(() => {
