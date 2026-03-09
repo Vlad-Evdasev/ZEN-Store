@@ -294,26 +294,26 @@ export function Catalog({
           <div style={styles.priceSortWrap} role="group" aria-label={t(lang, "priceFilter")}>
             <button
               type="button"
-              className={`catalog-price-sort-btn ${priceSort === "desc" ? "catalog-price-sort-btn--active" : ""}`}
-              onClick={() => setPriceSort((s) => (s === "desc" ? "none" : "desc"))}
-              style={{ ...styles.priceSortBtn, ...(priceSort === "desc" ? styles.priceSortBtnActive : {}) }}
-              aria-label={t(lang, "sortPriceDesc")}
-              title={t(lang, "sortPriceDesc")}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M18 15l-6-6-6 6" />
-              </svg>
-            </button>
-            <button
-              type="button"
               className={`catalog-price-sort-btn ${priceSort === "asc" ? "catalog-price-sort-btn--active" : ""}`}
               onClick={() => setPriceSort((s) => (s === "asc" ? "none" : "asc"))}
               style={{ ...styles.priceSortBtn, ...(priceSort === "asc" ? styles.priceSortBtnActive : {}) }}
               aria-label={t(lang, "sortPriceAsc")}
               title={t(lang, "sortPriceAsc")}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M6 9l6 6 6-6" />
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M6 10l6 6 6-6" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className={`catalog-price-sort-btn ${priceSort === "desc" ? "catalog-price-sort-btn--active" : ""}`}
+              onClick={() => setPriceSort((s) => (s === "desc" ? "none" : "desc"))}
+              style={{ ...styles.priceSortBtn, ...(priceSort === "desc" ? styles.priceSortBtnActive : {}) }}
+              aria-label={t(lang, "sortPriceDesc")}
+              title={t(lang, "sortPriceDesc")}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M18 14l-6-6-6 6" />
               </svg>
             </button>
           </div>

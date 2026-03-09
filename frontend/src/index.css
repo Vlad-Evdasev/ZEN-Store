@@ -332,6 +332,21 @@ button:active {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Кнопки сортировки по цене: без белой границы при фокусе/клике */
+.catalog-price-sort-btn,
+.catalog-price-sort-btn:focus,
+.catalog-price-sort-btn:focus-visible,
+.catalog-price-sort-btn:active,
+.zen-app .catalog-price-sort-btn,
+.zen-app .catalog-price-sort-btn:focus,
+.zen-app .catalog-price-sort-btn:focus-visible,
+.zen-app .catalog-price-sort-btn:active {
+  outline: none !important;
+  outline-width: 0 !important;
+  outline-color: transparent !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
 
 @keyframes zen-spin {
   from { transform: rotate(0deg); }
