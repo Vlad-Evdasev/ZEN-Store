@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import type { Product, Category } from "../api";
 import { getProductReviewStats, type ProductReviewStats } from "../api";
 import { FilterIcon } from "../components/FilterIcon";
@@ -33,6 +33,7 @@ export function NewArrivalsPage({
   const [priceSort, setPriceSort] = useState<"none" | "asc" | "desc">("none");
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set(["all"]));
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const filtersPanelTouchStartY = useRef<number>(0);
   const [reviewStats, setReviewStats] = useState<ProductReviewStats>({});
 
   useEffect(() => {
@@ -120,8 +121,19 @@ export function NewArrivalsPage({
       {filtersOpen && (
             <>
               <div className="zen-filters-overlay" onClick={() => setFiltersOpen(false)} aria-hidden />
-              <div className="zen-filters-panel" role="dialog">
-                <h3 className="zen-filters-panel-title">{t(lang, "filters")}</h3>
+              <div
+                className="zen-filters-panel"
+                role="dialog"
+                onTouchStart={(e) => { filtersPanelTouchStartY.current = e.touches[0].clientY; }}
+                onTouchEnd={(e) => {
+                  const dy = e.changedTouches[0].clientY - filtersPanelTouchStartY.current;
+                  if (dy > 60) setFiltersOpen(false);
+                }}
+              >
+                <div className="zen-filters-panel-header">
+                  <h3 className="zen-filters-panel-title">{t(lang, "filters")}</h3>
+                  <button type="button" className="zen-filters-panel-close" onClick={() => setFiltersOpen(false)} aria-label={t(lang, "close")}>×</button>
+                </div>
                 <div className="zen-price-filter-wrap" style={{ flexDirection: "column", alignItems: "stretch", border: "none", padding: 0 }}>
                   <span className="zen-price-filter-label" style={{ marginBottom: 8 }}>{t(lang, "priceFilter")}</span>
                   <div className="zen-price-sort-segmented" style={{ marginBottom: 16 }}>
@@ -134,11 +146,11 @@ export function NewArrivalsPage({
                   </div>
                 </div>
                 <span className="zen-price-filter-label" style={{ marginBottom: 8, display: "block" }}>{t(lang, "categories")}</span>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+                <div className="zen-filters-chip-row" style={{ marginBottom: 16 }}>
                   {categoryTabs.map(({ code, label }) => {
                     const isSelected = code === "all" ? selectedCategories.has("all") : selectedCategories.has(code);
                     return (
-                      <button key={code} type="button" className="catalog-tab-btn" onClick={() => handleCategoryClick(code)} style={{ ...tabStyles.tab, ...(isSelected ? tabStyles.tabActive : {}) }}>
+                      <button key={code} type="button" className={`zen-filters-chip ${isSelected ? "zen-filters-chip-active" : ""}`} onClick={() => handleCategoryClick(code)}>
                         {label}
                       </button>
                     );

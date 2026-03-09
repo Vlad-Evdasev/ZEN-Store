@@ -59,6 +59,8 @@ export function Catalog({
   const setSelectedCategories = onSelectedCategoriesChange ?? setInternalCategories;
   const [reviewStats, setReviewStats] = useState<ProductReviewStats>({});
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [selectedBrand, setSelectedBrand] = useState<string>("all");
+  const filtersPanelTouchStartY = useRef<number>(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const marqueePausedRef = useRef(false);
   const pauseTimeoutRef = useRef<number | null>(null);
@@ -167,6 +169,15 @@ export function Catalog({
     return FALLBACK_CATEGORY_CODES.map((code) => ({ code, label: t(lang, code) }));
   }, [categories, lang]);
 
+  const uniqueBrands = useMemo(() => {
+    const set = new Set<string>();
+    products.forEach((p) => {
+      const b = p.brand?.trim();
+      if (b) set.add(b);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [products]);
+
   const filtered = useMemo(() => {
     let list = products;
     if (!selectedCategories.has("all")) {
@@ -188,8 +199,11 @@ export function Catalog({
       const max = Number(priceMax.trim());
       if (!Number.isNaN(max)) list = list.filter((p) => p.price <= max);
     }
+    if (selectedBrand !== "all") {
+      list = list.filter((p) => (p.brand?.trim() ?? "") === selectedBrand);
+    }
     return list;
-  }, [products, selectedCategories, search, showPriceFilter, priceMin, priceMax]);
+  }, [products, selectedCategories, search, showPriceFilter, priceMin, priceMax, selectedBrand]);
 
   const displayList = useMemo(() => {
     if (priceSort === "asc") return [...filtered].sort((a, b) => a.price - b.price);
@@ -305,8 +319,20 @@ export function Catalog({
       {showPriceFilter && filtersOpen && (
         <>
           <div className="zen-filters-overlay" onClick={() => setFiltersOpen(false)} aria-hidden />
-          <div className="zen-filters-panel" role="dialog" aria-label={t(lang, "priceFilter")}>
-                <h3 className="zen-filters-panel-title">{t(lang, "filters")}</h3>
+          <div
+            className="zen-filters-panel"
+            role="dialog"
+            aria-label={t(lang, "priceFilter")}
+            onTouchStart={(e) => { filtersPanelTouchStartY.current = e.touches[0].clientY; }}
+            onTouchEnd={(e) => {
+              const dy = e.changedTouches[0].clientY - filtersPanelTouchStartY.current;
+              if (dy > 60) setFiltersOpen(false);
+            }}
+          >
+                <div className="zen-filters-panel-header">
+                  <h3 className="zen-filters-panel-title">{t(lang, "filters")}</h3>
+                  <button type="button" className="zen-filters-panel-close" onClick={() => setFiltersOpen(false)} aria-label={t(lang, "close")}>×</button>
+                </div>
                 <div className="zen-price-filter-wrap" style={{ flexDirection: "column", alignItems: "stretch", border: "none", padding: 0 }}>
                   <span className="zen-price-filter-label" style={{ marginBottom: 8 }}>{t(lang, "priceFilter")}</span>
                   <div className="zen-price-sort-segmented" style={{ marginBottom: 16 }} role="group">
@@ -326,22 +352,27 @@ export function Catalog({
                     <input type="number" className="zen-price-input" min={0} step={100} placeholder={t(lang, "priceTo")} value={priceMax} onChange={(e) => setPriceMax(e.target.value)} />
                   </div>
                 </div>
+                {uniqueBrands.length > 0 && (
+                  <>
+                    <span className="zen-price-filter-label" style={{ marginBottom: 8, display: "block" }}>{t(lang, "brand")}</span>
+                    <div className="zen-filters-chip-row" style={{ marginBottom: 16 }}>
+                      <button type="button" className={`zen-filters-chip ${selectedBrand === "all" ? "zen-filters-chip-active" : ""}`} onClick={() => setSelectedBrand("all")}>{t(lang, "all")}</button>
+                      {uniqueBrands.map((b) => (
+                        <button key={b} type="button" className={`zen-filters-chip ${selectedBrand === b ? "zen-filters-chip-active" : ""}`} onClick={() => setSelectedBrand(b)}>{b}</button>
+                      ))}
+                    </div>
+                  </>
+                )}
                 <span className="zen-price-filter-label" style={{ marginBottom: 8, display: "block" }}>{t(lang, "categories")}</span>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+                <div className="zen-filters-chip-row" style={{ marginBottom: 16 }}>
                   {categoryTabs.map(({ code, label }) => {
                     const isSelected = code === "all" ? selectedCategories.has("all") : selectedCategories.has(code);
                     return (
                       <button
                         key={code}
                         type="button"
-                        className="catalog-tab-btn"
+                        className={`zen-filters-chip ${isSelected ? "zen-filters-chip-active" : ""}`}
                         onClick={() => { handleCategoryClick(code); }}
-                        style={{
-                          ...styles.tab,
-                          ...(isSelected ? styles.tabActive : {}),
-                          outline: "none",
-                          boxShadow: "none",
-                        }}
                       >
                         {label}
                       </button>
