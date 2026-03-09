@@ -146,7 +146,9 @@ const styles: Record<string, React.CSSProperties> = {
   heroWrap: {
     position: "relative",
     width: "100%",
-    minHeight: "100vh",
+    marginTop: 24,
+    marginBottom: 24,
+    minHeight: "calc(100vh - 48px)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",

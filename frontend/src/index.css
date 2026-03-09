@@ -537,10 +537,12 @@ button:active {
   }
 }
 
-/* Hero: на всю высоту экрана, чтобы нижние карточки не были видны */
+/* Hero: отступы сверху и снизу одинаковые, карточка чуть короче экрана */
 .zen-landing section:first-of-type {
-  min-height: 100dvh;
-  min-height: 100vh;
+  margin-top: 24px;
+  margin-bottom: 24px;
+  min-height: calc(100dvh - 48px);
+  min-height: calc(100vh - 48px);
 }
 
 /* Hero: стрелка вниз в премиальном стиле */
