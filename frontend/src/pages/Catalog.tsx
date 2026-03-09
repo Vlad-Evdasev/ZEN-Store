@@ -397,7 +397,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     gap: 8,
     marginTop: 0,
-    marginBottom: 16,
+    marginBottom: 8,
   },
   storesRow: {
     flex: 1,
