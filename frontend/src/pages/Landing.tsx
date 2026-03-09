@@ -148,7 +148,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: "100%",
     marginTop: 0,
     marginBottom: 12,
-    minHeight: "calc(100vh - 12px)",
+    minHeight: "calc(100vh - 28px)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",

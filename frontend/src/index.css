@@ -537,12 +537,12 @@ button:active {
   }
 }
 
-/* Hero: без отступа сверху, снизу маленький отступ */
+/* Hero: без отступа сверху, снизу маленький отступ, карточка короче на 16px */
 .zen-landing section:first-of-type {
   margin-top: 0;
   margin-bottom: 12px;
-  min-height: calc(100dvh - 12px);
-  min-height: calc(100vh - 12px);
+  min-height: calc(100dvh - 28px);
+  min-height: calc(100vh - 28px);
 }
 
 /* Hero: стрелка вниз в премиальном стиле */
