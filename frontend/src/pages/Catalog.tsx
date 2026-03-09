@@ -295,6 +295,7 @@ export function Catalog({
             <button
               type="button"
               className={`catalog-price-sort-btn ${priceSort === "asc" ? "catalog-price-sort-btn--active" : ""}`}
+              onMouseDown={(e) => e.preventDefault()}
               onClick={(e) => {
                 setPriceSort((s) => (s === "asc" ? "none" : "asc"));
                 (e.currentTarget as HTMLButtonElement).blur();
@@ -316,6 +317,7 @@ export function Catalog({
             <button
               type="button"
               className={`catalog-price-sort-btn ${priceSort === "desc" ? "catalog-price-sort-btn--active" : ""}`}
+              onMouseDown={(e) => e.preventDefault()}
               onClick={(e) => {
                 setPriceSort((s) => (s === "desc" ? "none" : "desc"));
                 (e.currentTarget as HTMLButtonElement).blur();
