@@ -170,16 +170,17 @@ const styles: Record<string, React.CSSProperties> = {
   },
   price: {
     padding: 0,
-    margin: "6px 0 0",
+    margin: "4px 0 0",
     fontSize: 14,
     fontWeight: 500,
     fontFamily: 'Georgia, "Times New Roman", serif',
+    color: "var(--text)",
     lineHeight: 1.3,
     letterSpacing: "0.02em",
   },
   reviews: {
     padding: 0,
-    margin: "6px 0 0",
+    margin: "4px 0 0",
     flexShrink: 0,
     fontSize: 12,
     color: "var(--muted)",
@@ -187,7 +188,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   reviewsCompact: {
     padding: 0,
-    margin: "4px 0 0",
+    margin: "3px 0 0",
     flexShrink: 0,
     fontSize: 11,
     color: "var(--muted)",
@@ -199,6 +200,6 @@ const styles: Record<string, React.CSSProperties> = {
   imageWrapTall: { aspectRatio: "4/5" },
   imageWrapFillHeight: { flex: "1 1 0%", minHeight: 120, aspectRatio: "unset" as const },
   descWrapFillHeight: { flex: "0 0 auto", minHeight: 52, flexShrink: 0 },
-  nameCompact: { padding: 0, margin: "0 0 4px", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.3 },
-  priceCompact: { padding: 0, margin: "4px 0 0", fontSize: 13, fontWeight: 500, lineHeight: 1.25 },
+  nameCompact: { padding: 0, margin: "0 0 3px", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.3 },
+  priceCompact: { padding: 0, margin: "3px 0 0", fontSize: 13, fontWeight: 500, color: "var(--text)", lineHeight: 1.25 },
 };
