@@ -146,9 +146,9 @@ const styles: Record<string, React.CSSProperties> = {
   heroWrap: {
     position: "relative",
     width: "100%",
-    marginTop: 8,
-    marginBottom: 8,
-    minHeight: "calc(100vh - 16px)",
+    marginTop: 12,
+    marginBottom: 12,
+    minHeight: "calc(100vh - 24px)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -258,7 +258,7 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: "0.08em",
     textTransform: "uppercase",
   },
-  sectionGap: { marginTop: 32 },
+  sectionGap: { marginTop: 16 },
   tilesWrap: {
     margin: "0 auto",
     padding: "0 var(--content-padding, 16px)",
