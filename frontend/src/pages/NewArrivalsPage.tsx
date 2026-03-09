@@ -123,26 +123,7 @@ export function NewArrivalsPage({
       </button>
       <h1 className="zen-new-arrivals-title" style={styles.title}>{t(lang, "newArrivals")}</h1>
 
-      <div className="zen-catalog-search-row">
-        <input
-          type="search"
-          className="zen-input zen-catalog-search-input"
-          placeholder={t(lang, "search")}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          aria-label={t(lang, "search")}
-        />
-        <button
-          type="button"
-          className="zen-filter-icon-btn"
-          onClick={() => setFiltersOpen(true)}
-          aria-label={t(lang, "filters")}
-          title={t(lang, "filters")}
-        >
-          <FilterIcon />
-        </button>
-      </div>
-
+      <div style={styles.gridArea}>
       {filtersOpen && (
             <>
               <div className="zen-filters-overlay" onClick={() => setFiltersOpen(false)} aria-hidden />
@@ -199,13 +180,47 @@ export function NewArrivalsPage({
           ))}
         </div>
       )}
+      </div>
+
+      <div className="zen-catalog-search-row" style={styles.searchRow}>
+        <input
+          type="search"
+          className="zen-input zen-catalog-search-input"
+          placeholder={t(lang, "search")}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          aria-label={t(lang, "search")}
+        />
+        <button
+          type="button"
+          className="zen-filter-icon-btn"
+          onClick={() => setFiltersOpen(true)}
+          aria-label={t(lang, "filters")}
+          title={t(lang, "filters")}
+        >
+          <FilterIcon />
+        </button>
+      </div>
     </div>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  wrap: { paddingBottom: 24 },
-  back: { marginBottom: 8 },
-  title: { margin: "0 0 20px" },
+  wrap: {
+    display: "flex",
+    flexDirection: "column",
+    height: "100%",
+    minHeight: 0,
+    paddingBottom: 0,
+  },
+  back: { marginBottom: 8, flexShrink: 0 },
+  title: { margin: "0 0 12px", flexShrink: 0 },
+  gridArea: {
+    flex: 1,
+    minHeight: 0,
+    overflow: "auto",
+    marginBottom: 16,
+  },
+  searchRow: { flexShrink: 0 },
   empty: {},
 };

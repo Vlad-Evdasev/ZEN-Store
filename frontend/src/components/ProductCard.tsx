@@ -116,7 +116,7 @@ const styles: Record<string, React.CSSProperties> = {
   image: {
     width: "100%",
     height: "100%",
-    objectFit: "contain",
+    objectFit: "cover",
   },
   wishlistBtn: {
     position: "absolute",
