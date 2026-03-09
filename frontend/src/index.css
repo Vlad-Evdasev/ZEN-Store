@@ -381,11 +381,36 @@ html[data-theme="light"] .zen-app .product-card-price {
 }
 .zen-app .product-card-desc {
   background: var(--surface);
-  font-family: inherit;
+}
+/* Карточка RL: фото → отступ → название (serif) → цена (serif/приглушённая) */
+.zen-app .product-card--text-below {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 .zen-app .product-card--text-below .product-card-desc {
   border-radius: 0;
   box-shadow: none;
+  margin-top: 0;
+  border-top: 1px solid var(--border);
+}
+/* Отступ между фото и текстовым блоком */
+.zen-app .product-card--text-below .product-card-desc {
+  padding-top: 18px;
+}
+.zen-app .product-card--text-below .product-card-name {
+  font-family: Georgia, "Times New Roman", serif !important;
+  font-weight: 400 !important;
+  letter-spacing: 0.03em;
+  margin-bottom: 2px;
+}
+.zen-app .product-card--text-below .product-card-price {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+html[data-theme="light"] .zen-app .product-card--text-below .product-card-price {
+  color: var(--muted);
 }
 .zen-app .product-card-wishlist-btn {
   -webkit-tap-highlight-color: transparent;
