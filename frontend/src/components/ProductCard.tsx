@@ -86,12 +86,14 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
         {product.brand?.trim() && (
           <span style={compact ? styles.brandCompact : styles.brand}>{product.brand.trim()}</span>
         )}
-        <p className="product-card-price" style={priceStyle}>{formatPrice(product.price)}</p>
-        {hasReviews && (
-          <span style={{ ...(compact ? styles.reviewsCompact : styles.reviews), ...noShrink }}>
-            ★ {reviewAvg?.toFixed(1) ?? "—"}
-          </span>
-        )}
+        <div style={compact ? styles.priceRowCompact : styles.priceRow}>
+          <p className="product-card-price" style={priceStyle}>{formatPrice(product.price)}</p>
+          {hasReviews && (
+            <span style={{ ...(compact ? styles.reviewsCompact : styles.reviews), ...noShrink }}>
+              ★ {reviewAvg?.toFixed(1) ?? "—"}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -195,19 +197,41 @@ const styles: Record<string, React.CSSProperties> = {
     whiteSpace: "nowrap",
     lineHeight: 1.25,
   },
+  priceRow: {
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: 8,
+    marginTop: 4,
+    padding: 0,
+    minHeight: 0,
+  },
+  priceRowCompact: {
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: 6,
+    marginTop: 3,
+    padding: 0,
+    minHeight: 0,
+  },
   price: {
     padding: 0,
-    margin: "4px 0 0",
+    margin: 0,
     fontSize: 14,
     fontWeight: 500,
     fontFamily: 'Georgia, "Times New Roman", serif',
     color: "var(--text)",
     lineHeight: 1.3,
     letterSpacing: "0.02em",
+    flexShrink: 1,
+    minWidth: 0,
   },
   reviews: {
     padding: 0,
-    margin: "4px 0 0",
+    margin: 0,
     flexShrink: 0,
     fontSize: 12,
     color: "var(--muted)",
@@ -215,7 +239,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   reviewsCompact: {
     padding: 0,
-    margin: "3px 0 0",
+    margin: 0,
     flexShrink: 0,
     fontSize: 11,
     color: "var(--muted)",
@@ -228,5 +252,5 @@ const styles: Record<string, React.CSSProperties> = {
   imageWrapFillHeight: { flex: "1 1 0%", minHeight: 120, aspectRatio: "unset" as const },
   descWrapFillHeight: { flex: "0 0 auto", minHeight: 52, flexShrink: 0 },
   nameCompact: { padding: 0, margin: "0 0 3px", fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.3 },
-  priceCompact: { padding: 0, margin: "3px 0 0", fontSize: 13, fontWeight: 500, color: "var(--text)", lineHeight: 1.25 },
+  priceCompact: { padding: 0, margin: 0, fontSize: 13, fontWeight: 500, color: "var(--text)", lineHeight: 1.25 },
 };
