@@ -591,7 +591,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     padding: "10px 8px",
-    paddingLeft: "max(12px, env(safe-area-inset-left))",
+    paddingLeft: "max(16px, env(safe-area-inset-left))",
     paddingRight: "max(8px, env(safe-area-inset-right))",
     borderBottom: "1px solid var(--border)",
     background: "var(--header-bg)",
