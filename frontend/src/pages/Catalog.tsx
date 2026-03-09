@@ -291,16 +291,33 @@ export function Catalog({
       {showPriceFilter && (
         <div style={styles.priceFilterWrap}>
           <span style={styles.priceFilterLabel}>{t(lang, "priceFilter")}:</span>
-          <select
-            value={priceSort}
-            onChange={(e) => setPriceSort(e.target.value as "none" | "asc" | "desc")}
-            style={styles.priceSortSelect}
+          <button
+            type="button"
+            className="catalog-tab-btn"
+            onClick={(e) => {
+              setPriceSort((s) => (s === "none" ? "asc" : s === "asc" ? "desc" : "none"));
+              (e.currentTarget as HTMLButtonElement).blur();
+            }}
+            style={{
+              ...styles.priceSortToggle,
+              ...(priceSort !== "none" ? styles.tabActive : {}),
+              outline: "none",
+              boxShadow: "none",
+              WebkitTapHighlightColor: "transparent",
+            }}
             aria-label={t(lang, "priceFilter")}
+            title={
+              priceSort === "none"
+                ? t(lang, "sortPriceNoSort")
+                : priceSort === "asc"
+                  ? t(lang, "sortPriceAsc")
+                  : t(lang, "sortPriceDesc")
+            }
           >
-            <option value="none">{t(lang, "sortPriceNone")}</option>
-            <option value="asc">{t(lang, "sortPriceAsc")}</option>
-            <option value="desc">{t(lang, "sortPriceDesc")}</option>
-          </select>
+            {priceSort === "none" && t(lang, "sortPriceNoSort")}
+            {priceSort === "asc" && <>↑ {t(lang, "sortPriceAsc")}</>}
+            {priceSort === "desc" && <>↓ {t(lang, "sortPriceDesc")}</>}
+          </button>
           <input
             type="number"
             min={0}
@@ -419,16 +436,17 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--muted)",
     fontWeight: 500,
   },
-  priceSortSelect: {
-    minWidth: 160,
-    padding: "8px 12px",
+  priceSortToggle: {
+    flexShrink: 0,
+    padding: "8px 14px",
     background: "var(--surface)",
     border: "1px solid var(--border)",
-    borderRadius: 8,
-    color: "var(--text)",
-    fontSize: 14,
+    borderRadius: 20,
+    color: "var(--muted)",
+    fontSize: 13,
     fontFamily: "inherit",
     cursor: "pointer",
+    whiteSpace: "nowrap",
   },
   priceInput: {
     width: 100,
