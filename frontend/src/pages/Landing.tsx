@@ -25,8 +25,25 @@ export function Landing({ onGoToCatalog, onCustomOrder, onGoToArrived }: Landing
   const scrollToTiles = () => {
     const el = tilesRef.current;
     if (!el) return;
-    const y = el.getBoundingClientRect().top + window.scrollY - 16;
-    window.scrollTo({ top: y, behavior: "smooth" });
+    const targetY = el.getBoundingClientRect().top + window.scrollY - 16;
+    const startY = window.scrollY;
+    const distance = targetY - startY;
+    const duration = 900;
+    const startTime = performance.now();
+
+    function easeInOutCubic(t: number): number {
+      return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+    }
+
+    function tick(now: number) {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = easeOutCubic(progress);
+      window.scrollTo(0, startY + distance * eased);
+      if (progress < 1) requestAnimationFrame(tick);
+    }
+
+    requestAnimationFrame(tick);
   };
 
   useEffect(() => {
