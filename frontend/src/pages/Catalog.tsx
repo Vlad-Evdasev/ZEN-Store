@@ -291,52 +291,16 @@ export function Catalog({
       {showPriceFilter && (
         <div style={styles.priceFilterWrap}>
           <span style={styles.priceFilterLabel}>{t(lang, "priceFilter")}:</span>
-          <div style={styles.priceSortWrap} role="group" aria-label={t(lang, "priceFilter")}>
-            <button
-              type="button"
-              className={`catalog-price-sort-btn ${priceSort === "asc" ? "catalog-price-sort-btn--active" : ""}`}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={(e) => {
-                setPriceSort((s) => (s === "asc" ? "none" : "asc"));
-                (e.currentTarget as HTMLButtonElement).blur();
-              }}
-              style={{
-                ...styles.priceSortBtn,
-                ...(priceSort === "asc" ? styles.priceSortBtnActive : {}),
-                outline: "none",
-                boxShadow: "none",
-                WebkitTapHighlightColor: "transparent",
-              }}
-              aria-label={t(lang, "sortPriceAsc")}
-              title={t(lang, "sortPriceAsc")}
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M6 10l6 6 6-6" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              className={`catalog-price-sort-btn ${priceSort === "desc" ? "catalog-price-sort-btn--active" : ""}`}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={(e) => {
-                setPriceSort((s) => (s === "desc" ? "none" : "desc"));
-                (e.currentTarget as HTMLButtonElement).blur();
-              }}
-              style={{
-                ...styles.priceSortBtn,
-                ...(priceSort === "desc" ? styles.priceSortBtnActive : {}),
-                outline: "none",
-                boxShadow: "none",
-                WebkitTapHighlightColor: "transparent",
-              }}
-              aria-label={t(lang, "sortPriceDesc")}
-              title={t(lang, "sortPriceDesc")}
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M18 14l-6-6-6 6" />
-              </svg>
-            </button>
-          </div>
+          <select
+            value={priceSort}
+            onChange={(e) => setPriceSort(e.target.value as "none" | "asc" | "desc")}
+            style={styles.priceSortSelect}
+            aria-label={t(lang, "priceFilter")}
+          >
+            <option value="none">{t(lang, "sortPriceNone")}</option>
+            <option value="asc">{t(lang, "sortPriceAsc")}</option>
+            <option value="desc">{t(lang, "sortPriceDesc")}</option>
+          </select>
           <input
             type="number"
             min={0}
@@ -455,6 +419,17 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--muted)",
     fontWeight: 500,
   },
+  priceSortSelect: {
+    minWidth: 160,
+    padding: "8px 12px",
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: 8,
+    color: "var(--text)",
+    fontSize: 14,
+    fontFamily: "inherit",
+    cursor: "pointer",
+  },
   priceInput: {
     width: 100,
     padding: "8px 12px",
@@ -464,31 +439,6 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--text)",
     fontSize: 14,
     fontFamily: "inherit",
-  },
-  priceSortWrap: {
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-  },
-  priceSortBtn: {
-    width: 40,
-    height: 40,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: 10,
-    color: "var(--muted)",
-    cursor: "pointer",
-    transition: "color 0.2s ease, background 0.2s ease, border-color 0.2s ease",
-    outline: "none",
-    boxShadow: "none",
-  },
-  priceSortBtnActive: {
-    background: "var(--accent)",
-    borderColor: "var(--accent)",
-    color: "#fff",
   },
   search: {
     width: "100%",

@@ -337,24 +337,6 @@ button:active {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Кнопки сортировки по цене (div с role="button" — без нативной обводки) */
-.catalog-price-sort-btn,
-.catalog-price-sort-btn:focus,
-.catalog-price-sort-btn:focus-visible,
-.catalog-price-sort-btn:active,
-.zen-app .catalog-price-sort-btn,
-.zen-app .catalog-price-sort-btn:focus,
-.zen-app .catalog-price-sort-btn:focus-visible,
-.zen-app .catalog-price-sort-btn:active,
-.zen-app [role="button"].catalog-price-sort-btn:focus,
-.zen-app [role="button"].catalog-price-sort-btn:focus-visible {
-  outline: none !important;
-  outline-width: 0 !important;
-  outline-color: transparent !important;
-  box-shadow: none !important;
-  -webkit-tap-highlight-color: transparent;
-}
-
 @keyframes zen-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -478,15 +460,6 @@ button:active {
   .zen-app .catalog-grid {
     grid-template-columns: repeat(5, 1fr);
     gap: 24px;
-  }
-}
-
-/* Кнопки сортировки по цене: hover */
-@media (hover: hover) {
-  .zen-app .catalog-price-sort-btn:hover:not(.catalog-price-sort-btn--active) {
-    background: var(--surface-elevated);
-    color: var(--text);
-    border-color: var(--border);
   }
 }
 
