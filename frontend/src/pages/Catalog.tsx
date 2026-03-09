@@ -292,19 +292,20 @@ export function Catalog({
         <div style={styles.priceFilterWrap}>
           <span style={styles.priceFilterLabel}>{t(lang, "priceFilter")}:</span>
           <div style={styles.priceSortWrap} role="group" aria-label={t(lang, "priceFilter")}>
-            <button
-              type="button"
+            <div
+              role="button"
+              tabIndex={0}
               className={`catalog-price-sort-btn ${priceSort === "asc" ? "catalog-price-sort-btn--active" : ""}`}
-              onClick={(e) => {
-                setPriceSort((s) => (s === "asc" ? "none" : "asc"));
-                (e.currentTarget as HTMLButtonElement).blur();
+              onClick={() => setPriceSort((s) => (s === "asc" ? "none" : "asc"))}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setPriceSort((s) => (s === "asc" ? "none" : "asc"));
+                }
               }}
               style={{
                 ...styles.priceSortBtn,
                 ...(priceSort === "asc" ? styles.priceSortBtnActive : {}),
-                outline: "none",
-                boxShadow: "none",
-                WebkitTapHighlightColor: "transparent",
               }}
               aria-label={t(lang, "sortPriceAsc")}
               title={t(lang, "sortPriceAsc")}
@@ -312,20 +313,21 @@ export function Catalog({
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <path d="M6 10l6 6 6-6" />
               </svg>
-            </button>
-            <button
-              type="button"
+            </div>
+            <div
+              role="button"
+              tabIndex={0}
               className={`catalog-price-sort-btn ${priceSort === "desc" ? "catalog-price-sort-btn--active" : ""}`}
-              onClick={(e) => {
-                setPriceSort((s) => (s === "desc" ? "none" : "desc"));
-                (e.currentTarget as HTMLButtonElement).blur();
+              onClick={() => setPriceSort((s) => (s === "desc" ? "none" : "desc"))}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setPriceSort((s) => (s === "desc" ? "none" : "desc"));
+                }
               }}
               style={{
                 ...styles.priceSortBtn,
                 ...(priceSort === "desc" ? styles.priceSortBtnActive : {}),
-                outline: "none",
-                boxShadow: "none",
-                WebkitTapHighlightColor: "transparent",
               }}
               aria-label={t(lang, "sortPriceDesc")}
               title={t(lang, "sortPriceDesc")}
@@ -333,7 +335,7 @@ export function Catalog({
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <path d="M18 14l-6-6-6 6" />
               </svg>
-            </button>
+            </div>
           </div>
           <input
             type="number"
