@@ -343,7 +343,7 @@ function App() {
               </button>
             </div>
             <div style={styles.headerCenter}>
-              <button onClick={openCatalog} style={styles.logo} aria-label="На главную">
+              <button onClick={openCatalog} className="zen-logo" style={styles.logo} aria-label="На главную">
                 RAW
               </button>
             </div>

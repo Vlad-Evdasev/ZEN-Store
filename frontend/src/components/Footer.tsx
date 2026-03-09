@@ -1,7 +1,7 @@
 export function Footer() {
   return (
     <footer style={styles.footer}>
-      <div style={styles.brand}>RAW</div>
+      <div className="zen-brand" style={styles.brand}>RAW</div>
       <p style={styles.tagline}>Минимализм. Качество. Твой стиль.</p>
     </footer>
   );

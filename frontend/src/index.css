@@ -34,20 +34,20 @@
   --card-desc-outer: none;
 }
 
-/* Светлая тема: тёплый светло-серый/бежевый (тот же базовый тон) */
+/* Светлая тема: премиум в духе Ralph Lauren — белый/крем, чёткая типографика */
 html[data-theme="light"] {
-  --bg: #f5f3f0;
-  --surface: #ebe9e6;
-  --surface-elevated: #e5e2de;
-  --border: #d4d1cc;
-  --text: #1c1b19;
-  --muted: #7a7875;
-  --accent: #c62828;
-  --accent-hover: #e53935;
-  --accent-dim: #8b0000;
-  --header-bg: rgba(245,243,240,0.88);
-  --card-desc-bg: rgba(235,233,230,0.9);
-  --menu-panel-bg: rgba(235,233,230,0.88);
+  --bg: #faf9f7;
+  --surface: #ffffff;
+  --surface-elevated: #f5f3f0;
+  --border: #e8e6e3;
+  --text: #1a1a1a;
+  --muted: #6b6b6b;
+  --accent: #a52a2a;
+  --accent-hover: #8b0000;
+  --accent-dim: #6b1f1f;
+  --header-bg: rgba(250,249,247,0.95);
+  --card-desc-bg: rgba(255,255,255,0.95);
+  --menu-panel-bg: rgba(255,255,255,0.98);
   --card-desc-bleed: 2px;
   --card-desc-outer: none;
 }
@@ -80,13 +80,23 @@ html, body, #root {
 }
 
 body {
-  font-family: "Inter", "SF Pro Display", system-ui, sans-serif;
+  font-family: "Inter", "SF Pro Display", -apple-system, system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
-  letter-spacing: -0.02em;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: 0.01em;
   padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
   box-sizing: border-box;
+}
+
+/* Заголовки в стиле Ralph Lauren: серы, сдержанная типографика */
+.zen-app h1,
+.zen-app h2,
+.zen-app .zen-heading {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 400;
+  letter-spacing: 0.02em;
 }
 
 /* Контейнер приложения: мобильная ширина по умолчанию */
@@ -492,19 +502,24 @@ button:active {
   }
 }
 
-/* Адаптивная вёрстка: ноутбук и десктоп — используем ширину экрана, аккуратные отступы */
+/* Адаптивная вёрстка: ноутбук и десктоп — премиум-ширина, больше воздуха */
 @media (min-width: 1024px) {
   :root, [data-theme="dark"], html[data-theme="light"] {
     --content-padding: 32px;
   }
   .zen-app {
-    max-width: 1440px !important;
+    max-width: 1200px !important;
     margin-left: auto !important;
     margin-right: auto !important;
-    padding-left: 48px !important;
-    padding-right: 48px !important;
+    padding-left: 40px !important;
+    padding-right: 40px !important;
     box-sizing: border-box !important;
-    box-shadow: 0 0 60px rgba(0,0,0,0.15);
+  }
+  html[data-theme="light"] .zen-app {
+    box-shadow: 0 0 0 1px var(--border);
+  }
+  [data-theme="dark"] .zen-app {
+    box-shadow: 0 0 40px rgba(0,0,0,0.2);
   }
   .zen-app .catalog-grid {
     grid-template-columns: repeat(4, 1fr);
@@ -522,11 +537,18 @@ button:active {
   }
 }
 
-/* Главная в стиле Ralph Lauren: три блока с фото, сетка и оверлей */
-.zen-landing .landing-tiles-three {
+/* Главная: два блока рядом, затем один на всю ширину + отступы между секциями */
+.zen-landing .landing-tiles-two {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+.zen-landing .landing-tile-full-wrap {
+  display: block;
+}
+.zen-landing .landing-tile-full {
+  width: 100%;
+  min-height: 360px;
 }
 .zen-landing .landing-tile {
   position: relative;
@@ -541,34 +563,67 @@ button:active {
   background: rgba(0, 0, 0, 0.45);
 }
 @media (max-width: 768px) {
-  .zen-landing .landing-tiles-three {
+  .zen-landing .landing-tiles-two {
     grid-template-columns: 1fr;
+    gap: 16px;
   }
   .zen-landing .landing-tile {
     min-height: 280px !important;
   }
+  .zen-landing .landing-tile-full {
+    min-height: 280px !important;
+  }
 }
 
-/* Очень широкие экраны — больше колонок, больше воздуха */
+/* Очень широкие экраны — полное использование ширины в стиле RL */
 @media (min-width: 1280px) {
   :root, [data-theme="dark"], html[data-theme="light"] {
-    --content-padding: 40px;
+    --content-padding: 48px;
+  }
+  .zen-app {
+    max-width: 1600px !important;
+    padding-left: 48px !important;
+    padding-right: 48px !important;
   }
   .zen-app .catalog-grid {
     grid-template-columns: repeat(5, 1fr);
-    gap: 24px;
+    gap: 28px;
   }
 }
 
-/* Карточка товара: hover на устройствах с мышью */
+/* Карточка товара: премиум hover в духе RL */
 @media (hover: hover) {
   .zen-app .product-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+  }
+  html[data-theme="light"] .zen-app .product-card:hover {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
   }
   .zen-app .product-card {
-    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.15s ease;
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.2s ease;
   }
+}
+
+/* Кнопки CTA: буквенный интервал и сдержанный стиль */
+.zen-app button[type="submit"],
+.zen-app .zen-btn-primary {
+  letter-spacing: 0.04em;
+}
+
+/* Логотип и бренд в стиле RL: серы, широкий letter-spacing */
+.zen-app .zen-logo,
+.zen-app .zen-brand {
+  font-family: Georgia, "Times New Roman", serif !important;
+  font-weight: 400 !important;
+  letter-spacing: 0.18em !important;
+  text-transform: uppercase;
+}
+
+/* Хедер: минималистичная нижняя граница */
+.zen-app header {
+  border-bottom-width: 1px;
+  border-bottom-color: var(--border);
 }
 
 /* Фокус для доступности: только ссылки и инпуты (кнопки — без обводки глобально) */

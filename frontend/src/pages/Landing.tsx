@@ -70,8 +70,8 @@ export function Landing({ onGoToCatalog, onCustomOrder, onGoToArrived }: Landing
         </div>
       </section>
 
-      {/* Три блока с фото как Shop Men's / Women's / Kids у Ralph Lauren */}
-      <div className="landing-tiles landing-tiles-three" style={{ ...styles.tilesWrap, ...fadeStyle, transition: "opacity 0.8s ease-out 0.2s" }}>
+      {/* Два блока рядом: Каталог и Заказать не из каталога */}
+      <div className="landing-tiles landing-tiles-two" style={{ ...styles.tilesWrap, ...styles.sectionGap, ...fadeStyle, transition: "opacity 0.8s ease-out 0.2s" }}>
         <button type="button" onClick={onGoToCatalog} className="landing-tile" style={tileStyle(catalogImageUrl)}>
           <span className="landing-tile-overlay" />
           <span style={styles.tileInner}>
@@ -88,7 +88,11 @@ export function Landing({ onGoToCatalog, onCustomOrder, onGoToArrived }: Landing
             <span style={styles.tileLink}>Смотреть</span>
           </span>
         </button>
-        <button type="button" onClick={onGoToArrived} className="landing-tile" style={tileStyle(arrivedImageUrl)}>
+      </div>
+
+      {/* Один блок на всю ширину: Уже привезли */}
+      <div className="landing-tiles landing-tile-full-wrap" style={{ ...styles.tilesWrap, ...styles.sectionGap, ...fadeStyle, transition: "opacity 0.8s ease-out 0.25s" }}>
+        <button type="button" onClick={onGoToArrived} className="landing-tile landing-tile-full" style={tileStyle(arrivedImageUrl)}>
           <span className="landing-tile-overlay" />
           <span style={styles.tileInner}>
             <span style={styles.tileLabel}>{arrivedTitle}</span>
@@ -222,9 +226,10 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: "0.08em",
     textTransform: "uppercase",
   },
+  sectionGap: { marginTop: 32 },
   tilesWrap: {
-    margin: "0 auto 48px",
-    padding: 0,
+    margin: "0 auto",
+    padding: "0 var(--content-padding, 16px)",
     maxWidth: 1200,
   },
   tileInner: {
@@ -263,7 +268,7 @@ const styles: Record<string, React.CSSProperties> = {
     textShadow: "0 1px 6px rgba(0,0,0,0.4)",
   },
   aboutBlock: {
-    padding: "0 var(--content-padding, 16px)",
+    padding: "32px var(--content-padding, 16px) 48px",
     maxWidth: 600,
     margin: "0 auto",
     textAlign: "center",
