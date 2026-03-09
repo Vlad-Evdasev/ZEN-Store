@@ -503,14 +503,17 @@ button:active {
   outline-offset: 2px;
 }
 
-/* Кнопки сортировки по цене: без обводки после клика (переопределяем общее правило выше) */
+/* Кнопки сортировки по цене: без обводки после клика (как у .catalog-tab-btn) */
 .zen-app button.catalog-price-sort-btn,
 .zen-app button.catalog-price-sort-btn:focus,
 .zen-app button.catalog-price-sort-btn:focus-visible,
 .zen-app button.catalog-price-sort-btn:active {
   outline: none !important;
+  outline-width: 0 !important;
+  outline-color: transparent !important;
   outline-offset: 0 !important;
   box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Кнопки редактирования/удаления чата — крупнее на телефоне */

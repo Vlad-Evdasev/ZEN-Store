@@ -296,7 +296,13 @@ export function Catalog({
               type="button"
               className={`catalog-price-sort-btn ${priceSort === "asc" ? "catalog-price-sort-btn--active" : ""}`}
               onClick={() => setPriceSort((s) => (s === "asc" ? "none" : "asc"))}
-              style={{ ...styles.priceSortBtn, ...(priceSort === "asc" ? styles.priceSortBtnActive : {}) }}
+              style={{
+                ...styles.priceSortBtn,
+                ...(priceSort === "asc" ? styles.priceSortBtnActive : {}),
+                outline: "none",
+                boxShadow: "none",
+                WebkitTapHighlightColor: "transparent",
+              }}
               aria-label={t(lang, "sortPriceAsc")}
               title={t(lang, "sortPriceAsc")}
             >
@@ -308,7 +314,13 @@ export function Catalog({
               type="button"
               className={`catalog-price-sort-btn ${priceSort === "desc" ? "catalog-price-sort-btn--active" : ""}`}
               onClick={() => setPriceSort((s) => (s === "desc" ? "none" : "desc"))}
-              style={{ ...styles.priceSortBtn, ...(priceSort === "desc" ? styles.priceSortBtnActive : {}) }}
+              style={{
+                ...styles.priceSortBtn,
+                ...(priceSort === "desc" ? styles.priceSortBtnActive : {}),
+                outline: "none",
+                boxShadow: "none",
+                WebkitTapHighlightColor: "transparent",
+              }}
               aria-label={t(lang, "sortPriceDesc")}
               title={t(lang, "sortPriceDesc")}
             >
