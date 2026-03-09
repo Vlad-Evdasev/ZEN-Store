@@ -64,10 +64,8 @@ export function NewArrivalsSection({
       </div>
       <div style={fillAvailableSpace ? { ...styles.grid, ...styles.gridFill } : styles.grid}>
         {first && renderCard(first, styles.cardBig)}
-        <div style={styles.rightColumn}>
-          {second && renderCard(second, styles.cardSmall)}
-          {third && renderCard(third, styles.cardSmallBottom)}
-        </div>
+        {second && renderCard(second, styles.cardTopRight)}
+        {third && renderCard(third, styles.cardBottomRight)}
       </div>
     </div>
   );
@@ -91,13 +89,15 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 0,
     paddingTop: 12,
   },
+  /* Одна сетка: 2 колонки, 2 строки. Левая карточка — на обе строки, правые — в 1-й и 2-й. Высота левой = сумма правых. */
   grid: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
-    gridTemplateRows: "minmax(0, 1fr)",
+    gridTemplateRows: "1.12fr 0.88fr",
+    rowGap: ROW_GAP,
+    columnGap: COL_GAP,
     height: GRID_HEIGHT,
     minHeight: GRID_HEIGHT,
-    gap: COL_GAP,
     paddingLeft: 4,
     paddingRight: 4,
     alignItems: "stretch",
@@ -108,40 +108,36 @@ const styles: Record<string, React.CSSProperties> = {
     height: "100%",
   },
   cardBig: {
+    gridRow: "1 / -1",
     minWidth: 0,
     minHeight: 0,
     width: "100%",
     height: "100%",
-    maxHeight: "100%",
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",
   },
-  rightColumn: {
-    display: "grid",
-    gridTemplateRows: `1.12fr ${ROW_GAP}px 0.88fr`,
-    gridTemplateColumns: "1fr",
-    minWidth: 0,
-    minHeight: 0,
-    height: "100%",
-    maxHeight: "100%",
-    overflow: "hidden",
-  },
-  cardSmall: {
-    minHeight: 0,
-    width: "100%",
-    display: "flex",
-    flexDirection: "column",
-    gridColumn: 1,
+  cardTopRight: {
+    gridColumn: 2,
     gridRow: 1,
-  },
-  cardSmallBottom: {
+    minWidth: 0,
     minHeight: 0,
     width: "100%",
+    height: "100%",
     display: "flex",
     flexDirection: "column",
-    gridColumn: 1,
-    gridRow: 3,
+    overflow: "hidden",
+  },
+  cardBottomRight: {
+    gridColumn: 2,
+    gridRow: 2,
+    minWidth: 0,
+    minHeight: 0,
+    width: "100%",
+    height: "100%",
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
   },
   cardInner: {
     flex: 1,
