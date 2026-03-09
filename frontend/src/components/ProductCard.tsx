@@ -179,7 +179,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   reviews: {
     padding: 0,
-    margin: 0,
+    margin: "2px 0 0",
     flexShrink: 0,
     fontSize: 12,
     color: "var(--muted)",
@@ -187,7 +187,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   reviewsCompact: {
     padding: 0,
-    margin: 0,
+    margin: "1px 0 0",
     flexShrink: 0,
     fontSize: 11,
     color: "var(--muted)",
