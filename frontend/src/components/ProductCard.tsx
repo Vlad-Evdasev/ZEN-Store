@@ -147,7 +147,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: "100%",
     boxSizing: "border-box",
     background: "transparent",
-    padding: "6px 28px 8px 4px",
+    padding: "6px 10px 8px 4px",
     display: "flex",
     flexDirection: "column",
     gap: 0,
@@ -156,10 +156,10 @@ const styles: Record<string, React.CSSProperties> = {
     flex: "1 1 auto",
   },
   descWrapCompact: {
-    padding: "4px 24px 6px 4px",
+    padding: "4px 10px 6px 4px",
     gap: 0,
   },
-  descWrapCompactSmall: { padding: "3px 22px 5px 4px", gap: 0 },
+  descWrapCompactSmall: { padding: "3px 10px 5px 4px", gap: 0 },
   name: {
     padding: 0,
     margin: 0,
