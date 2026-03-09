@@ -295,7 +295,10 @@ export function Catalog({
             <button
               type="button"
               className={`catalog-price-sort-btn ${priceSort === "asc" ? "catalog-price-sort-btn--active" : ""}`}
-              onClick={() => setPriceSort((s) => (s === "asc" ? "none" : "asc"))}
+              onClick={(e) => {
+                setPriceSort((s) => (s === "asc" ? "none" : "asc"));
+                (e.currentTarget as HTMLButtonElement).blur();
+              }}
               style={{
                 ...styles.priceSortBtn,
                 ...(priceSort === "asc" ? styles.priceSortBtnActive : {}),
@@ -313,7 +316,10 @@ export function Catalog({
             <button
               type="button"
               className={`catalog-price-sort-btn ${priceSort === "desc" ? "catalog-price-sort-btn--active" : ""}`}
-              onClick={() => setPriceSort((s) => (s === "desc" ? "none" : "desc"))}
+              onClick={(e) => {
+                setPriceSort((s) => (s === "desc" ? "none" : "desc"));
+                (e.currentTarget as HTMLButtonElement).blur();
+              }}
               style={{
                 ...styles.priceSortBtn,
                 ...(priceSort === "desc" ? styles.priceSortBtnActive : {}),
@@ -358,7 +364,10 @@ export function Catalog({
               key={code}
               type="button"
               className="catalog-tab-btn"
-              onClick={() => handleCategoryClick(code)}
+              onClick={(e) => {
+                handleCategoryClick(code);
+                (e.currentTarget as HTMLButtonElement).blur();
+              }}
               style={{
                 ...styles.tab,
                 ...(isSelected ? styles.tabActive : {}),
