@@ -30,8 +30,8 @@ export function Landing({ onGoToCatalog, onCustomOrder, onGoToArrived }: Landing
     return () => cancelAnimationFrame(id);
   }, []);
 
-  const heroTitle = (content.hero_title ?? "").trim() || t(lang, "storeWelcomeTitle");
-  const heroSubtitle = (content.hero_subtitle ?? "").trim() || t(lang, "storeWelcomeIntro");
+  const heroTitle = (content.hero_title ?? "").trim() || "RAW";
+  const heroSubtitle = (content.hero_subtitle ?? "").trim() || "Оригинальная одежда из брендовых магазинов";
   const heroImageUrl = (content.hero_image_url ?? "").trim();
   const aboutText = (content.about_text ?? "").trim() || t(lang, "profileAboutText");
   const catalogCta = (content.catalog_cta ?? "").trim() || t(lang, "storeWelcomeToCatalog");
