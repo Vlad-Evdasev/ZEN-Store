@@ -452,6 +452,31 @@ button:active {
   }
 }
 
+/* Главная в стиле Ralph Lauren: тайлы в колонку на узких экранах */
+.zen-landing .landing-tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+.zen-landing .landing-tile {
+  border-right: 1px solid var(--border);
+}
+.zen-landing .landing-tile:last-child {
+  border-right: none;
+}
+@media (max-width: 600px) {
+  .zen-landing .landing-tiles {
+    grid-template-columns: 1fr;
+  }
+  .zen-landing .landing-tile {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .zen-landing .landing-tile:last-child {
+    border-bottom: none;
+  }
+}
+
 /* Очень широкие экраны — больше колонок, больше воздуха */
 @media (min-width: 1280px) {
   :root, [data-theme="dark"], html[data-theme="light"] {

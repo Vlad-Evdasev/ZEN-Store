@@ -205,6 +205,20 @@ try {
     )
   `);
 } catch {}
+// Предзаполнение главной (как у Ralph Lauren): hero + два блока
+const siteContentCount = db.prepare("SELECT COUNT(*) as count FROM site_content").get() as { count: number };
+if (siteContentCount.count === 0) {
+  const insertSc = db.prepare("INSERT OR IGNORE INTO site_content (key, value) VALUES (?, ?)");
+  const defaults: [string, string][] = [
+    ["hero_title", "RAW"],
+    ["hero_subtitle", "Оригинальная одежда из брендовых магазинов"],
+    ["hero_image_url", "https://images.unsplash.com/photo-1558769132-cb1aea3c9b9e?w=1200"],
+    ["about_text", "Все вещи оригинальные. В каталоге — в наличии в Минске. Под заказ — доставка из Китая."],
+    ["catalog_cta", "В каталог"],
+    ["custom_order_cta", "Заказать не из каталога"],
+  ];
+  for (const [k, v] of defaults) insertSc.run(k, v);
+}
 
 // Add store_id to products if missing (migration)
 try {

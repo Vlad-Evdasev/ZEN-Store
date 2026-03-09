@@ -34,11 +34,12 @@ export function Landing({ onGoToCatalog, onCustomOrder }: LandingProps) {
 
   const fadeStyle: React.CSSProperties = {
     opacity: visible ? 1 : 0,
-    transition: "opacity 0.7s ease-out",
+    transition: "opacity 0.8s ease-out",
   };
 
   return (
     <div className="zen-landing" style={styles.wrap}>
+      {/* Hero: полноэкранный блок как у Ralph Lauren, текст по центру */}
       <section style={styles.heroWrap}>
         {heroImageUrl ? (
           <div style={styles.heroImageWrap}>
@@ -51,19 +52,28 @@ export function Landing({ onGoToCatalog, onCustomOrder }: LandingProps) {
         <div style={{ ...styles.heroContent, ...fadeStyle }}>
           <h1 style={heroImageUrl ? styles.heroTitle : styles.heroTitleNoImage}>{heroTitle}</h1>
           <p style={heroImageUrl ? styles.heroSubtitle : styles.heroSubtitleNoImage}>{heroSubtitle}</p>
+          <div style={styles.heroCtaWrap}>
+            <button type="button" onClick={onGoToCatalog} style={styles.heroCta}>
+              {catalogCta}
+            </button>
+          </div>
         </div>
       </section>
 
-      <div style={{ ...styles.ctaBlock, ...fadeStyle, transition: "opacity 0.7s ease-out 0.15s" }}>
-        <button type="button" onClick={onGoToCatalog} style={styles.ctaPrimary}>
-          {catalogCta}
+      {/* Два блока-тайла как Men's / Women's у Ralph Lauren */}
+      <div className="landing-tiles" style={{ ...styles.tilesWrap, ...fadeStyle, transition: "opacity 0.8s ease-out 0.2s" }}>
+        <button type="button" onClick={onGoToCatalog} className="landing-tile" style={styles.tile}>
+          <span style={styles.tileLabel}>{catalogCta}</span>
+          <span style={styles.tileSub}>В наличии в Минске</span>
         </button>
-        <button type="button" onClick={onCustomOrder} style={styles.ctaSecondary}>
-          {customOrderCta}
+        <button type="button" onClick={onCustomOrder} className="landing-tile" style={styles.tile}>
+          <span style={styles.tileLabel}>{customOrderCta}</span>
+          <span style={styles.tileSub}>Под заказ из Китая</span>
         </button>
       </div>
 
-      <div style={{ ...styles.aboutBlock, ...fadeStyle, transition: "opacity 0.7s ease-out 0.25s" }}>
+      {/* Тонкая строка про оригиналы */}
+      <div style={{ ...styles.aboutBlock, ...fadeStyle, transition: "opacity 0.8s ease-out 0.35s" }}>
         <p style={styles.aboutText}>{aboutText}</p>
       </div>
     </div>
@@ -78,11 +88,9 @@ const styles: Record<string, React.CSSProperties> = {
   heroWrap: {
     position: "relative",
     width: "100%",
-    minHeight: "50vh",
-    maxHeight: 420,
-    marginBottom: 32,
+    minHeight: "85vh",
     display: "flex",
-    alignItems: "flex-end",
+    alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
   },
@@ -98,101 +106,120 @@ const styles: Record<string, React.CSSProperties> = {
   heroOverlay: {
     position: "absolute",
     inset: 0,
-    background: "linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.2) 50%, transparent 100%)",
+    background: "rgba(0,0,0,0.25)",
   },
   heroPlaceholder: {
     position: "absolute",
     inset: 0,
-    background: "linear-gradient(145deg, var(--surface-elevated, #2a2a2a) 0%, var(--surface, #1a1a1a) 100%)",
+    background: "linear-gradient(160deg, var(--surface-elevated) 0%, var(--surface) 100%)",
   },
   heroContent: {
     position: "relative",
     zIndex: 1,
     width: "100%",
-    padding: "32px var(--content-padding, 16px) 28px",
+    padding: "24px var(--content-padding, 16px)",
     textAlign: "center",
-  },
-  heroTitle: {
-    fontFamily: "Unbounded, sans-serif",
-    fontSize: "clamp(22px, 5vw, 32px)",
-    fontWeight: 600,
-    color: "#fff",
-    margin: 0,
-    marginBottom: 10,
-    letterSpacing: "0.02em",
-    textShadow: "0 1px 4px rgba(0,0,0,0.4)",
-  },
-  heroSubtitle: {
-    fontSize: "clamp(14px, 2.5vw, 16px)",
-    color: "rgba(255,255,255,0.92)",
-    margin: 0,
-    maxWidth: 420,
-    marginLeft: "auto",
-    marginRight: "auto",
-    lineHeight: 1.5,
-    textShadow: "0 1px 2px rgba(0,0,0,0.3)",
-  },
-  heroTitleNoImage: {
-    fontFamily: "Unbounded, sans-serif",
-    fontSize: "clamp(22px, 5vw, 32px)",
-    fontWeight: 600,
-    color: "var(--text)",
-    margin: 0,
-    marginBottom: 10,
-    letterSpacing: "0.02em",
-  },
-  heroSubtitleNoImage: {
-    fontSize: "clamp(14px, 2.5vw, 16px)",
-    color: "var(--muted)",
-    margin: 0,
-    maxWidth: 420,
-    marginLeft: "auto",
-    marginRight: "auto",
-    lineHeight: 1.5,
-  },
-  ctaBlock: {
     display: "flex",
     flexDirection: "column",
-    gap: 12,
-    padding: "0 var(--content-padding, 16px)",
-    maxWidth: 400,
-    margin: "0 auto 32px",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  ctaPrimary: {
-    width: "100%",
-    padding: "16px 24px",
-    background: "var(--accent)",
-    border: "none",
-    borderRadius: 10,
+  heroTitle: {
+    fontFamily: "Georgia, 'Times New Roman', serif",
+    fontSize: "clamp(2.5rem, 8vw, 4.5rem)",
+    fontWeight: 400,
     color: "#fff",
-    fontSize: 16,
+    margin: 0,
+    marginBottom: 12,
+    letterSpacing: "0.2em",
+    textTransform: "uppercase",
+    textShadow: "0 2px 20px rgba(0,0,0,0.3)",
+  },
+  heroSubtitle: {
+    fontSize: "clamp(14px, 2.2vw, 16px)",
+    color: "rgba(255,255,255,0.95)",
+    margin: 0,
+    marginBottom: 28,
+    maxWidth: 420,
+    lineHeight: 1.6,
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    textShadow: "0 1px 8px rgba(0,0,0,0.25)",
+  },
+  heroCtaWrap: {
+    marginTop: 8,
+  },
+  heroCta: {
+    padding: "14px 32px",
+    background: "transparent",
+    border: "2px solid rgba(255,255,255,0.9)",
+    color: "#fff",
+    fontSize: 12,
     fontWeight: 600,
     fontFamily: "inherit",
     cursor: "pointer",
-    letterSpacing: "0.02em",
+    letterSpacing: "0.2em",
+    textTransform: "uppercase",
   },
-  ctaSecondary: {
-    width: "100%",
-    padding: "14px 24px",
-    background: "transparent",
-    border: "2px solid var(--border)",
-    borderRadius: 10,
+  heroTitleNoImage: {
+    fontFamily: "Georgia, 'Times New Roman', serif",
+    fontSize: "clamp(2.5rem, 8vw, 4.5rem)",
+    fontWeight: 400,
     color: "var(--text)",
-    fontSize: 15,
-    fontWeight: 500,
-    fontFamily: "inherit",
+    margin: 0,
+    marginBottom: 12,
+    letterSpacing: "0.2em",
+    textTransform: "uppercase",
+  },
+  heroSubtitleNoImage: {
+    fontSize: "clamp(14px, 2.2vw, 16px)",
+    color: "var(--muted)",
+    margin: 0,
+    marginBottom: 28,
+    maxWidth: 420,
+    lineHeight: 1.6,
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+  },
+  tilesWrap: {
+    maxWidth: 900,
+    margin: "0 auto 40px",
+    padding: "0 var(--content-padding, 16px)",
+  },
+  tile: {
+    minHeight: 220,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    background: "var(--surface-elevated)",
+    border: "none",
     cursor: "pointer",
+    padding: 24,
+  },
+  tileLabel: {
+    fontSize: 15,
+    fontWeight: 600,
+    color: "var(--text)",
+    letterSpacing: "0.06em",
+  },
+  tileSub: {
+    fontSize: 12,
+    color: "var(--muted)",
+    letterSpacing: "0.04em",
   },
   aboutBlock: {
     padding: "0 var(--content-padding, 16px)",
-    maxWidth: 420,
+    maxWidth: 560,
     margin: "0 auto",
     textAlign: "center",
   },
   aboutText: {
-    fontSize: 14,
-    lineHeight: 1.6,
+    fontSize: 12,
+    lineHeight: 1.7,
     color: "var(--muted)",
     margin: 0,
+    letterSpacing: "0.02em",
   },
 };
