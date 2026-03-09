@@ -32,14 +32,14 @@ export function Landing({ onGoToCatalog, onCustomOrder, onGoToArrived }: Landing
     const now = performance.now();
     const startTime = now - 40;
 
-    function easeOutQuart(t: number): number {
-      return 1 - (1 - t) ** 4;
+    function easeOutCubic(t: number): number {
+      return 1 - (1 - t) ** 3;
     }
 
     function tick(now: number) {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      const eased = easeOutQuart(progress);
+      const eased = easeOutCubic(progress);
       window.scrollTo(0, startY + distance * eased);
       if (progress < 1) requestAnimationFrame(tick);
     }
