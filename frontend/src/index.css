@@ -537,6 +537,12 @@ button:active {
   }
 }
 
+/* Hero: на всю высоту экрана, чтобы нижние карточки не были видны */
+.zen-landing section:first-of-type {
+  min-height: 100dvh;
+  min-height: 100vh;
+}
+
 /* Hero: стрелка вниз в премиальном стиле */
 .zen-landing .landing-hero-scroll {
   transition: transform 0.25s ease, border-color 0.25s ease, color 0.25s ease;
