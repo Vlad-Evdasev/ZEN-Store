@@ -5,7 +5,6 @@ import { TelegramAuth } from "./components/TelegramAuth";
 import { useWishlist } from "./hooks/useWishlist";
 import { getProducts, getStores, getCategories, getCart, getReviews, getSupportUnreadCount, type Product, type Store, type Category } from "./api";
 import { Catalog } from "./pages/Catalog";
-import { StoresCarousel } from "./components/StoresCarousel";
 import { Cart } from "./pages/Cart";
 import { Favorites } from "./pages/Favorites";
 import { ProductPage } from "./pages/ProductPage";
@@ -408,7 +407,6 @@ function App() {
         <div key={page} className={page === "cart" || page === "favorites" ? "zen-page-enter" : ""} style={page === "newArrivals" ? { ...styles.mainContent, height: "100%" } : styles.mainContent}>
         {page === "catalog" && (
           <>
-            <StoresCarousel stores={stores} categories={categories} onStoreClick={openStoreCatalog} compact />
             <section className="zen-catalog-section" aria-label={t(lang, "catalogPreviewTitle")}>
               <Catalog
                 products={products}

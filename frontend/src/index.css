@@ -603,7 +603,7 @@ html[data-theme="light"] .zen-app .product-card-price {
   }
 }
 
-/* Секция каталога: отступ между каруселью магазинов и полем поиска */
+/* Секция каталога: отступ сверху */
 .zen-app .zen-catalog-section {
   margin-top: 8px;
 }
