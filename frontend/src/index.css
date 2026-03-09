@@ -1249,19 +1249,22 @@ html[data-theme="light"] .zen-app .product-card-price {
 }
 
 /* Кнопка меню (гамбургер): крупнее и сдвиг влево */
-.zen-app .zen-header-left {
-  margin-left: -10px !important;
+.zen-app .zen-header-left,
+header .zen-header-left {
+  margin-left: -12px !important;
 }
-.zen-app .zen-header-hamburger {
-  width: 56px !important;
-  min-width: 56px !important;
+.zen-app .zen-header-hamburger,
+header .zen-header-hamburger {
+  width: 60px !important;
+  min-width: 60px !important;
   height: 56px !important;
   min-height: 56px !important;
   border-radius: 8px;
 }
-.zen-app .zen-header-hamburger svg {
-  width: 32px !important;
-  height: 32px !important;
+.zen-app .zen-header-hamburger svg,
+header .zen-header-hamburger svg {
+  width: 34px !important;
+  height: 34px !important;
 }
 
 /* Фокус для доступности: только ссылки и инпуты (кнопки — без обводки глобально) */
