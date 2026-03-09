@@ -380,23 +380,13 @@ html[data-theme="light"] .zen-app .product-card-price {
   color: var(--muted);
 }
 .zen-app .product-card-desc {
-  background: var(--surface);
+  background: transparent;
 }
-/* Карточка RL: фото → отступ → название (serif) → цена (serif/приглушённая) */
-.zen-app .product-card--text-below {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
+/* Описание просто под фото — без отдельного блока, один фон карточки */
 .zen-app .product-card--text-below .product-card-desc {
   border-radius: 0;
   box-shadow: none;
-  margin-top: 0;
-  border-top: 1px solid var(--border);
-}
-/* Отступ между фото и текстовым блоком */
-.zen-app .product-card--text-below .product-card-desc {
-  padding-top: 18px;
+  border: none;
 }
 .zen-app .product-card--text-below .product-card-name {
   font-family: Georgia, "Times New Roman", serif !important;
