@@ -261,10 +261,15 @@ a {
   }
 }
 
+/* Все кнопки: без обводки при фокусе/клике (избегаем белой границы в тёмной теме) */
 button:focus,
 button:focus-visible,
 button:active {
-  outline: none;
+  outline: none !important;
+  outline-width: 0 !important;
+  outline-color: transparent !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .zen-app input,
@@ -494,26 +499,12 @@ button:active {
   }
 }
 
-/* Фокус для доступности */
-.zen-app button:focus-visible,
+/* Фокус для доступности: только ссылки и инпуты (кнопки — без обводки глобально) */
 .zen-app a:focus-visible,
 .zen-app input:focus-visible,
-.zen-app [role="button"]:focus-visible {
+.zen-app textarea:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-}
-
-/* Кнопки сортировки по цене: без обводки после клика (как у .catalog-tab-btn) */
-.zen-app button.catalog-price-sort-btn,
-.zen-app button.catalog-price-sort-btn:focus,
-.zen-app button.catalog-price-sort-btn:focus-visible,
-.zen-app button.catalog-price-sort-btn:active {
-  outline: none !important;
-  outline-width: 0 !important;
-  outline-color: transparent !important;
-  outline-offset: 0 !important;
-  box-shadow: none !important;
-  -webkit-tap-highlight-color: transparent;
 }
 
 /* Кнопки редактирования/удаления чата — крупнее на телефоне */
