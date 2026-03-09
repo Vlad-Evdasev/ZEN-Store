@@ -396,15 +396,36 @@ html[data-theme="light"] .zen-app .product-card-price {
   outline: none;
 }
 
-/* Сетка каталога: masonry (разная высота), больше воздуха */
+/* Картинки и карточки без скругления */
+.zen-app .product-card,
+.product-card,
+.zen-app .product-card .product-card__image-wrap,
+.zen-app .product-card .product-card__image-wrap img,
+.product-card .product-card__image-wrap,
+.product-card .product-card__image-wrap img,
+.zen-app .product-card .product-card-desc,
+.zen-app .product-card--text-below .product-card-desc {
+  border-radius: 0 !important;
+}
+
+/* Сетка каталога: концептуальная — первый товар на всю ширину, остальные в 2 колонки */
 .zen-app .catalog-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
+  gap: 20px;
   grid-auto-rows: auto;
 }
 .zen-app .catalog-grid.catalog-grid--masonry {
-  gap: 26px;
+  gap: 24px;
+}
+.zen-app .catalog-grid.catalog-grid--concept .product-card:first-child {
+  grid-column: 1 / -1;
+}
+.zen-app .catalog-grid.catalog-grid--concept .product-card:first-child .product-card__image-wrap {
+  aspect-ratio: 2/1 !important;
+}
+.zen-app .catalog-grid.catalog-grid--concept {
+  gap: 28px 24px;
 }
 
 /* Кнопка «Отмена» в модалках — явный цвет текста (на iOS иначе синий) */

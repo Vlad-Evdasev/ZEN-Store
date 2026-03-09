@@ -70,7 +70,7 @@ export function StoreCatalog({
           <strong>{t(lang, "nothingFound")}</strong>
         </div>
       ) : (
-        <div className="catalog-grid catalog-grid--masonry" style={styles.grid}>
+        <div className="catalog-grid catalog-grid--masonry catalog-grid--concept" style={styles.grid}>
           {filtered.map((p, idx) => (
             <ProductCard
               key={p.id}

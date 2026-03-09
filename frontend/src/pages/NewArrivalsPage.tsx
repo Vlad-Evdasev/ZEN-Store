@@ -180,7 +180,7 @@ export function NewArrivalsPage({
           <strong>{t(lang, "nothingFound")}</strong>
         </div>
       ) : (
-        <div className="catalog-grid catalog-grid--masonry">
+        <div className="catalog-grid catalog-grid--masonry catalog-grid--concept">
           {displayList.map((p, idx) => (
             <ProductCard
               key={p.id}

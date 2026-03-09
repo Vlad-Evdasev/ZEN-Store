@@ -367,7 +367,7 @@ export function Catalog({
           <strong>{t(lang, "nothingFound")}</strong>
         </div>
       ) : (
-        <div className="catalog-grid catalog-grid--masonry" style={styles.grid}>
+        <div className="catalog-grid catalog-grid--masonry catalog-grid--concept" style={styles.grid}>
           {displayList.map((p, idx) => (
             <ProductCard
               key={p.id}

@@ -62,7 +62,7 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
       onKeyDown={handleKeyDown}
       style={cardStyle}
     >
-      <div style={imageWrapStyle}>
+      <div className="product-card__image-wrap" style={imageWrapStyle}>
         <img
           src={(product.image_urls && product.image_urls[0]) || product.image_url || "https://via.placeholder.com/200"}
           alt={product.name}
@@ -111,12 +111,12 @@ const styles: Record<string, React.CSSProperties> = {
     position: "relative",
     aspectRatio: "1",
     overflow: "hidden",
-    background: "transparent",
+    background: "var(--surface-elevated)",
   },
   image: {
     width: "100%",
     height: "100%",
-    objectFit: "cover",
+    objectFit: "contain",
   },
   wishlistBtn: {
     position: "absolute",
@@ -192,7 +192,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--muted)",
     lineHeight: 1.25,
   },
-  cardCompact: { borderRadius: "var(--radius-md)" },
+  cardCompact: { borderRadius: 0 },
   cardFillHeight: { flex: 1, minHeight: 0, height: "100%" },
   imageWrapCompact: {},
   imageWrapTall: { aspectRatio: "4/5" },
