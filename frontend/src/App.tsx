@@ -440,6 +440,7 @@ function App() {
               <Landing
                 onGoToCatalog={openCatalog}
                 onCustomOrder={() => setStoreCatalogView("customOrder")}
+                onGoToArrived={openNewArrivals}
               />
             )}
             {storeCatalogView === "welcome" && !isDefaultWelcomeStore && (

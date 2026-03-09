@@ -452,28 +452,30 @@ button:active {
   }
 }
 
-/* Главная в стиле Ralph Lauren: тайлы в колонку на узких экранах */
-.zen-landing .landing-tiles {
+/* Главная в стиле Ralph Lauren: три блока с фото, сетка и оверлей */
+.zen-landing .landing-tiles-three {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 0;
 }
 .zen-landing .landing-tile {
-  border-right: 1px solid var(--border);
+  position: relative;
 }
-.zen-landing .landing-tile:last-child {
-  border-right: none;
+.zen-landing .landing-tile-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  pointer-events: none;
 }
-@media (max-width: 600px) {
-  .zen-landing .landing-tiles {
+.zen-landing .landing-tile:hover .landing-tile-overlay {
+  background: rgba(0, 0, 0, 0.45);
+}
+@media (max-width: 768px) {
+  .zen-landing .landing-tiles-three {
     grid-template-columns: 1fr;
   }
   .zen-landing .landing-tile {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
-  .zen-landing .landing-tile:last-child {
-    border-bottom: none;
+    min-height: 280px !important;
   }
 }
 

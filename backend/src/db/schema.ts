@@ -216,6 +216,11 @@ if (siteContentCount.count === 0) {
     ["about_text", "Все вещи оригинальные. В каталоге — в наличии в Минске. Под заказ — доставка из Китая."],
     ["catalog_cta", "В каталог"],
     ["custom_order_cta", "Заказать не из каталога"],
+    ["arrived_title", "Уже привезли"],
+    ["arrived_subtitle", "Вещи в наличии после заказов клиентов"],
+    ["arrived_image_url", "https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=800"],
+    ["catalog_image_url", "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=800"],
+    ["custom_order_image_url", "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800"],
   ];
   for (const [k, v] of defaults) insertSc.run(k, v);
 }

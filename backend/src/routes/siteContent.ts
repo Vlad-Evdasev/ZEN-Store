@@ -8,14 +8,19 @@ const SITE_CONTENT_KEYS = [
   "about_text",
   "catalog_cta",
   "custom_order_cta",
+  "arrived_title",
+  "arrived_subtitle",
+  "arrived_image_url",
+  "catalog_image_url",
+  "custom_order_image_url",
 ] as const;
 
 export type SiteContentKey = (typeof SITE_CONTENT_KEYS)[number];
 
 function getContentMap(): Record<string, string> {
-  const rows = db.prepare("SELECT key, value FROM site_content WHERE key IN (?, ?, ?, ?, ?, ?)").all(
-    ...SITE_CONTENT_KEYS
-  ) as { key: string; value: string | null }[];
+  const rows = db.prepare(
+    "SELECT key, value FROM site_content WHERE key IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+  ).all(...SITE_CONTENT_KEYS) as { key: string; value: string | null }[];
   const map: Record<string, string> = {};
   for (const k of SITE_CONTENT_KEYS) map[k] = "";
   for (const r of rows) if (r.value != null) map[r.key] = r.value;

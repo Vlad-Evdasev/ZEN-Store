@@ -3,12 +3,17 @@ import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 import { getSiteContent } from "../api";
 
+const DEFAULT_CATALOG_IMG = "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=800";
+const DEFAULT_CUSTOM_IMG = "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800";
+const DEFAULT_ARRIVED_IMG = "https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=800";
+
 interface LandingProps {
   onGoToCatalog: () => void;
   onCustomOrder: () => void;
+  onGoToArrived: () => void;
 }
 
-export function Landing({ onGoToCatalog, onCustomOrder }: LandingProps) {
+export function Landing({ onGoToCatalog, onCustomOrder, onGoToArrived }: LandingProps) {
   const { settings } = useSettings();
   const lang = settings.lang;
   const [content, setContent] = useState<Record<string, string>>({});
@@ -31,6 +36,11 @@ export function Landing({ onGoToCatalog, onCustomOrder }: LandingProps) {
   const aboutText = (content.about_text ?? "").trim() || t(lang, "profileAboutText");
   const catalogCta = (content.catalog_cta ?? "").trim() || t(lang, "storeWelcomeToCatalog");
   const customOrderCta = (content.custom_order_cta ?? "").trim() || t(lang, "storeWelcomeCustomOrder");
+  const arrivedTitle = (content.arrived_title ?? "").trim() || "Уже привезли";
+  const arrivedSubtitle = (content.arrived_subtitle ?? "").trim() || "Вещи в наличии после заказов клиентов";
+  const catalogImageUrl = (content.catalog_image_url ?? "").trim() || DEFAULT_CATALOG_IMG;
+  const customOrderImageUrl = (content.custom_order_image_url ?? "").trim() || DEFAULT_CUSTOM_IMG;
+  const arrivedImageUrl = (content.arrived_image_url ?? "").trim() || DEFAULT_ARRIVED_IMG;
 
   const fadeStyle: React.CSSProperties = {
     opacity: visible ? 1 : 0,
@@ -39,7 +49,7 @@ export function Landing({ onGoToCatalog, onCustomOrder }: LandingProps) {
 
   return (
     <div className="zen-landing" style={styles.wrap}>
-      {/* Hero: полноэкранный блок как у Ralph Lauren, текст по центру */}
+      {/* Hero: как у Ralph Lauren — полноэкранное фото, текст по центру */}
       <section style={styles.heroWrap}>
         {heroImageUrl ? (
           <div style={styles.heroImageWrap}>
@@ -60,24 +70,57 @@ export function Landing({ onGoToCatalog, onCustomOrder }: LandingProps) {
         </div>
       </section>
 
-      {/* Два блока-тайла как Men's / Women's у Ralph Lauren */}
-      <div className="landing-tiles" style={{ ...styles.tilesWrap, ...fadeStyle, transition: "opacity 0.8s ease-out 0.2s" }}>
-        <button type="button" onClick={onGoToCatalog} className="landing-tile" style={styles.tile}>
-          <span style={styles.tileLabel}>{catalogCta}</span>
-          <span style={styles.tileSub}>В наличии в Минске</span>
+      {/* Три блока с фото как Shop Men's / Women's / Kids у Ralph Lauren */}
+      <div className="landing-tiles landing-tiles-three" style={{ ...styles.tilesWrap, ...fadeStyle, transition: "opacity 0.8s ease-out 0.2s" }}>
+        <button type="button" onClick={onGoToCatalog} className="landing-tile" style={tileStyle(catalogImageUrl)}>
+          <span className="landing-tile-overlay" />
+          <span style={styles.tileInner}>
+            <span style={styles.tileLabel}>{catalogCta}</span>
+            <span style={styles.tileSub}>В наличии в Минске</span>
+            <span style={styles.tileLink}>Смотреть</span>
+          </span>
         </button>
-        <button type="button" onClick={onCustomOrder} className="landing-tile" style={styles.tile}>
-          <span style={styles.tileLabel}>{customOrderCta}</span>
-          <span style={styles.tileSub}>Под заказ из Китая</span>
+        <button type="button" onClick={onCustomOrder} className="landing-tile" style={tileStyle(customOrderImageUrl)}>
+          <span className="landing-tile-overlay" />
+          <span style={styles.tileInner}>
+            <span style={styles.tileLabel}>{customOrderCta}</span>
+            <span style={styles.tileSub}>Под заказ из Китая</span>
+            <span style={styles.tileLink}>Смотреть</span>
+          </span>
+        </button>
+        <button type="button" onClick={onGoToArrived} className="landing-tile" style={tileStyle(arrivedImageUrl)}>
+          <span className="landing-tile-overlay" />
+          <span style={styles.tileInner}>
+            <span style={styles.tileLabel}>{arrivedTitle}</span>
+            <span style={styles.tileSub}>{arrivedSubtitle}</span>
+            <span style={styles.tileLink}>Смотреть</span>
+          </span>
         </button>
       </div>
 
-      {/* Тонкая строка про оригиналы */}
       <div style={{ ...styles.aboutBlock, ...fadeStyle, transition: "opacity 0.8s ease-out 0.35s" }}>
         <p style={styles.aboutText}>{aboutText}</p>
       </div>
     </div>
   );
+}
+
+function tileStyle(backgroundImageUrl: string): React.CSSProperties {
+  return {
+    position: "relative",
+    minHeight: 320,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    border: "none",
+    cursor: "pointer",
+    padding: 24,
+    overflow: "hidden",
+    background: "var(--surface-elevated)",
+    backgroundImage: `url(${backgroundImageUrl})`,
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+  };
 }
 
 const styles: Record<string, React.CSSProperties> = {
@@ -106,7 +149,7 @@ const styles: Record<string, React.CSSProperties> = {
   heroOverlay: {
     position: "absolute",
     inset: 0,
-    background: "rgba(0,0,0,0.25)",
+    background: "rgba(0,0,0,0.28)",
   },
   heroPlaceholder: {
     position: "absolute",
@@ -133,32 +176,30 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 12,
     letterSpacing: "0.2em",
     textTransform: "uppercase",
-    textShadow: "0 2px 20px rgba(0,0,0,0.3)",
+    textShadow: "0 2px 24px rgba(0,0,0,0.4)",
   },
   heroSubtitle: {
     fontSize: "clamp(14px, 2.2vw, 16px)",
     color: "rgba(255,255,255,0.95)",
     margin: 0,
     marginBottom: 28,
-    maxWidth: 420,
+    maxWidth: 440,
     lineHeight: 1.6,
     letterSpacing: "0.08em",
     textTransform: "uppercase",
-    textShadow: "0 1px 8px rgba(0,0,0,0.25)",
+    textShadow: "0 1px 12px rgba(0,0,0,0.35)",
   },
-  heroCtaWrap: {
-    marginTop: 8,
-  },
+  heroCtaWrap: { marginTop: 8 },
   heroCta: {
-    padding: "14px 32px",
+    padding: "14px 36px",
     background: "transparent",
-    border: "2px solid rgba(255,255,255,0.9)",
+    border: "2px solid rgba(255,255,255,0.95)",
     color: "#fff",
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 600,
     fontFamily: "inherit",
     cursor: "pointer",
-    letterSpacing: "0.2em",
+    letterSpacing: "0.22em",
     textTransform: "uppercase",
   },
   heroTitleNoImage: {
@@ -176,48 +217,60 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--muted)",
     margin: 0,
     marginBottom: 28,
-    maxWidth: 420,
+    maxWidth: 440,
     lineHeight: 1.6,
     letterSpacing: "0.08em",
     textTransform: "uppercase",
   },
   tilesWrap: {
-    maxWidth: 900,
-    margin: "0 auto 40px",
-    padding: "0 var(--content-padding, 16px)",
+    margin: "0 auto 48px",
+    padding: 0,
+    maxWidth: 1200,
   },
-  tile: {
-    minHeight: 220,
+  tileInner: {
+    position: "relative",
+    zIndex: 1,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    background: "var(--surface-elevated)",
-    border: "none",
-    cursor: "pointer",
-    padding: 24,
+    gap: 8,
+    textAlign: "center",
   },
   tileLabel: {
-    fontSize: 15,
+    fontSize: "clamp(15px, 2vw, 18px)",
     fontWeight: 600,
-    color: "var(--text)",
-    letterSpacing: "0.06em",
+    color: "#fff",
+    letterSpacing: "0.12em",
+    textTransform: "uppercase",
+    textShadow: "0 2px 16px rgba(0,0,0,0.5)",
   },
   tileSub: {
     fontSize: 12,
-    color: "var(--muted)",
-    letterSpacing: "0.04em",
+    color: "rgba(255,255,255,0.9)",
+    letterSpacing: "0.06em",
+    textShadow: "0 1px 8px rgba(0,0,0,0.4)",
+  },
+  tileLink: {
+    fontSize: 11,
+    fontWeight: 600,
+    color: "#fff",
+    letterSpacing: "0.18em",
+    textTransform: "uppercase",
+    marginTop: 4,
+    textDecoration: "underline",
+    textUnderlineOffset: 4,
+    textShadow: "0 1px 6px rgba(0,0,0,0.4)",
   },
   aboutBlock: {
     padding: "0 var(--content-padding, 16px)",
-    maxWidth: 560,
+    maxWidth: 600,
     margin: "0 auto",
     textAlign: "center",
   },
   aboutText: {
     fontSize: 12,
-    lineHeight: 1.7,
+    lineHeight: 1.75,
     color: "var(--muted)",
     margin: 0,
     letterSpacing: "0.02em",

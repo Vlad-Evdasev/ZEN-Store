@@ -1037,7 +1037,12 @@ function CurrencyRateTab({ adminSecret }: { adminSecret: string }) {
   );
 }
 
-const SITE_CONTENT_KEYS = ["hero_title", "hero_subtitle", "hero_image_url", "about_text", "catalog_cta", "custom_order_cta"] as const;
+const SITE_CONTENT_KEYS = [
+  "hero_title", "hero_subtitle", "hero_image_url", "about_text",
+  "catalog_cta", "custom_order_cta",
+  "arrived_title", "arrived_subtitle", "arrived_image_url",
+  "catalog_image_url", "custom_order_image_url",
+] as const;
 const SITE_CONTENT_LABELS: Record<string, string> = {
   hero_title: "Заголовок hero",
   hero_subtitle: "Подзаголовок hero",
@@ -1045,6 +1050,11 @@ const SITE_CONTENT_LABELS: Record<string, string> = {
   about_text: "Текст про оригиналы / о магазине",
   catalog_cta: "Текст кнопки «Каталог»",
   custom_order_cta: "Текст кнопки «Заказ не из каталога»",
+  arrived_title: "Заголовок блока «Уже привезли»",
+  arrived_subtitle: "Подзаголовок блока «Уже привезли»",
+  arrived_image_url: "URL картинки блока «Уже привезли»",
+  catalog_image_url: "URL картинки блока «Каталог»",
+  custom_order_image_url: "URL картинки блока «Заказ не из каталога»",
 };
 
 function SiteContentTab({ adminSecret }: { adminSecret: string }) {
@@ -1093,30 +1103,28 @@ function SiteContentTab({ adminSecret }: { adminSecret: string }) {
         {SITE_CONTENT_KEYS.map((key) => (
           <label key={key} style={styles.label}>
             {SITE_CONTENT_LABELS[key] ?? key}
-            {key === "hero_image_url" || key === "about_text" ? (
-              key === "about_text" ? (
-                <textarea
-                  value={content[key] ?? ""}
-                  onChange={(e) => setContent((c) => ({ ...c, [key]: e.target.value }))}
-                  placeholder="Все вещи оригинальные из брендовых магазинов."
-                  rows={3}
-                  style={{ ...styles.input, minHeight: 80 }}
-                />
-              ) : (
-                <input
-                  type="url"
-                  value={content[key] ?? ""}
-                  onChange={(e) => setContent((c) => ({ ...c, [key]: e.target.value }))}
-                  placeholder="https://..."
-                  style={styles.input}
-                />
-              )
+            {key === "about_text" ? (
+              <textarea
+                value={content[key] ?? ""}
+                onChange={(e) => setContent((c) => ({ ...c, [key]: e.target.value }))}
+                placeholder="Все вещи оригинальные из брендовых магазинов."
+                rows={3}
+                style={{ ...styles.input, minHeight: 80 }}
+              />
+            ) : key.endsWith("_image_url") ? (
+              <input
+                type="url"
+                value={content[key] ?? ""}
+                onChange={(e) => setContent((c) => ({ ...c, [key]: e.target.value }))}
+                placeholder="https://..."
+                style={styles.input}
+              />
             ) : (
               <input
                 type="text"
                 value={content[key] ?? ""}
                 onChange={(e) => setContent((c) => ({ ...c, [key]: e.target.value }))}
-                placeholder={key === "catalog_cta" ? "В каталог" : key === "custom_order_cta" ? "Заказать не из каталога" : ""}
+                placeholder={key === "catalog_cta" ? "В каталог" : key === "custom_order_cta" ? "Заказать не из каталога" : key === "arrived_title" ? "Уже привезли" : key === "arrived_subtitle" ? "Вещи в наличии" : ""}
                 style={styles.input}
               />
             )}
