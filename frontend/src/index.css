@@ -361,46 +361,33 @@ button:active {
   flex-direction: column;
   gap: 6px;
 }
-/* Карточки товара: премиальная типографика в духе Ralph Lauren */
+/* Карточки: название и цена serif, описание просто под фото без блока */
+.product-card-name,
 .zen-app .product-card-name {
   font-family: Georgia, "Times New Roman", serif !important;
   font-weight: 400 !important;
-  letter-spacing: 0.02em;
 }
+.product-card-price,
 .zen-app .product-card-price {
-  font-family: Georgia, "Times New Roman", serif;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  color: var(--text);
+  font-family: Georgia, "Times New Roman", serif !important;
+  font-weight: 500 !important;
 }
+[data-theme="dark"] .product-card-price,
 [data-theme="dark"] .zen-app .product-card-price {
   color: var(--text);
 }
+html[data-theme="light"] .product-card-price,
 html[data-theme="light"] .zen-app .product-card-price {
   color: var(--muted);
 }
+.product-card-desc,
 .zen-app .product-card-desc {
-  background: transparent;
+  background: transparent !important;
 }
-/* Описание просто под фото — без отдельного блока, один фон карточки */
+.product-card--text-below .product-card-desc,
 .zen-app .product-card--text-below .product-card-desc {
-  border-radius: 0;
-  box-shadow: none;
-  border: none;
-}
-.zen-app .product-card--text-below .product-card-name {
-  font-family: Georgia, "Times New Roman", serif !important;
-  font-weight: 400 !important;
-  letter-spacing: 0.03em;
-  margin-bottom: 2px;
-}
-.zen-app .product-card--text-below .product-card-price {
-  font-family: Georgia, "Times New Roman", serif;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-}
-html[data-theme="light"] .zen-app .product-card--text-below .product-card-price {
-  color: var(--muted);
+  border: none !important;
+  box-shadow: none !important;
 }
 .zen-app .product-card-wishlist-btn {
   -webkit-tap-highlight-color: transparent;
