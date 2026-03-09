@@ -61,18 +61,19 @@ productsRouter.post("/", (req, res) => {
   if (ADMIN_SECRET && secret !== ADMIN_SECRET) {
     return res.status(401).json({ error: "Unauthorized. Проверь ADMIN_SECRET и заголовок X-Admin-Secret." });
   }
-  const { store_id, name, description, price, image_url, image_urls, category, sizes } = req.body;
+  const { store_id, name, description, price, image_url, image_urls, category, sizes, brand } = req.body;
   if (!name || price == null) return res.status(400).json({ error: "Требуются name и price" });
   const sid = store_id ?? 1;
   const cat = category || "tee";
   const sz = sizes || "S,M,L,XL";
+  const brandVal = typeof brand === "string" ? (brand.trim() || null) : null;
   const urls = Array.isArray(image_urls) ? image_urls.slice(0, MAX_IMAGES).filter(Boolean) : (image_url ? [image_url] : []);
   const firstUrl = urls[0] ?? image_url ?? null;
   const imagesJson = urls.length > 0 ? JSON.stringify(urls) : null;
   try {
     db.prepare(
-      "INSERT INTO products (store_id, name, description, price, image_url, images, category, sizes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-    ).run(sid, name, description ?? "", Number(price), firstUrl, imagesJson, cat, sz);
+      "INSERT INTO products (store_id, name, description, price, image_url, images, category, sizes, brand) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    ).run(sid, name, description ?? "", Number(price), firstUrl, imagesJson, cat, sz, brandVal);
     const row = db.prepare("SELECT last_insert_rowid() as id").get() as { id: number };
     return res.status(201).json({ id: row.id, ok: true });
   } catch (e) {
@@ -87,7 +88,7 @@ productsRouter.patch("/:id", (req, res) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
   const id = parseInt(req.params.id, 10);
-  const { store_id, name, description, price, image_url, image_urls, category, sizes, new_arrival_sort_order } = req.body;
+  const { store_id, name, description, price, image_url, image_urls, category, sizes, new_arrival_sort_order, brand } = req.body;
   const row = db.prepare("SELECT id FROM products WHERE id = ?").get(id) as { id: number } | undefined;
   if (!row) return res.status(404).json({ error: "Product not found" });
 
@@ -97,6 +98,10 @@ productsRouter.patch("/:id", (req, res) => {
   if (name != null) { updates.push("name = ?"); values.push(name); }
   if (description != null) { updates.push("description = ?"); values.push(description); }
   if (price != null) { updates.push("price = ?"); values.push(Number(price)); }
+  if (brand !== undefined) {
+    updates.push("brand = ?");
+    values.push(typeof brand === "string" && brand.trim() ? brand.trim() : null);
+  }
   if (new_arrival_sort_order !== undefined) {
     updates.push("new_arrival_sort_order = ?");
     values.push(new_arrival_sort_order === null || new_arrival_sort_order === "" ? null : Number(new_arrival_sort_order));

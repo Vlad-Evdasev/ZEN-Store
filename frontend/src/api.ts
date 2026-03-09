@@ -31,6 +31,7 @@ export async function checkApiHealth(): Promise<{ ok: boolean; url: string; erro
 export interface Product {
   id: number;
   store_id?: number;
+  brand?: string | null;
   name: string;
   description: string;
   price: number;
@@ -220,6 +221,7 @@ export async function verifyAdmin(adminSecret: string): Promise<boolean> {
 export async function createProduct(
   data: {
     store_id?: number;
+    brand?: string | null;
     name: string;
     description?: string;
     price: number;
@@ -254,6 +256,7 @@ export async function updateProduct(
   id: number,
   data: Partial<{
     store_id: number;
+    brand: string | null;
     name: string;
     description: string;
     price: number;

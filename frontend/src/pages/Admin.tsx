@@ -3,11 +3,7 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
-  createStore,
-  updateStore,
-  deleteStore,
   getProducts,
-  getStores,
   getCategories,
   createCategory,
   updateCategory,
@@ -32,7 +28,6 @@ import {
   getSiteContent,
   updateSiteContentAdmin,
   type Product,
-  type Store,
   type Category,
   type Order,
   type CustomOrderAdmin,
@@ -62,7 +57,7 @@ function telegramChatLink(username?: string | null, userId?: string): string {
   return "#";
 }
 
-type Tab = "products" | "stores" | "categories" | "orders" | "customOrders" | "support" | "currencyRate" | "newArrivals" | "siteContent";
+type Tab = "products" | "categories" | "orders" | "customOrders" | "support" | "currencyRate" | "newArrivals" | "siteContent";
 
 export function Admin() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -70,13 +65,10 @@ export function Admin() {
   const [passwordInput, setPasswordInput] = useState("");
   const [authError, setAuthError] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
-  const [stores, setStores] = useState<Store[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [tab, setTab] = useState<Tab>("products");
   const [supportUnreadCount, setSupportUnreadCount] = useState(0);
-  const [editingStoreId, setEditingStoreId] = useState<number | null>(null);
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
-  const [showAddProductToStore, setShowAddProductToStore] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [apiStatus, setApiStatus] = useState<{ ok: boolean; url: string; error?: string } | null>(null);
@@ -87,15 +79,12 @@ export function Admin() {
     setRefreshError(null);
     Promise.allSettled([
       getProducts().then((r) => ({ ok: true as const, data: r })),
-      getStores().then((r) => ({ ok: true as const, data: r })),
       getCategories().then((r) => ({ ok: true as const, data: r })),
-    ]).then(([p, s, c]) => {
+    ]).then(([p, c]) => {
       if (p.status === "fulfilled" && p.value.ok) setProducts(p.value.data);
-      if (s.status === "fulfilled" && s.value.ok) setStores(s.value.data);
       if (c.status === "fulfilled" && c.value.ok) setCategories(c.value.data);
       const errs: string[] = [];
       if (p.status === "rejected") errs.push("товары");
-      if (s.status === "rejected") errs.push("магазины");
       if (c.status === "rejected") errs.push("категории");
       if (errs.length) setRefreshError("Не загружено: " + errs.join(", ") + ". Повторите обновление.");
     });
@@ -155,7 +144,6 @@ export function Admin() {
 
   const setTabAndReset = (t: Tab) => {
     setTab(t);
-    setEditingStoreId(null);
     setEditingProductId(null);
   };
 
@@ -166,9 +154,6 @@ export function Admin() {
           <div className="admin-sidebar-title">RAW Admin</div>
           <button type="button" onClick={() => setTabAndReset("products")} className={`admin-nav-btn ${tab === "products" ? "active" : ""}`}>
             Товары
-          </button>
-          <button type="button" onClick={() => setTabAndReset("stores")} className={`admin-nav-btn ${tab === "stores" ? "active" : ""}`}>
-            Магазины
           </button>
           <button type="button" onClick={() => setTabAndReset("categories")} className={`admin-nav-btn ${tab === "categories" ? "active" : ""}`}>
             Категории
@@ -211,7 +196,6 @@ export function Admin() {
                 setAuthenticated(false);
                 setAdminSecret("");
                 setPasswordInput("");
-                setEditingStoreId(null);
                 setEditingProductId(null);
               }}
               style={styles.logoutBtn}
@@ -231,7 +215,6 @@ export function Admin() {
       {tab === "products" && (
         <ProductsTab
           products={products}
-          stores={stores}
           categories={categories}
           adminSecret={adminSecret}
           editingId={editingProductId}
@@ -279,27 +262,8 @@ export function Admin() {
       {tab === "newArrivals" && (
         <NewArrivalsTab
           products={products}
-          stores={stores}
           adminSecret={adminSecret}
           onRefresh={refresh}
-        />
-      )}
-
-      {tab === "stores" && (
-        <StoresTab
-          products={products}
-          stores={stores}
-          categories={categories}
-          adminSecret={adminSecret}
-          editingStoreId={editingStoreId}
-          setEditingStoreId={setEditingStoreId}
-          showAddProductToStore={showAddProductToStore}
-          setShowAddProductToStore={setShowAddProductToStore}
-          onRefresh={refresh}
-          message={message}
-          setMessage={setMessage}
-          submitting={submitting}
-          setSubmitting={setSubmitting}
         />
       )}
 
@@ -832,12 +796,10 @@ function CategoriesTab({
 
 function NewArrivalsTab({
   products,
-  stores,
   adminSecret,
   onRefresh,
 }: {
   products: Product[];
-  stores: Store[];
   adminSecret: string;
   onRefresh: () => void;
 }) {
@@ -919,7 +881,7 @@ function NewArrivalsTab({
           <option value="">Добавить товар в новинки</option>
           {notInNewArrivals.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.name} ({stores.find((s) => s.id === (p.store_id ?? 1))?.name ?? "—"})
+              {p.name} {p.brand?.trim() ? `(${p.brand.trim()})` : ""}
             </option>
           ))}
         </select>
@@ -936,7 +898,7 @@ function NewArrivalsTab({
               <tr>
                 <th style={styles.th}>#</th>
                 <th style={styles.th}>Товар</th>
-                <th style={styles.th}>Магазин</th>
+                <th style={styles.th}>Бренд</th>
                 <th style={styles.th}>Действия</th>
               </tr>
             </thead>
@@ -945,7 +907,7 @@ function NewArrivalsTab({
                 <tr key={p.id}>
                   <td style={styles.td}>{i + 1}</td>
                   <td style={styles.td}>{p.name}</td>
-                  <td style={styles.td}>{stores.find((s) => s.id === (p.store_id ?? 1))?.name ?? "—"}</td>
+                  <td style={styles.td}>{p.brand?.trim() ?? "—"}</td>
                   <td style={{ ...styles.td, display: "flex", gap: 6, flexWrap: "wrap" }}>
                     <button type="button" onClick={() => moveUp(i)} disabled={busy || i === 0} style={styles.smallBtn} title="Выше">
                       ↑
@@ -1445,7 +1407,6 @@ const supportBubbleUserStyle: React.CSSProperties = { ...supportBubbleStyle, bac
 
 function ProductsTab({
   products,
-  stores,
   categories,
   adminSecret,
   editingId,
@@ -1457,7 +1418,6 @@ function ProductsTab({
   setSubmitting,
 }: {
   products: Product[];
-  stores: Store[];
   categories: Category[];
   adminSecret: string;
   editingId: number | null;
@@ -1474,7 +1434,7 @@ function ProductsTab({
   const [price, setPrice] = useState("");
   const [imageUrls, setImageUrls] = useState<string[]>(["", "", "", "", ""]);
   const [category, setCategory] = useState(defaultCategory);
-  const [storeId, setStoreId] = useState(1);
+  const [brand, setBrand] = useState("");
   const [sizes, setSizes] = useState("S,M,L,XL");
 
   useEffect(() => {
@@ -1490,7 +1450,7 @@ function ProductsTab({
     setPrice(String(p.price));
     const urls = (p.image_urls && p.image_urls.length > 0) ? p.image_urls : (p.image_url ? [p.image_url] : []);
     setImageUrls([...urls, "", "", "", "", ""].slice(0, 5));
-    setStoreId(p.store_id ?? 1);
+    setBrand(p.brand ?? "");
     setCategory(categories.some((c) => c.code === p.category) ? p.category : defaultCategory);
     setSizes(p.sizes || "S,M,L,XL");
   };
@@ -1501,7 +1461,7 @@ function ProductsTab({
     setDescription("");
     setPrice("");
     setImageUrls(["", "", "", "", ""]);
-    setStoreId(1);
+    setBrand("");
     setCategory(defaultCategory);
     setSizes("S,M,L,XL");
   };
@@ -1517,7 +1477,8 @@ function ProductsTab({
     try {
       const urls = imageUrls.map((x) => x.trim()).filter(Boolean);
       const data = {
-        store_id: storeId,
+        store_id: 1,
+        brand: brand.trim() || undefined,
         name: name.trim(),
         description: description.trim() || undefined,
         price: Number(price.replace(/\s/g, "")) || 0,
@@ -1580,12 +1541,8 @@ function ProductsTab({
             style={styles.input}
           />
         ))}
-        <label style={styles.label}>Магазин</label>
-        <select value={storeId} onChange={(e) => setStoreId(Number(e.target.value))} style={styles.input}>
-          {stores.map((s) => (
-            <option key={s.id} value={s.id}>{s.name}</option>
-          ))}
-        </select>
+        <label style={styles.label}>Бренд</label>
+        <input type="text" value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="Название бренда" style={styles.input} />
         <label style={styles.label}>Категория</label>
         <select value={category} onChange={(e) => setCategory(e.target.value)} style={styles.input}>
           {categories.length === 0 ? (
@@ -1614,7 +1571,7 @@ function ProductsTab({
             <img src={(p.image_urls && p.image_urls[0]) || p.image_url || "https://via.placeholder.com/48"} alt="" style={styles.thumb} />
             <div style={styles.productInfo}>
               <p style={styles.productName}>{p.name}</p>
-              <p style={styles.productPrice}>{p.price} $ · {stores.find(s => s.id === (p.store_id ?? 1))?.name || "—"}</p>
+              <p style={styles.productPrice}>{p.price} $ · {p.brand?.trim() || "—"}</p>
             </div>
             <div style={styles.productActions}>
               <button type="button" onClick={() => startEdit(p)} style={styles.smallBtn}>Изменить</button>
@@ -1624,324 +1581,6 @@ function ProductsTab({
         ))}
       </div>
     </>
-  );
-}
-
-function StoresTab({
-  products,
-  stores,
-  categories,
-  adminSecret,
-  editingStoreId,
-  setEditingStoreId,
-  showAddProductToStore,
-  setShowAddProductToStore,
-  onRefresh,
-  message,
-  setMessage,
-  submitting,
-  setSubmitting,
-}: {
-  products: Product[];
-  stores: Store[];
-  categories: Category[];
-  adminSecret: string;
-  editingStoreId: number | null;
-  setEditingStoreId: (id: number | null) => void;
-  showAddProductToStore: number | null;
-  setShowAddProductToStore: (id: number | null) => void;
-  onRefresh: () => void;
-  message: string;
-  setMessage: (m: string) => void;
-  submitting: boolean;
-  setSubmitting: (v: boolean) => void;
-}) {
-  const editingStore = stores.find((s) => s.id === editingStoreId);
-  const storeProducts = editingStoreId ? products.filter((p) => (p.store_id ?? 1) === editingStoreId) : [];
-  const otherProducts = editingStoreId ? products.filter((p) => (p.store_id ?? 1) !== editingStoreId) : products;
-
-  const [storeName, setStoreName] = useState("");
-  const [storeImage, setStoreImage] = useState("");
-  const [storeDesc, setStoreDesc] = useState("");
-  const [newStoreName, setNewStoreName] = useState("");
-  const [newStoreImage, setNewStoreImage] = useState("");
-  const [newStoreDesc, setNewStoreDesc] = useState("");
-  const [productFormStoreId, setProductFormStoreId] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (editingStore) {
-      setStoreName(editingStore.name);
-      setStoreImage(editingStore.image_url || "");
-      setStoreDesc(editingStore.description || "");
-    }
-  }, [editingStore]);
-
-  const startEditStore = (s: Store) => {
-    setEditingStoreId(s.id);
-    setStoreName(s.name);
-    setStoreImage(s.image_url || "");
-    setStoreDesc(s.description || "");
-  };
-
-  const handleSaveStore = async () => {
-    if (!editingStoreId) return;
-    setSubmitting(true);
-    setMessage("");
-    try {
-      await updateStore(editingStoreId, { name: storeName.trim(), image_url: storeImage.trim() || undefined, description: storeDesc.trim() }, adminSecret);
-      setMessage("Магазин обновлён");
-      onRefresh();
-    } catch (err) {
-      setMessage("Ошибка: " + (err instanceof Error ? err.message : ""));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleAddStore = async () => {
-    if (!newStoreImage.trim()) return;
-    setSubmitting(true);
-    setMessage("");
-    try {
-      await createStore({ image_url: newStoreImage.trim(), name: newStoreName.trim(), description: newStoreDesc.trim() }, adminSecret);
-      setMessage("Магазин создан");
-      setNewStoreName("");
-      setNewStoreImage("");
-      setNewStoreDesc("");
-      onRefresh();
-    } catch (err) {
-      setMessage("Ошибка: " + (err instanceof Error ? err.message : ""));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleDeleteStore = async (id: number) => {
-    if (!confirm("Удалить магазин? Товары будут переназначены в первый магазин.")) return;
-    setSubmitting(true);
-    try {
-      await deleteStore(id, adminSecret);
-      setEditingStoreId(null);
-      setMessage("Магазин удалён");
-      onRefresh();
-    } catch (err) {
-      setMessage("Ошибка: " + (err instanceof Error ? err.message : ""));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleAssignProduct = async (productId: number, toStoreId: number) => {
-    setSubmitting(true);
-    setMessage("");
-    try {
-      await updateProduct(productId, { store_id: toStoreId }, adminSecret);
-      setMessage("Товар добавлен в магазин");
-      setShowAddProductToStore(null);
-      onRefresh();
-    } catch (err) {
-      setMessage("Ошибка: " + (err instanceof Error ? err.message : ""));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <>
-      {editingStoreId && editingStore ? (
-        <div style={styles.storeDetail}>
-          <button type="button" onClick={() => setEditingStoreId(null)} style={styles.backBtn}>← К списку магазинов</button>
-          <h3 style={styles.subtitle}>{editingStore.name}</h3>
-          <div style={styles.form}>
-            <label style={styles.label}>Название (необязательно)</label>
-            <input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} style={styles.input} placeholder="Название магазина" />
-            <label style={styles.label}>URL картинки *</label>
-            <input type="text" value={storeImage} onChange={(e) => setStoreImage(e.target.value)} placeholder="https://..." style={styles.input} />
-            <label style={styles.label}>Описание (необязательно)</label>
-            <input type="text" value={storeDesc} onChange={(e) => setStoreDesc(e.target.value)} style={styles.input} placeholder="Краткое описание" />
-            <div style={styles.formActions}>
-              <button type="button" onClick={handleSaveStore} disabled={submitting} style={styles.submit}>Сохранить</button>
-              <button type="button" onClick={() => handleDeleteStore(editingStoreId)} style={styles.deleteBtn}>Удалить магазин</button>
-            </div>
-          </div>
-
-          <h4 style={styles.sectionTitle}>Товары в магазине ({storeProducts.length})</h4>
-          <div style={styles.productActionsRow}>
-            <button type="button" onClick={() => setProductFormStoreId(editingStoreId)} style={styles.smallBtn}>
-              + Создать новый товар
-            </button>
-            <button type="button" onClick={() => setShowAddProductToStore(showAddProductToStore === editingStoreId ? null : editingStoreId)} style={styles.smallBtn}>
-              + Добавить существующий
-            </button>
-          </div>
-
-          {showAddProductToStore === editingStoreId && otherProducts.length > 0 && (
-            <div style={styles.modalList}>
-              {otherProducts.map((p) => (
-                <div key={p.id} style={styles.productRow}>
-                  <img src={(p.image_urls && p.image_urls[0]) || p.image_url || "https://via.placeholder.com/40"} alt="" style={{ ...styles.thumb, width: 40, height: 40 }} />
-                  <div style={styles.productInfo}>
-                    <p style={styles.productName}>{p.name}</p>
-                    <p style={styles.productPrice}>{p.price} $</p>
-                  </div>
-                  <button type="button" onClick={() => handleAssignProduct(p.id, editingStoreId)} style={styles.smallBtn}>Добавить</button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {showAddProductToStore === editingStoreId && otherProducts.length === 0 && (
-            <p style={styles.hint}>Все товары уже в этом магазине</p>
-          )}
-
-          {storeProducts.map((p) => (
-            <div key={p.id} style={styles.productRow}>
-              <img src={(p.image_urls && p.image_urls[0]) || p.image_url || "https://via.placeholder.com/48"} alt="" style={styles.thumb} />
-              <div style={styles.productInfo}>
-                <p style={styles.productName}>{p.name}</p>
-                <p style={styles.productPrice}>{p.price} $</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <>
-          <h2 style={styles.pageTitle}>Магазины</h2>
-          <p style={styles.hint}>Добавить магазин (обязательно только поле картинки)</p>
-          <div style={styles.form}>
-            <label style={styles.label}>URL картинки *</label>
-            <input type="text" value={newStoreImage} onChange={(e) => setNewStoreImage(e.target.value)} placeholder="https://..." style={styles.input} />
-            <label style={styles.label}>Название (необязательно)</label>
-            <input type="text" value={newStoreName} onChange={(e) => setNewStoreName(e.target.value)} placeholder="Название магазина" style={styles.input} />
-            <label style={styles.label}>Описание (необязательно)</label>
-            <input type="text" value={newStoreDesc} onChange={(e) => setNewStoreDesc(e.target.value)} placeholder="Описание" style={styles.input} />
-            <button type="button" onClick={handleAddStore} disabled={submitting} style={styles.submit}>Создать магазин</button>
-          </div>
-
-          <div style={styles.list}>
-            <h3 style={styles.subtitle}>Магазины ({stores.length})</h3>
-            {stores.map((s) => (
-              <div key={s.id} style={styles.productRow}>
-                <img src={s.image_url || "https://via.placeholder.com/48"} alt="" style={styles.thumb} />
-                <div style={styles.productInfo}>
-                  <p style={styles.productName}>{s.name}</p>
-                  <p style={styles.productPrice}>{products.filter(p => (p.store_id ?? 1) === s.id).length} товаров</p>
-                </div>
-                <div style={styles.productActions}>
-                  <button type="button" onClick={() => startEditStore(s)} style={styles.smallBtn}>Изменить</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      {productFormStoreId && (
-        <ProductFormModal
-          storeId={productFormStoreId}
-          stores={stores}
-          categories={categories}
-          adminSecret={adminSecret}
-          onClose={() => setProductFormStoreId(null)}
-          onSaved={() => {
-            setProductFormStoreId(null);
-            setMessage("Товар создан");
-            onRefresh();
-          }}
-          setSubmitting={setSubmitting}
-          setMessage={setMessage}
-        />
-      )}
-
-      {message && <p style={styles.message}>{message}</p>}
-    </>
-  );
-}
-
-function ProductFormModal({
-  storeId,
-  stores,
-  categories,
-  adminSecret,
-  onClose,
-  onSaved,
-  setSubmitting,
-  setMessage,
-}: {
-  storeId: number;
-  stores: Store[];
-  categories: Category[];
-  adminSecret: string;
-  onClose: () => void;
-  onSaved: () => void;
-  setSubmitting: (v: boolean) => void;
-  setMessage: (m: string) => void;
-}) {
-  const defaultCat = categories.length > 0 ? categories[0].code : "tee";
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [price, setPrice] = useState("");
-  const [imageUrls, setImageUrls] = useState<string[]>(["", "", "", "", ""]);
-  const [category, setCategory] = useState(defaultCat);
-  const [sizes, setSizes] = useState("S,M,L,XL");
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !price.trim()) return;
-    setSubmitting(true);
-    try {
-      const urls = imageUrls.map((x) => x.trim()).filter(Boolean);
-      await createProduct({
-        store_id: storeId,
-        name: name.trim(),
-        description: description.trim() || undefined,
-        price: Number(price.replace(/\s/g, "")) || 0,
-        image_url: urls[0] || undefined,
-        image_urls: urls.length > 0 ? urls : undefined,
-        category,
-        sizes: sizes.trim() || undefined,
-      }, adminSecret);
-      onSaved();
-    } catch (err) {
-      setMessage("Ошибка: " + (err instanceof Error ? err.message : ""));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div style={styles.modalOverlay} onClick={onClose}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <h4 style={styles.subtitle}>Новый товар в {stores.find(s => s.id === storeId)?.name}</h4>
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Название *" style={styles.input} required />
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Описание" rows={2} style={styles.input} />
-          <input type="text" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Цена ($) *" style={styles.input} required />
-          <label style={styles.label}>Картинки (до 5 URL)</label>
-          {[0, 1, 2, 3, 4].map((i) => (
-            <input
-              key={i}
-              type="text"
-              value={imageUrls[i] ?? ""}
-              onChange={(e) => setImageUrls((prev) => { const n = [...prev]; n[i] = e.target.value; return n; })}
-              placeholder={i === 0 ? "https://... (первая)" : `Картинка ${i + 1}`}
-              style={styles.input}
-            />
-          ))}
-          <label style={styles.label}>Категория</label>
-          <select value={category} onChange={(e) => setCategory(e.target.value)} style={styles.input}>
-            {categories.map((c) => (
-              <option key={c.code} value={c.code}>{c.name}</option>
-            ))}
-          </select>
-          <input type="text" value={sizes} onChange={(e) => setSizes(e.target.value)} placeholder="Размеры" style={styles.input} />
-          <div style={styles.formActions}>
-            <button type="submit" style={styles.submit}>Создать</button>
-            <button type="button" onClick={onClose} style={styles.cancelBtn}>Отмена</button>
-          </div>
-        </form>
-      </div>
-    </div>
   );
 }
 

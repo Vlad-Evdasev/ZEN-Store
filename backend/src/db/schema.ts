@@ -246,6 +246,13 @@ try {
   // column already exists
 }
 
+// Brand (replaces store in UI; store_id kept for StoreCatalog)
+try {
+  db.exec("ALTER TABLE products ADD COLUMN brand TEXT");
+} catch {
+  // column already exists
+}
+
 // Add user_username to orders (instead of/in addition to phone)
 try {
   db.exec("ALTER TABLE orders ADD COLUMN user_username TEXT");

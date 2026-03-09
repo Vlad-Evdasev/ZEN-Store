@@ -83,6 +83,9 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
           </button>
         )}
         <p className="product-card-name" style={nameStyle} title={product.name}>{product.name}</p>
+        {product.brand?.trim() && (
+          <span style={compact ? styles.brandCompact : styles.brand}>{product.brand.trim()}</span>
+        )}
         <p className="product-card-price" style={priceStyle}>{formatPrice(product.price)}</p>
         {hasReviews && (
           <span style={{ ...(compact ? styles.reviewsCompact : styles.reviews), ...noShrink }}>
@@ -158,7 +161,7 @@ const styles: Record<string, React.CSSProperties> = {
   name: {
     padding: 0,
     margin: 0,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: 400,
     fontFamily: 'Georgia, "Times New Roman", serif',
     color: "var(--text)",
@@ -167,6 +170,30 @@ const styles: Record<string, React.CSSProperties> = {
     whiteSpace: "nowrap",
     lineHeight: 1.35,
     letterSpacing: "0.03em",
+  },
+  brand: {
+    padding: 0,
+    margin: "2px 0 0",
+    fontSize: 12,
+    fontWeight: 400,
+    fontFamily: 'Georgia, "Times New Roman", serif',
+    color: "var(--muted)",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    lineHeight: 1.3,
+  },
+  brandCompact: {
+    padding: 0,
+    margin: "1px 0 0",
+    fontSize: 11,
+    fontWeight: 400,
+    fontFamily: 'Georgia, "Times New Roman", serif',
+    color: "var(--muted)",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    lineHeight: 1.25,
   },
   price: {
     padding: 0,
@@ -200,6 +227,6 @@ const styles: Record<string, React.CSSProperties> = {
   imageWrapTall: { aspectRatio: "4/5" },
   imageWrapFillHeight: { flex: "1 1 0%", minHeight: 120, aspectRatio: "unset" as const },
   descWrapFillHeight: { flex: "0 0 auto", minHeight: 52, flexShrink: 0 },
-  nameCompact: { padding: 0, margin: "0 0 3px", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.3 },
+  nameCompact: { padding: 0, margin: "0 0 3px", fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.3 },
   priceCompact: { padding: 0, margin: "3px 0 0", fontSize: 13, fontWeight: 500, color: "var(--text)", lineHeight: 1.25 },
 };
