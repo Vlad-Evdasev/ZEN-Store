@@ -415,12 +415,9 @@ html[data-theme="light"] .zen-app .product-card-price {
   gap: 20px;
   grid-auto-rows: auto;
 }
-/* Каталог (главный): минимальные отступы, одинаковый размер, карточки +15%, без скруглений */
+/* Каталог (главный): минимальные отступы, одинаковый размер, без скруглений */
 .zen-app .catalog-grid.catalog-grid--tight {
-  gap: 4px;
-}
-.zen-app .catalog-grid.catalog-grid--tight .product-card__image-wrap {
-  aspect-ratio: 1 / 1.15 !important;
+  gap: 6px;
 }
 .zen-app .catalog-grid.catalog-grid--tight .product-card,
 .zen-app .catalog-grid.catalog-grid--tight .product-card .product-card__image-wrap,
@@ -431,8 +428,8 @@ html[data-theme="light"] .zen-app .product-card-price {
 
 /* Каталог: минимальные отступы от краёв экрана */
 .zen-app main.zen-main--catalog {
-  padding-left: max(4px, env(safe-area-inset-left));
-  padding-right: max(4px, env(safe-area-inset-right));
+  padding-left: max(6px, env(safe-area-inset-left));
+  padding-right: max(6px, env(safe-area-inset-right));
 }
 
 /* Кнопка «Отмена» в модалках — явный цвет текста (на iOS иначе синий) */
