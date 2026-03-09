@@ -951,8 +951,8 @@ html[data-theme="light"] .zen-app .product-card-price {
 .zen-app .zen-catalog-search-input {
   flex: 1;
   min-width: 0;
-  min-height: var(--input-height);
-  padding: var(--input-padding);
+  min-height: 38px;
+  padding: 8px 0;
   padding-left: 0;
   border: none;
   border-radius: 0;
