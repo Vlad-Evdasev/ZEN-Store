@@ -459,6 +459,15 @@ button:active {
   }
 }
 
+/* Кнопки сортировки по цене: hover */
+@media (hover: hover) {
+  .zen-app .catalog-price-sort-btn:hover:not(.catalog-price-sort-btn--active) {
+    background: var(--surface-elevated);
+    color: var(--text);
+    border-color: var(--border);
+  }
+}
+
 /* Карточка товара: hover на устройствах с мышью */
 @media (hover: hover) {
   .zen-app .product-card:hover {

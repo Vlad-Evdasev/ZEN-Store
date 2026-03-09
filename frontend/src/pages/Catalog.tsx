@@ -52,6 +52,7 @@ export function Catalog({
   const [search, setSearch] = useState("");
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
+  const [priceSort, setPriceSort] = useState<"none" | "asc" | "desc">("none");
   const [internalCategories, setInternalCategories] = useState<Set<string>>(new Set(["all"]));
   const selectedCategories = selectedCategoriesProp ?? internalCategories;
   const setSelectedCategories = onSelectedCategoriesChange ?? setInternalCategories;
@@ -188,6 +189,12 @@ export function Catalog({
     return list;
   }, [products, selectedCategories, search, showPriceFilter, priceMin, priceMax]);
 
+  const displayList = useMemo(() => {
+    if (priceSort === "asc") return [...filtered].sort((a, b) => a.price - b.price);
+    if (priceSort === "desc") return [...filtered].sort((a, b) => b.price - a.price);
+    return filtered;
+  }, [filtered, priceSort]);
+
   const handleCategoryClick = (cat: string) => {
     if (cat === "all") {
       setSelectedCategories(new Set(["all"]));
@@ -302,6 +309,32 @@ export function Catalog({
             onChange={(e) => setPriceMax(e.target.value)}
             style={styles.priceInput}
           />
+          <div style={styles.priceSortWrap} role="group" aria-label={t(lang, "priceFilter")}>
+            <button
+              type="button"
+              className={`catalog-price-sort-btn ${priceSort === "asc" ? "catalog-price-sort-btn--active" : ""}`}
+              onClick={() => setPriceSort((s) => (s === "asc" ? "none" : "asc"))}
+              style={{ ...styles.priceSortBtn, ...(priceSort === "asc" ? styles.priceSortBtnActive : {}) }}
+              aria-label={t(lang, "sortPriceAsc")}
+              title={t(lang, "sortPriceAsc")}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M12 19V5M5 12l7-7 7 7" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className={`catalog-price-sort-btn ${priceSort === "desc" ? "catalog-price-sort-btn--active" : ""}`}
+              onClick={() => setPriceSort((s) => (s === "desc" ? "none" : "desc"))}
+              style={{ ...styles.priceSortBtn, ...(priceSort === "desc" ? styles.priceSortBtnActive : {}) }}
+              aria-label={t(lang, "sortPriceDesc")}
+              title={t(lang, "sortPriceDesc")}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M12 5v14M5 12l7 7 7-7" />
+              </svg>
+            </button>
+          </div>
         </div>
       )}
 
@@ -328,13 +361,13 @@ export function Catalog({
         })}
       </div>
 
-      {filtered.length === 0 ? (
+      {displayList.length === 0 ? (
         <div style={styles.empty}>
           <p>{t(lang, "nothingFound")}</p>
         </div>
       ) : (
         <div className="catalog-grid" style={styles.grid}>
-          {filtered.map((p) => (
+          {displayList.map((p) => (
             <ProductCard
               key={p.id}
               product={p}
@@ -408,6 +441,30 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--text)",
     fontSize: 14,
     fontFamily: "inherit",
+  },
+  priceSortWrap: {
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+    marginLeft: "auto",
+  },
+  priceSortBtn: {
+    width: 40,
+    height: 40,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: 10,
+    color: "var(--muted)",
+    cursor: "pointer",
+    transition: "color 0.2s ease, background 0.2s ease, border-color 0.2s ease",
+  },
+  priceSortBtnActive: {
+    background: "var(--accent)",
+    borderColor: "var(--accent)",
+    color: "#fff",
   },
   search: {
     width: "100%",
