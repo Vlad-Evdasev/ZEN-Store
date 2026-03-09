@@ -3,6 +3,7 @@ import type { Product, Store, Category, ProductReviewStats } from "../api";
 import { getProductReviewStats } from "../api";
 import { ProductCard } from "../components/ProductCard";
 import { StoreCard } from "../components/StoreCard";
+import { CollapsibleSearch } from "../components/CollapsibleSearch";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 
@@ -57,11 +58,23 @@ export function Catalog({
   const selectedCategories = selectedCategoriesProp ?? internalCategories;
   const setSelectedCategories = onSelectedCategoriesChange ?? setInternalCategories;
   const [reviewStats, setReviewStats] = useState<ProductReviewStats>({});
+  const [searchExpanded, setSearchExpanded] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 768px)").matches : false
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
   const marqueePausedRef = useRef(false);
   const pauseTimeoutRef = useRef<number | null>(null);
   const lastAutoScrollRef = useRef(0);
   const isTouchOnly = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    const handler = () => setIsMobile(mq.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   type DisplayStore =
     | { id: number; name: string; image: string; desc: string; isReal: true }
@@ -219,7 +232,7 @@ export function Catalog({
   };
 
   return (
-    <div style={styles.wrap}>
+    <div style={{ ...styles.wrap, paddingBottom: isMobile && showPriceFilter ? 88 : 24 }}>
       {!hideStores && displayStores.length > 0 && (
         <div style={styles.storesRowWrap}>
           <button
@@ -278,18 +291,17 @@ export function Catalog({
         </div>
       )}
 
-      <div className="zen-catalog-search-wrap" style={styles.searchWrap}>
-        <input
-          type="text"
-          className="zen-input"
-          placeholder={t(lang, "search")}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={styles.search}
-        />
-      </div>
+      <CollapsibleSearch
+        value={search}
+        onChange={setSearch}
+        placeholder={t(lang, "search")}
+        expanded={searchExpanded}
+        onExpand={() => setSearchExpanded(true)}
+        onCollapse={() => setSearchExpanded(false)}
+        aria-label={t(lang, "search")}
+      />
 
-      {showPriceFilter && (
+      {showPriceFilter && !isMobile && (
         <div className="zen-catalog-filters">
           <div className="zen-price-filter-wrap">
             <span className="zen-price-filter-label">{t(lang, "priceFilter")}</span>
@@ -339,43 +351,106 @@ export function Catalog({
         </div>
       )}
 
-      <div style={styles.tabsWrap} className="catalog-tabs-wrap hide-scrollbar">
-        {categoryTabs.map(({ code, label }) => {
-          const isSelected = code === "all" ? selectedCategories.has("all") : selectedCategories.has(code);
-          return (
-            <button
-              key={code}
-              type="button"
-              className="catalog-tab-btn"
-              onClick={(e) => {
-                handleCategoryClick(code);
-                (e.currentTarget as HTMLButtonElement).blur();
-              }}
-              style={{
-                ...styles.tab,
-                ...(isSelected ? styles.tabActive : {}),
-                outline: "none",
-                boxShadow: "none",
-                WebkitTapHighlightColor: "transparent",
-              }}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
+      {!isMobile && (
+        <div style={styles.tabsWrap} className="catalog-tabs-wrap hide-scrollbar">
+          {categoryTabs.map(({ code, label }) => {
+            const isSelected = code === "all" ? selectedCategories.has("all") : selectedCategories.has(code);
+            return (
+              <button
+                key={code}
+                type="button"
+                className="catalog-tab-btn"
+                onClick={(e) => {
+                  handleCategoryClick(code);
+                  (e.currentTarget as HTMLButtonElement).blur();
+                }}
+                style={{
+                  ...styles.tab,
+                  ...(isSelected ? styles.tabActive : {}),
+                  outline: "none",
+                  boxShadow: "none",
+                  WebkitTapHighlightColor: "transparent",
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {showPriceFilter && isMobile && (
+        <>
+          <button type="button" className="zen-filters-fab" onClick={() => setFiltersOpen(true)}>
+            {t(lang, "filters")}
+          </button>
+          {filtersOpen && (
+            <>
+              <div className="zen-filters-overlay" onClick={() => setFiltersOpen(false)} aria-hidden />
+              <div className="zen-filters-panel" role="dialog" aria-label={t(lang, "priceFilter")}>
+                <h3 className="zen-filters-panel-title">{t(lang, "filters")}</h3>
+                <div className="zen-price-filter-wrap" style={{ flexDirection: "column", alignItems: "stretch", border: "none", padding: 0 }}>
+                  <span className="zen-price-filter-label" style={{ marginBottom: 8 }}>{t(lang, "priceFilter")}</span>
+                  <div className="zen-price-sort-segmented" style={{ marginBottom: 16 }} role="group">
+                    <div
+                      className={`zen-price-sort-segment ${priceSort === "asc" ? "zen-price-sort-segment-active" : ""}`}
+                      onClick={() => setPriceSort((s) => (s === "asc" ? "none" : "asc"))}
+                      title={t(lang, "sortPriceAsc")}
+                    >↑</div>
+                    <div
+                      className={`zen-price-sort-segment ${priceSort === "desc" ? "zen-price-sort-segment-active" : ""}`}
+                      onClick={() => setPriceSort((s) => (s === "desc" ? "none" : "desc"))}
+                      title={t(lang, "sortPriceDesc")}
+                    >↓</div>
+                  </div>
+                  <div className="zen-price-inputs" style={{ marginBottom: 20 }}>
+                    <input type="number" className="zen-price-input" min={0} step={100} placeholder={t(lang, "priceFrom")} value={priceMin} onChange={(e) => setPriceMin(e.target.value)} />
+                    <input type="number" className="zen-price-input" min={0} step={100} placeholder={t(lang, "priceTo")} value={priceMax} onChange={(e) => setPriceMax(e.target.value)} />
+                  </div>
+                </div>
+                <span className="zen-price-filter-label" style={{ marginBottom: 8, display: "block" }}>{t(lang, "categories")}</span>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+                  {categoryTabs.map(({ code, label }) => {
+                    const isSelected = code === "all" ? selectedCategories.has("all") : selectedCategories.has(code);
+                    return (
+                      <button
+                        key={code}
+                        type="button"
+                        className="catalog-tab-btn"
+                        onClick={() => { handleCategoryClick(code); }}
+                        style={{
+                          ...styles.tab,
+                          ...(isSelected ? styles.tabActive : {}),
+                          outline: "none",
+                          boxShadow: "none",
+                        }}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button type="button" className="zen-filters-apply-btn" onClick={() => setFiltersOpen(false)}>
+                  {t(lang, "apply")}
+                </button>
+              </div>
+            </>
+          )}
+        </>
+      )}
 
       {displayList.length === 0 ? (
         <div className="zen-empty-state" style={styles.empty}>
           <strong>{t(lang, "nothingFound")}</strong>
         </div>
       ) : (
-        <div className="catalog-grid" style={styles.grid}>
-          {displayList.map((p) => (
+        <div className="catalog-grid catalog-grid--masonry" style={styles.grid}>
+          {displayList.map((p, idx) => (
             <ProductCard
               key={p.id}
               product={p}
               compact
+              sizeVariant={idx % 3 === 0 ? "tall" : "default"}
               onClick={() => onProductClick(p.id)}
               inWishlist={wishlistIds.has(p.id)}
               onWishlistClick={(e) => {

@@ -380,14 +380,23 @@ html[data-theme="light"] .zen-app .product-card-price {
   color: var(--muted);
 }
 .zen-app .product-card-desc {
-  background: var(--card-desc-bg);
+  background: var(--surface);
+}
+/* Карточка с текстом под фото: убираем любые overlay-стили */
+.zen-app .product-card--text-below .product-card-desc {
+  border-radius: 0;
+  box-shadow: none;
 }
 
-/* Сетка каталога: базовая и адаптивная (управляется из CSS для премиум-отступов) */
+/* Сетка каталога: masonry-ощущение (разная высота), больше воздуха */
 .zen-app .catalog-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 18px;
+  gap: 22px;
+  grid-auto-rows: auto;
+}
+.zen-app .catalog-grid.catalog-grid--masonry {
+  gap: 24px;
 }
 
 /* Кнопка «Отмена» в модалках — явный цвет текста (на iOS иначе синий) */
@@ -549,8 +558,8 @@ html[data-theme="light"] .zen-app .product-card-price {
     box-shadow: 0 0 40px rgba(0,0,0,0.2);
   }
   .zen-app .catalog-grid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 28px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
   }
 }
 
@@ -645,8 +654,8 @@ html[data-theme="light"] .zen-app .product-card-price {
     padding-right: 48px !important;
   }
   .zen-app .catalog-grid {
-    grid-template-columns: repeat(5, 1fr);
-    gap: 32px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 36px;
   }
 }
 
@@ -873,6 +882,177 @@ html[data-theme="light"] .zen-app .product-card-price {
   border-radius: var(--radius-md);
   font-size: 15px;
   letter-spacing: 0.02em;
+}
+
+/* Сворачиваемый поиск: иконка по умолчанию, раскрытие с анимацией */
+.zen-app .zen-search-toggle-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 20px;
+  min-height: 48px;
+}
+.zen-app .zen-search-toggle-btn {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+.zen-app .zen-search-toggle-btn:hover {
+  color: var(--text);
+  border-color: var(--muted);
+}
+.zen-app .zen-search-input-wrap {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  transition: max-width 0.3s cubic-bezier(0.25, 0.1, 0.25, 1), opacity 0.25s ease;
+}
+.zen-app .zen-search-input-wrap.zen-search-input-wrap--collapsed {
+  max-width: 0;
+  opacity: 0;
+  margin-left: 0;
+}
+.zen-app .zen-search-input-wrap.zen-search-input-wrap--expanded {
+  max-width: 400px;
+  opacity: 1;
+  margin-left: 12px;
+}
+.zen-app .zen-search-input-wrap input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 15px;
+  letter-spacing: 0.02em;
+}
+
+/* Панель фильтров (мобил): выезжает снизу */
+.zen-filters-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  animation: filtersOverlayFade 0.25s ease forwards;
+}
+.zen-filters-panel {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 75vh;
+  background: var(--surface);
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.15);
+  z-index: 101;
+  overflow-y: auto;
+  padding: 24px max(20px, env(safe-area-inset-left));
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+  animation: filtersPanelSlide 0.35s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+}
+@keyframes filtersOverlayFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes filtersPanelSlide {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.zen-app .zen-filters-panel-title {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  margin-bottom: 20px;
+  color: var(--text);
+}
+.zen-app .zen-filters-apply-btn {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 24px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+/* Плавающая кнопка «Фильтры» на мобиле */
+.zen-app .zen-filters-fab {
+  position: fixed;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  min-height: 48px;
+  padding: 12px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  z-index: 50;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.zen-app .zen-filters-fab:hover {
+  border-color: var(--muted);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+}
+@media (min-width: 769px) {
+  .zen-app .zen-filters-fab {
+    display: none;
+  }
+}
+
+/* Секция «Новинки»: заголовок в стиле RL + ссылка «Смотреть все» */
+.zen-app .zen-new-arrivals-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 0 4px;
+}
+.zen-app .zen-new-arrivals-title {
+  font-family: Georgia, "Times New Roman", serif !important;
+  font-size: 22px;
+  font-weight: 400 !important;
+  letter-spacing: 0.12em !important;
+  color: var(--text);
+  margin: 0;
+}
+.zen-app .zen-new-arrivals-view-all {
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 0;
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: opacity 0.2s ease;
+}
+.zen-app .zen-new-arrivals-view-all:hover {
+  opacity: 0.85;
 }
 
 /* Настройки: сегментированные кнопки */

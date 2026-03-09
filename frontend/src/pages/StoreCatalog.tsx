@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import type { Product } from "../api";
 import { ProductCard } from "../components/ProductCard";
+import { CollapsibleSearch } from "../components/CollapsibleSearch";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 import { getCategoryLabel } from "../utils/categories";
@@ -27,6 +28,7 @@ export function StoreCatalog({
   const { settings } = useSettings();
   const lang = settings.lang;
   const [search, setSearch] = useState("");
+  const [searchExpanded, setSearchExpanded] = useState(false);
   const isStoreById = "id" in store;
   const backLabel =
     (isStoreById ? store.name : getCategoryLabel(store.category, categoryLabels)).trim() ||
@@ -55,27 +57,27 @@ export function StoreCatalog({
       <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
         ← {backLabel}
       </button>
-      <div className="zen-catalog-search-wrap" style={styles.searchWrap}>
-        <input
-          type="text"
-          className="zen-input"
-          placeholder={t(lang, "search")}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={styles.search}
-        />
-      </div>
+      <CollapsibleSearch
+        value={search}
+        onChange={setSearch}
+        placeholder={t(lang, "search")}
+        expanded={searchExpanded}
+        onExpand={() => setSearchExpanded(true)}
+        onCollapse={() => setSearchExpanded(false)}
+        aria-label={t(lang, "search")}
+      />
       {filtered.length === 0 ? (
         <div className="zen-empty-state" style={styles.empty}>
           <strong>{t(lang, "nothingFound")}</strong>
         </div>
       ) : (
-        <div className="catalog-grid" style={styles.grid}>
-          {filtered.map((p) => (
+        <div className="catalog-grid catalog-grid--masonry" style={styles.grid}>
+          {filtered.map((p, idx) => (
             <ProductCard
               key={p.id}
               product={p}
               compact
+              sizeVariant={idx % 3 === 0 ? "tall" : "default"}
               onClick={() => onProductClick(p.id)}
               inWishlist={wishlistIds.has(p.id)}
               onWishlistClick={(e) => {
@@ -101,8 +103,6 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     marginBottom: 16,
   },
-  searchWrap: { marginBottom: 20 },
-  search: {},
   grid: {},
   empty: {},
 };

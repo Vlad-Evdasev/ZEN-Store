@@ -477,6 +477,7 @@ function App() {
         {page === "newArrivals" && (
           <NewArrivalsPage
             products={newArrivals}
+            categories={categories}
             onBack={openCatalog}
             onProductClick={(id) => openProduct(id, "newArrivals")}
             wishlistIds={wishlistIds}

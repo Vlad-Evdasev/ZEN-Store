@@ -15,9 +15,11 @@ interface ProductCardProps {
   descBlockMinHeight?: number;
   /** Ещё компактнее блок описания (новинки) */
   smallDescBlock?: boolean;
+  /** Вариант соотношения сторон для masonry: по умолчанию 1:1, tall = 4:5 */
+  sizeVariant?: "default" | "tall";
 }
 
-export function ProductCard({ product, onClick, inWishlist, onWishlistClick, compact, reviewCount, reviewAvg, fillHeight, descBlockMinHeight, smallDescBlock }: ProductCardProps) {
+export function ProductCard({ product, onClick, inWishlist, onWishlistClick, compact, reviewCount, reviewAvg, fillHeight, descBlockMinHeight, smallDescBlock, sizeVariant = "default" }: ProductCardProps) {
   const { formatPrice } = useSettings();
   const cardStyle = compact
     ? { ...styles.card, ...styles.cardCompact, ...(fillHeight ? styles.cardFillHeight : {}) }
@@ -26,8 +28,17 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
   const nameStyle = compact ? { ...styles.name, ...styles.nameCompact, ...noShrink } : { ...styles.name, ...noShrink };
   const priceStyle = compact ? { ...styles.price, ...styles.priceCompact, ...noShrink } : { ...styles.price, ...noShrink };
   const imageWrapStyle = compact
-    ? { ...styles.imageWrap, ...styles.imageWrapCompact, ...(fillHeight ? styles.imageWrapFillHeight : {}) }
-    : { ...styles.imageWrap, ...(fillHeight ? styles.imageWrapFillHeight : {}) };
+    ? {
+        ...styles.imageWrap,
+        ...styles.imageWrapCompact,
+        ...(fillHeight ? styles.imageWrapFillHeight : {}),
+        ...(!fillHeight && sizeVariant === "tall" ? styles.imageWrapTall : {}),
+      }
+    : {
+        ...styles.imageWrap,
+        ...(fillHeight ? styles.imageWrapFillHeight : {}),
+        ...(!fillHeight && sizeVariant === "tall" ? styles.imageWrapTall : {}),
+      };
   const wishlistBtnStyle = compact ? { ...styles.wishlistBtn, ...styles.wishlistBtnCompact } : styles.wishlistBtn;
   const hasReviews = reviewCount != null && reviewCount > 0;
   const descWrapStyle: React.CSSProperties = {
@@ -37,7 +48,7 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
     ...(descBlockMinHeight != null ? { minHeight: descBlockMinHeight } : {}),
   };
   return (
-    <button className="product-card" onClick={onClick} style={cardStyle}>
+    <button className="product-card product-card--text-below" onClick={onClick} style={cardStyle}>
       <div style={imageWrapStyle}>
         <img
           src={(product.image_urls && product.image_urls[0]) || product.image_url || "https://via.placeholder.com/200"}
@@ -107,39 +118,31 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
   },
   descWrap: {
-    position: "absolute",
-    bottom: "calc(-1 * var(--card-desc-bleed, 2px))",
-    left: "calc(-1 * var(--card-desc-bleed, 2px))",
-    right: "calc(-1 * var(--card-desc-bleed, 2px))",
-    width: "calc(100% + 2 * var(--card-desc-bleed, 2px))",
+    position: "relative",
+    width: "100%",
     boxSizing: "border-box",
-    background: "var(--card-desc-bg)",
-    backdropFilter: "none",
-    WebkitBackdropFilter: "none",
-    boxShadow: "var(--card-desc-outer, none)",
-    padding: 0,
-    borderBottomLeftRadius: "var(--radius-lg)",
-    borderBottomRightRadius: "var(--radius-lg)",
+    background: "var(--surface)",
+    padding: "12px 14px 14px",
     display: "flex",
     flexDirection: "column",
     lineHeight: 1.25,
-    minHeight: 72,
+    minHeight: 0,
+    flex: "1 1 auto",
   },
   descWrapCompact: {
-    borderBottomLeftRadius: "var(--radius-md)",
-    borderBottomRightRadius: "var(--radius-md)",
+    padding: "10px 12px 12px",
   },
-  descWrapCompactSmall: {},
+  descWrapCompactSmall: { padding: "8px 10px 10px" },
   name: {
-    padding: "8px calc(10px + var(--card-desc-bleed, 2px)) 4px calc(10px + var(--card-desc-bleed, 2px))",
-    margin: 0,
+    padding: 0,
+    margin: "0 0 4px",
     fontSize: 14,
     fontWeight: 400,
     color: "var(--text)",
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
-    lineHeight: 1.3,
+    lineHeight: 1.35,
   },
   descBottomRow: {
     display: "flex",
@@ -147,20 +150,16 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: "space-between",
     alignItems: "baseline",
     gap: 8,
-    padding: "0 calc(10px + var(--card-desc-bleed, 2px)) 14px calc(10px + var(--card-desc-bleed, 2px))",
-    minHeight: 0,
+    padding: 0,
     margin: 0,
+    minHeight: 0,
     lineHeight: 1.25,
   },
   descBottomRowCompact: {
-    display: "flex",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "baseline",
-    gap: 6,
-    padding: "0 calc(6px + var(--card-desc-bleed, 2px)) 14px calc(6px + var(--card-desc-bleed, 2px))",
-    minHeight: 0,
+    padding: 0,
     margin: 0,
+    gap: 6,
+    minHeight: 0,
     lineHeight: 1.25,
   },
   price: {
@@ -190,8 +189,9 @@ const styles: Record<string, React.CSSProperties> = {
   cardCompact: { borderRadius: "var(--radius-md)" },
   cardFillHeight: { flex: 1, minHeight: 0, height: "100%" },
   imageWrapCompact: {},
+  imageWrapTall: { aspectRatio: "4/5" },
   imageWrapFillHeight: { flex: 1, minHeight: 0, aspectRatio: "unset" as const },
   wishlistBtnCompact: { top: 8, right: 8, width: 30, height: 30, fontSize: 15 },
-  nameCompact: { padding: "6px calc(8px + var(--card-desc-bleed, 2px)) 2px calc(8px + var(--card-desc-bleed, 2px))", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.3 },
+  nameCompact: { padding: 0, margin: "0 0 2px", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.3 },
   priceCompact: { padding: 0, margin: 0, fontSize: 13, fontWeight: 500, lineHeight: 1.25 },
 };

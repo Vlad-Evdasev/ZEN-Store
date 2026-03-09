@@ -53,15 +53,12 @@ export function NewArrivalsSection({
 
   return (
     <div style={styles.wrap}>
-      <button type="button" onClick={onViewAll} style={styles.titleBtn} aria-label={t(lang, "newArrivalsViewAll")}>
-        <span>{t(lang, "newArrivals")}</span>
-        <span style={styles.titleArrow} aria-hidden>
-          <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}>
-            <circle cx="16" cy="16" r="12" />
-            <path d="M14 11l6 5-6 5" />
-          </svg>
-        </span>
-      </button>
+      <div className="zen-new-arrivals-header">
+        <h2 className="zen-new-arrivals-title">{t(lang, "newArrivals")}</h2>
+        <button type="button" className="zen-new-arrivals-view-all" onClick={onViewAll} aria-label={t(lang, "newArrivalsViewAll")}>
+          {t(lang, "viewAll")} →
+        </button>
+      </div>
       <div style={styles.grid}>
         {first && renderCard(first, styles.cardBig)}
         <div style={styles.rightColumn}>
@@ -82,21 +79,6 @@ const styles: Record<string, React.CSSProperties> = {
     minWidth: 0,
     maxWidth: "100%",
   },
-  titleBtn: {
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    width: "100%",
-    padding: "0 4px 12px",
-    background: "none",
-    border: "none",
-    fontFamily: "inherit",
-    fontSize: 18,
-    fontWeight: 700,
-    color: "var(--text)",
-    textAlign: "left",
-    cursor: "pointer",
-  },
   grid: {
     display: "grid",
     gridTemplateColumns: "2fr 1fr",
@@ -116,12 +98,6 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",
-  },
-  titleArrow: {
-    color: "var(--accent)",
-    lineHeight: 1,
-    display: "flex",
-    alignItems: "center",
   },
   rightColumn: {
     display: "flex",
