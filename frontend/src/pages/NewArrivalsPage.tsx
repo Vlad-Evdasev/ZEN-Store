@@ -9,8 +9,13 @@ const FALLBACK_CATEGORY_CODES = ["all", "tee", "hoodie", "pants", "jacket", "acc
 
 function FilterIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <line x1="4" y1="6" x2="20" y2="6" />
+      <circle cx="8" cy="6" r="2" fill="currentColor" stroke="none" />
+      <line x1="4" y1="12" x2="20" y2="12" />
+      <circle cx="16" cy="12" r="2" fill="currentColor" stroke="none" />
+      <line x1="4" y1="18" x2="20" y2="18" />
+      <circle cx="12" cy="18" r="2" fill="currentColor" stroke="none" />
     </svg>
   );
 }
@@ -183,14 +188,6 @@ export function NewArrivalsPage({
       </div>
 
       <div className="zen-catalog-search-row" style={styles.searchRow}>
-        <input
-          type="search"
-          className="zen-input zen-catalog-search-input"
-          placeholder={t(lang, "search")}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          aria-label={t(lang, "search")}
-        />
         <button
           type="button"
           className="zen-filter-icon-btn"
@@ -200,6 +197,14 @@ export function NewArrivalsPage({
         >
           <FilterIcon />
         </button>
+        <input
+          type="search"
+          className="zen-input zen-catalog-search-input"
+          placeholder={t(lang, "search")}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          aria-label={t(lang, "search")}
+        />
       </div>
     </div>
   );
