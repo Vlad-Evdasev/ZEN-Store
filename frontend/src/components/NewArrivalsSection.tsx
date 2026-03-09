@@ -94,7 +94,7 @@ const styles: Record<string, React.CSSProperties> = {
   grid: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
-    gridTemplateRows: "1fr",
+    gridTemplateRows: "minmax(0, 1fr)",
     height: GRID_HEIGHT,
     minHeight: GRID_HEIGHT,
     gap: COL_GAP,
@@ -112,6 +112,7 @@ const styles: Record<string, React.CSSProperties> = {
     minHeight: 0,
     width: "100%",
     height: "100%",
+    maxHeight: "100%",
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",
@@ -123,6 +124,8 @@ const styles: Record<string, React.CSSProperties> = {
     minWidth: 0,
     minHeight: 0,
     height: "100%",
+    maxHeight: "100%",
+    overflow: "hidden",
   },
   cardSmall: {
     minHeight: 0,
