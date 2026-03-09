@@ -19,6 +19,7 @@ export function Landing({ onGoToCatalog, onCustomOrder, onGoToArrived }: Landing
   const lang = settings.lang;
   const [content, setContent] = useState<Record<string, string>>({});
   const [visible, setVisible] = useState(false);
+  const [heroImageFallback, setHeroImageFallback] = useState(false);
   const tilesRef = useRef<HTMLDivElement>(null);
 
   const scrollToTiles = () => {
@@ -36,9 +37,15 @@ export function Landing({ onGoToCatalog, onCustomOrder, onGoToArrived }: Landing
     return () => cancelAnimationFrame(id);
   }, []);
 
+  const heroUrlFromContent = (content.hero_image_url ?? "").trim();
+  const heroImageUrl = heroImageFallback ? DEFAULT_HERO_IMG : (heroUrlFromContent || DEFAULT_HERO_IMG);
+
+  useEffect(() => {
+    setHeroImageFallback(false);
+  }, [heroUrlFromContent]);
+
   const heroTitle = (content.hero_title ?? "").trim() || "RAW";
   const heroSubtitle = (content.hero_subtitle ?? "").trim() || "Оригинальная одежда из брендовых магазинов";
-  const heroImageUrl = (content.hero_image_url ?? "").trim() || DEFAULT_HERO_IMG;
   const aboutText = (content.about_text ?? "").trim() || t(lang, "profileAboutText");
   const catalogCta = (content.catalog_cta ?? "").trim() || t(lang, "storeWelcomeToCatalog");
   const customOrderCta = (content.custom_order_cta ?? "").trim() || t(lang, "storeWelcomeCustomOrder");
@@ -59,7 +66,14 @@ export function Landing({ onGoToCatalog, onCustomOrder, onGoToArrived }: Landing
       <section style={styles.heroWrap}>
         {heroImageUrl ? (
           <div style={styles.heroImageWrap}>
-            <img src={heroImageUrl} alt="" style={styles.heroImage} />
+            <img
+              src={heroImageUrl}
+              alt=""
+              style={styles.heroImage}
+              onError={() => {
+                if (heroImageUrl !== DEFAULT_HERO_IMG) setHeroImageFallback(true);
+              }}
+            />
             <div style={styles.heroOverlay} />
           </div>
         ) : (
