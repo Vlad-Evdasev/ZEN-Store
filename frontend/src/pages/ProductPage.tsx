@@ -303,6 +303,7 @@ export function ProductPage({
               ))}
             </div>
             <textarea
+              className="zen-textarea"
               value={reviewText}
               onChange={(e) => setReviewText(e.target.value)}
               placeholder="Напишите отзыв о товаре..."
@@ -394,7 +395,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   imageWrap: {
     position: "relative",
-    borderRadius: 12,
+    borderRadius: "var(--radius-lg)",
     overflow: "hidden",
     background: "var(--surface)",
     aspectRatio: "1",
@@ -530,7 +531,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "12px 18px",
     background: "var(--surface)",
     border: "1px solid var(--surface)",
-    borderRadius: 8,
+    borderRadius: "var(--radius-md)",
     color: "var(--text)",
     fontFamily: "inherit",
     fontSize: 14,
@@ -562,7 +563,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 16,
     background: "var(--accent)",
     border: "none",
-    borderRadius: 10,
+    borderRadius: "var(--radius-md)",
     color: "#ffffff",
     fontFamily: "inherit",
     fontSize: 15,
@@ -597,7 +598,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "8px 14px",
     background: "var(--surface)",
     border: "1px solid var(--border)",
-    borderRadius: 8,
+    borderRadius: "var(--radius-md)",
     color: "var(--text)",
     fontSize: 13,
     cursor: "pointer",
@@ -606,7 +607,7 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 20,
     padding: 16,
     background: "var(--surface)",
-    borderRadius: 12,
+    borderRadius: "var(--radius-lg)",
     border: "1px solid var(--border)",
   },
   ratingRow: {
@@ -625,18 +626,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 18,
     cursor: "pointer",
   },
-  reviewTextarea: {
-    width: "100%",
-    padding: 12,
-    background: "var(--bg)",
-    border: "1px solid var(--border)",
-    borderRadius: 8,
-    color: "var(--text)",
-    fontSize: 14,
-    fontFamily: "inherit",
-    marginBottom: 12,
-    resize: "vertical",
-  },
+  reviewTextarea: { marginBottom: 12 },
   reviewFormActions: {
     display: "flex",
     gap: 8,
@@ -645,7 +635,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "10px 16px",
     background: "var(--accent)",
     border: "none",
-    borderRadius: 8,
+    borderRadius: "var(--radius-md)",
     color: "#fff",
     fontSize: 13,
     fontWeight: 600,
@@ -655,7 +645,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "10px 16px",
     background: "none",
     border: "1px solid var(--border)",
-    borderRadius: 8,
+    borderRadius: "var(--radius-md)",
     color: "var(--muted)",
     fontSize: 13,
     cursor: "pointer",
@@ -674,7 +664,7 @@ const styles: Record<string, React.CSSProperties> = {
   reviewItem: {
     padding: 14,
     background: "var(--surface)",
-    borderRadius: 10,
+    borderRadius: "var(--radius-md)",
     border: "1px solid var(--border)",
   },
   reviewItemHead: {
@@ -711,7 +701,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   sizeGuideModal: {
     background: "var(--surface)",
-    borderRadius: 12,
+    borderRadius: "var(--radius-lg)",
     border: "1px solid var(--border)",
     maxWidth: 360,
     width: "100%",

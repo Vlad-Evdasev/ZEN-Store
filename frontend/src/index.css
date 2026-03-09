@@ -4,6 +4,19 @@
   --transition-fast: 0.15s ease;
   --transition-normal: 0.25s ease;
   --transition-slow: 0.35s ease;
+  /* Design tokens: radius, spacing, forms (Ralph Lauren–style) */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --input-height: 48px;
+  --input-padding: 14px 16px;
+  --font-size-body: 15px;
   /* Тёмная тема: тот же тёплый тон, затемнённый */
   --bg: #0f0e0e;
   --surface: #1c1b1a;
@@ -282,6 +295,63 @@ button:active {
   box-shadow: none !important;
   caret-color: var(--accent);
 }
+
+/* ——— Формы и поля в стиле Ralph Lauren (единый вид) ——— */
+.zen-app .zen-input,
+.zen-app input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
+  width: 100%;
+  min-height: var(--input-height);
+  padding: var(--input-padding);
+  font-size: var(--font-size-body);
+  line-height: 1.4;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.zen-app .zen-input:focus,
+.zen-app input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.zen-app .zen-textarea,
+.zen-app textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: var(--input-padding);
+  font-size: var(--font-size-body);
+  line-height: 1.5;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  resize: vertical;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.zen-app .zen-textarea:focus,
+.zen-app textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.zen-app .zen-label,
+.zen-app form label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.zen-app form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+/* Карточки: единый радиус (задаётся в компонентах через var(--radius-lg)) */
 
 /* Кнопка «Отмена» в модалках — явный цвет текста (на iOS иначе синий) */
 .zen-app .zen-modal-cancel {

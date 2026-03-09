@@ -38,7 +38,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: 210,
     background: "var(--surface)",
     border: "1px solid var(--border)",
-    borderRadius: 12,
+    borderRadius: "var(--radius-lg)",
     overflow: "hidden",
     textAlign: "left",
     cursor: "pointer",
@@ -46,7 +46,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   cardCompact: {
     width: 147,
-    borderRadius: 10,
+    borderRadius: "var(--radius-md)",
   },
   cardSelected: {
     borderColor: "var(--accent)",

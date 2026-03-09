@@ -113,9 +113,10 @@ export function CustomOrderPage({ userId, userName, firstName, onBack }: CustomO
       <div style={styles.card}>
         <h3 style={styles.title}>{t(lang, "customOrderTitle")}</h3>
         <form onSubmit={handleSubmit} style={styles.form}>
-          <label style={styles.label}>{t(lang, "customOrderName")} *</label>
+          <label className="zen-label" style={styles.label}>{t(lang, "customOrderName")} *</label>
           <input
             type="text"
+            className="zen-input"
             value={customName}
             onChange={(e) => setCustomName(e.target.value)}
             onFocus={scrollFieldIntoView}
@@ -123,11 +124,12 @@ export function CustomOrderPage({ userId, userName, firstName, onBack }: CustomO
             style={styles.input}
             required
           />
-          <label style={styles.label}>{t(lang, "customOrderUsername")}</label>
-          <input type="text" value={userName ?? ""} readOnly onFocus={scrollFieldIntoView} style={{ ...styles.input, opacity: 0.9 }} />
-          <label style={styles.label}>{t(lang, "customOrderAddress")} *</label>
+          <label className="zen-label" style={styles.label}>{t(lang, "customOrderUsername")}</label>
+          <input type="text" className="zen-input" value={userName ?? ""} readOnly onFocus={scrollFieldIntoView} style={{ ...styles.input, opacity: 0.9 }} />
+          <label className="zen-label" style={styles.label}>{t(lang, "customOrderAddress")} *</label>
           <input
             type="text"
+            className="zen-input"
             value={addressRecipientName}
             onChange={(e) => setAddressRecipientName(e.target.value)}
             onFocus={scrollFieldIntoView}
@@ -136,6 +138,7 @@ export function CustomOrderPage({ userId, userName, firstName, onBack }: CustomO
           />
           <input
             type="text"
+            className="zen-input"
             value={addressFull}
             onChange={(e) => setAddressFull(e.target.value)}
             onFocus={scrollFieldIntoView}
@@ -144,6 +147,7 @@ export function CustomOrderPage({ userId, userName, firstName, onBack }: CustomO
           />
           <input
             type="text"
+            className="zen-input"
             value={addressPostcode}
             onChange={(e) => setAddressPostcode(e.target.value)}
             onFocus={scrollFieldIntoView}
@@ -152,6 +156,7 @@ export function CustomOrderPage({ userId, userName, firstName, onBack }: CustomO
           />
           <input
             type="text"
+            className="zen-input"
             value={addressLocality}
             onChange={(e) => setAddressLocality(e.target.value)}
             onFocus={scrollFieldIntoView}
@@ -160,6 +165,7 @@ export function CustomOrderPage({ userId, userName, firstName, onBack }: CustomO
           />
           <input
             type="text"
+            className="zen-input"
             value={addressRegion}
             onChange={(e) => setAddressRegion(e.target.value)}
             onFocus={scrollFieldIntoView}
@@ -168,13 +174,14 @@ export function CustomOrderPage({ userId, userName, firstName, onBack }: CustomO
           />
           <input
             type="text"
+            className="zen-input"
             value={addressPhone}
             onChange={(e) => setAddressPhone(e.target.value)}
             onFocus={scrollFieldIntoView}
             placeholder={t(lang, "customOrderAddressPhone")}
             style={styles.input}
           />
-          <label style={styles.label}>{t(lang, "customOrderPhoto")}</label>
+          <label className="zen-label" style={styles.label}>{t(lang, "customOrderPhoto")}</label>
           <div style={styles.photoBlock}>
             <input
               ref={fileInputRef}
@@ -196,8 +203,9 @@ export function CustomOrderPage({ userId, userName, firstName, onBack }: CustomO
               </button>
             )}
           </div>
-          <label style={styles.label}>{t(lang, "customOrderDesc")} *</label>
+          <label className="zen-label" style={styles.label}>{t(lang, "customOrderDesc")} *</label>
           <textarea
+            className="zen-textarea"
             value={customDesc}
             onChange={(e) => setCustomDesc(e.target.value)}
             onFocus={scrollFieldIntoView}
@@ -206,9 +214,10 @@ export function CustomOrderPage({ userId, userName, firstName, onBack }: CustomO
             style={styles.textarea}
             required
           />
-          <label style={styles.label}>{t(lang, "customOrderSize")}</label>
+          <label className="zen-label" style={styles.label}>{t(lang, "customOrderSize")}</label>
           <input
             type="text"
+            className="zen-input"
             value={customSize}
             onChange={(e) => setCustomSize(e.target.value)}
             onFocus={scrollFieldIntoView}
@@ -239,7 +248,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 20,
     paddingBottom: 24,
     background: "var(--surface)",
-    borderRadius: 12,
+    borderRadius: "var(--radius-lg)",
     border: "1px solid var(--border)",
   },
   title: { fontSize: 18, fontWeight: 600, marginBottom: 16 },
@@ -251,7 +260,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "10px 16px",
     background: "var(--accent)",
     border: "none",
-    borderRadius: 10,
+    borderRadius: "var(--radius-md)",
     color: "#fff",
     fontSize: 15,
     fontWeight: 600,
@@ -260,7 +269,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   newBtnIcon: { fontSize: 18, lineHeight: 1 },
   form: { display: "flex", flexDirection: "column", gap: 6 },
-  label: { fontSize: 13, color: "var(--muted)", marginBottom: 2 },
+  label: { marginBottom: 2 },
   photoBlock: { marginBottom: 0 },
   fileHidden: {
     position: "absolute",
@@ -278,7 +287,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: "100%",
     background: "var(--bg)",
     border: "1px dashed var(--border)",
-    borderRadius: 8,
+    borderRadius: "var(--radius-md)",
     color: "var(--muted)",
     fontSize: 14,
     fontFamily: "inherit",
@@ -286,7 +295,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   photoBtnIcon: { fontSize: 18 },
   photoWrap: { position: "relative", display: "inline-block", alignSelf: "flex-start" },
-  photoPreview: { width: 80, height: 80, objectFit: "cover", borderRadius: 8 },
+  photoPreview: { width: 80, height: 80, objectFit: "cover", borderRadius: "var(--radius-md)" },
   photoRemove: {
     position: "absolute",
     top: 4,
@@ -300,33 +309,15 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     fontSize: 14,
   },
-  textarea: {
-    padding: "8px 10px",
-    minHeight: 72,
-    background: "var(--bg)",
-    border: "1px solid var(--border)",
-    borderRadius: 8,
-    color: "var(--text)",
-    fontSize: 14,
-    fontFamily: "inherit",
-    resize: "vertical",
-  },
-  input: {
-    padding: "8px 10px",
-    background: "var(--bg)",
-    border: "1px solid var(--border)",
-    borderRadius: 8,
-    color: "var(--text)",
-    fontSize: 14,
-    fontFamily: "inherit",
-  },
+  textarea: { minHeight: 80 },
+  input: {},
   submitBtn: {
     width: "100%",
     padding: "14px 16px",
     marginTop: 8,
     background: "var(--accent)",
     border: "none",
-    borderRadius: 10,
+    borderRadius: "var(--radius-md)",
     color: "#fff",
     fontSize: 15,
     fontWeight: 600,

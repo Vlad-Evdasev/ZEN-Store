@@ -109,10 +109,11 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, sel
       <h2 style={styles.title}>Оформление заказа</h2>
 
       <form onSubmit={handleSubmit} style={styles.form}>
-        <label style={styles.label}>
+        <label className="zen-label" style={styles.label}>
           Имя *
           <input
             type="text"
+            className="zen-input"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Ваше имя"
@@ -120,20 +121,22 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, sel
             required
           />
         </label>
-        <label style={styles.label}>
+        <label className="zen-label" style={styles.label}>
           Username
           <input
             type="text"
+            className="zen-input"
             value={username}
             readOnly
             placeholder="@username"
             style={{ ...styles.input, ...styles.inputReadOnly }}
           />
         </label>
-        <label style={styles.label}>
+        <label className="zen-label" style={styles.label}>
           Адрес доставки *
           <input
             type="text"
+            className="zen-input"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             placeholder="Город, улица, дом, квартира"
@@ -170,7 +173,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 14,
     background: "var(--surface)",
     border: "1px solid var(--border)",
-    borderRadius: 10,
+    borderRadius: "var(--radius-md)",
     color: "var(--text)",
     fontFamily: "inherit",
     fontSize: 15,
@@ -200,7 +203,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 16,
     background: "var(--accent)",
     border: "none",
-    borderRadius: 10,
+    borderRadius: "var(--radius-md)",
     color: "#fff",
     fontFamily: "inherit",
     fontSize: 15,
@@ -211,29 +214,15 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 16,
     background: "var(--surface)",
     border: "1px solid var(--border)",
-    borderRadius: 10,
+    borderRadius: "var(--radius-md)",
     color: "var(--text)",
     fontFamily: "inherit",
     fontSize: 15,
     cursor: "pointer",
   },
   form: { display: "flex", flexDirection: "column", gap: 16 },
-  label: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 6,
-    fontSize: 14,
-    color: "var(--muted)",
-  },
-  input: {
-    padding: 12,
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: 8,
-    color: "var(--text)",
-    fontFamily: "inherit",
-    fontSize: 15,
-  },
+  label: { display: "flex", flexDirection: "column", gap: 6 },
+  input: {},
   inputReadOnly: {
     opacity: 0.85,
     cursor: "default",
@@ -251,7 +240,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 16,
     background: "var(--accent)",
     border: "none",
-    borderRadius: 10,
+    borderRadius: "var(--radius-md)",
     color: "#fff",
     fontFamily: "inherit",
     fontSize: 15,

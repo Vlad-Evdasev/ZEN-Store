@@ -281,6 +281,7 @@ export function Catalog({
       <div style={styles.searchWrap}>
         <input
           type="text"
+          className="zen-input"
           placeholder={t(lang, "search")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -321,6 +322,7 @@ export function Catalog({
           </div>
           <input
             type="number"
+            className="zen-input"
             min={0}
             step={100}
             placeholder={t(lang, "priceFrom")}
@@ -330,6 +332,7 @@ export function Catalog({
           />
           <input
             type="number"
+            className="zen-input"
             min={0}
             step={100}
             placeholder={t(lang, "priceTo")}
@@ -442,7 +445,7 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0,
     background: "var(--surface)",
     border: "1px solid var(--border)",
-    borderRadius: 10,
+    borderRadius: "var(--radius-md)",
     overflow: "hidden",
   },
   priceSortSegment: {
@@ -463,28 +466,8 @@ const styles: Record<string, React.CSSProperties> = {
     background: "var(--accent)",
     color: "#fff",
   },
-  priceInput: {
-    width: 100,
-    padding: "8px 12px",
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: 8,
-    color: "var(--text)",
-    fontSize: 14,
-    fontFamily: "inherit",
-  },
-  search: {
-    width: "100%",
-    padding: "12px 16px",
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    outline: "none",
-    boxShadow: "none",
-    borderRadius: 10,
-    color: "var(--text)",
-    fontSize: 15,
-    fontFamily: "inherit",
-  },
+  priceInput: { width: 100 },
+  search: {},
   tabsWrap: {
     display: "flex",
     gap: 8,
