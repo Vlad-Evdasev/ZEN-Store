@@ -23,7 +23,10 @@ export function Landing({ onGoToCatalog, onCustomOrder, onGoToArrived }: Landing
   const tilesRef = useRef<HTMLDivElement>(null);
 
   const scrollToTiles = () => {
-    tilesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const el = tilesRef.current;
+    if (!el) return;
+    const y = el.getBoundingClientRect().top + window.scrollY - 16;
+    window.scrollTo({ top: y, behavior: "smooth" });
   };
 
   useEffect(() => {
