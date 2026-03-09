@@ -28,17 +28,17 @@ export function Landing({ onGoToCatalog, onCustomOrder, onGoToArrived }: Landing
     const targetY = el.getBoundingClientRect().top + window.scrollY - 16;
     const startY = window.scrollY;
     const distance = targetY - startY;
-    const duration = 900;
+    const duration = 1400;
     const startTime = performance.now();
 
-    function easeInOutCubic(t: number): number {
-      return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+    function easeInOutQuart(t: number): number {
+      return t < 0.5 ? 8 * t * t * t * t : 1 - (-2 * t + 2) ** 4 / 2;
     }
 
     function tick(now: number) {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      const eased = easeOutCubic(progress);
+      const eased = easeInOutQuart(progress);
       window.scrollTo(0, startY + distance * eased);
       if (progress < 1) requestAnimationFrame(tick);
     }
