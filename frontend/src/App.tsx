@@ -17,6 +17,7 @@ import { Support } from "./pages/Support";
 import { Reviews } from "./pages/Reviews";
 import { StoreCatalog } from "./pages/StoreCatalog";
 import { StoreWelcome } from "./pages/StoreWelcome";
+import { Landing } from "./pages/Landing";
 import { NewArrivalsPage } from "./pages/NewArrivalsPage";
 import { CustomOrderPage } from "./pages/CustomOrderPage";
 import { Settings } from "./pages/Settings";
@@ -435,13 +436,19 @@ function App() {
         )}
         {page === "storeCatalog" && storeCatalogStore && (
           <>
-            {storeCatalogView === "welcome" && (
+            {storeCatalogView === "welcome" && isDefaultWelcomeStore && (
+              <Landing
+                onGoToCatalog={openCatalog}
+                onCustomOrder={() => setStoreCatalogView("customOrder")}
+              />
+            )}
+            {storeCatalogView === "welcome" && !isDefaultWelcomeStore && (
               <StoreWelcome
                 store={storeCatalogStore}
                 categoryLabels={categories.length > 0 ? Object.fromEntries(categories.map((c) => [c.code, c.name])) : undefined}
-                showBack={!isDefaultWelcomeStore}
+                showBack={true}
                 onBack={openCatalog}
-                onGoToCatalog={isDefaultWelcomeStore ? openCatalog : () => setStoreCatalogView("catalog")}
+                onGoToCatalog={() => setStoreCatalogView("catalog")}
                 onCustomOrder={() => setStoreCatalogView("customOrder")}
               />
             )}

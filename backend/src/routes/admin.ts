@@ -45,3 +45,20 @@ adminRouter.patch("/currency-rate", requireAdmin, (req, res) => {
   const savedRate = row ? parseFloat(row.value) : 3.2;
   res.json({ rate: Number.isFinite(savedRate) ? savedRate : 3.2 });
 });
+
+const SITE_CONTENT_KEYS = ["hero_title", "hero_subtitle", "hero_image_url", "about_text", "catalog_cta", "custom_order_cta"] as const;
+
+adminRouter.patch("/site-content", requireAdmin, (req, res) => {
+  const body = req.body as Record<string, unknown>;
+  const upsert = db.prepare("INSERT INTO site_content (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value");
+  for (const key of SITE_CONTENT_KEYS) {
+    const v = body[key];
+    const value = v === undefined || v === null ? "" : String(v).trim();
+    upsert.run(key, value);
+  }
+  const rows = db.prepare("SELECT key, value FROM site_content WHERE key IN (?, ?, ?, ?, ?, ?)").all(...SITE_CONTENT_KEYS) as { key: string; value: string | null }[];
+  const map: Record<string, string> = {};
+  for (const k of SITE_CONTENT_KEYS) map[k] = "";
+  for (const r of rows) if (r.value != null) map[r.key] = r.value;
+  res.json(map);
+});

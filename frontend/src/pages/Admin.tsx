@@ -29,6 +29,8 @@ import {
   deleteSupportMessageAdmin,
   getCurrencyRateAdmin,
   updateCurrencyRateAdmin,
+  getSiteContent,
+  updateSiteContentAdmin,
   type Product,
   type Store,
   type Category,
@@ -60,7 +62,7 @@ function telegramChatLink(username?: string | null, userId?: string): string {
   return "#";
 }
 
-type Tab = "products" | "stores" | "categories" | "orders" | "customOrders" | "support" | "currencyRate" | "newArrivals";
+type Tab = "products" | "stores" | "categories" | "orders" | "customOrders" | "support" | "currencyRate" | "newArrivals" | "siteContent";
 
 export function Admin() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -189,6 +191,9 @@ export function Admin() {
           <button type="button" onClick={() => setTabAndReset("newArrivals")} className={`admin-nav-btn ${tab === "newArrivals" ? "active" : ""}`}>
             Новинки
           </button>
+          <button type="button" onClick={() => setTabAndReset("siteContent")} className={`admin-nav-btn ${tab === "siteContent" ? "active" : ""}`}>
+            Главная (контент)
+          </button>
           <div style={{ flex: 1 }} />
           <div style={styles.sidebarFooter}>
             <button type="button" onClick={() => checkApiHealth().then(setApiStatus)} style={styles.checkBtn}>
@@ -296,6 +301,10 @@ export function Admin() {
           submitting={submitting}
           setSubmitting={setSubmitting}
         />
+      )}
+
+      {tab === "siteContent" && (
+        <SiteContentTab adminSecret={adminSecret} />
       )}
 
           </div>
@@ -1018,6 +1027,101 @@ function CurrencyRateTab({ adminSecret }: { adminSecret: string }) {
             style={styles.input}
           />
         </label>
+        <div style={styles.formActions}>
+          <button type="submit" style={styles.submit} disabled={saving}>
+            {saving ? "Сохранение…" : "Сохранить"}
+          </button>
+        </div>
+      </form>
+    </>
+  );
+}
+
+const SITE_CONTENT_KEYS = ["hero_title", "hero_subtitle", "hero_image_url", "about_text", "catalog_cta", "custom_order_cta"] as const;
+const SITE_CONTENT_LABELS: Record<string, string> = {
+  hero_title: "Заголовок hero",
+  hero_subtitle: "Подзаголовок hero",
+  hero_image_url: "URL картинки hero",
+  about_text: "Текст про оригиналы / о магазине",
+  catalog_cta: "Текст кнопки «Каталог»",
+  custom_order_cta: "Текст кнопки «Заказ не из каталога»",
+};
+
+function SiteContentTab({ adminSecret }: { adminSecret: string }) {
+  const [content, setContent] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const load = () => {
+    setLoading(true);
+    getSiteContent()
+      .then((data) => {
+        const next: Record<string, string> = {};
+        for (const k of SITE_CONTENT_KEYS) next[k] = data[k] ?? "";
+        setContent(next);
+      })
+      .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setMessage("");
+    updateSiteContentAdmin(content, adminSecret)
+      .then((saved) => {
+        setContent((prev) => ({ ...prev, ...saved }));
+        setMessage("Сохранено");
+      })
+      .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")))
+      .finally(() => setSaving(false));
+  };
+
+  if (loading) return <p style={styles.hint}>Загрузка...</p>;
+
+  return (
+    <>
+      {message && <p style={styles.message}>{message}</p>}
+      <h2 style={styles.pageTitle}>Главная страница</h2>
+      <p style={{ ...styles.hint, marginBottom: 16 }}>Тексты и картинка hero блока. Если поле пустое, в приложении подставится значение по умолчанию.</p>
+      <form onSubmit={handleSave} style={styles.form}>
+        {SITE_CONTENT_KEYS.map((key) => (
+          <label key={key} style={styles.label}>
+            {SITE_CONTENT_LABELS[key] ?? key}
+            {key === "hero_image_url" || key === "about_text" ? (
+              key === "about_text" ? (
+                <textarea
+                  value={content[key] ?? ""}
+                  onChange={(e) => setContent((c) => ({ ...c, [key]: e.target.value }))}
+                  placeholder="Все вещи оригинальные из брендовых магазинов."
+                  rows={3}
+                  style={{ ...styles.input, minHeight: 80 }}
+                />
+              ) : (
+                <input
+                  type="url"
+                  value={content[key] ?? ""}
+                  onChange={(e) => setContent((c) => ({ ...c, [key]: e.target.value }))}
+                  placeholder="https://..."
+                  style={styles.input}
+                />
+              )
+            ) : (
+              <input
+                type="text"
+                value={content[key] ?? ""}
+                onChange={(e) => setContent((c) => ({ ...c, [key]: e.target.value }))}
+                placeholder={key === "catalog_cta" ? "В каталог" : key === "custom_order_cta" ? "Заказать не из каталога" : ""}
+                style={styles.input}
+              />
+            )}
+          </label>
+        ))}
         <div style={styles.formActions}>
           <button type="submit" style={styles.submit} disabled={saving}>
             {saving ? "Сохранение…" : "Сохранить"}

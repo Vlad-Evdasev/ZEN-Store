@@ -104,6 +104,27 @@ export async function deleteCategory(code: string, adminSecret: string): Promise
   }
 }
 
+export type SiteContent = Record<string, string>;
+
+export async function getSiteContent(): Promise<SiteContent> {
+  const res = await fetchWithRetry(`${API_URL}/api/site-content`);
+  if (!res.ok) return {};
+  return res.json();
+}
+
+export async function updateSiteContentAdmin(data: SiteContent, adminSecret: string): Promise<SiteContent> {
+  const res = await fetch(`${API_URL}/api/admin/site-content`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+  return res.json();
+}
+
 export async function getStores(): Promise<Store[]> {
   const res = await fetchWithRetry(`${API_URL}/api/stores`);
   if (!res.ok) throw new Error("Failed to fetch stores");
