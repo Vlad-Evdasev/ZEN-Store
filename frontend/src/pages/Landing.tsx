@@ -3,6 +3,7 @@ import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 import { getSiteContent } from "../api";
 
+const DEFAULT_HERO_IMG = "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=1200";
 const DEFAULT_CATALOG_IMG = "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=800";
 const DEFAULT_CUSTOM_IMG = "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800";
 const DEFAULT_ARRIVED_IMG = "https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=800";
@@ -37,7 +38,7 @@ export function Landing({ onGoToCatalog, onCustomOrder, onGoToArrived }: Landing
 
   const heroTitle = (content.hero_title ?? "").trim() || "RAW";
   const heroSubtitle = (content.hero_subtitle ?? "").trim() || "Оригинальная одежда из брендовых магазинов";
-  const heroImageUrl = (content.hero_image_url ?? "").trim();
+  const heroImageUrl = (content.hero_image_url ?? "").trim() || DEFAULT_HERO_IMG;
   const aboutText = (content.about_text ?? "").trim() || t(lang, "profileAboutText");
   const catalogCta = (content.catalog_cta ?? "").trim() || t(lang, "storeWelcomeToCatalog");
   const customOrderCta = (content.custom_order_cta ?? "").trim() || t(lang, "storeWelcomeCustomOrder");
