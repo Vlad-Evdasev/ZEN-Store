@@ -45,6 +45,7 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
     ...styles.descWrap,
     ...(compact ? styles.descWrapCompact : {}),
     ...(compact && smallDescBlock ? styles.descWrapCompactSmall : {}),
+    ...(fillHeight ? styles.descWrapFillHeight : {}),
     ...(descBlockMinHeight != null ? { minHeight: descBlockMinHeight } : {}),
   };
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -196,7 +197,8 @@ const styles: Record<string, React.CSSProperties> = {
   cardFillHeight: { flex: 1, minHeight: 0, height: "100%" },
   imageWrapCompact: {},
   imageWrapTall: { aspectRatio: "4/5" },
-  imageWrapFillHeight: { flex: 1, minHeight: 0, aspectRatio: "unset" as const },
+  imageWrapFillHeight: { flex: "1 1 0%", minHeight: 120, aspectRatio: "unset" as const },
+  descWrapFillHeight: { flex: "0 0 auto" },
   nameCompact: { padding: 0, margin: "0 0 2px", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.3 },
   priceCompact: { padding: 0, margin: "1px 0 0", fontSize: 13, fontWeight: 500, lineHeight: 1.25 },
 };
