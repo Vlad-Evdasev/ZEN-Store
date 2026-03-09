@@ -75,6 +75,18 @@ function MenuIconHome() {
 const headerIconSize = 22;
 const headerIconStyle: React.CSSProperties = { width: headerIconSize, height: headerIconSize, flexShrink: 0, color: "currentColor", display: "block" };
 const headerIconCartStyle: React.CSSProperties = { width: headerIconSize, height: headerIconSize, flexShrink: 0, color: "currentColor", display: "block", transform: "scale(1.38)" };
+const headerIconHamburgerSize = 28;
+const headerIconHamburgerStyle: React.CSSProperties = { width: headerIconHamburgerSize, height: headerIconHamburgerSize, flexShrink: 0, color: "currentColor", display: "block" };
+
+function HeaderIconHamburger() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={headerIconHamburgerStyle} aria-hidden>
+      <line x1="4" y1="6" x2="20" y2="6" />
+      <line x1="4" y1="12" x2="20" y2="12" />
+      <line x1="4" y1="18" x2="20" y2="18" />
+    </svg>
+  );
+}
 
 function HeaderIconFavorites() {
   return (
@@ -337,7 +349,7 @@ function App() {
                 style={styles.hamburger}
                 aria-label="Меню"
               >
-                ☰
+                <HeaderIconHamburger />
               </button>
             </div>
             <div style={styles.headerCenter}>
@@ -637,7 +649,6 @@ const styles: Record<string, React.CSSProperties> = {
     background: "none",
     border: "none",
     color: "var(--text)",
-    fontSize: 24,
     cursor: "pointer",
     borderRadius: 8,
   },
