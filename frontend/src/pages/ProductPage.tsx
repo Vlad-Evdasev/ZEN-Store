@@ -395,7 +395,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   imageWrap: {
     position: "relative",
-    borderRadius: "var(--radius-lg)",
+    borderRadius: 0,
     overflow: "hidden",
     background: "var(--surface)",
     aspectRatio: "1",
