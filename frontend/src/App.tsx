@@ -404,7 +404,7 @@ function App() {
         </>
       )}
 
-      <main ref={mainScrollRef} style={page === "support" ? { ...styles.main, paddingBottom: 0 } : styles.main}>
+      <main ref={mainScrollRef} className={page === "catalog" ? "zen-main--catalog" : undefined} style={page === "support" ? { ...styles.main, paddingBottom: 0 } : styles.main}>
         <div key={page} className={page === "cart" || page === "favorites" ? "zen-page-enter" : ""} style={page === "newArrivals" ? { ...styles.mainContent, height: "100%" } : styles.mainContent}>
         {page === "catalog" && (
           <>

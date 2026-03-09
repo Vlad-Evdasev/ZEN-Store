@@ -367,13 +367,13 @@ export function Catalog({
           <strong>{t(lang, "nothingFound")}</strong>
         </div>
       ) : (
-        <div className="catalog-grid catalog-grid--masonry catalog-grid--concept" style={styles.grid}>
-          {displayList.map((p, idx) => (
+        <div className="catalog-grid catalog-grid--tight" style={styles.grid}>
+          {displayList.map((p) => (
             <ProductCard
               key={p.id}
               product={p}
               compact
-              sizeVariant={idx % 3 === 0 ? "tall" : "default"}
+              sizeVariant="default"
               onClick={() => onProductClick(p.id)}
               inWishlist={wishlistIds.has(p.id)}
               onWishlistClick={(e) => {
