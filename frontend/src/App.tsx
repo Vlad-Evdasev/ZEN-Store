@@ -624,8 +624,8 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 6,
   },
   hamburger: {
-    width: 52,
-    height: 52,
+    width: 48,
+    height: 48,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
