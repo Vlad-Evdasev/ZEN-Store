@@ -1,8 +1,12 @@
-/** Иконка фильтра для строки поиска каталога — минималистичная воронка */
+/** Иконка фильтра — премиальный эквалайзер (тонкие полосы разной высоты) */
 export function FilterIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M4 4L10 12h4L20 4H4z" />
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <line x1="5" y1="16" x2="5" y2="8" />
+      <line x1="9" y1="16" x2="9" y2="4" />
+      <line x1="13" y1="16" x2="13" y2="10" />
+      <line x1="17" y1="16" x2="17" y2="6" />
+      <line x1="21" y1="16" x2="21" y2="12" />
     </svg>
   );
 }
