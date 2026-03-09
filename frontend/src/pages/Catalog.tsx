@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import type { Product, Store, Category, ProductReviewStats } from "../api";
 import { getProductReviewStats } from "../api";
+import { FilterIcon } from "../components/FilterIcon";
 import { ProductCard } from "../components/ProductCard";
 import { StoreCard } from "../components/StoreCard";
 import { useSettings } from "../context/SettingsContext";
@@ -33,16 +34,6 @@ const FALLBACK_BY_CODE: Record<string, { image: string; desc: string }> = {
   accessories: { image: "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=400", desc: "Аксессуары" },
 };
 const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400";
-
-function FilterIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <line x1="7" y1="4" x2="7" y2="20" />
-      <line x1="12" y1="10" x2="12" y2="20" />
-      <line x1="17" y1="14" x2="17" y2="20" />
-    </svg>
-  );
-}
 
 export function Catalog({
   products,
