@@ -12,6 +12,8 @@ interface NewArrivalsSectionProps {
   wishlistIds: Set<number>;
   onToggleWishlist: (id: number) => void;
   reviewStats?: Record<number, { count: number; avg: number }>;
+  /** Заполнять доступную высоту (каталог: от верха до карточек магазина) */
+  fillAvailableSpace?: boolean;
 }
 
 export function NewArrivalsSection({
@@ -21,6 +23,7 @@ export function NewArrivalsSection({
   wishlistIds,
   onToggleWishlist,
   reviewStats = {},
+  fillAvailableSpace = false,
 }: NewArrivalsSectionProps) {
   const { settings } = useSettings();
   const lang = settings.lang;
@@ -52,14 +55,14 @@ export function NewArrivalsSection({
   );
 
   return (
-    <div style={styles.wrap}>
+    <div style={fillAvailableSpace ? { ...styles.wrap, ...styles.wrapFill } : styles.wrap}>
       <div className="zen-new-arrivals-header">
         <h2 className="zen-new-arrivals-title">{t(lang, "newArrivals")}</h2>
         <button type="button" className="zen-new-arrivals-view-all" onClick={onViewAll} aria-label={t(lang, "newArrivalsViewAll")}>
           {t(lang, "viewAll")} →
         </button>
       </div>
-      <div style={styles.grid}>
+      <div style={fillAvailableSpace ? { ...styles.grid, ...styles.gridFill } : styles.grid}>
         {first && renderCard(first, styles.cardBig)}
         <div style={styles.rightColumn}>
           {second && renderCard(second, styles.cardSmall)}
@@ -80,6 +83,14 @@ const styles: Record<string, React.CSSProperties> = {
     minWidth: 0,
     maxWidth: "100%",
   },
+  wrapFill: {
+    flex: 1,
+    minHeight: 0,
+    display: "flex",
+    flexDirection: "column",
+    marginBottom: 0,
+    paddingTop: 12,
+  },
   grid: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
@@ -90,6 +101,11 @@ const styles: Record<string, React.CSSProperties> = {
     paddingLeft: 4,
     paddingRight: 4,
     alignItems: "stretch",
+  },
+  gridFill: {
+    flex: 1,
+    minHeight: 0,
+    height: "100%",
   },
   cardBig: {
     minWidth: 0,

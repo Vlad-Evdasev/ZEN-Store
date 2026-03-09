@@ -1056,8 +1056,9 @@ html[data-theme="light"] .zen-app .product-card-price {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   padding: 0 4px;
+  flex-shrink: 0;
 }
 .zen-app .zen-new-arrivals-title {
   font-family: Georgia, "Times New Roman", serif !important;
