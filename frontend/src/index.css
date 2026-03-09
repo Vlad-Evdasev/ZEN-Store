@@ -563,12 +563,18 @@ button:active {
   background: rgba(0, 0, 0, 0.45);
 }
 @media (max-width: 768px) {
+  /* Карточки каталога и заказа — в один ряд; ширина как у верхней (без боковых отступов) */
+  .zen-landing .landing-tiles-two,
+  .zen-landing .landing-tile-full-wrap {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
   .zen-landing .landing-tiles-two {
-    grid-template-columns: 1fr;
-    gap: 16px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
   }
   .zen-landing .landing-tile {
-    min-height: 280px !important;
+    min-height: 260px !important;
   }
   .zen-landing .landing-tile-full {
     min-height: 280px !important;
