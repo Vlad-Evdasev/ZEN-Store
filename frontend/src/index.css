@@ -503,6 +503,16 @@ button:active {
   outline-offset: 2px;
 }
 
+/* Кнопки сортировки по цене: без обводки после клика (переопределяем общее правило выше) */
+.zen-app button.catalog-price-sort-btn,
+.zen-app button.catalog-price-sort-btn:focus,
+.zen-app button.catalog-price-sort-btn:focus-visible,
+.zen-app button.catalog-price-sort-btn:active {
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+}
+
 /* Кнопки редактирования/удаления чата — крупнее на телефоне */
 @media (max-width: 768px) {
   .zen-support [data-touch-area="chat-rename"],

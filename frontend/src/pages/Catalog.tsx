@@ -459,6 +459,8 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--muted)",
     cursor: "pointer",
     transition: "color 0.2s ease, background 0.2s ease, border-color 0.2s ease",
+    outline: "none",
+    boxShadow: "none",
   },
   priceSortBtnActive: {
     background: "var(--accent)",
