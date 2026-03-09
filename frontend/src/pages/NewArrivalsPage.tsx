@@ -92,24 +92,6 @@ export function NewArrivalsPage({
     });
   };
 
-  const tabStyles = {
-    tab: {
-      flexShrink: 0 as const,
-      background: "var(--surface)",
-      border: "1px solid var(--border)",
-      color: "var(--muted)",
-      fontFamily: "inherit",
-      cursor: "pointer",
-      boxShadow: "none",
-      outline: "none",
-    },
-    tabActive: {
-      background: "var(--accent)",
-      border: "1px solid var(--accent)",
-      color: "#fff",
-    },
-  };
-
   return (
     <div style={styles.wrap}>
       <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
