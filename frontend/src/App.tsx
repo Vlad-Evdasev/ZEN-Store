@@ -610,12 +610,15 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
   },
   headerCenter: {
-    flex: 1,
-    minWidth: 0,
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    transform: "translateX(-8px)",
+    pointerEvents: "none",
   },
   headerRight: {
     flexShrink: 0,
@@ -675,6 +678,7 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     letterSpacing: "-0.02em",
     padding: "6px 8px",
+    pointerEvents: "auto",
   },
   headerLink: {
     padding: "8px 10px",
