@@ -55,18 +55,19 @@ export function StoreCatalog({
       <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
         ← {backLabel}
       </button>
-      <div style={styles.searchWrap}>
+      <div className="zen-catalog-search-wrap" style={styles.searchWrap}>
         <input
           type="text"
-          placeholder="Поиск в каталоге..."
+          className="zen-input"
+          placeholder={t(lang, "search")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={styles.search}
         />
       </div>
       {filtered.length === 0 ? (
-        <div style={styles.empty}>
-          <p>Ничего не найдено</p>
+        <div className="zen-empty-state" style={styles.empty}>
+          <strong>{t(lang, "nothingFound")}</strong>
         </div>
       ) : (
         <div className="catalog-grid" style={styles.grid}>
@@ -100,25 +101,8 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     marginBottom: 16,
   },
-  searchWrap: { marginBottom: 16 },
-  search: {
-    width: "100%",
-    padding: "12px 16px",
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: 10,
-    color: "var(--text)",
-    fontSize: 15,
-    fontFamily: "inherit",
-  },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(2, 1fr)",
-    gap: 16,
-  },
-  empty: {
-    textAlign: "center",
-    padding: 48,
-    color: "var(--muted)",
-  },
+  searchWrap: { marginBottom: 20 },
+  search: {},
+  grid: {},
+  empty: {},
 };

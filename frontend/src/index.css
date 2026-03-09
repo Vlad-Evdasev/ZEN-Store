@@ -361,7 +361,34 @@ button:active {
   flex-direction: column;
   gap: 6px;
 }
-/* Карточки: единый радиус (задаётся в компонентах через var(--radius-lg)) */
+/* Карточки товара: премиальная типографика в духе Ralph Lauren */
+.zen-app .product-card-name {
+  font-family: Georgia, "Times New Roman", serif !important;
+  font-weight: 400 !important;
+  letter-spacing: 0.02em;
+}
+.zen-app .product-card-price {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+[data-theme="dark"] .zen-app .product-card-price {
+  color: var(--text);
+}
+html[data-theme="light"] .zen-app .product-card-price {
+  color: var(--muted);
+}
+.zen-app .product-card-desc {
+  background: var(--card-desc-bg);
+}
+
+/* Сетка каталога: базовая и адаптивная (управляется из CSS для премиум-отступов) */
+.zen-app .catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+}
 
 /* Кнопка «Отмена» в модалках — явный цвет текста (на iOS иначе синий) */
 .zen-app .zen-modal-cancel {
@@ -498,7 +525,7 @@ button:active {
   }
   .zen-app .catalog-grid {
     grid-template-columns: repeat(3, 1fr);
-    gap: 18px;
+    gap: 22px;
   }
 }
 
@@ -523,7 +550,7 @@ button:active {
   }
   .zen-app .catalog-grid {
     grid-template-columns: repeat(4, 1fr);
-    gap: 24px;
+    gap: 28px;
   }
 }
 
@@ -619,7 +646,7 @@ button:active {
   }
   .zen-app .catalog-grid {
     grid-template-columns: repeat(5, 1fr);
-    gap: 28px;
+    gap: 32px;
   }
 }
 
@@ -723,14 +750,129 @@ button:active {
   color: var(--accent) !important;
 }
 
-/* Категории каталога: пилюли в стиле RL */
+/* Категории каталога: пилюли в стиле RL, концептуально */
 .zen-app .catalog-tab-btn {
   padding: 12px 20px;
   border-radius: 999px;
   font-size: 13px;
   font-weight: 500;
-  letter-spacing: 0.04em;
-  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, transform 0.2s ease;
+}
+.zen-app .catalog-tab-btn:hover {
+  border-color: var(--muted);
+  color: var(--text);
+}
+.zen-app .catalog-tabs-wrap {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 24px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.zen-app .catalog-tabs-wrap::-webkit-scrollbar {
+  display: none;
+}
+
+/* Фильтр цены: премиальный блок — заголовок, сортировка, диапазон */
+.zen-app .zen-catalog-filters {
+  margin-bottom: 24px;
+}
+.zen-app .zen-price-filter-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+.zen-app .zen-price-filter-label {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.zen-app .zen-price-sort-segmented {
+  display: flex;
+  flex-shrink: 0;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.zen-app .zen-price-sort-segment {
+  min-width: 44px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.zen-app .zen-price-sort-segment:hover {
+  color: var(--text);
+  background: var(--surface);
+}
+.zen-app .zen-price-sort-segment-active {
+  background: var(--accent) !important;
+  color: #fff !important;
+  border: none;
+}
+.zen-app .zen-price-inputs {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.zen-app .zen-price-input {
+  width: 100%;
+  min-width: 0;
+  max-width: 120px;
+  min-height: var(--input-height);
+  padding: var(--input-padding);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-size: 14px;
+  font-family: Georgia, "Times New Roman", serif;
+  letter-spacing: 0.02em;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.zen-app .zen-price-input::placeholder {
+  color: var(--muted);
+}
+.zen-app .zen-price-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+/* Поиск в каталоге: премиальный инпут */
+.zen-app .zen-catalog-search-wrap {
+  margin-bottom: 20px;
+}
+.zen-app .zen-catalog-search-wrap .zen-input,
+.zen-app .zen-catalog-search-wrap input[type="text"] {
+  min-height: var(--input-height);
+  padding: var(--input-padding);
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  letter-spacing: 0.02em;
 }
 
 /* Настройки: сегментированные кнопки */

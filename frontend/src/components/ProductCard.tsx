@@ -55,9 +55,9 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
         )}
       </div>
       <div className="product-card-desc" style={descWrapStyle}>
-        <p style={nameStyle} title={product.name}>{product.name}</p>
+        <p className="product-card-name" style={nameStyle} title={product.name}>{product.name}</p>
         <div style={compact ? styles.descBottomRowCompact : styles.descBottomRow}>
-          <p style={priceStyle}>{formatPrice(product.price)}</p>
+          <p className="product-card-price" style={priceStyle}>{formatPrice(product.price)}</p>
           {hasReviews && (
             <p style={{ ...(compact ? styles.reviewsCompact : styles.reviews), ...noShrink }}>
               ★ {reviewAvg?.toFixed(1) ?? "—"} {reviewCount !== undefined && `(${reviewCount})`}
@@ -123,7 +123,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     lineHeight: 1.25,
-    minHeight: 66,
+    minHeight: 72,
   },
   descWrapCompact: {
     borderBottomLeftRadius: "var(--radius-md)",
@@ -131,15 +131,15 @@ const styles: Record<string, React.CSSProperties> = {
   },
   descWrapCompactSmall: {},
   name: {
-    padding: "6px calc(8px + var(--card-desc-bleed, 2px)) 2px calc(8px + var(--card-desc-bleed, 2px))",
+    padding: "8px calc(10px + var(--card-desc-bleed, 2px)) 4px calc(10px + var(--card-desc-bleed, 2px))",
     margin: 0,
     fontSize: 14,
-    fontWeight: 600,
+    fontWeight: 400,
     color: "var(--text)",
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
-    lineHeight: 1.25,
+    lineHeight: 1.3,
   },
   descBottomRow: {
     display: "flex",
@@ -147,7 +147,7 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: "space-between",
     alignItems: "baseline",
     gap: 8,
-    padding: "0 calc(8px + var(--card-desc-bleed, 2px)) 12px calc(8px + var(--card-desc-bleed, 2px))",
+    padding: "0 calc(10px + var(--card-desc-bleed, 2px)) 14px calc(10px + var(--card-desc-bleed, 2px))",
     minHeight: 0,
     margin: 0,
     lineHeight: 1.25,
@@ -166,9 +166,9 @@ const styles: Record<string, React.CSSProperties> = {
   price: {
     padding: 0,
     margin: 0,
-    fontSize: 15,
+    fontSize: 14,
     color: "var(--text)",
-    fontWeight: 700,
+    fontWeight: 500,
     lineHeight: 1.25,
   },
   reviews: {
@@ -192,6 +192,6 @@ const styles: Record<string, React.CSSProperties> = {
   imageWrapCompact: {},
   imageWrapFillHeight: { flex: 1, minHeight: 0, aspectRatio: "unset" as const },
   wishlistBtnCompact: { top: 8, right: 8, width: 30, height: 30, fontSize: 15 },
-  nameCompact: { padding: "5px calc(6px + var(--card-desc-bleed, 2px)) 2px calc(6px + var(--card-desc-bleed, 2px))", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.25 },
-  priceCompact: { padding: 0, margin: 0, fontSize: 13, lineHeight: 1.25 },
+  nameCompact: { padding: "6px calc(8px + var(--card-desc-bleed, 2px)) 2px calc(8px + var(--card-desc-bleed, 2px))", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.3 },
+  priceCompact: { padding: 0, margin: 0, fontSize: 13, fontWeight: 500, lineHeight: 1.25 },
 };

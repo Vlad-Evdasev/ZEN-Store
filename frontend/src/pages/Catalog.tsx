@@ -278,7 +278,7 @@ export function Catalog({
         </div>
       )}
 
-      <div style={styles.searchWrap}>
+      <div className="zen-catalog-search-wrap" style={styles.searchWrap}>
         <input
           type="text"
           className="zen-input"
@@ -290,60 +290,56 @@ export function Catalog({
       </div>
 
       {showPriceFilter && (
-        <div style={styles.priceFilterWrap}>
-          <span style={styles.priceFilterLabel}>{t(lang, "priceFilter")}:</span>
-          <div
-            style={styles.priceSortSegmented}
-            role="group"
-            aria-label={t(lang, "priceFilter")}
-          >
+        <div className="zen-catalog-filters">
+          <div className="zen-price-filter-wrap">
+            <span className="zen-price-filter-label">{t(lang, "priceFilter")}</span>
             <div
-              style={{
-                ...styles.priceSortSegment,
-                ...(priceSort === "asc" ? styles.priceSortSegmentActive : {}),
-              }}
-              onClick={() => setPriceSort((s) => (s === "asc" ? "none" : "asc"))}
-              title={t(lang, "sortPriceAsc")}
-              aria-hidden
+              className="zen-price-sort-segmented"
+              role="group"
+              aria-label={t(lang, "priceFilter")}
             >
-              ↑
+              <div
+                className={`zen-price-sort-segment ${priceSort === "asc" ? "zen-price-sort-segment-active" : ""}`}
+                onClick={() => setPriceSort((s) => (s === "asc" ? "none" : "asc"))}
+                title={t(lang, "sortPriceAsc")}
+                aria-hidden
+              >
+                ↑
+              </div>
+              <div
+                className={`zen-price-sort-segment ${priceSort === "desc" ? "zen-price-sort-segment-active" : ""}`}
+                onClick={() => setPriceSort((s) => (s === "desc" ? "none" : "desc"))}
+                title={t(lang, "sortPriceDesc")}
+                aria-hidden
+              >
+                ↓
+              </div>
             </div>
-            <div
-              style={{
-                ...styles.priceSortSegment,
-                ...(priceSort === "desc" ? styles.priceSortSegmentActive : {}),
-              }}
-              onClick={() => setPriceSort((s) => (s === "desc" ? "none" : "desc"))}
-              title={t(lang, "sortPriceDesc")}
-              aria-hidden
-            >
-              ↓
+            <div className="zen-price-inputs">
+              <input
+                type="number"
+                className="zen-price-input"
+                min={0}
+                step={100}
+                placeholder={t(lang, "priceFrom")}
+                value={priceMin}
+                onChange={(e) => setPriceMin(e.target.value)}
+              />
+              <input
+                type="number"
+                className="zen-price-input"
+                min={0}
+                step={100}
+                placeholder={t(lang, "priceTo")}
+                value={priceMax}
+                onChange={(e) => setPriceMax(e.target.value)}
+              />
             </div>
           </div>
-          <input
-            type="number"
-            className="zen-input"
-            min={0}
-            step={100}
-            placeholder={t(lang, "priceFrom")}
-            value={priceMin}
-            onChange={(e) => setPriceMin(e.target.value)}
-            style={styles.priceInput}
-          />
-          <input
-            type="number"
-            className="zen-input"
-            min={0}
-            step={100}
-            placeholder={t(lang, "priceTo")}
-            value={priceMax}
-            onChange={(e) => setPriceMax(e.target.value)}
-            style={styles.priceInput}
-          />
         </div>
       )}
 
-      <div style={styles.tabsWrap} className="hide-scrollbar">
+      <div style={styles.tabsWrap} className="catalog-tabs-wrap hide-scrollbar">
         {categoryTabs.map(({ code, label }) => {
           const isSelected = code === "all" ? selectedCategories.has("all") : selectedCategories.has(code);
           return (
@@ -427,63 +423,16 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 24,
     cursor: "pointer",
   },
-  searchWrap: { marginBottom: 16 },
-  priceFilterWrap: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 16,
-    flexWrap: "wrap",
-  },
-  priceFilterLabel: {
-    fontSize: 14,
-    color: "var(--muted)",
-    fontWeight: 500,
-  },
-  priceSortSegmented: {
-    display: "flex",
-    flexShrink: 0,
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: "var(--radius-md)",
-    overflow: "hidden",
-  },
-  priceSortSegment: {
-    flex: 1,
-    minWidth: 40,
-    padding: "8px 12px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "var(--muted)",
-    fontSize: 18,
-    fontWeight: 600,
-    cursor: "pointer",
-    userSelect: "none",
-    WebkitTapHighlightColor: "transparent",
-  },
-  priceSortSegmentActive: {
-    background: "var(--accent)",
-    color: "#fff",
-  },
-  priceInput: { width: 100 },
+  searchWrap: {},
   search: {},
   tabsWrap: {
-    display: "flex",
-    gap: 8,
-    overflowX: "auto",
-    paddingBottom: 8,
-    marginBottom: 20,
     WebkitOverflowScrolling: "touch",
   },
   tab: {
     flexShrink: 0,
-    padding: "10px 16px",
     background: "var(--surface)",
     border: "1px solid var(--border)",
-    borderRadius: 20,
     color: "var(--muted)",
-    fontSize: 13,
     fontFamily: "inherit",
     cursor: "pointer",
     boxShadow: "none",
@@ -493,17 +442,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: "var(--accent)",
     border: "1px solid var(--accent)",
     color: "#fff",
-    outline: "none",
-    boxShadow: "none",
   },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(2, 1fr)",
-    gap: 16,
-  },
-  empty: {
-    textAlign: "center",
-    padding: 48,
-    color: "var(--muted)",
-  },
+  grid: {},
+  empty: {},
 };
