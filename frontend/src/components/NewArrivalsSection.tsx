@@ -70,8 +70,9 @@ export function NewArrivalsSection({
   );
 }
 
-const GRID_GAP = 8;
-const GRID_HEIGHT = 320;
+const ROW_GAP = 16;
+const COL_GAP = 16;
+const GRID_HEIGHT = 400;
 
 const styles: Record<string, React.CSSProperties> = {
   wrap: {
@@ -81,11 +82,11 @@ const styles: Record<string, React.CSSProperties> = {
   },
   grid: {
     display: "grid",
-    gridTemplateColumns: "2fr 1fr",
+    gridTemplateColumns: "1fr 1fr",
     gridTemplateRows: "1fr",
     height: GRID_HEIGHT,
     minHeight: GRID_HEIGHT,
-    gap: GRID_GAP,
+    gap: COL_GAP,
     paddingLeft: 4,
     paddingRight: 4,
     alignItems: "stretch",
@@ -100,26 +101,28 @@ const styles: Record<string, React.CSSProperties> = {
     overflow: "hidden",
   },
   rightColumn: {
-    display: "flex",
-    flexDirection: "column",
-    gap: GRID_GAP,
+    display: "grid",
+    gridTemplateRows: `1fr ${ROW_GAP}px 1fr`,
+    gridTemplateColumns: "1fr",
     minWidth: 0,
     minHeight: 0,
     height: "100%",
   },
   cardSmall: {
-    flex: 1,
     minHeight: 0,
     width: "100%",
     display: "flex",
     flexDirection: "column",
+    gridColumn: 1,
+    gridRow: 1,
   },
   cardSmallBottom: {
-    flex: 1,
     minHeight: 0,
     width: "100%",
     display: "flex",
     flexDirection: "column",
+    gridColumn: 1,
+    gridRow: 3,
   },
   cardInner: {
     flex: 1,
