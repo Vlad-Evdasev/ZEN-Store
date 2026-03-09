@@ -118,7 +118,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   rightColumn: {
     display: "grid",
-    gridTemplateRows: `1fr ${ROW_GAP}px 1fr`,
+    gridTemplateRows: `1.12fr ${ROW_GAP}px 0.88fr`,
     gridTemplateColumns: "1fr",
     minWidth: 0,
     minHeight: 0,
