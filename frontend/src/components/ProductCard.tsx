@@ -198,7 +198,7 @@ const styles: Record<string, React.CSSProperties> = {
   imageWrapCompact: {},
   imageWrapTall: { aspectRatio: "4/5" },
   imageWrapFillHeight: { flex: "1 1 0%", minHeight: 120, aspectRatio: "unset" as const },
-  descWrapFillHeight: { flex: "0 0 auto" },
+  descWrapFillHeight: { flex: "0 0 auto", minHeight: 52, flexShrink: 0 },
   nameCompact: { padding: 0, margin: "0 0 2px", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.3 },
   priceCompact: { padding: 0, margin: "1px 0 0", fontSize: 13, fontWeight: 500, lineHeight: 1.25 },
 };

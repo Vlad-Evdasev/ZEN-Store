@@ -814,7 +814,7 @@ const styles: Record<string, React.CSSProperties> = {
     minHeight: 0,
     display: "flex",
     flexDirection: "column",
-    marginBottom: 24,
+    marginBottom: 16,
   },
 };
 

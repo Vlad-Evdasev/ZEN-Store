@@ -219,7 +219,7 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     minHeight: 0,
     overflow: "auto",
-    marginBottom: 16,
+    marginBottom: 8,
   },
   searchRow: { flexShrink: 0 },
   empty: {},

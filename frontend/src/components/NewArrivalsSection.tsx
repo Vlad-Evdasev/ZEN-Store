@@ -91,10 +91,10 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 0,
     paddingTop: 12,
   },
-  /* Как в примере: одна строка, две колонки одной высоты. Левая — одна карточка, правая — колонка из двух карточек (верхняя чуть выше). */
+  /* Левая колонка шире правой; одна строка — высота левой = сумма правых. */
   grid: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
+    gridTemplateColumns: "1.4fr 0.6fr",
     gridTemplateRows: "1fr",
     gap: COL_GAP,
     height: GRID_HEIGHT,
@@ -129,7 +129,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   cardTopRight: {
     flex: "1.12 1 0",
-    minHeight: 0,
+    minHeight: 100,
     width: "100%",
     display: "flex",
     flexDirection: "column",
@@ -137,7 +137,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   cardBottomRight: {
     flex: "0.88 1 0",
-    minHeight: 0,
+    minHeight: 100,
     width: "100%",
     display: "flex",
     flexDirection: "column",
