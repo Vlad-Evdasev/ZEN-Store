@@ -391,7 +391,7 @@ export function Catalog({
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  wrap: { paddingTop: 8, paddingBottom: 24, overflowX: "hidden", minWidth: 0 },
+  wrap: { paddingTop: 0, paddingBottom: 24, overflowX: "hidden", minWidth: 0 },
   storesRowWrap: {
     display: "flex",
     alignItems: "center",
