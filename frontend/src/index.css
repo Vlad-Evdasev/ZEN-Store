@@ -417,7 +417,7 @@ html[data-theme="light"] .zen-app .product-card-price {
 }
 /* Каталог (главный): минимальные отступы, одинаковый размер, без скруглений */
 .zen-app .catalog-grid.catalog-grid--tight {
-  gap: 6px;
+  gap: 14px 6px;
 }
 .zen-app .catalog-grid.catalog-grid--tight .product-card,
 .zen-app .catalog-grid.catalog-grid--tight .product-card .product-card__image-wrap,
@@ -571,7 +571,7 @@ html[data-theme="light"] .zen-app .product-card-price {
     gap: 22px;
   }
   .zen-app .catalog-grid.catalog-grid--tight {
-    gap: 8px;
+    gap: 16px 8px;
   }
 }
 
@@ -599,7 +599,7 @@ html[data-theme="light"] .zen-app .product-card-price {
     gap: 32px;
   }
   .zen-app .catalog-grid.catalog-grid--tight {
-    gap: 8px;
+    gap: 16px 8px;
   }
 }
 
@@ -698,7 +698,7 @@ html[data-theme="light"] .zen-app .product-card-price {
     gap: 36px;
   }
   .zen-app .catalog-grid.catalog-grid--tight {
-    gap: 8px;
+    gap: 16px 8px;
   }
 }
 
