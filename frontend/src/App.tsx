@@ -622,6 +622,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   headerRight: {
     flexShrink: 0,
+    marginLeft: "auto",
     display: "flex",
     alignItems: "center",
     gap: 6,
