@@ -74,7 +74,7 @@ function MenuIconHome() {
 
 const headerIconSize = 22;
 const headerIconStyle: React.CSSProperties = { width: headerIconSize, height: headerIconSize, flexShrink: 0, color: "currentColor", display: "block" };
-const headerIconCartStyle: React.CSSProperties = { width: headerIconSize, height: headerIconSize, flexShrink: 0, color: "currentColor", display: "block", transform: "scale(1.22)" };
+const headerIconCartStyle: React.CSSProperties = { width: headerIconSize, height: headerIconSize, flexShrink: 0, color: "currentColor", display: "block", transform: "scale(1.38)" };
 
 function HeaderIconFavorites() {
   return (
@@ -705,6 +705,7 @@ const styles: Record<string, React.CSSProperties> = {
   headerIconBtnCart: {
     position: "relative",
     padding: 8,
+    marginRight: 6,
     background: "none",
     border: "none",
     color: "var(--accent)",

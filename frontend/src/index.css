@@ -979,10 +979,10 @@ html[data-theme="light"] .zen-app .product-card-price {
 }
 .zen-app .zen-catalog-search-row .zen-filter-icon-btn {
   flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
-  min-height: 40px;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -994,6 +994,10 @@ html[data-theme="light"] .zen-app .product-card-price {
   cursor: pointer;
   transition: color 0.2s ease;
   -webkit-tap-highlight-color: transparent;
+}
+.zen-app .zen-catalog-search-row .zen-filter-icon-btn svg {
+  width: 32px;
+  height: 32px;
 }
 .zen-app .zen-filter-icon-btn {
   flex-shrink: 0;
