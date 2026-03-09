@@ -291,33 +291,34 @@ export function Catalog({
       {showPriceFilter && (
         <div style={styles.priceFilterWrap}>
           <span style={styles.priceFilterLabel}>{t(lang, "priceFilter")}:</span>
-          <button
-            type="button"
-            className="catalog-tab-btn"
-            onClick={(e) => {
-              setPriceSort((s) => (s === "none" ? "asc" : s === "asc" ? "desc" : "none"));
-              (e.currentTarget as HTMLButtonElement).blur();
-            }}
-            style={{
-              ...styles.priceSortToggle,
-              ...(priceSort !== "none" ? styles.tabActive : {}),
-              outline: "none",
-              boxShadow: "none",
-              WebkitTapHighlightColor: "transparent",
-            }}
+          <div
+            style={styles.priceSortSegmented}
+            role="group"
             aria-label={t(lang, "priceFilter")}
-            title={
-              priceSort === "none"
-                ? t(lang, "sortPriceNoSort")
-                : priceSort === "asc"
-                  ? t(lang, "sortPriceAsc")
-                  : t(lang, "sortPriceDesc")
-            }
           >
-            {priceSort === "none" && t(lang, "sortPriceNoSort")}
-            {priceSort === "asc" && <>↑ {t(lang, "sortPriceAsc")}</>}
-            {priceSort === "desc" && <>↓ {t(lang, "sortPriceDesc")}</>}
-          </button>
+            <div
+              style={{
+                ...styles.priceSortSegment,
+                ...(priceSort === "asc" ? styles.priceSortSegmentActive : {}),
+              }}
+              onClick={() => setPriceSort((s) => (s === "asc" ? "none" : "asc"))}
+              title={t(lang, "sortPriceAsc")}
+              aria-hidden
+            >
+              ↑
+            </div>
+            <div
+              style={{
+                ...styles.priceSortSegment,
+                ...(priceSort === "desc" ? styles.priceSortSegmentActive : {}),
+              }}
+              onClick={() => setPriceSort((s) => (s === "desc" ? "none" : "desc"))}
+              title={t(lang, "sortPriceDesc")}
+              aria-hidden
+            >
+              ↓
+            </div>
+          </div>
           <input
             type="number"
             min={0}
@@ -436,17 +437,31 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--muted)",
     fontWeight: 500,
   },
-  priceSortToggle: {
+  priceSortSegmented: {
+    display: "flex",
     flexShrink: 0,
-    padding: "8px 14px",
     background: "var(--surface)",
     border: "1px solid var(--border)",
-    borderRadius: 20,
+    borderRadius: 10,
+    overflow: "hidden",
+  },
+  priceSortSegment: {
+    flex: 1,
+    minWidth: 40,
+    padding: "8px 12px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     color: "var(--muted)",
-    fontSize: 13,
-    fontFamily: "inherit",
+    fontSize: 18,
+    fontWeight: 600,
     cursor: "pointer",
-    whiteSpace: "nowrap",
+    userSelect: "none",
+    WebkitTapHighlightColor: "transparent",
+  },
+  priceSortSegmentActive: {
+    background: "var(--accent)",
+    color: "#fff",
   },
   priceInput: {
     width: 100,
