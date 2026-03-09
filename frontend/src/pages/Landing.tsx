@@ -28,7 +28,7 @@ export function Landing({ onGoToCatalog, onCustomOrder, onGoToArrived }: Landing
     const targetY = el.getBoundingClientRect().top + window.scrollY - 16;
     const startY = window.scrollY;
     const distance = targetY - startY;
-    const duration = 1400;
+    const duration = 1100;
     const startTime = performance.now();
 
     function easeInOutQuart(t: number): number {
