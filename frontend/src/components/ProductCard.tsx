@@ -71,18 +71,20 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
         />
       </div>
       <div className="product-card-desc" style={descWrapStyle}>
-        {onWishlistClick && (
-          <button
-            type="button"
-            className="product-card-wishlist-btn"
-            onClick={(e) => { e.stopPropagation(); onWishlistClick(e); }}
-            style={{ ...wishlistBtnStyle, color: inWishlist ? "var(--accent)" : "var(--muted)" }}
-            aria-label={inWishlist ? "Убрать из избранного" : "В избранное"}
-          >
-            {inWishlist ? "♥" : "♡"}
-          </button>
-        )}
-        <p className="product-card-name" style={nameStyle} title={product.name}>{product.name}</p>
+        <div style={compact ? styles.nameRowCompact : styles.nameRow}>
+          <p className="product-card-name" style={nameStyle} title={product.name}>{product.name}</p>
+          {onWishlistClick && (
+            <button
+              type="button"
+              className="product-card-wishlist-btn"
+              onClick={(e) => { e.stopPropagation(); onWishlistClick(e); }}
+              style={{ ...wishlistBtnStyle, color: inWishlist ? "var(--accent)" : "var(--muted)" }}
+              aria-label={inWishlist ? "Убрать из избранного" : "В избранное"}
+            >
+              {inWishlist ? "♥" : "♡"}
+            </button>
+          )}
+        </div>
         {product.brand?.trim() && (
           <span style={compact ? styles.brandCompact : styles.brand}>{product.brand.trim()}</span>
         )}
@@ -124,11 +126,23 @@ const styles: Record<string, React.CSSProperties> = {
     height: "100%",
     objectFit: "cover",
   },
+  nameRow: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 8,
+    marginBottom: 0,
+    minHeight: 0,
+  },
+  nameRowCompact: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 6,
+    marginBottom: 0,
+    minHeight: 0,
+  },
   wishlistBtn: {
-    position: "absolute",
-    top: 4,
-    right: 6,
-    padding: 6,
+    flexShrink: 0,
+    padding: 2,
     margin: 0,
     border: "none",
     background: "none",
@@ -137,9 +151,7 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: 1,
   },
   wishlistBtnCompact: {
-    top: 2,
-    right: 4,
-    padding: 4,
+    padding: 2,
     fontSize: 18,
   },
   descWrap: {
@@ -161,17 +173,18 @@ const styles: Record<string, React.CSSProperties> = {
   },
   descWrapCompactSmall: { padding: "3px 10px 5px 4px", gap: 0 },
   name: {
+    flex: 1,
+    minWidth: 0,
     padding: 0,
     margin: 0,
     fontSize: 15,
     fontWeight: 400,
     fontFamily: 'Georgia, "Times New Roman", serif',
     color: "var(--text)",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     lineHeight: 1.35,
     letterSpacing: "0.03em",
+    wordBreak: "break-word",
+    overflowWrap: "break-word",
   },
   brand: {
     padding: 0,
@@ -251,6 +264,6 @@ const styles: Record<string, React.CSSProperties> = {
   imageWrapTall: { aspectRatio: "4/5" },
   imageWrapFillHeight: { flex: "1 1 0%", minHeight: 120, aspectRatio: "unset" as const },
   descWrapFillHeight: { flex: "0 0 auto", minHeight: 52, flexShrink: 0 },
-  nameCompact: { padding: 0, margin: "0 0 3px", fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.3 },
+  nameCompact: { padding: 0, margin: "0 0 3px", fontSize: 13, lineHeight: 1.3 },
   priceCompact: { padding: 0, margin: 0, fontSize: 13, fontWeight: 500, color: "var(--text)", lineHeight: 1.25 },
 };
