@@ -391,12 +391,12 @@ export function Catalog({
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  wrap: { paddingBottom: 24, overflowX: "hidden", minWidth: 0 },
+  wrap: { paddingTop: 8, paddingBottom: 24, overflowX: "hidden", minWidth: 0 },
   storesRowWrap: {
     display: "flex",
     alignItems: "center",
     gap: 8,
-    marginTop: 24,
+    marginTop: 0,
     marginBottom: 24,
   },
   storesRow: {
