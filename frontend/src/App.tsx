@@ -6,7 +6,6 @@ import { useWishlist } from "./hooks/useWishlist";
 import { getProducts, getStores, getCategories, getCart, getReviews, getSupportUnreadCount, type Product, type Store, type Category } from "./api";
 import { Catalog } from "./pages/Catalog";
 import { StoresCarousel } from "./components/StoresCarousel";
-import { NewArrivalsSection } from "./components/NewArrivalsSection";
 import { Cart } from "./pages/Cart";
 import { Favorites } from "./pages/Favorites";
 import { ProductPage } from "./pages/ProductPage";
@@ -405,20 +404,10 @@ function App() {
         </>
       )}
 
-      <main ref={mainScrollRef} style={page === "support" ? { ...styles.main, paddingBottom: 0 } : page === "catalog" ? { ...styles.main, paddingTop: 0 } : styles.main}>
-        <div key={page} className={page === "cart" || page === "favorites" ? "zen-page-enter" : ""} style={page === "newArrivals" ? { ...styles.mainContent, height: "100%" } : page === "catalog" ? { ...styles.mainContent, display: "flex", flexDirection: "column", flex: 1, minHeight: 0 } : styles.mainContent}>
+      <main ref={mainScrollRef} style={page === "support" ? { ...styles.main, paddingBottom: 0 } : styles.main}>
+        <div key={page} className={page === "cart" || page === "favorites" ? "zen-page-enter" : ""} style={page === "newArrivals" ? { ...styles.mainContent, height: "100%" } : styles.mainContent}>
         {page === "catalog" && (
           <>
-            <div style={styles.catalogNewArrivalsWrap}>
-              <NewArrivalsSection
-                products={newArrivals}
-                onProductClick={(id) => openProduct(id, "catalog")}
-                onViewAll={openNewArrivals}
-                wishlistIds={wishlistIds}
-                onToggleWishlist={toggleWishlist}
-                fillAvailableSpace
-              />
-            </div>
             <StoresCarousel stores={stores} categories={categories} onStoreClick={openStoreCatalog} compact />
             <section className="zen-catalog-section" aria-label={t(lang, "catalogPreviewTitle")}>
               <Catalog
@@ -809,13 +798,6 @@ const styles: Record<string, React.CSSProperties> = {
   mainContent: {
     minWidth: 0,
   },
-  catalogNewArrivalsWrap: {
-    flex: 1,
-    minHeight: 0,
-    display: "flex",
-    flexDirection: "column",
-    marginBottom: 16,
-  },
-};
+  };
 
 export default App;
