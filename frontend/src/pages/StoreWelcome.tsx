@@ -31,7 +31,7 @@ export function StoreWelcome({ store: _store, categoryLabels: _categoryLabels, s
   return (
     <div style={{ ...styles.wrap, ...(showBack ? {} : styles.wrapNoHeader) }}>
       {showBack && (
-        <button onClick={onBack} style={styles.back}>
+        <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
           ← {t(lang, "back")}
         </button>
       )}

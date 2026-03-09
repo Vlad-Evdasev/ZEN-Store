@@ -15,7 +15,7 @@ export function Profile({ userName, firstName, onBack, onOpenDeliveryTerms, onOp
   const lang = settings.lang;
   return (
     <div style={styles.wrap}>
-      <button onClick={onBack} style={styles.back}>
+      <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
         ← {t(lang, "backToCatalog")}
       </button>
 
@@ -84,10 +84,11 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 16,
   },
   name: {
-    fontFamily: "Unbounded, sans-serif",
+    fontFamily: "Georgia, 'Times New Roman', serif",
     fontSize: 22,
-    fontWeight: 600,
+    fontWeight: 400,
     marginBottom: 4,
+    letterSpacing: "0.02em",
   },
   username: {
     color: "var(--muted)",
@@ -102,14 +103,15 @@ const styles: Record<string, React.CSSProperties> = {
   section: {
     padding: 20,
     background: "var(--surface)",
-    borderRadius: 12,
+    borderRadius: "var(--radius-lg)",
     border: "1px solid var(--border)",
   },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: 11,
+    fontWeight: 600,
     color: "var(--muted)",
     textTransform: "uppercase",
-    letterSpacing: "0.05em",
+    letterSpacing: "0.06em",
     marginBottom: 8,
   },
   actions: {

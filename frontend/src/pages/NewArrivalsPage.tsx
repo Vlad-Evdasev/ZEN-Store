@@ -23,7 +23,7 @@ export function NewArrivalsPage({
 
   return (
     <div style={styles.wrap}>
-      <button onClick={onBack} style={styles.back}>
+      <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
         ← {t(lang, "back")}
       </button>
       <h1 style={styles.title}>{t(lang, "newArrivals")}</h1>

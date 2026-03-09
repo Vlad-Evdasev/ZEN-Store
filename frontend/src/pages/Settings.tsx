@@ -14,10 +14,10 @@ export function Settings({ onBack }: SettingsProps) {
 
   return (
     <div style={styles.wrap}>
-      <button onClick={onBack} style={styles.back}>
+      <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
         ← {t(lang, "backToCatalog")}
       </button>
-      <h2 style={styles.title}>{t(lang, "settings")}</h2>
+      <h2 className="zen-page-title" style={styles.title}>{t(lang, "settings")}</h2>
 
       <div style={styles.section}>
         <p style={styles.label}>{t(lang, "language")}</p>
@@ -94,26 +94,22 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     marginBottom: 20,
   },
-  title: {
-    fontFamily: "Unbounded, sans-serif",
-    fontSize: 22,
-    fontWeight: 600,
-    marginBottom: 24,
-  },
+  title: { marginBottom: 24 },
   section: { marginBottom: 24 },
   label: {
-    fontSize: 12,
+    fontSize: 11,
+    fontWeight: 600,
     color: "var(--muted)",
     textTransform: "uppercase",
-    letterSpacing: "0.05em",
+    letterSpacing: "0.06em",
     marginBottom: 10,
   },
   row: { display: "flex", gap: 10, flexWrap: "wrap" },
   optBtn: {
-    padding: "12px 18px",
+    padding: "12px 20px",
     background: "var(--surface)",
-    border: "1px solid var(--surface)",
-    borderRadius: 10,
+    border: "1px solid var(--border)",
+    borderRadius: "var(--radius-md)",
     color: "var(--text)",
     fontSize: 14,
     fontFamily: "inherit",

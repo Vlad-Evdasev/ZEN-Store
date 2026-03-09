@@ -24,14 +24,14 @@ export function Favorites({
 
   return (
     <div style={styles.wrap}>
-      <button onClick={onBack} style={styles.back}>
+      <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
         ← {t(lang, "back")}
       </button>
-      <h2 style={styles.title}>{t(lang, "favoritesTitle")}</h2>
+      <h2 className="zen-page-title" style={styles.title}>{t(lang, "favoritesTitle")}</h2>
       {favorites.length === 0 ? (
-        <div style={styles.empty}>
-          <p>{t(lang, "favoritesEmpty")}</p>
-          <p style={styles.emptyHint}>{t(lang, "favoritesEmptyHint")}</p>
+        <div className="zen-empty-state">
+          <strong>{t(lang, "favoritesEmpty")}</strong>
+          <span>{t(lang, "favoritesEmptyHint")}</span>
         </div>
       ) : (
         <div style={styles.grid}>
@@ -64,25 +64,10 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     marginBottom: 20,
   },
-  title: {
-    fontFamily: "Unbounded, sans-serif",
-    fontSize: 22,
-    fontWeight: 600,
-    marginBottom: 20,
-  },
+  title: { marginBottom: 20 },
   grid: {
     display: "grid",
     gridTemplateColumns: "repeat(2, 1fr)",
     gap: 16,
-  },
-  empty: {
-    textAlign: "center",
-    padding: 48,
-    color: "var(--muted)",
-  },
-  emptyHint: {
-    fontSize: 13,
-    marginTop: 8,
-    opacity: 0.8,
   },
 };

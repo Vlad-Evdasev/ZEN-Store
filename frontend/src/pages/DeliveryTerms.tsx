@@ -10,7 +10,7 @@ export function DeliveryTerms({ onBack }: DeliveryTermsProps) {
   const lang = settings.lang;
   return (
     <div style={styles.wrap}>
-      <button onClick={onBack} style={styles.back}>
+      <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
         ← {t(lang, "back")}
       </button>
       <h2 style={styles.title}>{t(lang, "deliveryTermsTitle")}</h2>

@@ -441,10 +441,10 @@ button:active {
   to { opacity: 1; transform: translateX(0); }
 }
 .zen-menu-overlay {
-  animation: menuOverlayFade 0.3s ease-out forwards;
+  animation: menuOverlayFade 0.28s ease-out forwards;
 }
-.zen-menu-panel {
-  animation: menuPanelSlide 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+.zen-app .zen-menu-panel {
+  animation: menuPanelSlide 0.35s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
 }
 /* backwards = до старта анимации применить "from", чтобы кнопки не мигали */
 .zen-menu-item {
@@ -641,6 +641,112 @@ button:active {
 .zen-app button[type="submit"],
 .zen-app .zen-btn-primary {
   letter-spacing: 0.04em;
+}
+
+/* Кнопки в стиле Ralph Lauren */
+.zen-app .zen-btn-primary {
+  min-height: 48px;
+  padding: 14px 24px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+.zen-app .zen-btn-secondary {
+  min-height: 48px;
+  padding: 14px 24px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+.zen-app .zen-back-link {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  padding: 4px 0;
+  margin-bottom: 20px;
+}
+.zen-app .zen-page-title {
+  font-size: 22px;
+  font-weight: 400;
+  margin-bottom: 24px;
+  letter-spacing: 0.02em;
+}
+.zen-app .zen-empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.6;
+  letter-spacing: 0.01em;
+}
+.zen-app .zen-empty-state strong {
+  display: block;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+/* Экшен-меню: премиум в духе RL */
+.zen-app .zen-menu-panel {
+  padding-top: max(24px, env(safe-area-inset-top));
+  padding-left: max(20px, env(safe-area-inset-left));
+  padding-right: 20px;
+  padding-bottom: 24px;
+  gap: 2px;
+}
+.zen-app .zen-menu-item {
+  padding: 16px 14px !important;
+  font-size: 15px !important;
+  letter-spacing: 0.02em !important;
+  border-radius: var(--radius-md) !important;
+  transition: background-color 0.2s ease !important;
+  text-align: left;
+  width: 100%;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--text);
+  font-family: inherit;
+}
+.zen-app .zen-menu-item:hover {
+  background: var(--surface-elevated) !important;
+}
+.zen-app .zen-menu-item.zen-menu-item-welcome {
+  color: var(--accent) !important;
+}
+
+/* Категории каталога: пилюли в стиле RL */
+.zen-app .catalog-tab-btn {
+  padding: 12px 20px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+/* Настройки: сегментированные кнопки */
+.zen-app .settings-opt-btn {
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+/* Анимация появления страницы: чуть длиннее для премиум-ощущения */
+.zen-app .zen-page-enter {
+  animation-duration: 0.35s;
+  animation-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
 /* Логотип и бренд в стиле RL: серы, широкий letter-spacing */

@@ -370,8 +370,8 @@ export function Catalog({
       </div>
 
       {displayList.length === 0 ? (
-        <div style={styles.empty}>
-          <p>{t(lang, "nothingFound")}</p>
+        <div className="zen-empty-state" style={styles.empty}>
+          <strong>{t(lang, "nothingFound")}</strong>
         </div>
       ) : (
         <div className="catalog-grid" style={styles.grid}>

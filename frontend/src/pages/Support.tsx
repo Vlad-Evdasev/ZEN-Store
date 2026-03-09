@@ -205,7 +205,7 @@ export function Support({ userId, userName, firstName, onBack, onUnreadCountChan
     return (
       <div className="zen-support" style={styles.wrap}>
         <div style={styles.topRow}>
-          <button onClick={() => { setSelectedChatId(null); setPhotoDataUrl(null); }} style={styles.back}>
+          <button type="button" onClick={() => { setSelectedChatId(null); setPhotoDataUrl(null); }} className="zen-back-link" style={styles.back}>
             ← {t(lang, "back")}
           </button>
           <button onClick={handleDeleteChat} style={styles.deleteBtn}>
@@ -356,7 +356,7 @@ export function Support({ userId, userName, firstName, onBack, onUnreadCountChan
 
   return (
     <div className="zen-support" style={styles.wrap}>
-      <button onClick={onBack} style={styles.back}>
+      <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
         ← {t(lang, "back")}
       </button>
       <button onClick={handleCreateChat} style={styles.newChatBtn} disabled={creating}>

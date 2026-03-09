@@ -153,7 +153,7 @@ export function ProductPage({
   return (
     <div ref={rootRef} style={styles.wrap}>
       <div style={styles.topBar}>
-        <button onClick={onBack} style={styles.back}>
+        <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
           ← {t(lang, "back")}
         </button>
       </div>

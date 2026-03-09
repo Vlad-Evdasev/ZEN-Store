@@ -58,17 +58,19 @@ export function Cart({ userId, onBack, onCheckout, onCartChange, onProductClick 
   if (items.length === 0) {
     return (
       <div style={styles.wrap}>
-        <button onClick={onBack} style={styles.back}>
+        <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
           ← {t(lang, "toCatalog")}
         </button>
-        <p style={styles.empty}>{t(lang, "cartEmpty")}</p>
+        <div className="zen-empty-state">
+          <strong>{t(lang, "cartEmpty")}</strong>
+        </div>
       </div>
     );
   }
 
   return (
     <div style={styles.wrap}>
-      <button onClick={onBack} style={styles.back}>
+      <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
         ← {t(lang, "back")}
       </button>
 

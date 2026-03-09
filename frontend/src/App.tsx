@@ -395,7 +395,7 @@ function App() {
                 <span>{t(lang, "settings")}</span>
               </span>
             </button>
-            <button onClick={goToWelcome} type="button" className="zen-menu-item" style={styles.menuWelcomeItem}>
+            <button onClick={goToWelcome} type="button" className="zen-menu-item zen-menu-item-welcome" style={styles.menuWelcomeItem}>
               <span style={styles.menuItemContent}>
                 <MenuIconHome />
                 <span>{t(lang, "menuToWelcome")}</span>
@@ -663,39 +663,17 @@ const styles: Record<string, React.CSSProperties> = {
     WebkitBackdropFilter: "blur(12px)",
     borderRight: "1px solid var(--border)",
     zIndex: 21,
-    paddingTop: "max(16px, env(safe-area-inset-top))",
-    paddingLeft: "max(10px, env(safe-area-inset-left))",
     display: "flex",
     flexDirection: "column",
-    gap: 4,
+    gap: 2,
   },
-  menuItem: {
-    padding: "14px 12px 14px 10px",
-    textAlign: "left",
-    background: "none",
-    border: "none",
-    color: "var(--text)",
-    fontSize: 16,
-    fontFamily: "inherit",
-    cursor: "pointer",
-    width: "100%",
-  },
+  menuItem: {},
   menuItemContent: {
     display: "flex",
     alignItems: "center",
     gap: 12,
   },
-  menuWelcomeItem: {
-    padding: "14px 12px 14px 10px",
-    textAlign: "left",
-    background: "none",
-    border: "none",
-    color: "#b91c1c",
-    fontSize: 16,
-    fontFamily: "inherit",
-    cursor: "pointer",
-    width: "100%",
-  },
+  menuWelcomeItem: {},
   logo: {
     fontFamily: "Unbounded, sans-serif",
     fontSize: 22,

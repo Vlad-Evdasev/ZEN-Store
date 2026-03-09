@@ -78,7 +78,7 @@ export function History({ userId, onBack, onProductClick }: HistoryProps) {
   if (loading) {
     return (
       <div style={styles.wrap}>
-        <button onClick={onBack} style={styles.back} type="button">← {t(lang, "backToCatalog")}</button>
+        <button onClick={onBack} className="zen-back-link" style={styles.back} type="button">← {t(lang, "backToCatalog")}</button>
         <p style={styles.loading}>{t(lang, "loading")}</p>
       </div>
     );
@@ -87,11 +87,11 @@ export function History({ userId, onBack, onProductClick }: HistoryProps) {
   return (
     <div style={styles.wrap}>
       <header style={styles.header}>
-        <button onClick={onBack} style={styles.back} type="button">
+        <button onClick={onBack} className="zen-back-link" style={styles.back} type="button">
           ← {t(lang, "backToCatalog")}
         </button>
         <div style={styles.titleAndFilterWrap}>
-          <h1 style={styles.title}>{t(lang, "historyTitle")}</h1>
+          <h1 className="zen-page-title" style={styles.title}>{t(lang, "historyTitle")}</h1>
           <div style={styles.filterDropdownWrap} ref={filterDropdownRef} role="group" aria-label={t(lang, "historyTitle")}>
           <button
             type="button"
@@ -164,8 +164,8 @@ export function History({ userId, onBack, onProductClick }: HistoryProps) {
       )}
 
       {filtered.length === 0 && (
-        <div style={styles.emptyWrap}>
-          <p style={styles.empty}>{t(lang, "historyEmpty")}</p>
+        <div className="zen-empty-state" style={styles.emptyWrap}>
+          <strong>{t(lang, "historyEmpty")}</strong>
         </div>
       )}
     </div>
@@ -250,9 +250,8 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "4px 0",
   },
   title: {
-    fontFamily: "Unbounded, sans-serif",
     fontSize: 22,
-    fontWeight: 600,
+    fontWeight: 400,
     margin: "0 0 16px 0",
     lineHeight: 1.25,
   },

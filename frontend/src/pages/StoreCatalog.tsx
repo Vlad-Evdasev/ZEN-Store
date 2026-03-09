@@ -52,7 +52,7 @@ export function StoreCatalog({
 
   return (
     <div style={styles.wrap}>
-      <button onClick={onBack} style={styles.back}>
+      <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
         ← {backLabel}
       </button>
       <div style={styles.searchWrap}>

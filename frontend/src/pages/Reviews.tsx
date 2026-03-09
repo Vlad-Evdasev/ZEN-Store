@@ -102,11 +102,11 @@ export function Reviews({ userId, firstName, onBack }: ReviewsProps) {
 
   return (
     <div style={styles.wrap}>
-      <button onClick={onBack} style={styles.back}>
+      <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
         ← {t(lang, "backToCatalog")}
       </button>
 
-      <h2 style={styles.title}>{t(lang, "reviewsTitle")}</h2>
+      <h2 className="zen-page-title" style={styles.title}>{t(lang, "reviewsTitle")}</h2>
 
       <form onSubmit={handleAddReview} style={styles.form}>
         <div style={styles.ratingRow}>
@@ -126,6 +126,7 @@ export function Reviews({ userId, firstName, onBack }: ReviewsProps) {
           ))}
         </div>
         <textarea
+          className="zen-textarea"
           value={newText}
           onChange={(e) => setNewText(e.target.value)}
           placeholder={t(lang, "reviewsPlaceholder")}
@@ -133,7 +134,7 @@ export function Reviews({ userId, firstName, onBack }: ReviewsProps) {
           style={styles.textarea}
         />
         {error && <p style={styles.error}>{error}</p>}
-        <button type="submit" disabled={submitting} style={styles.submitBtn}>
+        <button type="submit" className="zen-btn-primary" disabled={submitting} style={styles.submitBtn}>
           {submitting ? "..." : t(lang, "reviewsSubmit")}
         </button>
       </form>

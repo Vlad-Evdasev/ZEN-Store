@@ -93,7 +93,7 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, sel
             Продавец сам свяжется со мной
           </button>
         </div>
-        <button onClick={onDone} style={styles.backBtn}>
+        <button type="button" onClick={onDone} className="zen-btn-secondary" style={styles.backBtn}>
           В каталог
         </button>
       </div>
@@ -102,7 +102,7 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, sel
 
   return (
     <div style={styles.wrap}>
-      <button onClick={onBack} style={styles.back}>
+      <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
         ← Назад
       </button>
 
