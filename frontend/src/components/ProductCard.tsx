@@ -89,7 +89,7 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
         <p className="product-card-price" style={priceStyle}>{formatPrice(product.price)}</p>
         {hasReviews && (
           <span style={{ ...(compact ? styles.reviewsCompact : styles.reviews), ...noShrink }}>
-            ★ {reviewAvg?.toFixed(1) ?? "—"} {reviewCount !== undefined && `(${reviewCount})`}
+            ★ {reviewAvg?.toFixed(1) ?? "—"}
           </span>
         )}
       </div>
