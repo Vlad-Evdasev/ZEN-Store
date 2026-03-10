@@ -162,20 +162,21 @@ export function Catalog({
     }
     const step = 1;
     const intervalMs = 45;
-    const W = (el: HTMLDivElement) => el.scrollWidth / 3;
     const startCarousel = (el: HTMLDivElement | null, intervalIdRef: React.MutableRefObject<number | null>, userScrolledRef: React.MutableRefObject<boolean>) => {
       if (!el || userScrolledRef.current) return;
       if (intervalIdRef.current) clearInterval(intervalIdRef.current);
-      const w = W(el);
-      if (w <= 0) return;
-      el.scrollLeft = w; // start in middle copy for infinite both ways
+      const max = el.scrollWidth - el.clientWidth;
+      if (max <= 0) return;
       const id = window.setInterval(() => {
         if (userScrolledRef.current) return;
-        const ww = W(el);
-        if (ww <= 0) return;
+        const max = el.scrollWidth - el.clientWidth;
+        if (max <= 0) return;
         chipScrollProgrammaticRef.current = true;
-        el.scrollLeft += step;
-        if (el.scrollLeft >= 2 * ww - el.clientWidth) el.scrollLeft = ww - el.clientWidth;
+        if (el.scrollLeft >= max - 2) {
+          el.scrollLeft = 0;
+        } else {
+          el.scrollLeft += step;
+        }
         requestAnimationFrame(() => { chipScrollProgrammaticRef.current = false; });
       }, intervalMs);
       intervalIdRef.current = id;
@@ -657,21 +658,6 @@ export function Catalog({
                             ref={brandChipRowRef}
                             className="zen-filters-chip-row"
                             onScroll={() => {
-                              const el = brandChipRowRef.current;
-                              if (el) {
-                                const w = el.scrollWidth / 3;
-                                if (w > 0) {
-                                  if (el.scrollLeft <= 0) {
-                                    chipScrollProgrammaticRef.current = true;
-                                    el.scrollLeft = w;
-                                    requestAnimationFrame(() => { chipScrollProgrammaticRef.current = false; });
-                                  } else if (el.scrollLeft >= 2 * w - el.clientWidth) {
-                                    chipScrollProgrammaticRef.current = true;
-                                    el.scrollLeft = w - el.clientWidth;
-                                    requestAnimationFrame(() => { chipScrollProgrammaticRef.current = false; });
-                                  }
-                                }
-                              }
                               if (chipScrollProgrammaticRef.current) return;
                               if (brandAutoScrollIdRef.current) {
                                 clearInterval(brandAutoScrollIdRef.current);
@@ -680,13 +666,9 @@ export function Catalog({
                               userScrolledBrandRef.current = true;
                             }}
                           >
-                            {[0, 1, 2].map((copy) => (
-                              <span key={`brand-${copy}`} className="zen-filters-chip-row-segment">
-                                <button type="button" className={`zen-filters-chip ${selectedBrand === "all" ? "zen-filters-chip-active" : ""}`} onClick={() => setSelectedBrand("all")}>{t(lang, "all")}</button>
-                                {uniqueBrands.map((b) => (
-                                  <button key={`${b}-${copy}`} type="button" className={`zen-filters-chip ${selectedBrand === b ? "zen-filters-chip-active" : ""}`} onClick={() => setSelectedBrand(b)}>{b}</button>
-                                ))}
-                              </span>
+                            <button type="button" className={`zen-filters-chip ${selectedBrand === "all" ? "zen-filters-chip-active" : ""}`} onClick={() => setSelectedBrand("all")}>{t(lang, "all")}</button>
+                            {uniqueBrands.map((b) => (
+                              <button key={b} type="button" className={`zen-filters-chip ${selectedBrand === b ? "zen-filters-chip-active" : ""}`} onClick={() => setSelectedBrand(b)}>{b}</button>
                             ))}
                           </div>
                         </div>
@@ -704,21 +686,6 @@ export function Catalog({
                           ref={categoryChipRowRef}
                           className="zen-filters-chip-row"
                           onScroll={() => {
-                            const el = categoryChipRowRef.current;
-                            if (el) {
-                              const w = el.scrollWidth / 3;
-                              if (w > 0) {
-                                if (el.scrollLeft <= 0) {
-                                  chipScrollProgrammaticRef.current = true;
-                                  el.scrollLeft = w;
-                                  requestAnimationFrame(() => { chipScrollProgrammaticRef.current = false; });
-                                } else if (el.scrollLeft >= 2 * w - el.clientWidth) {
-                                  chipScrollProgrammaticRef.current = true;
-                                  el.scrollLeft = w - el.clientWidth;
-                                  requestAnimationFrame(() => { chipScrollProgrammaticRef.current = false; });
-                                }
-                              }
-                            }
                             if (chipScrollProgrammaticRef.current) return;
                             if (categoryAutoScrollIdRef.current) {
                               clearInterval(categoryAutoScrollIdRef.current);
@@ -727,23 +694,19 @@ export function Catalog({
                             userScrolledCategoryRef.current = true;
                           }}
                         >
-                          {[0, 1, 2].map((copy) => (
-                            <span key={`cat-${copy}`} className="zen-filters-chip-row-segment">
-                              {categoryTabs.map(({ code, label }) => {
-                                const isSelected = code === "all" ? selectedCategories.has("all") : selectedCategories.has(code);
-                                return (
-                                  <button
-                                    key={`${code}-${copy}`}
-                                    type="button"
-                                    className={`zen-filters-chip ${isSelected ? "zen-filters-chip-active" : ""}`}
-                                    onClick={() => { handleCategoryClick(code); }}
-                                  >
-                                    {label}
-                                  </button>
-                                );
-                              })}
-                            </span>
-                          ))}
+                          {categoryTabs.map(({ code, label }) => {
+                            const isSelected = code === "all" ? selectedCategories.has("all") : selectedCategories.has(code);
+                            return (
+                              <button
+                                key={code}
+                                type="button"
+                                className={`zen-filters-chip ${isSelected ? "zen-filters-chip-active" : ""}`}
+                                onClick={() => { handleCategoryClick(code); }}
+                              >
+                                {label}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                     </div>
