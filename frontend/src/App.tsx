@@ -72,9 +72,9 @@ function MenuIconHome() {
   );
 }
 
-const headerIconSize = 22;
+const headerIconSize = 19;
 const headerIconStyle: React.CSSProperties = { width: headerIconSize, height: headerIconSize, flexShrink: 0, color: "currentColor", display: "block" };
-const headerIconCartStyle: React.CSSProperties = { width: headerIconSize, height: headerIconSize, flexShrink: 0, color: "currentColor", display: "block", transform: "scale(1.38)" };
+const headerIconCartStyle: React.CSSProperties = { width: headerIconSize, height: headerIconSize, flexShrink: 0, color: "currentColor", display: "block", transform: "scale(1.2)" };
 const headerIconHamburgerSize = 32;
 const headerIconHamburgerStyle: React.CSSProperties = { width: headerIconHamburgerSize, height: headerIconHamburgerSize, flexShrink: 0, color: "currentColor", display: "block" };
 
@@ -702,7 +702,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   headerIconBtn: {
     position: "relative",
-    padding: 8,
+    padding: 6,
     background: "none",
     border: "none",
     color: "var(--text)",
@@ -714,8 +714,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   headerIconBtnCart: {
     position: "relative",
-    padding: 8,
-    marginRight: 6,
+    padding: 6,
+    marginRight: 4,
     background: "none",
     border: "none",
     color: "var(--accent)",
