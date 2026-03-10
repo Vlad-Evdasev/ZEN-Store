@@ -1095,10 +1095,10 @@ html[data-theme="light"] .zen-app .product-card-price {
   transition: transform 0.15s ease-out;
 }
 .zen-filters-panel-body {
-  flex: 1;
+  flex: 0 0 auto;
+  max-height: min(60vh, 60dvh);
   overflow-y: auto;
   overflow-x: hidden;
-  min-height: 0;
   -webkit-overflow-scrolling: touch;
 }
 .zen-filters-panel-section {
