@@ -1113,7 +1113,7 @@ html[data-theme="light"] .zen-app .product-card-price {
 }
 .zen-filters-panel-section:last-child {
   border-bottom: none;
-  padding-bottom: 8px;
+  padding-bottom: 0;
 }
 .zen-filters-panel-section-title {
   font-size: 11px;
@@ -1314,13 +1314,13 @@ html[data-theme="light"] .zen-app .product-card-price {
   text-transform: uppercase;
 }
 .zen-filters-panel-summary {
-  padding: 0 4px 16px;
-  margin-bottom: 8px;
+  padding: 0 4px 12px;
+  margin-bottom: 0;
   border-bottom: 1px solid var(--border);
 }
 .zen-filters-panel-summary-count {
   display: block;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--text);
   margin-bottom: 8px;
@@ -1353,7 +1353,7 @@ html[data-theme="light"] .zen-app .product-card-price {
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 14px 0;
+  padding: 12px 0;
   border: none;
   background: none;
   cursor: pointer;
@@ -1454,10 +1454,10 @@ html[data-theme="light"] .zen-app .product-card-price {
 .zen-filters-panel-footer {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 0;
   padding: 16px max(20px, env(safe-area-inset-right)) 12px max(20px, env(safe-area-inset-left));
   padding-bottom: calc(12px + env(safe-area-inset-bottom));
-  margin-bottom: 44px;
   border-top: 1px solid var(--border);
   background: var(--surface);
   flex-shrink: 0;
@@ -1479,18 +1479,11 @@ html[data-theme="light"] .zen-app .product-card-price {
 }
 /* Стрелка свернуть — простая стрелка вверх по центру внизу */
 .zen-filters-panel-collapse-wrap {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 8px max(20px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
   display: flex;
   justify-content: center;
-  pointer-events: none;
+  margin-top: 12px;
+  padding-bottom: env(safe-area-inset-bottom);
   flex-shrink: 0;
-}
-.zen-filters-panel-collapse-wrap > * {
-  pointer-events: auto;
 }
 .zen-filters-panel-close-arrow {
   width: 40px;

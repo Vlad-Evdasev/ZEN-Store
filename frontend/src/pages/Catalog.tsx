@@ -482,6 +482,7 @@ export function Catalog({
           >
                 <div ref={filtersDragHandleRef} className="zen-filters-panel-header zen-filters-panel-drag-handle">
                   <span className="zen-filters-panel-drag-bar" aria-hidden />
+                  <h3 className="zen-filters-panel-title">{t(lang, "filters")}</h3>
                 </div>
                 <div className="zen-filters-panel-summary">
                   <span className="zen-filters-panel-summary-count">{displayList.length} {t(lang, "resultsCount")}</span>
@@ -632,11 +633,11 @@ export function Catalog({
               <button type="button" className="zen-filters-reset-btn" onClick={resetAllFilters}>
                 {t(lang, "resetFilters")}
               </button>
-            </div>
-            <div className="zen-filters-panel-collapse-wrap">
-              <button type="button" className="zen-filters-panel-close-arrow" onClick={closeFilters} aria-label={t(lang, "close")}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
-              </button>
+              <div className="zen-filters-panel-collapse-wrap">
+                <button type="button" className="zen-filters-panel-close-arrow" onClick={closeFilters} aria-label={t(lang, "close")}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
+                </button>
+              </div>
             </div>
           </div>
         </>
