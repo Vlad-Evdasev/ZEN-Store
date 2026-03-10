@@ -170,21 +170,38 @@ export function Catalog({
   };
 
   useEffect(() => {
-    const el = filtersPanelRef.current;
-    if (!el || !filtersOpen) return;
+    if (!filtersOpen) return;
     const onTouchMove = (e: TouchEvent) => {
-      if (panelDragActiveRef.current) {
-        e.preventDefault();
-        const dy = e.touches[0].clientY - filtersPanelTouchStartY.current;
-        const offset = Math.max(0, dy);
-        panelDragOffsetRef.current = offset;
-        el.style.transform = `translateY(${offset}px)`;
+      if (!panelDragActiveRef.current || !e.touches.length) return;
+      e.preventDefault();
+      const el = filtersPanelRef.current;
+      if (!el) return;
+      const dy = e.touches[0].clientY - filtersPanelTouchStartY.current;
+      const offset = Math.max(0, dy);
+      panelDragOffsetRef.current = offset;
+      el.style.transform = `translateY(${offset}px)`;
+    };
+    const onTouchEnd = () => {
+      if (!panelDragActiveRef.current) return;
+      const offset = panelDragOffsetRef.current;
+      panelDragActiveRef.current = false;
+      setPanelDragging(false);
+      if (offset > 0) closeFilters();
+      else {
+        setPanelDragOffset(0);
+        const el = filtersPanelRef.current;
+        if (el) el.style.transform = "";
       }
     };
-    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
+    document.addEventListener("touchend", onTouchEnd);
+    document.addEventListener("touchcancel", onTouchEnd);
     return () => {
-      el.removeEventListener("touchmove", onTouchMove);
-      el.style.transform = "";
+      document.removeEventListener("touchmove", onTouchMove);
+      document.removeEventListener("touchend", onTouchEnd);
+      document.removeEventListener("touchcancel", onTouchEnd);
+      const el = filtersPanelRef.current;
+      if (el) el.style.transform = "";
     };
   }, [filtersOpen]);
 
