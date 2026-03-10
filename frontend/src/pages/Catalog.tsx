@@ -476,7 +476,7 @@ export function Catalog({
             ref={filtersPanelRef}
             className={`zen-filters-panel ${filtersClosing ? "zen-filters-panel--closing" : ""}`}
             role="dialog"
-            aria-label={t(lang, "priceFilter")}
+            aria-label={t(lang, "filters")}
             onAnimationEnd={handleFiltersPanelAnimationEnd}
             style={!filtersClosing && panelDragY > 0 ? { transform: `translateY(${panelDragY}px)` } : undefined}
           >
