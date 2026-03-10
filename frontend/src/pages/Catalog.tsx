@@ -347,7 +347,6 @@ export function Catalog({
           >
                 <div className="zen-filters-panel-header">
                   <h3 className="zen-filters-panel-title">{t(lang, "filters")}</h3>
-                  <button type="button" className="zen-filters-panel-close" onClick={closeFilters} aria-label={t(lang, "close")}>×</button>
                 </div>
                 <div className="zen-price-filter-wrap" style={{ flexDirection: "column", alignItems: "stretch", border: "none", padding: 0 }}>
                   <span className="zen-price-filter-label" style={{ marginBottom: 10 }}>{t(lang, "priceFilter")}</span>
@@ -406,6 +405,11 @@ export function Catalog({
             <button type="button" className="zen-filters-apply-btn" onClick={closeFilters}>
               {t(lang, "apply")}
             </button>
+            <div className="zen-filters-panel-collapse-wrap">
+              <button type="button" className="zen-filters-panel-close-arrow" onClick={closeFilters} aria-label={t(lang, "close")}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+            </div>
           </div>
         </>
       )}

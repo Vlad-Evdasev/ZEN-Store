@@ -1054,11 +1054,13 @@ html[data-theme="light"] .zen-app .product-card-price {
   outline-offset: 2px;
 }
 
-/* Панель фильтров (мобил): выезжает снизу */
+/* Панель фильтров (мобил): выезжает сверху, брендовый стиль */
 .zen-filters-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   z-index: 100;
   animation: filtersOverlayFade 0.25s ease forwards;
 }
@@ -1066,23 +1068,26 @@ html[data-theme="light"] .zen-app .product-card-price {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
+  top: 0;
   max-height: 75vh;
   background: var(--surface);
-  border-radius: 16px 16px 0 0;
-  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.15);
+  border-radius: 0 0 20px 20px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
   z-index: 101;
   overflow-y: auto;
-  padding: 12px max(20px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
-  animation: filtersPanelSlide 0.35s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+  display: flex;
+  flex-direction: column;
+  padding: max(16px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+  padding-bottom: calc(max(20px, env(safe-area-inset-bottom)) + 56px);
+  animation: filtersPanelSlideFromTop 0.35s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
   touch-action: pan-y;
 }
 .zen-filters-panel--closing {
-  animation: filtersPanelSlideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: filtersPanelSlideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   transition: none;
 }
-@keyframes filtersPanelSlideDown {
-  to { transform: translateY(100%); }
+@keyframes filtersPanelSlideUp {
+  to { transform: translateY(-100%); }
 }
 .zen-filters-overlay--closing {
   animation: filtersOverlayFadeOut 0.25s ease forwards;
@@ -1093,46 +1098,68 @@ html[data-theme="light"] .zen-app .product-card-price {
 .zen-filters-panel-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
+  justify-content: center;
+  margin-bottom: 24px;
   padding: 0 4px;
 }
-.zen-filters-panel-close {
-  width: 44px;
-  height: 44px;
+.zen-app .zen-filters-panel-title {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  margin: 0;
+  color: var(--text);
+  text-transform: uppercase;
+}
+/* Стрелка свернуть — по центру внизу панели */
+.zen-filters-panel-collapse-wrap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 12px max(20px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.zen-filters-panel-collapse-wrap > * {
+  pointer-events: auto;
+}
+.zen-filters-panel-close-arrow {
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
   border: none;
   border-radius: 50%;
-  background: transparent;
-  color: var(--muted);
-  font-size: 28px;
-  line-height: 1;
+  background: var(--surface-elevated);
+  color: var(--text);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   cursor: pointer;
-  transition: color 0.2s ease, background 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
   -webkit-tap-highlight-color: transparent;
 }
-.zen-filters-panel-close:hover {
-  color: var(--text);
-  background: var(--surface-elevated);
+.zen-filters-panel-close-arrow:hover {
+  background: var(--border);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  transform: scale(1.05);
+}
+.zen-filters-panel-close-arrow:active {
+  transform: scale(0.98);
+}
+.zen-filters-panel-close-arrow svg {
+  width: 20px;
+  height: 20px;
 }
 @keyframes filtersOverlayFade {
   from { opacity: 0; }
   to { opacity: 1; }
 }
-@keyframes filtersPanelSlide {
-  from { transform: translateY(100%); }
+@keyframes filtersPanelSlideFromTop {
+  from { transform: translateY(-100%); }
   to { transform: translateY(0); }
-}
-.zen-app .zen-filters-panel-title {
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 18px;
-  font-weight: 400;
-  letter-spacing: 0.06em;
-  margin: 0;
-  color: var(--text);
 }
 .zen-filters-chip-row {
   display: flex;
