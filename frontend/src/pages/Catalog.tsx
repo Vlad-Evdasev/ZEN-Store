@@ -139,32 +139,53 @@ export function Catalog({
     setFiltersClosing(true);
   };
 
+  const panelDragOffsetRef = useRef(0);
+
   const handleFiltersPanelTouchStart = (e: React.TouchEvent) => {
     filtersPanelTouchStartY.current = e.touches[0].clientY;
     panelDragActiveRef.current = true;
+    panelDragOffsetRef.current = 0;
     setPanelDragging(true);
     setPanelDragOffset(0);
+    const el = filtersPanelRef.current;
+    if (el) el.style.transform = "";
   };
+
   const handleFiltersPanelTouchMove = (e: React.TouchEvent) => {
     const dy = e.touches[0].clientY - filtersPanelTouchStartY.current;
-    if (dy > 0) setPanelDragOffset(dy);
+    const offset = Math.max(0, dy);
+    panelDragOffsetRef.current = offset;
   };
   const handleFiltersPanelTouchEnd = () => {
-    const offset = panelDragOffset;
+    const offset = panelDragOffsetRef.current;
     panelDragActiveRef.current = false;
     setPanelDragging(false);
-    if (offset > 0) closeFilters();
-    else setPanelDragOffset(0);
+    if (offset > 0) {
+      closeFilters();
+    } else {
+      setPanelDragOffset(0);
+      const el = filtersPanelRef.current;
+      if (el) el.style.transform = "";
+    }
   };
 
   useEffect(() => {
     const el = filtersPanelRef.current;
     if (!el || !filtersOpen) return;
     const onTouchMove = (e: TouchEvent) => {
-      if (panelDragActiveRef.current) e.preventDefault();
+      if (panelDragActiveRef.current) {
+        e.preventDefault();
+        const dy = e.touches[0].clientY - filtersPanelTouchStartY.current;
+        const offset = Math.max(0, dy);
+        panelDragOffsetRef.current = offset;
+        el.style.transform = `translateY(${offset}px)`;
+      }
     };
     el.addEventListener("touchmove", onTouchMove, { passive: false });
-    return () => el.removeEventListener("touchmove", onTouchMove);
+    return () => {
+      el.removeEventListener("touchmove", onTouchMove);
+      el.style.transform = "";
+    };
   }, [filtersOpen]);
 
   const handleFiltersPanelAnimationEnd = () => {
@@ -378,7 +399,7 @@ export function Catalog({
             className={`zen-filters-panel ${filtersClosing ? "zen-filters-panel--closing" : ""} ${panelDragging ? "zen-filters-panel--dragging" : ""}`}
             role="dialog"
             aria-label={t(lang, "priceFilter")}
-            style={!filtersClosing && panelDragOffset > 0 ? { transform: `translateY(${panelDragOffset}px)` } : undefined}
+            style={!filtersClosing && !panelDragging && panelDragOffset > 0 ? { transform: `translateY(${panelDragOffset}px)` } : undefined}
             onTouchStart={handleFiltersPanelTouchStart}
             onTouchMove={handleFiltersPanelTouchMove}
             onTouchEnd={handleFiltersPanelTouchEnd}
