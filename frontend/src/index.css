@@ -1096,7 +1096,8 @@ html[data-theme="light"] .zen-app .product-card-price {
 }
 .zen-filters-panel-body {
   flex: 0 0 auto;
-  max-height: min(60vh, 60dvh);
+  min-height: 0;
+  max-height: min(60vh, 60dvh, calc(90vh - 220px), calc(90dvh - 220px));
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
@@ -1456,8 +1457,8 @@ html[data-theme="light"] .zen-app .product-card-price {
   flex-direction: column;
   align-items: center;
   gap: 0;
-  padding: 16px max(20px, env(safe-area-inset-right)) 12px max(20px, env(safe-area-inset-left));
-  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  padding: 16px max(20px, env(safe-area-inset-right)) 8px max(20px, env(safe-area-inset-left));
+  padding-bottom: calc(8px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--border);
   background: var(--surface);
   flex-shrink: 0;
@@ -1477,12 +1478,11 @@ html[data-theme="light"] .zen-app .product-card-price {
 .zen-filters-reset-btn:hover {
   color: var(--text);
 }
-/* Стрелка свернуть — простая стрелка вверх по центру внизу */
+/* Стрелка свернуть — фиксированный зазор до кнопки «Сбросить всё» */
 .zen-filters-panel-collapse-wrap {
   display: flex;
   justify-content: center;
-  margin-top: 12px;
-  padding-bottom: env(safe-area-inset-bottom);
+  margin-top: 10px;
   flex-shrink: 0;
 }
 .zen-filters-panel-close-arrow {
