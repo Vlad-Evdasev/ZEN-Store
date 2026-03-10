@@ -348,66 +348,70 @@ export function Catalog({
                 <div className="zen-filters-panel-header">
                   <h3 className="zen-filters-panel-title">{t(lang, "filters")}</h3>
                 </div>
-                <div className="zen-price-filter-wrap" style={{ flexDirection: "column", alignItems: "stretch", border: "none", padding: 0 }}>
-                  <span className="zen-price-filter-label" style={{ marginBottom: 10 }}>{t(lang, "priceFilter")}</span>
-                  <div className="zen-price-row">
-                    <div className="zen-price-sort-segmented" role="group">
-                      <button
-                        type="button"
-                        className={`zen-price-sort-btn ${priceSort === "asc" ? "zen-price-sort-btn-active" : ""}`}
-                        onClick={() => setPriceSort((s) => (s === "asc" ? "none" : "asc"))}
-                        title={t(lang, "sortPriceAsc")}
-                        aria-pressed={priceSort === "asc"}
-                      >
-                        <span className="zen-price-sort-icon" aria-hidden>↑</span>
-                      </button>
-                      <button
-                        type="button"
-                        className={`zen-price-sort-btn ${priceSort === "desc" ? "zen-price-sort-btn-active" : ""}`}
-                        onClick={() => setPriceSort((s) => (s === "desc" ? "none" : "desc"))}
-                        title={t(lang, "sortPriceDesc")}
-                        aria-pressed={priceSort === "desc"}
-                      >
-                        <span className="zen-price-sort-icon" aria-hidden>↓</span>
-                      </button>
+                <div className="zen-filters-panel-body">
+                  <section className="zen-filters-panel-section">
+                    <h4 className="zen-filters-panel-section-title">{t(lang, "priceFilter")}</h4>
+                    <div className="zen-filters-panel-price-row">
+                      <div className="zen-price-sort-segmented zen-filters-panel-sort" role="group">
+                        <button
+                          type="button"
+                          className={`zen-price-sort-btn ${priceSort === "asc" ? "zen-price-sort-btn-active" : ""}`}
+                          onClick={() => setPriceSort((s) => (s === "asc" ? "none" : "asc"))}
+                          title={t(lang, "sortPriceAsc")}
+                          aria-pressed={priceSort === "asc"}
+                        >
+                          <span className="zen-price-sort-icon" aria-hidden>↑</span>
+                        </button>
+                        <button
+                          type="button"
+                          className={`zen-price-sort-btn ${priceSort === "desc" ? "zen-price-sort-btn-active" : ""}`}
+                          onClick={() => setPriceSort((s) => (s === "desc" ? "none" : "desc"))}
+                          title={t(lang, "sortPriceDesc")}
+                          aria-pressed={priceSort === "desc"}
+                        >
+                          <span className="zen-price-sort-icon" aria-hidden>↓</span>
+                        </button>
+                      </div>
+                      <div className="zen-filters-panel-inputs">
+                        <input type="number" className="zen-filters-panel-input" min={0} step={100} placeholder={t(lang, "priceFrom")} value={priceMin} onChange={(e) => setPriceMin(e.target.value)} />
+                        <span className="zen-filters-panel-input-sep" aria-hidden>–</span>
+                        <input type="number" className="zen-filters-panel-input" min={0} step={100} placeholder={t(lang, "priceTo")} value={priceMax} onChange={(e) => setPriceMax(e.target.value)} />
+                      </div>
                     </div>
-                    <input type="number" className="zen-price-input" min={0} step={100} placeholder={t(lang, "priceFrom")} value={priceMin} onChange={(e) => setPriceMin(e.target.value)} />
-                    <input type="number" className="zen-price-input" min={0} step={100} placeholder={t(lang, "priceTo")} value={priceMax} onChange={(e) => setPriceMax(e.target.value)} />
-                  </div>
-                </div>
-                {uniqueBrands.length > 0 && (
-                  <>
-                    <span className="zen-price-filter-label" style={{ marginBottom: 8, display: "block" }}>{t(lang, "brand")}</span>
-                    <div className="zen-filters-chip-row" style={{ marginBottom: 16 }}>
-                      <button type="button" className={`zen-filters-chip ${selectedBrand === "all" ? "zen-filters-chip-active" : ""}`} onClick={() => setSelectedBrand("all")}>{t(lang, "all")}</button>
-                      {uniqueBrands.map((b) => (
-                        <button key={b} type="button" className={`zen-filters-chip ${selectedBrand === b ? "zen-filters-chip-active" : ""}`} onClick={() => setSelectedBrand(b)}>{b}</button>
-                      ))}
+                  </section>
+                  {uniqueBrands.length > 0 && (
+                    <section className="zen-filters-panel-section">
+                      <h4 className="zen-filters-panel-section-title">{t(lang, "brand")}</h4>
+                      <div className="zen-filters-chip-row">
+                        <button type="button" className={`zen-filters-chip ${selectedBrand === "all" ? "zen-filters-chip-active" : ""}`} onClick={() => setSelectedBrand("all")}>{t(lang, "all")}</button>
+                        {uniqueBrands.map((b) => (
+                          <button key={b} type="button" className={`zen-filters-chip ${selectedBrand === b ? "zen-filters-chip-active" : ""}`} onClick={() => setSelectedBrand(b)}>{b}</button>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+                  <section className="zen-filters-panel-section">
+                    <h4 className="zen-filters-panel-section-title">{t(lang, "categories")}</h4>
+                    <div className="zen-filters-chip-row">
+                      {categoryTabs.map(({ code, label }) => {
+                        const isSelected = code === "all" ? selectedCategories.has("all") : selectedCategories.has(code);
+                        return (
+                          <button
+                            key={code}
+                            type="button"
+                            className={`zen-filters-chip ${isSelected ? "zen-filters-chip-active" : ""}`}
+                            onClick={() => { handleCategoryClick(code); }}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
                     </div>
-                  </>
-                )}
-                <span className="zen-price-filter-label" style={{ marginBottom: 8, display: "block" }}>{t(lang, "categories")}</span>
-                <div className="zen-filters-chip-row" style={{ marginBottom: 16 }}>
-                  {categoryTabs.map(({ code, label }) => {
-                    const isSelected = code === "all" ? selectedCategories.has("all") : selectedCategories.has(code);
-                    return (
-                      <button
-                        key={code}
-                        type="button"
-                        className={`zen-filters-chip ${isSelected ? "zen-filters-chip-active" : ""}`}
-                        onClick={() => { handleCategoryClick(code); }}
-                      >
-                        {label}
-                      </button>
-                    );
-                  })}
+                  </section>
                 </div>
-            <button type="button" className="zen-filters-apply-btn" onClick={closeFilters}>
-              {t(lang, "apply")}
-            </button>
             <div className="zen-filters-panel-collapse-wrap">
               <button type="button" className="zen-filters-panel-close-arrow" onClick={closeFilters} aria-label={t(lang, "close")}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
               </button>
             </div>
           </div>

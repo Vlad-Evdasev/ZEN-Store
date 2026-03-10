@@ -115,32 +115,38 @@ export function NewArrivalsPage({
                 <div className="zen-filters-panel-header">
                   <h3 className="zen-filters-panel-title">{t(lang, "filters")}</h3>
                 </div>
-                <div className="zen-price-filter-wrap" style={{ flexDirection: "column", alignItems: "stretch", border: "none", padding: 0 }}>
-                  <span className="zen-price-filter-label" style={{ marginBottom: 8 }}>{t(lang, "priceFilter")}</span>
-                  <div className="zen-price-sort-segmented" style={{ marginBottom: 16 }}>
-                    <div className={`zen-price-sort-segment ${priceSort === "asc" ? "zen-price-sort-segment-active" : ""}`} onClick={() => setPriceSort((s) => (s === "asc" ? "none" : "asc"))}>↑</div>
-                    <div className={`zen-price-sort-segment ${priceSort === "desc" ? "zen-price-sort-segment-active" : ""}`} onClick={() => setPriceSort((s) => (s === "desc" ? "none" : "desc"))}>↓</div>
-                  </div>
-                  <div className="zen-price-inputs" style={{ marginBottom: 20 }}>
-                    <input type="number" className="zen-price-input" min={0} step={100} placeholder={t(lang, "priceFrom")} value={priceMin} onChange={(e) => setPriceMin(e.target.value)} />
-                    <input type="number" className="zen-price-input" min={0} step={100} placeholder={t(lang, "priceTo")} value={priceMax} onChange={(e) => setPriceMax(e.target.value)} />
-                  </div>
+                <div className="zen-filters-panel-body">
+                  <section className="zen-filters-panel-section">
+                    <h4 className="zen-filters-panel-section-title">{t(lang, "priceFilter")}</h4>
+                    <div className="zen-filters-panel-price-row">
+                      <div className="zen-price-sort-segmented zen-filters-panel-sort" role="group">
+                        <button type="button" className={`zen-price-sort-btn ${priceSort === "asc" ? "zen-price-sort-btn-active" : ""}`} onClick={() => setPriceSort((s) => (s === "asc" ? "none" : "asc"))} title={t(lang, "sortPriceAsc")} aria-pressed={priceSort === "asc"}><span className="zen-price-sort-icon" aria-hidden>↑</span></button>
+                        <button type="button" className={`zen-price-sort-btn ${priceSort === "desc" ? "zen-price-sort-btn-active" : ""}`} onClick={() => setPriceSort((s) => (s === "desc" ? "none" : "desc"))} title={t(lang, "sortPriceDesc")} aria-pressed={priceSort === "desc"}><span className="zen-price-sort-icon" aria-hidden>↓</span></button>
+                      </div>
+                      <div className="zen-filters-panel-inputs">
+                        <input type="number" className="zen-filters-panel-input" min={0} step={100} placeholder={t(lang, "priceFrom")} value={priceMin} onChange={(e) => setPriceMin(e.target.value)} />
+                        <span className="zen-filters-panel-input-sep" aria-hidden>–</span>
+                        <input type="number" className="zen-filters-panel-input" min={0} step={100} placeholder={t(lang, "priceTo")} value={priceMax} onChange={(e) => setPriceMax(e.target.value)} />
+                      </div>
+                    </div>
+                  </section>
+                  <section className="zen-filters-panel-section">
+                    <h4 className="zen-filters-panel-section-title">{t(lang, "categories")}</h4>
+                    <div className="zen-filters-chip-row">
+                      {categoryTabs.map(({ code, label }) => {
+                        const isSelected = code === "all" ? selectedCategories.has("all") : selectedCategories.has(code);
+                        return (
+                          <button key={code} type="button" className={`zen-filters-chip ${isSelected ? "zen-filters-chip-active" : ""}`} onClick={() => handleCategoryClick(code)}>
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
                 </div>
-                <span className="zen-price-filter-label" style={{ marginBottom: 8, display: "block" }}>{t(lang, "categories")}</span>
-                <div className="zen-filters-chip-row" style={{ marginBottom: 16 }}>
-                  {categoryTabs.map(({ code, label }) => {
-                    const isSelected = code === "all" ? selectedCategories.has("all") : selectedCategories.has(code);
-                    return (
-                      <button key={code} type="button" className={`zen-filters-chip ${isSelected ? "zen-filters-chip-active" : ""}`} onClick={() => handleCategoryClick(code)}>
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
-            <button type="button" className="zen-filters-apply-btn" onClick={() => setFiltersOpen(false)}>{t(lang, "apply")}</button>
             <div className="zen-filters-panel-collapse-wrap">
               <button type="button" className="zen-filters-panel-close-arrow" onClick={() => setFiltersOpen(false)} aria-label={t(lang, "close")}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
               </button>
             </div>
           </div>
