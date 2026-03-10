@@ -858,38 +858,55 @@ html[data-theme="light"] .zen-app .product-card-price {
   color: var(--muted);
   flex-shrink: 0;
 }
+/* Одна строка: сортировка + поля «От» и «До» */
+.zen-app .zen-price-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
 .zen-app .zen-price-sort-segmented {
   display: flex;
   flex-shrink: 0;
-  background: var(--surface-elevated);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  overflow: hidden;
+  gap: 6px;
 }
-.zen-app .zen-price-sort-segment {
+.zen-app .zen-price-sort-btn {
+  width: 44px;
+  height: 44px;
   min-width: 44px;
-  padding: 10px 14px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface-elevated);
   color: var(--muted);
-  font-size: 14px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
   cursor: pointer;
-  user-select: none;
   -webkit-tap-highlight-color: transparent;
   outline: none;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease, transform 0.15s ease;
 }
-.zen-app .zen-price-sort-segment:hover {
+.zen-app .zen-price-sort-btn:hover {
   color: var(--text);
+  border-color: var(--muted);
   background: var(--surface);
 }
-.zen-app .zen-price-sort-segment-active {
-  background: var(--accent) !important;
-  color: #fff !important;
-  border: none;
+.zen-app .zen-price-sort-btn-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.zen-app .zen-price-sort-btn-active:hover {
+  color: #fff;
+  filter: brightness(1.1);
+}
+.zen-app .zen-price-sort-icon {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1;
 }
 .zen-app .zen-price-inputs {
   display: flex;
@@ -897,10 +914,12 @@ html[data-theme="light"] .zen-app .product-card-price {
   flex-wrap: wrap;
   align-items: center;
 }
+.zen-app .zen-price-row .zen-price-input {
+  flex: 1;
+  min-width: 80px;
+  max-width: 100px;
+}
 .zen-app .zen-price-input {
-  width: 100%;
-  min-width: 0;
-  max-width: 120px;
   min-height: 44px;
   padding: 10px 14px;
   background: var(--surface-elevated);
@@ -1056,6 +1075,19 @@ html[data-theme="light"] .zen-app .product-card-price {
   overflow-y: auto;
   padding: 12px max(20px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
   animation: filtersPanelSlide 0.35s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+  touch-action: pan-y;
+}
+.zen-filters-panel--closing {
+  animation: filtersPanelSlideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+@keyframes filtersPanelSlideDown {
+  to { transform: translateY(100%); }
+}
+.zen-filters-overlay--closing {
+  animation: filtersOverlayFadeOut 0.25s ease forwards;
+}
+@keyframes filtersOverlayFadeOut {
+  to { opacity: 0; }
 }
 .zen-filters-panel-header {
   display: flex;

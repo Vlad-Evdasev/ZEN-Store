@@ -59,8 +59,10 @@ export function Catalog({
   const setSelectedCategories = onSelectedCategoriesChange ?? setInternalCategories;
   const [reviewStats, setReviewStats] = useState<ProductReviewStats>({});
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filtersClosing, setFiltersClosing] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState<string>("all");
   const filtersPanelTouchStartY = useRef<number>(0);
+  const filtersPanelRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const marqueePausedRef = useRef(false);
   const pauseTimeoutRef = useRef<number | null>(null);
@@ -120,6 +122,25 @@ export function Catalog({
   useEffect(() => {
     getProductReviewStats().then(setReviewStats).catch(console.error);
   }, []);
+
+  useEffect(() => {
+    if (filtersOpen || filtersClosing) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => { document.body.style.overflow = prev; };
+    }
+  }, [filtersOpen, filtersClosing]);
+
+  const closeFilters = () => {
+    if (filtersClosing) return;
+    setFiltersClosing(true);
+  };
+  const handleFiltersPanelAnimationEnd = () => {
+    if (filtersClosing) {
+      setFiltersOpen(false);
+      setFiltersClosing(false);
+    }
+  };
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -318,36 +339,46 @@ export function Catalog({
 
       {showPriceFilter && filtersOpen && (
         <>
-          <div className="zen-filters-overlay" onClick={() => setFiltersOpen(false)} aria-hidden />
+          <div className={`zen-filters-overlay ${filtersClosing ? "zen-filters-overlay--closing" : ""}`} onClick={closeFilters} aria-hidden />
           <div
-            className="zen-filters-panel"
+            ref={filtersPanelRef}
+            className={`zen-filters-panel ${filtersClosing ? "zen-filters-panel--closing" : ""}`}
             role="dialog"
             aria-label={t(lang, "priceFilter")}
             onTouchStart={(e) => { filtersPanelTouchStartY.current = e.touches[0].clientY; }}
             onTouchEnd={(e) => {
               const dy = e.changedTouches[0].clientY - filtersPanelTouchStartY.current;
-              if (dy > 60) setFiltersOpen(false);
+              if (dy > 60) closeFilters();
             }}
+            onAnimationEnd={handleFiltersPanelAnimationEnd}
           >
                 <div className="zen-filters-panel-header">
                   <h3 className="zen-filters-panel-title">{t(lang, "filters")}</h3>
-                  <button type="button" className="zen-filters-panel-close" onClick={() => setFiltersOpen(false)} aria-label={t(lang, "close")}>×</button>
+                  <button type="button" className="zen-filters-panel-close" onClick={closeFilters} aria-label={t(lang, "close")}>×</button>
                 </div>
                 <div className="zen-price-filter-wrap" style={{ flexDirection: "column", alignItems: "stretch", border: "none", padding: 0 }}>
-                  <span className="zen-price-filter-label" style={{ marginBottom: 8 }}>{t(lang, "priceFilter")}</span>
-                  <div className="zen-price-sort-segmented" style={{ marginBottom: 16 }} role="group">
-                    <div
-                      className={`zen-price-sort-segment ${priceSort === "asc" ? "zen-price-sort-segment-active" : ""}`}
-                      onClick={() => setPriceSort((s) => (s === "asc" ? "none" : "asc"))}
-                      title={t(lang, "sortPriceAsc")}
-                    >↑</div>
-                    <div
-                      className={`zen-price-sort-segment ${priceSort === "desc" ? "zen-price-sort-segment-active" : ""}`}
-                      onClick={() => setPriceSort((s) => (s === "desc" ? "none" : "desc"))}
-                      title={t(lang, "sortPriceDesc")}
-                    >↓</div>
-                  </div>
-                  <div className="zen-price-inputs" style={{ marginBottom: 20 }}>
+                  <span className="zen-price-filter-label" style={{ marginBottom: 10 }}>{t(lang, "priceFilter")}</span>
+                  <div className="zen-price-row">
+                    <div className="zen-price-sort-segmented" role="group">
+                      <button
+                        type="button"
+                        className={`zen-price-sort-btn ${priceSort === "asc" ? "zen-price-sort-btn-active" : ""}`}
+                        onClick={() => setPriceSort((s) => (s === "asc" ? "none" : "asc"))}
+                        title={t(lang, "sortPriceAsc")}
+                        aria-pressed={priceSort === "asc"}
+                      >
+                        <span className="zen-price-sort-icon" aria-hidden>↑</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`zen-price-sort-btn ${priceSort === "desc" ? "zen-price-sort-btn-active" : ""}`}
+                        onClick={() => setPriceSort((s) => (s === "desc" ? "none" : "desc"))}
+                        title={t(lang, "sortPriceDesc")}
+                        aria-pressed={priceSort === "desc"}
+                      >
+                        <span className="zen-price-sort-icon" aria-hidden>↓</span>
+                      </button>
+                    </div>
                     <input type="number" className="zen-price-input" min={0} step={100} placeholder={t(lang, "priceFrom")} value={priceMin} onChange={(e) => setPriceMin(e.target.value)} />
                     <input type="number" className="zen-price-input" min={0} step={100} placeholder={t(lang, "priceTo")} value={priceMax} onChange={(e) => setPriceMax(e.target.value)} />
                   </div>
@@ -379,7 +410,7 @@ export function Catalog({
                     );
                   })}
                 </div>
-            <button type="button" className="zen-filters-apply-btn" onClick={() => setFiltersOpen(false)}>
+            <button type="button" className="zen-filters-apply-btn" onClick={closeFilters}>
               {t(lang, "apply")}
             </button>
           </div>
