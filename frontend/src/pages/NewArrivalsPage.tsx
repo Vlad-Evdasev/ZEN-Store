@@ -119,9 +119,9 @@ export function NewArrivalsPage({
                   <section className="zen-filters-panel-section">
                     <h4 className="zen-filters-panel-section-title">{t(lang, "priceFilter")}</h4>
                     <div className="zen-filters-panel-price-row">
-                      <div className="zen-price-sort-segmented zen-filters-panel-sort" role="group">
-                        <button type="button" className={`zen-price-sort-btn ${priceSort === "asc" ? "zen-price-sort-btn-active" : ""}`} onClick={() => setPriceSort((s) => (s === "asc" ? "none" : "asc"))} title={t(lang, "sortPriceAsc")} aria-pressed={priceSort === "asc"}><span className="zen-price-sort-icon" aria-hidden>↑</span></button>
-                        <button type="button" className={`zen-price-sort-btn ${priceSort === "desc" ? "zen-price-sort-btn-active" : ""}`} onClick={() => setPriceSort((s) => (s === "desc" ? "none" : "desc"))} title={t(lang, "sortPriceDesc")} aria-pressed={priceSort === "desc"}><span className="zen-price-sort-icon" aria-hidden>↓</span></button>
+                      <div className="zen-price-sort-segmented zen-filters-panel-sort" role="group" aria-label={t(lang, "priceFilter")}>
+                        <button type="button" className={`zen-price-sort-btn zen-price-sort-btn--first ${priceSort === "asc" ? "zen-price-sort-btn-active" : ""}`} onClick={() => setPriceSort((s) => (s === "asc" ? "none" : "asc"))} title={t(lang, "sortPriceAsc")} aria-pressed={priceSort === "asc"}><span className="zen-price-sort-icon" aria-hidden>↓</span></button>
+                        <button type="button" className={`zen-price-sort-btn zen-price-sort-btn--last ${priceSort === "desc" ? "zen-price-sort-btn-active" : ""}`} onClick={() => setPriceSort((s) => (s === "desc" ? "none" : "desc"))} title={t(lang, "sortPriceDesc")} aria-pressed={priceSort === "desc"}><span className="zen-price-sort-icon" aria-hidden>↑</span></button>
                       </div>
                       <div className="zen-filters-panel-inputs">
                         <input type="number" className="zen-filters-panel-input" min={0} step={100} placeholder={t(lang, "priceFrom")} value={priceMin} onChange={(e) => setPriceMin(e.target.value)} />

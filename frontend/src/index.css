@@ -867,9 +867,13 @@ html[data-theme="light"] .zen-app .product-card-price {
   margin-bottom: 20px;
 }
 .zen-app .zen-price-sort-segmented {
-  display: flex;
+  display: inline-flex;
   flex-shrink: 0;
-  gap: 6px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 4px;
+  gap: 0;
 }
 .zen-app .zen-price-sort-btn {
   width: 44px;
@@ -880,28 +884,34 @@ html[data-theme="light"] .zen-app .product-card-price {
   align-items: center;
   justify-content: center;
   padding: 0;
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  background: var(--surface-elevated);
+  border: none;
+  border-radius: 10px;
+  background: transparent;
   color: var(--muted);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   outline: none;
-  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+  transition: color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+}
+.zen-app .zen-price-sort-btn--first {
+  border-radius: 10px 0 0 10px;
+}
+.zen-app .zen-price-sort-btn--last {
+  border-radius: 0 10px 10px 0;
 }
 .zen-app .zen-price-sort-btn:hover {
   color: var(--text);
-  border-color: var(--muted);
-  background: var(--surface);
+  background: rgba(0, 0, 0, 0.04);
 }
 .zen-app .zen-price-sort-btn-active {
   background: var(--accent);
-  border-color: var(--accent);
   color: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
 }
 .zen-app .zen-price-sort-btn-active:hover {
   color: #fff;
-  filter: brightness(1.1);
+  background: var(--accent-hover, var(--accent));
+  filter: none;
 }
 .zen-app .zen-price-sort-icon {
   font-size: 18px;
