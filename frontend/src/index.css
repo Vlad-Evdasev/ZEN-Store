@@ -1079,14 +1079,14 @@ html[data-theme="light"] .zen-app .product-card-price {
   left: 0;
   right: 0;
   top: 0;
-  height: 100vh;
-  height: 100dvh;
-  max-height: none;
+  height: fit-content;
+  max-height: min(90vh, 90dvh);
   background: var(--surface);
-  border-radius: 0;
+  border-radius: 0 0 20px 20px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
   z-index: 101;
   overflow: hidden;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   padding: max(16px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) 0 max(20px, env(safe-area-inset-left));
@@ -1097,7 +1097,9 @@ html[data-theme="light"] .zen-app .product-card-price {
 .zen-filters-panel-body {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   min-height: 0;
+  -webkit-overflow-scrolling: touch;
 }
 .zen-filters-panel-section {
   padding: 20px 0;
@@ -1125,6 +1127,7 @@ html[data-theme="light"] .zen-app .product-card-price {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  min-width: 0;
 }
 .zen-filters-price-range-row {
   display: flex;
@@ -1170,8 +1173,61 @@ html[data-theme="light"] .zen-app .product-card-price {
 }
 .zen-filters-price-sort-caption {
   font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
   color: var(--muted);
   flex-shrink: 0;
+}
+/* Кнопки сортировки: технологичный сегментированный вид */
+.zen-filters-sort-segmented {
+  display: inline-flex;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.zen-filters-sort-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.zen-filters-sort-btn:hover {
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.04);
+}
+.zen-filters-sort-btn-active {
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--border);
+}
+.zen-filters-sort-btn-active:hover {
+  color: var(--accent);
+  background: var(--surface);
+}
+.zen-filters-sort-icon {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  opacity: 0.9;
+}
+.zen-filters-sort-text {
+  white-space: nowrap;
 }
 .zen-filters-panel-price-row {
   display: flex;
@@ -1340,17 +1396,21 @@ html[data-theme="light"] .zen-app .product-card-price {
 }
 .zen-filters-panel-section--accordion .zen-filters-panel-section-content {
   padding-bottom: 20px;
+  overflow-x: hidden;
+  min-width: 0;
 }
 .zen-filters-price-slider {
   position: relative;
   height: 32px;
   margin: 16px 0 8px;
+  padding: 0 14px;
   touch-action: none;
+  box-sizing: border-box;
 }
 .zen-filters-price-slider-track {
   position: absolute;
-  left: 0;
-  right: 0;
+  left: 14px;
+  right: 14px;
   top: 50%;
   transform: translateY(-50%);
   height: 6px;
@@ -1379,6 +1439,7 @@ html[data-theme="light"] .zen-app .product-card-price {
   cursor: grab;
   z-index: 1;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
 }
 .zen-filters-price-slider-thumb:active {
   cursor: grabbing;

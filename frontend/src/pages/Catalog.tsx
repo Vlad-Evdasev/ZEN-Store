@@ -318,11 +318,14 @@ export function Catalog({
   const priceMaxPercent = ((priceMaxNum - catalogPriceMin) / priceRange) * 100;
   const priceRangePercent = ((priceMaxNum - priceMinNum) / priceRange) * 100;
 
+  const SLIDER_PAD = 14;
   const handlePriceSliderTrack = (clientX: number) => {
     const track = priceSliderTrackRef.current;
     if (!track) return;
     const rect = track.getBoundingClientRect();
-    const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const trackLeft = rect.left + SLIDER_PAD;
+    const trackWidth = rect.width - SLIDER_PAD * 2;
+    const percent = trackWidth > 0 ? Math.max(0, Math.min(1, (clientX - trackLeft) / trackWidth)) : 0;
     const value = Math.round(catalogPriceMin + percent * (catalogPriceMax - catalogPriceMin));
     const thumb = sliderActiveThumbRef.current;
     if (thumb === "min") {
@@ -536,12 +539,13 @@ export function Catalog({
                             if (e.button !== 0) return;
                             const rect = priceSliderTrackRef.current?.getBoundingClientRect();
                             if (!rect) return;
-                            const x = e.clientX;
-                            const pos = (x - rect.left) / rect.width;
+                            const trackLeft = rect.left + SLIDER_PAD;
+                            const trackWidth = rect.width - SLIDER_PAD * 2;
+                            const pos = trackWidth > 0 ? (e.clientX - trackLeft) / trackWidth : 0;
                             const toMin = Math.abs(pos - priceMinPercent / 100);
                             const toMax = Math.abs(pos - priceMaxPercent / 100);
                             sliderActiveThumbRef.current = toMin <= toMax ? "min" : "max";
-                            handlePriceSliderTrack(x);
+                            handlePriceSliderTrack(e.clientX);
                             (e.target as HTMLElement).setPointerCapture(e.pointerId);
                           }}
                           onPointerMove={(e) => {
@@ -551,34 +555,36 @@ export function Catalog({
                           onPointerLeave={() => { sliderActiveThumbRef.current = null; }}
                         >
                           <div className="zen-filters-price-slider-track" />
-                          <div className="zen-filters-price-slider-range" style={{ left: `${priceMinPercent}%`, width: `${priceRangePercent}%` }} />
-                          <div className="zen-filters-price-slider-thumb zen-filters-price-slider-thumb--min" style={{ left: `${priceMinPercent}%` }} onPointerDown={(e) => { e.stopPropagation(); sliderActiveThumbRef.current = "min"; priceSliderTrackRef.current?.setPointerCapture(e.pointerId); }} />
-                          <div className="zen-filters-price-slider-thumb zen-filters-price-slider-thumb--max" style={{ left: `${priceMaxPercent}%` }} onPointerDown={(e) => { e.stopPropagation(); sliderActiveThumbRef.current = "max"; priceSliderTrackRef.current?.setPointerCapture(e.pointerId); }} />
+                          <div className="zen-filters-price-slider-range" style={{ left: `calc(14px + (100% - 28px) * ${priceMinPercent / 100})`, width: `calc((100% - 28px) * ${priceRangePercent / 100})` }} />
+                          <div className="zen-filters-price-slider-thumb zen-filters-price-slider-thumb--min" style={{ left: `calc(14px + (100% - 28px) * ${priceMinPercent / 100})` }} onPointerDown={(e) => { e.stopPropagation(); sliderActiveThumbRef.current = "min"; priceSliderTrackRef.current?.setPointerCapture(e.pointerId); }} />
+                          <div className="zen-filters-price-slider-thumb zen-filters-price-slider-thumb--max" style={{ left: `calc(14px + (100% - 28px) * ${priceMaxPercent / 100})` }} onPointerDown={(e) => { e.stopPropagation(); sliderActiveThumbRef.current = "max"; priceSliderTrackRef.current?.setPointerCapture(e.pointerId); }} />
                         </div>
                         <div className="zen-filters-price-slider-labels">
                           <span>{priceMinNum}</span>
                           <span>{priceMaxNum}</span>
                         </div>
                         <div className="zen-filters-price-sort-row">
-                          <span className="zen-filters-price-sort-caption">{t(lang, "sortPriceNoSort")}</span>
-                          <div className="zen-price-sort-segmented zen-filters-panel-sort" role="group" aria-label={t(lang, "priceFilter")}>
+                          <span className="zen-filters-price-sort-caption">{t(lang, "sortOrderLabel")}</span>
+                          <div className="zen-filters-sort-segmented" role="group" aria-label={t(lang, "priceFilter")}>
                             <button
                               type="button"
-                              className={`zen-price-sort-btn zen-price-sort-btn--first ${priceSort === "asc" ? "zen-price-sort-btn-active" : ""}`}
+                              className={`zen-filters-sort-btn ${priceSort === "asc" ? "zen-filters-sort-btn-active" : ""}`}
                               onClick={() => setPriceSort((s) => (s === "asc" ? "none" : "asc"))}
                               title={t(lang, "sortPriceAsc")}
                               aria-pressed={priceSort === "asc"}
                             >
-                              <span className="zen-price-sort-icon" aria-hidden>↓</span>
+                              <span className="zen-filters-sort-icon" aria-hidden>↑</span>
+                              <span className="zen-filters-sort-text">{t(lang, "sortAscShort")}</span>
                             </button>
                             <button
                               type="button"
-                              className={`zen-price-sort-btn zen-price-sort-btn--last ${priceSort === "desc" ? "zen-price-sort-btn-active" : ""}`}
+                              className={`zen-filters-sort-btn ${priceSort === "desc" ? "zen-filters-sort-btn-active" : ""}`}
                               onClick={() => setPriceSort((s) => (s === "desc" ? "none" : "desc"))}
                               title={t(lang, "sortPriceDesc")}
                               aria-pressed={priceSort === "desc"}
                             >
-                              <span className="zen-price-sort-icon" aria-hidden>↑</span>
+                              <span className="zen-filters-sort-icon" aria-hidden>↓</span>
+                              <span className="zen-filters-sort-text">{t(lang, "sortDescShort")}</span>
                             </button>
                           </div>
                         </div>
