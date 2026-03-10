@@ -1089,7 +1089,8 @@ html[data-theme="light"] .zen-app .product-card-price {
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  padding: max(16px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) 0 max(20px, env(safe-area-inset-left));
+  padding: max(16px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) 16px max(20px, env(safe-area-inset-left));
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
   animation: filtersPanelSlideFromTop 0.35s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
   touch-action: pan-y;
   transition: transform 0.15s ease-out;
@@ -1097,7 +1098,7 @@ html[data-theme="light"] .zen-app .product-card-price {
 .zen-filters-panel-body {
   flex: 0 0 auto;
   min-height: 0;
-  max-height: min(60vh, 60dvh, calc(90vh - 220px), calc(90dvh - 220px));
+  max-height: min(60vh, 60dvh, calc(90vh - 252px), calc(90dvh - 252px));
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
@@ -1451,17 +1452,18 @@ html[data-theme="light"] .zen-app .product-card-price {
   color: var(--muted);
   margin-top: 2px;
 }
-/* Футер панели: Сбросить всё */
+/* Футер панели: Сбросить всё + стрелка (как на ноутбуке — отступы не меняются при раскрытии) */
 .zen-filters-panel-footer {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0;
-  padding: 16px max(20px, env(safe-area-inset-right)) 8px max(20px, env(safe-area-inset-left));
-  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  padding: 16px max(20px, env(safe-area-inset-right)) 12px max(20px, env(safe-area-inset-left));
+  padding-bottom: 12px;
   border-top: 1px solid var(--border);
   background: var(--surface);
   flex-shrink: 0;
+  min-height: 0;
 }
 .zen-filters-reset-btn {
   padding: 12px 16px;
@@ -1478,11 +1480,11 @@ html[data-theme="light"] .zen-app .product-card-price {
 .zen-filters-reset-btn:hover {
   color: var(--text);
 }
-/* Стрелка свернуть — фиксированный зазор до кнопки «Сбросить всё» */
+/* Стрелка свернуть — фиксированный зазор до кнопки «Сбросить всё» (едино на ноутбуке и телефоне) */
 .zen-filters-panel-collapse-wrap {
   display: flex;
   justify-content: center;
-  margin-top: 10px;
+  margin-top: 14px;
   flex-shrink: 0;
 }
 .zen-filters-panel-close-arrow {
