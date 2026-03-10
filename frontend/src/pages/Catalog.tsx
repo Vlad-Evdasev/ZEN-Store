@@ -72,6 +72,9 @@ export function Catalog({
   const panelDragYRef = useRef(0);
   const priceSliderTrackRef = useRef<HTMLDivElement>(null);
   const sliderActiveThumbRef = useRef<"min" | "max" | null>(null);
+  const handlePriceSliderTrackRef = useRef<(clientX: number) => void>(() => {});
+  const priceMinPercentRef = useRef(0);
+  const priceMaxPercentRef = useRef(0);
   const marqueePausedRef = useRef(false);
   const pauseTimeoutRef = useRef<number | null>(null);
   const lastAutoScrollRef = useRef(0);
@@ -392,6 +395,13 @@ export function Catalog({
       setPriceMax(String(Math.min(catalogPriceMax, newMax)));
     }
   };
+  useEffect(() => {
+    handlePriceSliderTrackRef.current = handlePriceSliderTrack;
+  });
+  useEffect(() => {
+    priceMinPercentRef.current = priceMinPercent;
+    priceMaxPercentRef.current = priceMaxPercent;
+  }, [priceMinPercent, priceMaxPercent]);
 
   useEffect(() => {
     panelDragYRef.current = panelDragY;
@@ -400,6 +410,57 @@ export function Catalog({
   useEffect(() => {
     if (!filtersOpen) setPanelDragY(0);
   }, [filtersOpen]);
+
+  useEffect(() => {
+    const track = priceSliderTrackRef.current;
+    if (!track || !filtersOpen || !sectionOpen.price) return;
+    const onTouchStart = (e: TouchEvent) => {
+      const t = e.target as HTMLElement;
+      if (!track.contains(t)) return;
+      const rect = track.getBoundingClientRect();
+      const trackLeft = rect.left + SLIDER_PAD;
+      const trackWidth = rect.width - SLIDER_PAD * 2;
+      const clientX = e.touches[0].clientX;
+      if (t.closest(".zen-filters-price-slider-thumb--min")) {
+        sliderActiveThumbRef.current = "min";
+      } else if (t.closest(".zen-filters-price-slider-thumb--max")) {
+        sliderActiveThumbRef.current = "max";
+      } else {
+        const pos = trackWidth > 0 ? (clientX - trackLeft) / trackWidth : 0;
+        const toMin = Math.abs(pos - priceMinPercentRef.current / 100);
+        const toMax = Math.abs(pos - priceMaxPercentRef.current / 100);
+        sliderActiveThumbRef.current = toMin <= toMax ? "min" : "max";
+      }
+      handlePriceSliderTrackRef.current(clientX);
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (sliderActiveThumbRef.current && e.touches.length > 0) {
+        e.preventDefault();
+        handlePriceSliderTrackRef.current(e.touches[0].clientX);
+      }
+    };
+    const onTouchEnd = () => {
+      sliderActiveThumbRef.current = null;
+      document.removeEventListener("touchmove", onTouchMove, { capture: true });
+      document.removeEventListener("touchend", onTouchEnd, { capture: true });
+      document.removeEventListener("touchcancel", onTouchEnd, { capture: true });
+    };
+    const onTouchStartCapture = (e: TouchEvent) => {
+      onTouchStart(e);
+      if (sliderActiveThumbRef.current !== null) {
+        document.addEventListener("touchmove", onTouchMove, { passive: false, capture: true });
+        document.addEventListener("touchend", onTouchEnd, { capture: true });
+        document.addEventListener("touchcancel", onTouchEnd, { capture: true });
+      }
+    };
+    track.addEventListener("touchstart", onTouchStartCapture, { passive: true, capture: true });
+    return () => {
+      track.removeEventListener("touchstart", onTouchStartCapture, { capture: true });
+      document.removeEventListener("touchmove", onTouchMove, { capture: true });
+      document.removeEventListener("touchend", onTouchEnd, { capture: true });
+      document.removeEventListener("touchcancel", onTouchEnd, { capture: true });
+    };
+  }, [filtersOpen, sectionOpen.price]);
 
   useEffect(() => {
     const handle = filtersDragHandleRef.current;
