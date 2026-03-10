@@ -1079,16 +1079,17 @@ html[data-theme="light"] .zen-app .product-card-price {
   left: 0;
   right: 0;
   top: 0;
-  max-height: 75vh;
+  height: 100vh;
+  height: 100dvh;
+  max-height: none;
   background: var(--surface);
-  border-radius: 0 0 20px 20px;
+  border-radius: 0;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
   z-index: 101;
-  overflow-y: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  padding: max(16px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
-  padding-bottom: calc(max(20px, env(safe-area-inset-bottom)) + 52px);
+  padding: max(16px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) 0 max(20px, env(safe-area-inset-left));
   animation: filtersPanelSlideFromTop 0.35s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
   touch-action: pan-y;
   transition: transform 0.15s ease-out;
@@ -1119,6 +1120,58 @@ html[data-theme="light"] .zen-app .product-card-price {
   text-transform: uppercase;
   color: var(--muted);
   margin: 0 0 14px 0;
+}
+.zen-filters-price-block {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.zen-filters-price-range-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.zen-filters-price-label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.zen-filters-price-label-text {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.zen-filters-price-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.zen-filters-price-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.zen-filters-price-sort-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.zen-filters-price-sort-caption {
+  font-size: 12px;
+  color: var(--muted);
+  flex-shrink: 0;
 }
 .zen-filters-panel-price-row {
   display: flex;
@@ -1339,12 +1392,13 @@ html[data-theme="light"] .zen-app .product-card-price {
   color: var(--muted);
   margin-top: 4px;
 }
-/* Футер панели: Сбросить всё + Показать N товаров */
+/* Футер панели: Сбросить всё */
 .zen-filters-panel-footer {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0;
   padding: 16px max(20px, env(safe-area-inset-right)) 12px max(20px, env(safe-area-inset-left));
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
   margin-bottom: 52px;
   border-top: 1px solid var(--border);
   background: var(--surface);
@@ -1365,12 +1419,6 @@ html[data-theme="light"] .zen-app .product-card-price {
 .zen-filters-reset-btn:hover {
   color: var(--text);
 }
-.zen-app .zen-filters-panel-footer .zen-filters-apply-btn {
-  width: 100%;
-  min-height: 52px;
-  margin: 0;
-}
-
 /* Стрелка свернуть — простая стрелка вверх по центру внизу */
 .zen-filters-panel-collapse-wrap {
   position: absolute;

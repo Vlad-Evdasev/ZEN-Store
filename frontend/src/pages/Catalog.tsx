@@ -61,7 +61,7 @@ export function Catalog({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filtersClosing, setFiltersClosing] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState<string>("all");
-  const [sectionOpen, setSectionOpen] = useState({ price: true, brand: true, categories: true });
+  const [sectionOpen, setSectionOpen] = useState({ price: false, brand: false, categories: false });
   const [panelDragY, setPanelDragY] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const filtersPanelRef = useRef<HTMLDivElement>(null);
@@ -499,26 +499,35 @@ export function Catalog({
                       <span className="zen-filters-panel-section-chevron" aria-hidden>▶</span>
                     </button>
                     <div className="zen-filters-panel-section-content">
-                      <div className="zen-filters-panel-price-row">
-                        <div className="zen-price-sort-segmented zen-filters-panel-sort" role="group" aria-label={t(lang, "priceFilter")}>
-                          <button
-                            type="button"
-                            className={`zen-price-sort-btn zen-price-sort-btn--first ${priceSort === "asc" ? "zen-price-sort-btn-active" : ""}`}
-                            onClick={() => setPriceSort((s) => (s === "asc" ? "none" : "asc"))}
-                            title={t(lang, "sortPriceAsc")}
-                            aria-pressed={priceSort === "asc"}
-                          >
-                            <span className="zen-price-sort-icon" aria-hidden>↓</span>
-                          </button>
-                          <button
-                            type="button"
-                            className={`zen-price-sort-btn zen-price-sort-btn--last ${priceSort === "desc" ? "zen-price-sort-btn-active" : ""}`}
-                            onClick={() => setPriceSort((s) => (s === "desc" ? "none" : "desc"))}
-                            title={t(lang, "sortPriceDesc")}
-                            aria-pressed={priceSort === "desc"}
-                          >
-                            <span className="zen-price-sort-icon" aria-hidden>↑</span>
-                          </button>
+                      <div className="zen-filters-price-block">
+                        <div className="zen-filters-price-range-row">
+                          <label className="zen-filters-price-label">
+                            <span className="zen-filters-price-label-text">{t(lang, "priceFrom")}</span>
+                            <input
+                              type="number"
+                              className="zen-filters-panel-input zen-filters-price-input"
+                              min={catalogPriceMin}
+                              max={catalogPriceMax}
+                              value={priceMin}
+                              onChange={(e) => setPriceMin(e.target.value)}
+                              placeholder={String(catalogPriceMin)}
+                              aria-label={t(lang, "priceFrom")}
+                            />
+                          </label>
+                          <span className="zen-filters-panel-input-sep">—</span>
+                          <label className="zen-filters-price-label">
+                            <span className="zen-filters-price-label-text">{t(lang, "priceTo")}</span>
+                            <input
+                              type="number"
+                              className="zen-filters-panel-input zen-filters-price-input"
+                              min={catalogPriceMin}
+                              max={catalogPriceMax}
+                              value={priceMax}
+                              onChange={(e) => setPriceMax(e.target.value)}
+                              placeholder={String(catalogPriceMax)}
+                              aria-label={t(lang, "priceTo")}
+                            />
+                          </label>
                         </div>
                         <div
                           ref={priceSliderTrackRef}
@@ -549,6 +558,29 @@ export function Catalog({
                         <div className="zen-filters-price-slider-labels">
                           <span>{priceMinNum}</span>
                           <span>{priceMaxNum}</span>
+                        </div>
+                        <div className="zen-filters-price-sort-row">
+                          <span className="zen-filters-price-sort-caption">{t(lang, "sortPriceNoSort")}</span>
+                          <div className="zen-price-sort-segmented zen-filters-panel-sort" role="group" aria-label={t(lang, "priceFilter")}>
+                            <button
+                              type="button"
+                              className={`zen-price-sort-btn zen-price-sort-btn--first ${priceSort === "asc" ? "zen-price-sort-btn-active" : ""}`}
+                              onClick={() => setPriceSort((s) => (s === "asc" ? "none" : "asc"))}
+                              title={t(lang, "sortPriceAsc")}
+                              aria-pressed={priceSort === "asc"}
+                            >
+                              <span className="zen-price-sort-icon" aria-hidden>↓</span>
+                            </button>
+                            <button
+                              type="button"
+                              className={`zen-price-sort-btn zen-price-sort-btn--last ${priceSort === "desc" ? "zen-price-sort-btn-active" : ""}`}
+                              onClick={() => setPriceSort((s) => (s === "desc" ? "none" : "desc"))}
+                              title={t(lang, "sortPriceDesc")}
+                              aria-pressed={priceSort === "desc"}
+                            >
+                              <span className="zen-price-sort-icon" aria-hidden>↑</span>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -596,9 +628,6 @@ export function Catalog({
             <div className="zen-filters-panel-footer">
               <button type="button" className="zen-filters-reset-btn" onClick={resetAllFilters}>
                 {t(lang, "resetFilters")}
-              </button>
-              <button type="button" className="zen-filters-apply-btn" onClick={closeFilters} aria-label={`${t(lang, "showResults")} ${displayList.length} ${t(lang, "resultsCount")}`}>
-                {t(lang, "showResults")} {displayList.length} {t(lang, "resultsCount")}
               </button>
             </div>
             <div className="zen-filters-panel-collapse-wrap">
