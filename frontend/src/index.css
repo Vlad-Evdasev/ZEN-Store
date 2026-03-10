@@ -1541,12 +1541,22 @@ html[data-theme="light"] .zen-app .product-card-price {
 .zen-filters-chip-row {
   display: flex;
   flex-wrap: nowrap;
-  gap: 10px;
+  gap: 0;
   overflow-x: auto;
   overflow-y: hidden;
   padding: 2px 28px 6px 4px;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+}
+.zen-filters-chip-row-segment {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  flex-shrink: 0;
+  padding-right: 10px;
+}
+.zen-filters-chip-row-segment:last-child {
+  padding-right: 0;
 }
 .zen-filters-chip-row::-webkit-scrollbar {
   display: none;
