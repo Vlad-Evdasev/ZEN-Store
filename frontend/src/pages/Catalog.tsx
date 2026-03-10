@@ -482,7 +482,6 @@ export function Catalog({
           >
                 <div ref={filtersDragHandleRef} className="zen-filters-panel-header zen-filters-panel-drag-handle">
                   <span className="zen-filters-panel-drag-bar" aria-hidden />
-                  <h3 className="zen-filters-panel-title">{t(lang, "filters")}</h3>
                 </div>
                 <div className="zen-filters-panel-summary">
                   <span className="zen-filters-panel-summary-count">{displayList.length} {t(lang, "resultsCount")}</span>
