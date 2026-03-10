@@ -1522,12 +1522,39 @@ html[data-theme="light"] .zen-app .product-card-price {
   from { transform: translateY(-100%); }
   to { transform: translateY(0); }
 }
+/* Обёртка для горизонтального скролла чипов + индикатор «есть ещё» */
+.zen-filters-chip-row-wrap {
+  position: relative;
+  margin: 0 -2px;
+  overflow: hidden;
+}
+.zen-filters-chip-row-wrap::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 32px;
+  background: linear-gradient(to right, transparent, var(--surface) 65%);
+  pointer-events: none;
+  flex-shrink: 0;
+}
 .zen-filters-chip-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 0 6px;
+  padding-right: 24px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.zen-filters-chip-row::-webkit-scrollbar {
+  display: none;
 }
 .zen-filters-chip {
+  flex-shrink: 0;
   padding: 10px 18px;
   border-radius: 999px;
   border: 1px solid var(--border);

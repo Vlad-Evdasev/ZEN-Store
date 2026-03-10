@@ -596,11 +596,13 @@ export function Catalog({
                         <span className="zen-filters-panel-section-chevron" aria-hidden>▶</span>
                       </button>
                       <div className="zen-filters-panel-section-content">
-                        <div className="zen-filters-chip-row">
-                          <button type="button" className={`zen-filters-chip ${selectedBrand === "all" ? "zen-filters-chip-active" : ""}`} onClick={() => setSelectedBrand("all")}>{t(lang, "all")}</button>
-                          {uniqueBrands.map((b) => (
-                            <button key={b} type="button" className={`zen-filters-chip ${selectedBrand === b ? "zen-filters-chip-active" : ""}`} onClick={() => setSelectedBrand(b)}>{b}</button>
-                          ))}
+                        <div className="zen-filters-chip-row-wrap">
+                          <div className="zen-filters-chip-row">
+                            <button type="button" className={`zen-filters-chip ${selectedBrand === "all" ? "zen-filters-chip-active" : ""}`} onClick={() => setSelectedBrand("all")}>{t(lang, "all")}</button>
+                            {uniqueBrands.map((b) => (
+                              <button key={b} type="button" className={`zen-filters-chip ${selectedBrand === b ? "zen-filters-chip-active" : ""}`} onClick={() => setSelectedBrand(b)}>{b}</button>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </section>
@@ -611,20 +613,22 @@ export function Catalog({
                       <span className="zen-filters-panel-section-chevron" aria-hidden>▶</span>
                     </button>
                     <div className="zen-filters-panel-section-content">
-                      <div className="zen-filters-chip-row">
-                        {categoryTabs.map(({ code, label }) => {
-                          const isSelected = code === "all" ? selectedCategories.has("all") : selectedCategories.has(code);
-                          return (
-                            <button
-                              key={code}
-                              type="button"
-                              className={`zen-filters-chip ${isSelected ? "zen-filters-chip-active" : ""}`}
-                              onClick={() => { handleCategoryClick(code); }}
-                            >
-                              {label}
-                            </button>
-                          );
-                        })}
+                      <div className="zen-filters-chip-row-wrap">
+                        <div className="zen-filters-chip-row">
+                          {categoryTabs.map(({ code, label }) => {
+                            const isSelected = code === "all" ? selectedCategories.has("all") : selectedCategories.has(code);
+                            return (
+                              <button
+                                key={code}
+                                type="button"
+                                className={`zen-filters-chip ${isSelected ? "zen-filters-chip-active" : ""}`}
+                                onClick={() => { handleCategoryClick(code); }}
+                              >
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   </section>
