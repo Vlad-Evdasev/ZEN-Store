@@ -76,6 +76,13 @@ export function Catalog({
   const pauseTimeoutRef = useRef<number | null>(null);
   const lastAutoScrollRef = useRef(0);
   const isTouchOnly = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+  const brandChipRowRef = useRef<HTMLDivElement>(null);
+  const categoryChipRowRef = useRef<HTMLDivElement>(null);
+  const brandAutoScrollIdRef = useRef<number | null>(null);
+  const categoryAutoScrollIdRef = useRef<number | null>(null);
+  const userScrolledBrandRef = useRef(false);
+  const userScrolledCategoryRef = useRef(false);
+  const chipScrollProgrammaticRef = useRef(false);
 
   type DisplayStore =
     | { id: number; name: string; image: string; desc: string; isReal: true }
@@ -137,6 +144,54 @@ export function Catalog({
       document.body.style.overflow = "hidden";
       return () => { document.body.style.overflow = prev; };
     }
+  }, [filtersOpen, filtersClosing]);
+
+  useEffect(() => {
+    if (!filtersOpen || filtersClosing) {
+      if (brandAutoScrollIdRef.current) {
+        clearInterval(brandAutoScrollIdRef.current);
+        brandAutoScrollIdRef.current = null;
+      }
+      if (categoryAutoScrollIdRef.current) {
+        clearInterval(categoryAutoScrollIdRef.current);
+        categoryAutoScrollIdRef.current = null;
+      }
+      userScrolledBrandRef.current = false;
+      userScrolledCategoryRef.current = false;
+      return;
+    }
+    const step = 1;
+    const intervalMs = 45;
+    const startCarousel = (el: HTMLDivElement | null, intervalIdRef: React.MutableRefObject<number | null>, userScrolledRef: React.MutableRefObject<boolean>) => {
+      if (!el || userScrolledRef.current) return;
+      if (intervalIdRef.current) clearInterval(intervalIdRef.current);
+      const id = window.setInterval(() => {
+        if (userScrolledRef.current) return;
+        const max = el.scrollWidth - el.clientWidth;
+        if (max <= 0) return;
+        chipScrollProgrammaticRef.current = true;
+        if (el.scrollLeft >= max - 2) {
+          el.scrollLeft = 0;
+        } else {
+          el.scrollLeft += step;
+        }
+        requestAnimationFrame(() => { chipScrollProgrammaticRef.current = false; });
+      }, intervalMs);
+      intervalIdRef.current = id;
+    };
+    const t = window.setTimeout(() => {
+      if (brandChipRowRef.current && brandChipRowRef.current.scrollWidth > brandChipRowRef.current.clientWidth) {
+        startCarousel(brandChipRowRef.current, brandAutoScrollIdRef, userScrolledBrandRef);
+      }
+      if (categoryChipRowRef.current && categoryChipRowRef.current.scrollWidth > categoryChipRowRef.current.clientWidth) {
+        startCarousel(categoryChipRowRef.current, categoryAutoScrollIdRef, userScrolledCategoryRef);
+      }
+    }, 300);
+    return () => {
+      window.clearTimeout(t);
+      if (brandAutoScrollIdRef.current) clearInterval(brandAutoScrollIdRef.current);
+      if (categoryAutoScrollIdRef.current) clearInterval(categoryAutoScrollIdRef.current);
+    };
   }, [filtersOpen, filtersClosing]);
 
   const closeFilters = () => {
@@ -597,7 +652,18 @@ export function Catalog({
                       </button>
                       <div className="zen-filters-panel-section-content">
                         <div className="zen-filters-chip-row-wrap">
-                          <div className="zen-filters-chip-row">
+                          <div
+                            ref={brandChipRowRef}
+                            className="zen-filters-chip-row"
+                            onScroll={() => {
+                              if (chipScrollProgrammaticRef.current) return;
+                              if (brandAutoScrollIdRef.current) {
+                                clearInterval(brandAutoScrollIdRef.current);
+                                brandAutoScrollIdRef.current = null;
+                              }
+                              userScrolledBrandRef.current = true;
+                            }}
+                          >
                             <button type="button" className={`zen-filters-chip ${selectedBrand === "all" ? "zen-filters-chip-active" : ""}`} onClick={() => setSelectedBrand("all")}>{t(lang, "all")}</button>
                             {uniqueBrands.map((b) => (
                               <button key={b} type="button" className={`zen-filters-chip ${selectedBrand === b ? "zen-filters-chip-active" : ""}`} onClick={() => setSelectedBrand(b)}>{b}</button>
@@ -614,7 +680,18 @@ export function Catalog({
                     </button>
                     <div className="zen-filters-panel-section-content">
                       <div className="zen-filters-chip-row-wrap">
-                        <div className="zen-filters-chip-row">
+                        <div
+                          ref={categoryChipRowRef}
+                          className="zen-filters-chip-row"
+                          onScroll={() => {
+                            if (chipScrollProgrammaticRef.current) return;
+                            if (categoryAutoScrollIdRef.current) {
+                              clearInterval(categoryAutoScrollIdRef.current);
+                              categoryAutoScrollIdRef.current = null;
+                            }
+                            userScrolledCategoryRef.current = true;
+                          }}
+                        >
                           {categoryTabs.map(({ code, label }) => {
                             const isSelected = code === "all" ? selectedCategories.has("all") : selectedCategories.has(code);
                             return (

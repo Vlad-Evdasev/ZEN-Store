@@ -1525,7 +1525,6 @@ html[data-theme="light"] .zen-app .product-card-price {
 /* Обёртка для горизонтального скролла чипов + индикатор «есть ещё» */
 .zen-filters-chip-row-wrap {
   position: relative;
-  margin: 0 -2px;
   overflow: hidden;
 }
 .zen-filters-chip-row-wrap::after {
@@ -1534,8 +1533,8 @@ html[data-theme="light"] .zen-app .product-card-price {
   right: 0;
   top: 0;
   bottom: 0;
-  width: 32px;
-  background: linear-gradient(to right, transparent, var(--surface) 65%);
+  width: 40px;
+  background: linear-gradient(to right, transparent 0%, var(--surface) 50%);
   pointer-events: none;
   flex-shrink: 0;
 }
@@ -1545,8 +1544,7 @@ html[data-theme="light"] .zen-app .product-card-price {
   gap: 10px;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 2px 0 6px;
-  padding-right: 24px;
+  padding: 2px 28px 6px 4px;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
