@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useLayoutEffect } from "react";
 import type { Product, Store, Category, ProductReviewStats } from "../api";
 import { getProductReviewStats } from "../api";
 import { FilterIcon } from "../components/FilterIcon";
@@ -60,7 +60,6 @@ export function Catalog({
   const [reviewStats, setReviewStats] = useState<ProductReviewStats>({});
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filtersClosing, setFiltersClosing] = useState(false);
-  const [panelDragOffset, setPanelDragOffset] = useState(0);
   const [panelDragging, setPanelDragging] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState<string>("all");
   const filtersPanelTouchStartY = useRef<number>(0);
@@ -142,38 +141,45 @@ export function Catalog({
   const panelDragOffsetRef = useRef(0);
 
   const handleFiltersPanelTouchStart = (e: React.TouchEvent) => {
-    filtersPanelTouchStartY.current = e.touches[0].clientY;
+    const touch = e.touches[0];
+    if (!touch) return;
+    filtersPanelTouchStartY.current = touch.clientY;
     panelDragActiveRef.current = true;
     panelDragOffsetRef.current = 0;
     setPanelDragging(true);
-    setPanelDragOffset(0);
     const el = filtersPanelRef.current;
-    if (el) el.style.transform = "";
+    if (el) {
+      el.style.transform = "";
+      el.style.touchAction = "none";
+      el.style.overflow = "hidden";
+    }
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!filtersOpen) return;
+
     const onTouchMove = (e: TouchEvent) => {
       if (!panelDragActiveRef.current || !e.touches.length) return;
       e.preventDefault();
-      const el = filtersPanelRef.current;
-      if (!el) return;
+      const panelEl = filtersPanelRef.current;
+      if (!panelEl) return;
       const dy = e.touches[0].clientY - filtersPanelTouchStartY.current;
       const offset = Math.max(0, dy);
       panelDragOffsetRef.current = offset;
-      el.style.transform = `translateY(${offset}px)`;
+      panelEl.style.transform = `translateY(${offset}px)`;
     };
     const onTouchEnd = () => {
       if (!panelDragActiveRef.current) return;
+      const panelEl = filtersPanelRef.current;
+      if (panelEl) {
+        panelEl.style.touchAction = "";
+        panelEl.style.overflow = "";
+      }
       const offset = panelDragOffsetRef.current;
       panelDragActiveRef.current = false;
       setPanelDragging(false);
       if (offset > 0) closeFilters();
-      else {
-        setPanelDragOffset(0);
-        const el = filtersPanelRef.current;
-        if (el) el.style.transform = "";
-      }
+      else if (panelEl) panelEl.style.transform = "";
     };
     document.addEventListener("touchmove", onTouchMove, { passive: false, capture: true });
     document.addEventListener("touchend", onTouchEnd, true);
@@ -182,8 +188,12 @@ export function Catalog({
       document.removeEventListener("touchmove", onTouchMove, true);
       document.removeEventListener("touchend", onTouchEnd, true);
       document.removeEventListener("touchcancel", onTouchEnd, true);
-      const el = filtersPanelRef.current;
-      if (el) el.style.transform = "";
+      const panelEl = filtersPanelRef.current;
+      if (panelEl) {
+        panelEl.style.touchAction = "";
+        panelEl.style.overflow = "";
+        panelEl.style.transform = "";
+      }
     };
   }, [filtersOpen]);
 
@@ -191,7 +201,6 @@ export function Catalog({
     if (filtersClosing) {
       setFiltersOpen(false);
       setFiltersClosing(false);
-      setPanelDragOffset(0);
     }
   };
 
@@ -398,7 +407,6 @@ export function Catalog({
             className={`zen-filters-panel ${filtersClosing ? "zen-filters-panel--closing" : ""} ${panelDragging ? "zen-filters-panel--dragging" : ""}`}
             role="dialog"
             aria-label={t(lang, "priceFilter")}
-            style={!filtersClosing && !panelDragging && panelDragOffset > 0 ? { transform: `translateY(${panelDragOffset}px)` } : undefined}
             onAnimationEnd={handleFiltersPanelAnimationEnd}
           >
                 <div
