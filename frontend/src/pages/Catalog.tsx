@@ -245,19 +245,6 @@ export function Catalog({
     };
   }, [baseListForPrice]);
 
-  const countAfterPrice = useMemo(() => {
-    let list = baseListForPrice;
-    if (showPriceFilter && priceMin.trim() !== "") {
-      const min = Number(priceMin.trim());
-      if (!Number.isNaN(min)) list = list.filter((p) => p.price >= min);
-    }
-    if (showPriceFilter && priceMax.trim() !== "") {
-      const max = Number(priceMax.trim());
-      if (!Number.isNaN(max)) list = list.filter((p) => p.price <= max);
-    }
-    return list.length;
-  }, [baseListForPrice, showPriceFilter, priceMin, priceMax]);
-
   const filtered = useMemo(() => {
     let list = products;
     if (!selectedCategories.has("all")) {
