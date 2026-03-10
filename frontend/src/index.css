@@ -1374,7 +1374,7 @@ html[data-theme="light"] .zen-app .product-card-price {
 .zen-filters-panel-section-chevron {
   font-size: 10px;
   color: var(--muted);
-  transition: transform 0.2s ease;
+  transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
   display: inline-block;
 }
 .zen-filters-panel-section--open .zen-filters-panel-section-chevron {
@@ -1383,21 +1383,17 @@ html[data-theme="light"] .zen-app .product-card-price {
 .zen-filters-panel-section--accordion .zen-filters-panel-section-content {
   overflow: hidden;
   max-height: 0;
-  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  padding-top: 0;
+  padding-bottom: 0;
+  margin: 0;
+  overflow-x: hidden;
+  min-width: 0;
+  transition: max-height 0.4s cubic-bezier(0.32, 0.72, 0, 1), padding-top 0.4s cubic-bezier(0.32, 0.72, 0, 1), padding-bottom 0.4s cubic-bezier(0.32, 0.72, 0, 1);
 }
 .zen-filters-panel-section--accordion.zen-filters-panel-section--open .zen-filters-panel-section-content {
   max-height: 420px;
   padding-top: 12px;
-}
-.zen-filters-panel-section--accordion:not(.zen-filters-panel-section--open) .zen-filters-panel-section-content {
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-  margin: 0 !important;
-}
-.zen-filters-panel-section--accordion .zen-filters-panel-section-content {
   padding-bottom: 20px;
-  overflow-x: hidden;
-  min-width: 0;
 }
 .zen-filters-price-slider {
   position: relative;
