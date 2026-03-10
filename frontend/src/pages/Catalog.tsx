@@ -66,6 +66,7 @@ export function Catalog({
   const scrollRef = useRef<HTMLDivElement>(null);
   const filtersPanelRef = useRef<HTMLDivElement>(null);
   const filtersDragHandleRef = useRef<HTMLDivElement>(null);
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
   const touchStartYRef = useRef(0);
   const touchStartTimeRef = useRef(0);
   const panelDragYRef = useRef(0);
@@ -147,7 +148,16 @@ export function Catalog({
     if (filtersClosing) {
       setFiltersOpen(false);
       setFiltersClosing(false);
+      filterButtonRef.current?.focus({ preventScroll: true });
     }
+  };
+
+  const resetAllFilters = () => {
+    setPriceMin("");
+    setPriceMax("");
+    setPriceSort("none");
+    setSelectedBrand("all");
+    setSelectedCategories(new Set(["all"]));
   };
 
   useEffect(() => {
@@ -450,6 +460,7 @@ export function Catalog({
       <div className="zen-catalog-search-row">
         {showPriceFilter && (
           <button
+            ref={filterButtonRef}
             type="button"
             className="zen-filter-icon-btn"
             onClick={() => setFiltersOpen(true)}
@@ -498,8 +509,7 @@ export function Catalog({
                   <section className={`zen-filters-panel-section zen-filters-panel-section--accordion ${sectionOpen.price ? "zen-filters-panel-section--open" : ""}`}>
                     <button type="button" className="zen-filters-panel-section-head" onClick={() => setSectionOpen((s) => ({ ...s, price: !s.price }))} aria-expanded={sectionOpen.price}>
                       <h4 className="zen-filters-panel-section-title">{t(lang, "priceFilter")}</h4>
-                      <span className="zen-filters-panel-section-count">{countAfterPrice}</span>
-                      <span className="zen-filters-panel-section-chevron" aria-hidden>▼</span>
+                      <span className="zen-filters-panel-section-chevron" aria-hidden>▶</span>
                     </button>
                     <div className="zen-filters-panel-section-content">
                       <div className="zen-filters-panel-price-row">
@@ -560,8 +570,7 @@ export function Catalog({
                     <section className={`zen-filters-panel-section zen-filters-panel-section--accordion ${sectionOpen.brand ? "zen-filters-panel-section--open" : ""}`}>
                       <button type="button" className="zen-filters-panel-section-head" onClick={() => setSectionOpen((s) => ({ ...s, brand: !s.brand }))} aria-expanded={sectionOpen.brand}>
                         <h4 className="zen-filters-panel-section-title">{t(lang, "brand")}</h4>
-                        <span className="zen-filters-panel-section-count">{filtered.length}</span>
-                        <span className="zen-filters-panel-section-chevron" aria-hidden>▼</span>
+                        <span className="zen-filters-panel-section-chevron" aria-hidden>▶</span>
                       </button>
                       <div className="zen-filters-panel-section-content">
                         <div className="zen-filters-chip-row">
@@ -576,8 +585,7 @@ export function Catalog({
                   <section className={`zen-filters-panel-section zen-filters-panel-section--accordion ${sectionOpen.categories ? "zen-filters-panel-section--open" : ""}`}>
                     <button type="button" className="zen-filters-panel-section-head" onClick={() => setSectionOpen((s) => ({ ...s, categories: !s.categories }))} aria-expanded={sectionOpen.categories}>
                       <h4 className="zen-filters-panel-section-title">{t(lang, "categories")}</h4>
-                      <span className="zen-filters-panel-section-count">{displayList.length}</span>
-                      <span className="zen-filters-panel-section-chevron" aria-hidden>▼</span>
+                      <span className="zen-filters-panel-section-chevron" aria-hidden>▶</span>
                     </button>
                     <div className="zen-filters-panel-section-content">
                       <div className="zen-filters-chip-row">
@@ -598,6 +606,14 @@ export function Catalog({
                     </div>
                   </section>
                 </div>
+            <div className="zen-filters-panel-footer">
+              <button type="button" className="zen-filters-reset-btn" onClick={resetAllFilters}>
+                {t(lang, "resetFilters")}
+              </button>
+              <button type="button" className="zen-filters-apply-btn" onClick={closeFilters} aria-label={`${t(lang, "showResults")} ${displayList.length} ${t(lang, "resultsCount")}`}>
+                {t(lang, "showResults")} {displayList.length} {t(lang, "resultsCount")}
+              </button>
+            </div>
             <div className="zen-filters-panel-collapse-wrap">
               <button type="button" className="zen-filters-panel-close-arrow" onClick={closeFilters} aria-label={t(lang, "close")}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 15l-6-6-6 6"/></svg>

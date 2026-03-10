@@ -1267,9 +1267,10 @@ html[data-theme="light"] .zen-app .product-card-price {
   font-size: 10px;
   color: var(--muted);
   transition: transform 0.2s ease;
+  display: inline-block;
 }
 .zen-filters-panel-section--open .zen-filters-panel-section-chevron {
-  transform: rotate(180deg);
+  transform: rotate(90deg);
 }
 .zen-filters-panel-section--accordion .zen-filters-panel-section-content {
   overflow: hidden;
@@ -1338,6 +1339,38 @@ html[data-theme="light"] .zen-app .product-card-price {
   color: var(--muted);
   margin-top: 4px;
 }
+/* Футер панели: Сбросить всё + Показать N товаров */
+.zen-filters-panel-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px max(20px, env(safe-area-inset-right)) 12px max(20px, env(safe-area-inset-left));
+  margin-bottom: 52px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.zen-filters-reset-btn {
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.zen-filters-reset-btn:hover {
+  color: var(--text);
+}
+.zen-app .zen-filters-panel-footer .zen-filters-apply-btn {
+  width: 100%;
+  min-height: 52px;
+  margin: 0;
+}
+
 /* Стрелка свернуть — простая стрелка вверх по центру внизу */
 .zen-filters-panel-collapse-wrap {
   position: absolute;
