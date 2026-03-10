@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, useLayoutEffect } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import type { Product, Store, Category, ProductReviewStats } from "../api";
 import { getProductReviewStats } from "../api";
 import { FilterIcon } from "../components/FilterIcon";
@@ -60,11 +60,7 @@ export function Catalog({
   const [reviewStats, setReviewStats] = useState<ProductReviewStats>({});
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filtersClosing, setFiltersClosing] = useState(false);
-  const [panelDragging, setPanelDragging] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState<string>("all");
-  const filtersPanelTouchStartY = useRef<number>(0);
-  const filtersPanelRef = useRef<HTMLDivElement>(null);
-  const panelDragActiveRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const marqueePausedRef = useRef(false);
   const pauseTimeoutRef = useRef<number | null>(null);
@@ -137,65 +133,6 @@ export function Catalog({
     if (filtersClosing) return;
     setFiltersClosing(true);
   };
-
-  const panelDragOffsetRef = useRef(0);
-
-  const handleFiltersPanelTouchStart = (e: React.TouchEvent) => {
-    const touch = e.touches[0];
-    if (!touch) return;
-    filtersPanelTouchStartY.current = touch.clientY;
-    panelDragActiveRef.current = true;
-    panelDragOffsetRef.current = 0;
-    setPanelDragging(true);
-    const el = filtersPanelRef.current;
-    if (el) {
-      el.style.transform = "";
-      el.style.touchAction = "none";
-      el.style.overflow = "hidden";
-    }
-  };
-
-  useLayoutEffect(() => {
-    if (!filtersOpen) return;
-
-    const onTouchMove = (e: TouchEvent) => {
-      if (!panelDragActiveRef.current || !e.touches.length) return;
-      e.preventDefault();
-      const panelEl = filtersPanelRef.current;
-      if (!panelEl) return;
-      const dy = e.touches[0].clientY - filtersPanelTouchStartY.current;
-      const offset = Math.max(0, dy);
-      panelDragOffsetRef.current = offset;
-      panelEl.style.transform = `translateY(${offset}px)`;
-    };
-    const onTouchEnd = () => {
-      if (!panelDragActiveRef.current) return;
-      const panelEl = filtersPanelRef.current;
-      if (panelEl) {
-        panelEl.style.touchAction = "";
-        panelEl.style.overflow = "";
-      }
-      const offset = panelDragOffsetRef.current;
-      panelDragActiveRef.current = false;
-      setPanelDragging(false);
-      if (offset > 0) closeFilters();
-      else if (panelEl) panelEl.style.transform = "";
-    };
-    document.addEventListener("touchmove", onTouchMove, { passive: false, capture: true });
-    document.addEventListener("touchend", onTouchEnd, true);
-    document.addEventListener("touchcancel", onTouchEnd, true);
-    return () => {
-      document.removeEventListener("touchmove", onTouchMove, true);
-      document.removeEventListener("touchend", onTouchEnd, true);
-      document.removeEventListener("touchcancel", onTouchEnd, true);
-      const panelEl = filtersPanelRef.current;
-      if (panelEl) {
-        panelEl.style.touchAction = "";
-        panelEl.style.overflow = "";
-        panelEl.style.transform = "";
-      }
-    };
-  }, [filtersOpen]);
 
   const handleFiltersPanelAnimationEnd = () => {
     if (filtersClosing) {
@@ -403,20 +340,11 @@ export function Catalog({
         <>
           <div className={`zen-filters-overlay ${filtersClosing ? "zen-filters-overlay--closing" : ""}`} onClick={closeFilters} aria-hidden />
           <div
-            ref={filtersPanelRef}
-            className={`zen-filters-panel ${filtersClosing ? "zen-filters-panel--closing" : ""} ${panelDragging ? "zen-filters-panel--dragging" : ""}`}
+            className={`zen-filters-panel ${filtersClosing ? "zen-filters-panel--closing" : ""}`}
             role="dialog"
             aria-label={t(lang, "priceFilter")}
             onAnimationEnd={handleFiltersPanelAnimationEnd}
           >
-                <div
-                  className="zen-filters-panel-drag-handle"
-                  onTouchStart={handleFiltersPanelTouchStart}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={t(lang, "close")}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); closeFilters(); } }}
-                />
                 <div className="zen-filters-panel-header">
                   <h3 className="zen-filters-panel-title">{t(lang, "filters")}</h3>
                   <button type="button" className="zen-filters-panel-close" onClick={closeFilters} aria-label={t(lang, "close")}>×</button>
