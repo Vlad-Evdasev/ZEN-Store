@@ -1402,7 +1402,7 @@ html[data-theme="light"] .zen-app .product-card-price {
 .zen-filters-price-slider {
   position: relative;
   height: 32px;
-  margin: 10px 0 0;
+  margin: 4px 0 0;
   padding: 0 14px;
   touch-action: none;
   box-sizing: border-box;
