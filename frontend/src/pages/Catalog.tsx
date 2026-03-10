@@ -139,8 +139,6 @@ export function Catalog({
     setFiltersClosing(true);
   };
 
-  const FILTER_PANEL_CLOSE_THRESHOLD = 100;
-
   const handleFiltersPanelTouchStart = (e: React.TouchEvent) => {
     filtersPanelTouchStartY.current = e.touches[0].clientY;
     panelDragActiveRef.current = true;
@@ -155,11 +153,8 @@ export function Catalog({
     const offset = panelDragOffset;
     panelDragActiveRef.current = false;
     setPanelDragging(false);
-    if (offset >= FILTER_PANEL_CLOSE_THRESHOLD) {
-      closeFilters();
-    } else {
-      setPanelDragOffset(0);
-    }
+    if (offset > 0) closeFilters();
+    else setPanelDragOffset(0);
   };
 
   useEffect(() => {
