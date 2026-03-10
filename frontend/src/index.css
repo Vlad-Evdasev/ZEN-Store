@@ -975,7 +975,7 @@ html[data-theme="light"] .zen-app .product-card-price {
   border-bottom: 1px solid var(--border);
   transition: border-color 0.25s ease, border-width 0.2s ease;
 }
-.zen-app .zen-catalog-search-row:focus-within {
+.zen-app .zen-catalog-search-row:focus-within:not(.zen-catalog-search-row--filter-open) {
   border-bottom-width: 2px;
   border-bottom-color: var(--accent);
 }
@@ -1302,11 +1302,7 @@ html[data-theme="light"] .zen-app .product-card-price {
   cursor: grabbing;
 }
 .zen-filters-panel-drag-bar {
-  display: block;
-  width: 40px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--border);
+  display: none;
 }
 .zen-app .zen-filters-panel-title {
   font-family: Georgia, "Times New Roman", serif;
@@ -1458,9 +1454,9 @@ html[data-theme="light"] .zen-app .product-card-price {
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding: 16px max(20px, env(safe-area-inset-right)) 12px max(20px, env(safe-area-inset-left));
-  padding-bottom: calc(12px + env(safe-area-inset-bottom));
-  margin-bottom: 52px;
+  padding: 16px max(20px, env(safe-area-inset-right)) 20px max(20px, env(safe-area-inset-left));
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  margin-bottom: 64px;
   border-top: 1px solid var(--border);
   background: var(--surface);
   flex-shrink: 0;

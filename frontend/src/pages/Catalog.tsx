@@ -148,7 +148,6 @@ export function Catalog({
     if (filtersClosing) {
       setFiltersOpen(false);
       setFiltersClosing(false);
-      filterButtonRef.current?.focus({ preventScroll: true });
     }
   };
 
@@ -447,7 +446,7 @@ export function Catalog({
         </div>
       )}
 
-      <div className="zen-catalog-search-row">
+      <div className={`zen-catalog-search-row ${filtersOpen || filtersClosing ? "zen-catalog-search-row--filter-open" : ""}`}>
         {showPriceFilter && (
           <button
             ref={filterButtonRef}
@@ -564,7 +563,6 @@ export function Catalog({
                           <span>{priceMaxNum}</span>
                         </div>
                         <div className="zen-filters-price-sort-row">
-                          <span className="zen-filters-price-sort-caption">{t(lang, "sortOrderLabel")}</span>
                           <div className="zen-filters-sort-segmented" role="group" aria-label={t(lang, "priceFilter")}>
                             <button
                               type="button"
