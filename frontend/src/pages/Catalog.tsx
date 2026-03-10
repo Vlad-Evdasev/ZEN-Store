@@ -151,24 +151,6 @@ export function Catalog({
     if (el) el.style.transform = "";
   };
 
-  const handleFiltersPanelTouchMove = (e: React.TouchEvent) => {
-    const dy = e.touches[0].clientY - filtersPanelTouchStartY.current;
-    const offset = Math.max(0, dy);
-    panelDragOffsetRef.current = offset;
-  };
-  const handleFiltersPanelTouchEnd = () => {
-    const offset = panelDragOffsetRef.current;
-    panelDragActiveRef.current = false;
-    setPanelDragging(false);
-    if (offset > 0) {
-      closeFilters();
-    } else {
-      setPanelDragOffset(0);
-      const el = filtersPanelRef.current;
-      if (el) el.style.transform = "";
-    }
-  };
-
   useEffect(() => {
     if (!filtersOpen) return;
     const onTouchMove = (e: TouchEvent) => {
@@ -193,13 +175,13 @@ export function Catalog({
         if (el) el.style.transform = "";
       }
     };
-    document.addEventListener("touchmove", onTouchMove, { passive: false });
-    document.addEventListener("touchend", onTouchEnd);
-    document.addEventListener("touchcancel", onTouchEnd);
+    document.addEventListener("touchmove", onTouchMove, { passive: false, capture: true });
+    document.addEventListener("touchend", onTouchEnd, true);
+    document.addEventListener("touchcancel", onTouchEnd, true);
     return () => {
-      document.removeEventListener("touchmove", onTouchMove);
-      document.removeEventListener("touchend", onTouchEnd);
-      document.removeEventListener("touchcancel", onTouchEnd);
+      document.removeEventListener("touchmove", onTouchMove, true);
+      document.removeEventListener("touchend", onTouchEnd, true);
+      document.removeEventListener("touchcancel", onTouchEnd, true);
       const el = filtersPanelRef.current;
       if (el) el.style.transform = "";
     };
@@ -417,11 +399,16 @@ export function Catalog({
             role="dialog"
             aria-label={t(lang, "priceFilter")}
             style={!filtersClosing && !panelDragging && panelDragOffset > 0 ? { transform: `translateY(${panelDragOffset}px)` } : undefined}
-            onTouchStart={handleFiltersPanelTouchStart}
-            onTouchMove={handleFiltersPanelTouchMove}
-            onTouchEnd={handleFiltersPanelTouchEnd}
             onAnimationEnd={handleFiltersPanelAnimationEnd}
           >
+                <div
+                  className="zen-filters-panel-drag-handle"
+                  onTouchStart={handleFiltersPanelTouchStart}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={t(lang, "close")}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); closeFilters(); } }}
+                />
                 <div className="zen-filters-panel-header">
                   <h3 className="zen-filters-panel-title">{t(lang, "filters")}</h3>
                   <button type="button" className="zen-filters-panel-close" onClick={closeFilters} aria-label={t(lang, "close")}>×</button>
