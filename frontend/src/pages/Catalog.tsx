@@ -60,9 +60,12 @@ export function Catalog({
   const [reviewStats, setReviewStats] = useState<ProductReviewStats>({});
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filtersClosing, setFiltersClosing] = useState(false);
+  const [panelDragOffset, setPanelDragOffset] = useState(0);
+  const [panelDragging, setPanelDragging] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState<string>("all");
   const filtersPanelTouchStartY = useRef<number>(0);
   const filtersPanelRef = useRef<HTMLDivElement>(null);
+  const panelDragActiveRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const marqueePausedRef = useRef(false);
   const pauseTimeoutRef = useRef<number | null>(null);
@@ -135,10 +138,45 @@ export function Catalog({
     if (filtersClosing) return;
     setFiltersClosing(true);
   };
+
+  const FILTER_PANEL_CLOSE_THRESHOLD = 100;
+
+  const handleFiltersPanelTouchStart = (e: React.TouchEvent) => {
+    filtersPanelTouchStartY.current = e.touches[0].clientY;
+    panelDragActiveRef.current = true;
+    setPanelDragging(true);
+    setPanelDragOffset(0);
+  };
+  const handleFiltersPanelTouchMove = (e: React.TouchEvent) => {
+    const dy = e.touches[0].clientY - filtersPanelTouchStartY.current;
+    if (dy > 0) setPanelDragOffset(dy);
+  };
+  const handleFiltersPanelTouchEnd = () => {
+    const offset = panelDragOffset;
+    panelDragActiveRef.current = false;
+    setPanelDragging(false);
+    if (offset >= FILTER_PANEL_CLOSE_THRESHOLD) {
+      closeFilters();
+    } else {
+      setPanelDragOffset(0);
+    }
+  };
+
+  useEffect(() => {
+    const el = filtersPanelRef.current;
+    if (!el || !filtersOpen) return;
+    const onTouchMove = (e: TouchEvent) => {
+      if (panelDragActiveRef.current) e.preventDefault();
+    };
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => el.removeEventListener("touchmove", onTouchMove);
+  }, [filtersOpen]);
+
   const handleFiltersPanelAnimationEnd = () => {
     if (filtersClosing) {
       setFiltersOpen(false);
       setFiltersClosing(false);
+      setPanelDragOffset(0);
     }
   };
 
@@ -342,14 +380,13 @@ export function Catalog({
           <div className={`zen-filters-overlay ${filtersClosing ? "zen-filters-overlay--closing" : ""}`} onClick={closeFilters} aria-hidden />
           <div
             ref={filtersPanelRef}
-            className={`zen-filters-panel ${filtersClosing ? "zen-filters-panel--closing" : ""}`}
+            className={`zen-filters-panel ${filtersClosing ? "zen-filters-panel--closing" : ""} ${panelDragging ? "zen-filters-panel--dragging" : ""}`}
             role="dialog"
             aria-label={t(lang, "priceFilter")}
-            onTouchStart={(e) => { filtersPanelTouchStartY.current = e.touches[0].clientY; }}
-            onTouchEnd={(e) => {
-              const dy = e.changedTouches[0].clientY - filtersPanelTouchStartY.current;
-              if (dy > 60) closeFilters();
-            }}
+            style={!filtersClosing && panelDragOffset > 0 ? { transform: `translateY(${panelDragOffset}px)` } : undefined}
+            onTouchStart={handleFiltersPanelTouchStart}
+            onTouchMove={handleFiltersPanelTouchMove}
+            onTouchEnd={handleFiltersPanelTouchEnd}
             onAnimationEnd={handleFiltersPanelAnimationEnd}
           >
                 <div className="zen-filters-panel-header">

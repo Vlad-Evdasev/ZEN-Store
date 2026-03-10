@@ -1075,10 +1075,15 @@ html[data-theme="light"] .zen-app .product-card-price {
   overflow-y: auto;
   padding: 12px max(20px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
   animation: filtersPanelSlide 0.35s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   touch-action: pan-y;
+}
+.zen-filters-panel--dragging {
+  transition: none;
 }
 .zen-filters-panel--closing {
   animation: filtersPanelSlideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  transition: none;
 }
 @keyframes filtersPanelSlideDown {
   to { transform: translateY(100%); }
