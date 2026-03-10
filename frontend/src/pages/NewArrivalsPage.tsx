@@ -33,7 +33,14 @@ export function NewArrivalsPage({
   const [priceSort, setPriceSort] = useState<"none" | "asc" | "desc">("none");
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set(["all"]));
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const filtersPanelTouchStartY = useRef<number>(0);
+  const [sectionOpen, setSectionOpen] = useState({ price: true, categories: true });
+  const [panelDragY, setPanelDragY] = useState(0);
+  const filtersDragHandleRef = useRef<HTMLDivElement>(null);
+  const touchStartYRef = useRef(0);
+  const touchStartTimeRef = useRef(0);
+  const panelDragYRef = useRef(0);
+  const priceSliderTrackRef = useRef<HTMLDivElement>(null);
+  const sliderActiveThumbRef = useRef<"min" | "max" | null>(null);
   const [reviewStats, setReviewStats] = useState<ProductReviewStats>({});
 
   useEffect(() => {
@@ -46,6 +53,41 @@ export function NewArrivalsPage({
     }
     return FALLBACK_CATEGORY_CODES.map((code) => ({ code, label: t(lang, code) }));
   }, [categories, lang]);
+
+  const baseListForPrice = useMemo(() => {
+    let list = products;
+    if (!selectedCategories.has("all")) {
+      list = list.filter((p) => selectedCategories.has(p.category));
+    }
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          (p.description && p.description.toLowerCase().includes(q))
+      );
+    }
+    return list;
+  }, [products, selectedCategories, search]);
+
+  const { catalogPriceMin, catalogPriceMax } = useMemo(() => {
+    if (baseListForPrice.length === 0) return { catalogPriceMin: 0, catalogPriceMax: 100000 };
+    const prices = baseListForPrice.map((p) => p.price);
+    return { catalogPriceMin: Math.min(...prices), catalogPriceMax: Math.max(...prices) };
+  }, [baseListForPrice]);
+
+  const countAfterPrice = useMemo(() => {
+    let list = baseListForPrice;
+    if (priceMin.trim() !== "") {
+      const min = Number(priceMin.trim());
+      if (!Number.isNaN(min)) list = list.filter((p) => p.price >= min);
+    }
+    if (priceMax.trim() !== "") {
+      const max = Number(priceMax.trim());
+      if (!Number.isNaN(max)) list = list.filter((p) => p.price <= max);
+    }
+    return list.length;
+  }, [baseListForPrice, priceMin, priceMax]);
 
   const filtered = useMemo(() => {
     let list = products;
@@ -92,6 +134,81 @@ export function NewArrivalsPage({
     });
   };
 
+  const activeSummary = useMemo(() => {
+    const parts: { key: string; label: string; onClear: () => void }[] = [];
+    const minNum = priceMin.trim() !== "" ? Number(priceMin.trim()) : null;
+    const maxNum = priceMax.trim() !== "" ? Number(priceMax.trim()) : null;
+    if ((minNum != null && !Number.isNaN(minNum)) || (maxNum != null && !Number.isNaN(maxNum))) {
+      const label = [minNum != null && !Number.isNaN(minNum) ? String(minNum) : "", maxNum != null && !Number.isNaN(maxNum) ? String(maxNum) : ""].filter(Boolean).join(" – ");
+      if (label) parts.push({ key: "price", label, onClear: () => { setPriceMin(""); setPriceMax(""); } });
+    }
+    if (!selectedCategories.has("all") && selectedCategories.size > 0) {
+      const labels = categoryTabs.filter((t) => t.code !== "all" && selectedCategories.has(t.code)).map((t) => t.label);
+      if (labels.length) parts.push({ key: "cat", label: labels.join(", "), onClear: () => setSelectedCategories(new Set(["all"])) });
+    }
+    return parts;
+  }, [priceMin, priceMax, selectedCategories, categoryTabs]);
+
+  const priceRange = catalogPriceMax - catalogPriceMin || 1;
+  const priceMinNum = Math.max(catalogPriceMin, Math.min(catalogPriceMax, Number(priceMin.trim()) || catalogPriceMin));
+  const priceMaxNum = Math.min(catalogPriceMax, Math.max(catalogPriceMin, Number(priceMax.trim()) || catalogPriceMax));
+  const priceMinPercent = ((priceMinNum - catalogPriceMin) / priceRange) * 100;
+  const priceMaxPercent = ((priceMaxNum - catalogPriceMin) / priceRange) * 100;
+  const priceRangePercent = ((priceMaxNum - priceMinNum) / priceRange) * 100;
+
+  const handlePriceSliderTrack = (clientX: number) => {
+    const track = priceSliderTrackRef.current;
+    if (!track) return;
+    const rect = track.getBoundingClientRect();
+    const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const value = Math.round(catalogPriceMin + percent * (catalogPriceMax - catalogPriceMin));
+    const thumb = sliderActiveThumbRef.current;
+    if (thumb === "min") {
+      setPriceMin(String(Math.max(catalogPriceMin, Math.min(value, priceMaxNum - 1))));
+    } else if (thumb === "max") {
+      setPriceMax(String(Math.min(catalogPriceMax, Math.max(value, priceMinNum + 1))));
+    }
+  };
+
+  useEffect(() => {
+    panelDragYRef.current = panelDragY;
+  }, [panelDragY]);
+  useEffect(() => {
+    if (!filtersOpen) setPanelDragY(0);
+  }, [filtersOpen]);
+  useEffect(() => {
+    const handle = filtersDragHandleRef.current;
+    if (!filtersOpen || !handle) return;
+    const onStart = (clientY: number) => {
+      touchStartYRef.current = clientY;
+      touchStartTimeRef.current = Date.now();
+    };
+    const onMove = (clientY: number) => {
+      const val = Math.max(0, clientY - touchStartYRef.current);
+      panelDragYRef.current = val;
+      setPanelDragY(val);
+    };
+    const onEnd = () => {
+      const dy = panelDragYRef.current;
+      const dt = Date.now() - touchStartTimeRef.current;
+      const velocity = dt > 0 ? dy / dt : 0;
+      if (dy > 60 || velocity > 0.3) setFiltersOpen(false);
+      setPanelDragY(0);
+    };
+    const touchStart = (e: TouchEvent) => { onStart(e.touches[0].clientY); };
+    const touchMove = (e: TouchEvent) => { e.preventDefault(); onMove(e.touches[0].clientY); };
+    handle.addEventListener("touchstart", touchStart, { passive: true });
+    handle.addEventListener("touchmove", touchMove, { passive: false });
+    handle.addEventListener("touchend", onEnd);
+    handle.addEventListener("touchcancel", onEnd);
+    return () => {
+      handle.removeEventListener("touchstart", touchStart);
+      handle.removeEventListener("touchmove", touchMove);
+      handle.removeEventListener("touchend", onEnd);
+      handle.removeEventListener("touchcancel", onEnd);
+    };
+  }, [filtersOpen]);
+
   return (
     <div style={styles.wrap}>
       <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
@@ -106,41 +223,80 @@ export function NewArrivalsPage({
               <div
                 className="zen-filters-panel"
                 role="dialog"
-                onTouchStart={(e) => { filtersPanelTouchStartY.current = e.touches[0].clientY; }}
-                onTouchEnd={(e) => {
-                  const dy = e.changedTouches[0].clientY - filtersPanelTouchStartY.current;
-                  if (dy > 60) setFiltersOpen(false);
-                }}
+                style={panelDragY > 0 ? { transform: `translateY(${panelDragY}px)` } : undefined}
               >
-                <div className="zen-filters-panel-header">
+                <div ref={filtersDragHandleRef} className="zen-filters-panel-header zen-filters-panel-drag-handle">
+                  <span className="zen-filters-panel-drag-bar" aria-hidden />
                   <h3 className="zen-filters-panel-title">{t(lang, "filters")}</h3>
                 </div>
+                <div className="zen-filters-panel-summary">
+                  <span className="zen-filters-panel-summary-count">{displayList.length} {t(lang, "resultsCount")}</span>
+                  {activeSummary.length > 0 && (
+                    <div className="zen-filters-panel-summary-tags">
+                      {activeSummary.map(({ key, label, onClear }) => (
+                        <button key={key} type="button" className="zen-filters-panel-summary-tag" onClick={onClear}>{label} ×</button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <div className="zen-filters-panel-body">
-                  <section className="zen-filters-panel-section">
-                    <h4 className="zen-filters-panel-section-title">{t(lang, "priceFilter")}</h4>
-                    <div className="zen-filters-panel-price-row">
-                      <div className="zen-price-sort-segmented zen-filters-panel-sort" role="group" aria-label={t(lang, "priceFilter")}>
-                        <button type="button" className={`zen-price-sort-btn zen-price-sort-btn--first ${priceSort === "asc" ? "zen-price-sort-btn-active" : ""}`} onClick={() => setPriceSort((s) => (s === "asc" ? "none" : "asc"))} title={t(lang, "sortPriceAsc")} aria-pressed={priceSort === "asc"}><span className="zen-price-sort-icon" aria-hidden>↓</span></button>
-                        <button type="button" className={`zen-price-sort-btn zen-price-sort-btn--last ${priceSort === "desc" ? "zen-price-sort-btn-active" : ""}`} onClick={() => setPriceSort((s) => (s === "desc" ? "none" : "desc"))} title={t(lang, "sortPriceDesc")} aria-pressed={priceSort === "desc"}><span className="zen-price-sort-icon" aria-hidden>↑</span></button>
-                      </div>
-                      <div className="zen-filters-panel-inputs">
-                        <input type="number" className="zen-filters-panel-input" min={0} step={100} placeholder={t(lang, "priceFrom")} value={priceMin} onChange={(e) => setPriceMin(e.target.value)} />
-                        <span className="zen-filters-panel-input-sep" aria-hidden>–</span>
-                        <input type="number" className="zen-filters-panel-input" min={0} step={100} placeholder={t(lang, "priceTo")} value={priceMax} onChange={(e) => setPriceMax(e.target.value)} />
+                  <section className={`zen-filters-panel-section zen-filters-panel-section--accordion ${sectionOpen.price ? "zen-filters-panel-section--open" : ""}`}>
+                    <button type="button" className="zen-filters-panel-section-head" onClick={() => setSectionOpen((s) => ({ ...s, price: !s.price }))} aria-expanded={sectionOpen.price}>
+                      <h4 className="zen-filters-panel-section-title">{t(lang, "priceFilter")}</h4>
+                      <span className="zen-filters-panel-section-count">{countAfterPrice}</span>
+                      <span className="zen-filters-panel-section-chevron" aria-hidden>▼</span>
+                    </button>
+                    <div className="zen-filters-panel-section-content">
+                      <div className="zen-filters-panel-price-row">
+                        <div className="zen-price-sort-segmented zen-filters-panel-sort" role="group" aria-label={t(lang, "priceFilter")}>
+                          <button type="button" className={`zen-price-sort-btn zen-price-sort-btn--first ${priceSort === "asc" ? "zen-price-sort-btn-active" : ""}`} onClick={() => setPriceSort((s) => (s === "asc" ? "none" : "asc"))} title={t(lang, "sortPriceAsc")} aria-pressed={priceSort === "asc"}><span className="zen-price-sort-icon" aria-hidden>↓</span></button>
+                          <button type="button" className={`zen-price-sort-btn zen-price-sort-btn--last ${priceSort === "desc" ? "zen-price-sort-btn-active" : ""}`} onClick={() => setPriceSort((s) => (s === "desc" ? "none" : "desc"))} title={t(lang, "sortPriceDesc")} aria-pressed={priceSort === "desc"}><span className="zen-price-sort-icon" aria-hidden>↑</span></button>
+                        </div>
+                        <div
+                          ref={priceSliderTrackRef}
+                          className="zen-filters-price-slider"
+                          onPointerDown={(e) => {
+                            if (e.button !== 0) return;
+                            const rect = priceSliderTrackRef.current?.getBoundingClientRect();
+                            if (!rect) return;
+                            const pos = (e.clientX - rect.left) / rect.width;
+                            sliderActiveThumbRef.current = Math.abs(pos - priceMinPercent / 100) <= Math.abs(pos - priceMaxPercent / 100) ? "min" : "max";
+                            handlePriceSliderTrack(e.clientX);
+                            (e.target as HTMLElement).setPointerCapture(e.pointerId);
+                          }}
+                          onPointerMove={(e) => { if (sliderActiveThumbRef.current) handlePriceSliderTrack(e.clientX); }}
+                          onPointerUp={(e) => { (e.target as HTMLElement).releasePointerCapture(e.pointerId); sliderActiveThumbRef.current = null; }}
+                          onPointerLeave={() => { sliderActiveThumbRef.current = null; }}
+                        >
+                          <div className="zen-filters-price-slider-track" />
+                          <div className="zen-filters-price-slider-range" style={{ left: `${priceMinPercent}%`, width: `${priceRangePercent}%` }} />
+                          <div className="zen-filters-price-slider-thumb zen-filters-price-slider-thumb--min" style={{ left: `${priceMinPercent}%` }} onPointerDown={(e) => { e.stopPropagation(); sliderActiveThumbRef.current = "min"; priceSliderTrackRef.current?.setPointerCapture(e.pointerId); }} />
+                          <div className="zen-filters-price-slider-thumb zen-filters-price-slider-thumb--max" style={{ left: `${priceMaxPercent}%` }} onPointerDown={(e) => { e.stopPropagation(); sliderActiveThumbRef.current = "max"; priceSliderTrackRef.current?.setPointerCapture(e.pointerId); }} />
+                        </div>
+                        <div className="zen-filters-price-slider-labels">
+                          <span>{priceMinNum}</span>
+                          <span>{priceMaxNum}</span>
+                        </div>
                       </div>
                     </div>
                   </section>
-                  <section className="zen-filters-panel-section">
-                    <h4 className="zen-filters-panel-section-title">{t(lang, "categories")}</h4>
-                    <div className="zen-filters-chip-row">
-                      {categoryTabs.map(({ code, label }) => {
-                        const isSelected = code === "all" ? selectedCategories.has("all") : selectedCategories.has(code);
-                        return (
-                          <button key={code} type="button" className={`zen-filters-chip ${isSelected ? "zen-filters-chip-active" : ""}`} onClick={() => handleCategoryClick(code)}>
-                            {label}
-                          </button>
-                        );
-                      })}
+                  <section className={`zen-filters-panel-section zen-filters-panel-section--accordion ${sectionOpen.categories ? "zen-filters-panel-section--open" : ""}`}>
+                    <button type="button" className="zen-filters-panel-section-head" onClick={() => setSectionOpen((s) => ({ ...s, categories: !s.categories }))} aria-expanded={sectionOpen.categories}>
+                      <h4 className="zen-filters-panel-section-title">{t(lang, "categories")}</h4>
+                      <span className="zen-filters-panel-section-count">{displayList.length}</span>
+                      <span className="zen-filters-panel-section-chevron" aria-hidden>▼</span>
+                    </button>
+                    <div className="zen-filters-panel-section-content">
+                      <div className="zen-filters-chip-row">
+                        {categoryTabs.map(({ code, label }) => {
+                          const isSelected = code === "all" ? selectedCategories.has("all") : selectedCategories.has(code);
+                          return (
+                            <button key={code} type="button" className={`zen-filters-chip ${isSelected ? "zen-filters-chip-active" : ""}`} onClick={() => handleCategoryClick(code)}>
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </section>
                 </div>

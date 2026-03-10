@@ -1091,6 +1091,7 @@ html[data-theme="light"] .zen-app .product-card-price {
   padding-bottom: calc(max(20px, env(safe-area-inset-bottom)) + 52px);
   animation: filtersPanelSlideFromTop 0.35s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
   touch-action: pan-y;
+  transition: transform 0.15s ease-out;
 }
 .zen-filters-panel-body {
   flex: 1;
@@ -1100,6 +1101,12 @@ html[data-theme="light"] .zen-app .product-card-price {
 .zen-filters-panel-section {
   padding: 20px 0;
   border-bottom: 1px solid var(--border);
+}
+.zen-filters-panel-section--accordion {
+  padding: 0;
+}
+.zen-filters-panel-section--accordion:last-child {
+  border-bottom: none;
 }
 .zen-filters-panel-section:last-child {
   border-bottom: none;
@@ -1171,10 +1178,26 @@ html[data-theme="light"] .zen-app .product-card-price {
 }
 .zen-filters-panel-header {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   padding: 0 4px;
+}
+.zen-filters-panel-drag-handle {
+  padding: 10px 0;
+  cursor: grab;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.zen-filters-panel-drag-handle:active {
+  cursor: grabbing;
+}
+.zen-filters-panel-drag-bar {
+  display: block;
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
 }
 .zen-app .zen-filters-panel-title {
   font-family: Georgia, "Times New Roman", serif;
@@ -1184,6 +1207,136 @@ html[data-theme="light"] .zen-app .product-card-price {
   margin: 0;
   color: var(--text);
   text-transform: uppercase;
+}
+.zen-filters-panel-summary {
+  padding: 0 4px 16px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.zen-filters-panel-summary-count {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.zen-filters-panel-summary-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.zen-filters-panel-summary-tag {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
+  background: rgba(196, 40, 40, 0.08);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.zen-filters-panel-summary-tag:hover {
+  background: rgba(196, 40, 40, 0.14);
+}
+.zen-filters-panel-summary-tag:active {
+  transform: scale(0.97);
+}
+.zen-filters-panel-section--accordion .zen-filters-panel-section-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+.zen-filters-panel-section--accordion .zen-filters-panel-section-title {
+  margin: 0;
+  flex: 1;
+}
+.zen-filters-panel-section-count {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+}
+.zen-filters-panel-section-chevron {
+  font-size: 10px;
+  color: var(--muted);
+  transition: transform 0.2s ease;
+}
+.zen-filters-panel-section--open .zen-filters-panel-section-chevron {
+  transform: rotate(180deg);
+}
+.zen-filters-panel-section--accordion .zen-filters-panel-section-content {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.25s ease-out;
+}
+.zen-filters-panel-section--accordion.zen-filters-panel-section--open .zen-filters-panel-section-content {
+  max-height: 420px;
+}
+.zen-filters-panel-section--accordion:not(.zen-filters-panel-section--open) .zen-filters-panel-section-content {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin: 0 !important;
+}
+.zen-filters-panel-section--accordion .zen-filters-panel-section-content {
+  padding-bottom: 20px;
+}
+.zen-filters-price-slider {
+  position: relative;
+  height: 32px;
+  margin: 16px 0 8px;
+  touch-action: none;
+}
+.zen-filters-price-slider-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-elevated);
+}
+.zen-filters-price-slider-range {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 6px;
+  border-radius: 3px;
+  background: var(--accent);
+  pointer-events: none;
+}
+.zen-filters-price-slider-thumb {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  cursor: grab;
+  z-index: 1;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.zen-filters-price-slider-thumb:active {
+  cursor: grabbing;
+  transform: translate(-50%, -50%) scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+.zen-filters-price-slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
 }
 /* Стрелка свернуть — простая стрелка вверх по центру внизу */
 .zen-filters-panel-collapse-wrap {
@@ -1248,7 +1401,7 @@ html[data-theme="light"] .zen-app .product-card-price {
   font-weight: 500;
   letter-spacing: 0.04em;
   cursor: pointer;
-  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease, transform 0.18s ease;
   -webkit-tap-highlight-color: transparent;
   outline: none;
 }
@@ -1256,14 +1409,25 @@ html[data-theme="light"] .zen-app .product-card-price {
   color: var(--text);
   border-color: var(--muted);
 }
+.zen-filters-chip:active {
+  transform: scale(0.96);
+}
 .zen-filters-chip-active {
   border-color: var(--accent);
   background: var(--accent);
   color: #fff;
+  animation: zen-chip-select 0.2s ease;
 }
 .zen-filters-chip-active:hover {
   color: #fff;
   border-color: var(--accent);
+}
+.zen-filters-chip-active:active {
+  transform: scale(0.98);
+}
+@keyframes zen-chip-select {
+  from { transform: scale(0.95); opacity: 0.9; }
+  to { transform: scale(1); opacity: 1; }
 }
 .zen-app .zen-filters-apply-btn {
   width: 100%;
