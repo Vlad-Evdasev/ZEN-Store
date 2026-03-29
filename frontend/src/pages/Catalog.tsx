@@ -582,8 +582,11 @@ export function Catalog({
             <button type="button" onClick={onCustomOrder} style={catalogBannerStyles.card()}>
               <span className="landing-tile-overlay" />
               <span style={catalogBannerStyles.inner}>
-                <span style={catalogBannerStyles.title}>Заказать не из каталога</span>
-                <span style={catalogBannerStyles.sub}>Под заказ из Китая</span>
+                <div>
+                  <span style={catalogBannerStyles.title}>Заказать не из каталога</span>
+                  <span style={catalogBannerStyles.sub}>Под заказ из Китая</span>
+                </div>
+                <span style={catalogBannerStyles.arrow}>→</span>
               </span>
             </button>
           )}
@@ -591,8 +594,11 @@ export function Catalog({
             <button type="button" onClick={onNewArrivals} style={catalogBannerStyles.card()}>
               <span className="landing-tile-overlay" />
               <span style={catalogBannerStyles.inner}>
-                <span style={catalogBannerStyles.title}>Товары которые мы привезли</span>
-                <span style={catalogBannerStyles.sub}>Вещи в наличии</span>
+                <div>
+                  <span style={catalogBannerStyles.title}>Товары которые мы привезли</span>
+                  <span style={catalogBannerStyles.sub}>Вещи в наличии</span>
+                </div>
+                <span style={catalogBannerStyles.arrow}>→</span>
               </span>
             </button>
           )}
@@ -924,8 +930,8 @@ const catalogBannerStyles = {
     borderRadius: 16,
     cursor: "pointer",
     overflow: "hidden",
-    background: "linear-gradient(135deg, #c62828 0%, #e53935 100%)",
-    boxShadow: "0 4px 12px rgba(198, 40, 40, 0.3)",
+    background: "linear-gradient(135deg, #a52a2a 0%, #c62828 100%)",
+    boxShadow: "0 4px 12px rgba(165, 42, 42, 0.35)",
   }),
   inner: {
     position: "relative",
@@ -934,7 +940,7 @@ const catalogBannerStyles = {
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
+    gap: 12,
     textAlign: "center",
     width: "100%",
   } as React.CSSProperties,
@@ -954,5 +960,10 @@ const catalogBannerStyles = {
     fontFamily: "inherit",
     lineHeight: 1.3,
     textShadow: "0 1px 6px rgba(0,0,0,0.4)",
+  } as React.CSSProperties,
+  arrow: {
+    fontSize: 18,
+    color: "#fff",
+    opacity: 0.9,
   } as React.CSSProperties,
 };
