@@ -584,6 +584,7 @@ export function Catalog({
               <span style={catalogBannerStyles.inner}>
                 <div>
                   <span style={catalogBannerStyles.title}>Заказать не из каталога</span>
+                  <br />
                   <span style={catalogBannerStyles.sub}>Под заказ из Китая</span>
                 </div>
                 <span style={catalogBannerStyles.arrow}>→</span>
@@ -596,6 +597,7 @@ export function Catalog({
               <span style={catalogBannerStyles.inner}>
                 <div>
                   <span style={catalogBannerStyles.title}>Товары которые мы привезли</span>
+                  <br />
                   <span style={catalogBannerStyles.sub}>Вещи в наличии</span>
                 </div>
                 <span style={catalogBannerStyles.arrow}>→</span>
@@ -924,8 +926,8 @@ const catalogBannerStyles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    padding: "16px",
-    minHeight: 130,
+    padding: "12px",
+    minHeight: 110,
     border: "none",
     borderRadius: 16,
     cursor: "pointer",
@@ -940,29 +942,30 @@ const catalogBannerStyles = {
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    gap: 12,
+    gap: 8,
     textAlign: "center",
     width: "100%",
   } as React.CSSProperties,
   title: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: 700,
     color: "#fff",
-    lineHeight: 1.3,
+    lineHeight: 1.2,
     letterSpacing: "0.04em",
     textTransform: "uppercase",
     textShadow: "0 1px 8px rgba(0,0,0,0.3)",
     fontFamily: "inherit",
   } as React.CSSProperties,
   sub: {
-    fontSize: 11,
+    fontSize: 10,
     color: "rgba(255,255,255,0.88)",
     fontFamily: "inherit",
-    lineHeight: 1.3,
+    lineHeight: 1.2,
     textShadow: "0 1px 6px rgba(0,0,0,0.4)",
+    display: "block",
   } as React.CSSProperties,
   arrow: {
-    fontSize: 18,
+    fontSize: 16,
     color: "#fff",
     opacity: 0.9,
   } as React.CSSProperties,
