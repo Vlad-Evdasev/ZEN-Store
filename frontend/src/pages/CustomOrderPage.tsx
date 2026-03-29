@@ -88,6 +88,8 @@ export function CustomOrderPage({ userId, userName, firstName, onBack }: CustomO
       <div style={styles.wrap}>
         <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
           ← {t(lang, "backToCatalog")}
+        </button>
+        <div style={styles.successCard}>
           <CheckCircleIcon />
           <h3 style={styles.successTitle}>{t(lang, "customOrderSuccess")}</h3>
           <p style={styles.successHint}>{t(lang, "customOrderSubtitle")}</p>

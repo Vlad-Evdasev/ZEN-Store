@@ -395,13 +395,13 @@ const styles: Record<string, React.CSSProperties> = {
   },
   imageWrap: {
     position: "relative",
-    borderRadius: 0,
+    borderRadius: 12,
     overflow: "hidden",
     background: "var(--surface)",
     aspectRatio: "1",
     marginBottom: 24,
   },
-  image: { width: "100%", height: "100%", objectFit: "cover" },
+  image: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
   galleryFrame: {
     position: "absolute",
     inset: 0,
