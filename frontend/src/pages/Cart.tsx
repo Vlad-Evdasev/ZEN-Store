@@ -59,7 +59,7 @@ export function Cart({ userId, onBack, onCheckout, onCartChange, onProductClick 
   if (items.length === 0) {
     return (
       <div style={styles.wrap}>
-        <BackButton onClick={onBack} label={t(lang, "toCatalog")} />
+        <BackButton onClick={onBack} label={t(lang, "back")} />
         <div className="zen-empty-state">
           <strong>{t(lang, "cartEmpty")}</strong>
         </div>

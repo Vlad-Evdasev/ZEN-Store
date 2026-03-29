@@ -26,7 +26,6 @@ export function Favorites({
   return (
     <div style={styles.wrap}>
       <BackButton onClick={onBack} label={t(lang, "back")} />
-      <h2 className="zen-page-title" style={styles.title}>{t(lang, "favoritesTitle")}</h2>
       {favorites.length === 0 ? (
         <div className="zen-empty-state">
           <strong>{t(lang, "favoritesEmpty")}</strong>
@@ -54,7 +53,6 @@ export function Favorites({
 
 const styles: Record<string, React.CSSProperties> = {
   wrap: { maxWidth: 420, margin: "0 auto", paddingBottom: 24 },
-  title: { marginBottom: 20 },
   grid: {
     display: "grid",
     gridTemplateColumns: "repeat(2, 1fr)",
