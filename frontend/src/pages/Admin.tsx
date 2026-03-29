@@ -1042,6 +1042,7 @@ function SiteContentTab({ adminSecret }: { adminSecret: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const imageInputRef = useRef<Record<string, HTMLInputElement | null>>({});
 
   const load = () => {
     setLoading(true);
@@ -1058,6 +1059,18 @@ function SiteContentTab({ adminSecret }: { adminSecret: string }) {
   useEffect(() => {
     load();
   }, []);
+
+  const handleImageUpload = (key: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      setContent((c) => ({ ...c, [key]: base64 }));
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1078,7 +1091,7 @@ function SiteContentTab({ adminSecret }: { adminSecret: string }) {
     <>
       {message && <p style={styles.message}>{message}</p>}
       <h2 style={styles.pageTitle}>Главная страница</h2>
-      <p style={{ ...styles.hint, marginBottom: 16 }}>Тексты и картинка hero блока. Если поле пустое, в приложении подставится значение по умолчанию.</p>
+      <p style={{ ...styles.hint, marginBottom: 16 }}>Тексты и картинки. Если поле пустое, в приложении подставится значение по умолчанию.</p>
       <form onSubmit={handleSave} style={styles.form}>
         {SITE_CONTENT_KEYS.map((key) => (
           <label key={key} style={styles.label}>
@@ -1092,13 +1105,38 @@ function SiteContentTab({ adminSecret }: { adminSecret: string }) {
                 style={{ ...styles.input, minHeight: 80 }}
               />
             ) : key.endsWith("_image_url") ? (
-              <input
-                type="url"
-                value={content[key] ?? ""}
-                onChange={(e) => setContent((c) => ({ ...c, [key]: e.target.value }))}
-                placeholder="https://..."
-                style={styles.input}
-              />
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    type="url"
+                    value={content[key] ?? ""}
+                    onChange={(e) => setContent((c) => ({ ...c, [key]: e.target.value }))}
+                    placeholder="https://..."
+                    style={{ ...styles.input, flex: 1 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => imageInputRef.current[key]?.click()}
+                    style={{ ...styles.smallBtn, padding: "10px 16px", whiteSpace: "nowrap" }}
+                  >
+                    Загрузить
+                  </button>
+                </div>
+                <input
+                  ref={(el) => { imageInputRef.current[key] = el; }}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleImageUpload(key, e)}
+                  style={{ display: "none" }}
+                />
+                {content[key] && (
+                  <img
+                    src={content[key]}
+                    alt="Preview"
+                    style={{ maxWidth: "100%", maxHeight: 200, borderRadius: 8, objectFit: "cover" }}
+                  />
+                )}
+              </div>
             ) : (
               <input
                 type="text"
