@@ -1020,8 +1020,7 @@ function CurrencyRateTab({ adminSecret }: { adminSecret: string }) {
 const SITE_CONTENT_KEYS = [
   "hero_title", "hero_subtitle", "hero_image_url", "about_text",
   "catalog_cta", "custom_order_cta",
-  "arrived_title", "arrived_subtitle", "arrived_image_url",
-  "catalog_image_url", "custom_order_image_url",
+  "arrived_title", "arrived_subtitle",
 ] as const;
 const SITE_CONTENT_LABELS: Record<string, string> = {
   hero_title: "Заголовок hero",
@@ -1032,9 +1031,6 @@ const SITE_CONTENT_LABELS: Record<string, string> = {
   custom_order_cta: "Текст кнопки «Заказ не из каталога»",
   arrived_title: "Заголовок блока «Уже привезли»",
   arrived_subtitle: "Подзаголовок блока «Уже привезли»",
-  arrived_image_url: "URL картинки блока «Уже привезли»",
-  catalog_image_url: "URL картинки блока «Каталог»",
-  custom_order_image_url: "URL картинки блока «Заказ не из каталога»",
 };
 
 function SiteContentTab({ adminSecret }: { adminSecret: string }) {
@@ -1091,7 +1087,7 @@ function SiteContentTab({ adminSecret }: { adminSecret: string }) {
     <>
       {message && <p style={styles.message}>{message}</p>}
       <h2 style={styles.pageTitle}>Главная страница</h2>
-      <p style={{ ...styles.hint, marginBottom: 16 }}>Тексты и картинки. Если поле пустое, в приложении подставится значение по умолчанию.</p>
+      <p style={{ ...styles.hint, marginBottom: 16 }}>Тексты и картинка hero блока. Если поле пустое, в приложении подставится значение по умолчанию. Кнопки "Заказать не из каталога" и "Товары которые мы привезли" имеют встроенный красный градиент.</p>
       <form onSubmit={handleSave} style={styles.form}>
         {SITE_CONTENT_KEYS.map((key) => (
           <label key={key} style={styles.label}>

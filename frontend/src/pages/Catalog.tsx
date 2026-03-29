@@ -1,16 +1,13 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import type { Product, Store, Category, ProductReviewStats } from "../api";
-import { getProductReviewStats, getSiteContent } from "../api";
+import { getProductReviewStats } from "../api";
 import { FilterIcon } from "../components/FilterIcon";
 import { ProductCard } from "../components/ProductCard";
 import { StoreCard } from "../components/StoreCard";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 
-const DEFAULT_CUSTOM_IMG = "https://images.unsplash.com/photo-1526868158330-2d5492f0e50b?w=800&q=75";
-const DEFAULT_ARRIVED_IMG = "https://images.unsplash.com/photo-1550355291-bbee04a92027?w=800&q=75";
-
-interface CatalogProps {
+const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400";
   products: Product[];
   stores: Store[];
   categories?: Category[];
@@ -71,8 +68,6 @@ export function Catalog({
   const [selectedBrand, setSelectedBrand] = useState<string>("all");
   const [sectionOpen, setSectionOpen] = useState({ price: false, brand: false, categories: false });
   const [panelDragY, setPanelDragY] = useState(0);
-  const [customOrderImg, setCustomOrderImg] = useState(DEFAULT_CUSTOM_IMG);
-  const [arrivedImg, setArrivedImg] = useState(DEFAULT_ARRIVED_IMG);
   const scrollRef = useRef<HTMLDivElement>(null);
   const filtersPanelRef = useRef<HTMLDivElement>(null);
   const filtersDragHandleRef = useRef<HTMLDivElement>(null);
@@ -149,12 +144,6 @@ export function Catalog({
 
   useEffect(() => {
     getProductReviewStats().then(setReviewStats).catch(console.error);
-    getSiteContent()
-      .then((content) => {
-        if (content.custom_order_image_url) setCustomOrderImg(content.custom_order_image_url);
-        if (content.arrived_image_url) setArrivedImg(content.arrived_image_url);
-      })
-      .catch(console.error);
   }, []);
 
   useEffect(() => {
@@ -589,7 +578,7 @@ export function Catalog({
       {(onCustomOrder || onNewArrivals) && (
         <div style={catalogBannerStyles.row}>
           {onCustomOrder && (
-            <button type="button" onClick={onCustomOrder} style={catalogBannerStyles.card(customOrderImg)}>
+            <button type="button" onClick={onCustomOrder} style={catalogBannerStyles.card()}>
               <span className="landing-tile-overlay" />
               <span style={catalogBannerStyles.inner}>
                 <span style={catalogBannerStyles.title}>Заказать не из каталога</span>
@@ -598,7 +587,7 @@ export function Catalog({
             </button>
           )}
           {onNewArrivals && (
-            <button type="button" onClick={onNewArrivals} style={catalogBannerStyles.card(arrivedImg)}>
+            <button type="button" onClick={onNewArrivals} style={catalogBannerStyles.card()}>
               <span className="landing-tile-overlay" />
               <span style={catalogBannerStyles.inner}>
                 <span style={catalogBannerStyles.title}>Товары которые мы привезли</span>
@@ -923,7 +912,7 @@ const catalogBannerStyles = {
     gap: 10,
     margin: "0 0 12px",
   } as React.CSSProperties,
-  card: (bgImg: string): React.CSSProperties => ({
+  card: (): React.CSSProperties => ({
     position: "relative",
     display: "flex",
     alignItems: "center",
@@ -934,9 +923,8 @@ const catalogBannerStyles = {
     borderRadius: 16,
     cursor: "pointer",
     overflow: "hidden",
-    backgroundImage: `linear-gradient(135deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.35) 100%), url(${bgImg})`,
-    backgroundSize: "cover",
-    backgroundPosition: "center",
+    background: "linear-gradient(135deg, #c62828 0%, #e53935 100%)",
+    boxShadow: "0 4px 12px rgba(198, 40, 40, 0.3)",
   }),
   inner: {
     position: "relative",
@@ -956,7 +944,7 @@ const catalogBannerStyles = {
     lineHeight: 1.3,
     letterSpacing: "0.04em",
     textTransform: "uppercase",
-    textShadow: "0 1px 8px rgba(0,0,0,0.5)",
+    textShadow: "0 1px 8px rgba(0,0,0,0.3)",
     fontFamily: "inherit",
   } as React.CSSProperties,
   sub: {
