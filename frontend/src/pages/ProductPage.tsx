@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { addToCart, getProductReviews, addProductReview, type Product, type ProductReview } from "../api";
+import { BackButton } from "../components/BackButton";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 
@@ -153,9 +154,7 @@ export function ProductPage({
   return (
     <div ref={rootRef} style={styles.wrap}>
       <div style={styles.topBar}>
-        <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
-          ← {t(lang, "back")}
-        </button>
+        <BackButton onClick={onBack} label={t(lang, "back")} />
       </div>
 
       <div style={styles.imageWrap}>
@@ -365,15 +364,7 @@ const styles: Record<string, React.CSSProperties> = {
   topBar: {
     display: "flex",
     alignItems: "center",
-    marginBottom: 12,
-  },
-  back: {
-    background: "none",
-    border: "none",
-    color: "var(--muted)",
-    fontFamily: "inherit",
-    fontSize: 14,
-    cursor: "pointer",
+    marginBottom: 0,
   },
   titleRow: {
     display: "flex",

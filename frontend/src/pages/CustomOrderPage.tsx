@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { submitCustomOrder } from "../api";
+import { BackButton } from "../components/BackButton";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 
@@ -86,9 +87,7 @@ export function CustomOrderPage({ userId, userName, firstName, onBack }: CustomO
   if (customSuccess) {
     return (
       <div style={styles.wrap}>
-        <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
-          ← {t(lang, "backToCatalog")}
-        </button>
+        <BackButton onClick={onBack} label={t(lang, "backToCatalog")} />
         <div style={styles.successCard}>
           <CheckCircleIcon />
           <h3 style={styles.successTitle}>{t(lang, "customOrderSuccess")}</h3>
@@ -108,9 +107,7 @@ export function CustomOrderPage({ userId, userName, firstName, onBack }: CustomO
 
   return (
     <div style={styles.wrap}>
-      <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
-        ← {t(lang, "backToCatalog")}
-      </button>
+      <BackButton onClick={onBack} label={t(lang, "backToCatalog")} />
 
       <div style={styles.heroSection}>
         <h2 style={styles.heroTitle}>{t(lang, "customOrderTitle")}</h2>
@@ -229,17 +226,6 @@ const styles: Record<string, React.CSSProperties> = {
     margin: "0 auto",
     paddingBottom: 32,
   },
-  back: {
-    background: "none",
-    border: "none",
-    color: "var(--muted)",
-    fontFamily: "inherit",
-    fontSize: 14,
-    cursor: "pointer",
-    marginBottom: 16,
-    padding: 0,
-  },
-
   heroSection: {
     background: "linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%)",
     borderRadius: "var(--radius-lg)",

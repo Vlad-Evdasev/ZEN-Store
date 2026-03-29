@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import type { Product } from "../api";
 import { ProductCard } from "../components/ProductCard";
+import { BackButton } from "../components/BackButton";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 import { getCategoryLabel } from "../utils/categories";
@@ -52,9 +53,7 @@ export function StoreCatalog({
 
   return (
     <div style={styles.wrap}>
-      <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
-        ← {backLabel}
-      </button>
+      <BackButton onClick={onBack} label={backLabel} />
       <div className="zen-catalog-search-row">
         <input
           type="search"
@@ -93,15 +92,6 @@ export function StoreCatalog({
 
 const styles: Record<string, React.CSSProperties> = {
   wrap: { paddingBottom: 24 },
-  back: {
-    background: "none",
-    border: "none",
-    color: "var(--muted)",
-    fontFamily: "inherit",
-    fontSize: 14,
-    cursor: "pointer",
-    marginBottom: 16,
-  },
   grid: {},
   empty: {},
 };

@@ -7,6 +7,7 @@ import {
   type Post,
   type PostComment,
 } from "../api";
+import { BackButton } from "../components/BackButton";
 import { useSettings, type Lang } from "../context/SettingsContext";
 import { t } from "../i18n";
 
@@ -328,13 +329,7 @@ export function NewArrivalsPage({
   return (
     <div style={pageStyles.wrap}>
       <div style={pageStyles.headerArea}>
-        <button
-          type="button"
-          onClick={onBack}
-          style={pageStyles.backBtn}
-        >
-          ← {t(lang, "backToCatalog")}
-        </button>
+        <BackButton onClick={onBack} label={t(lang, "backToCatalog")} />
         <h1 style={pageStyles.title}>{t(lang, "postsFeedTitle")}</h1>
         <div style={pageStyles.divider} />
       </div>
@@ -382,19 +377,6 @@ const pageStyles: Record<string, React.CSSProperties> = {
   },
   headerArea: {
     marginBottom: 20,
-  },
-  backBtn: {
-    display: "block",
-    marginLeft: 0,
-    background: "none",
-    border: "none",
-    color: "var(--muted)",
-    fontFamily: "inherit",
-    fontSize: 14,
-    cursor: "pointer",
-    padding: 0,
-    marginBottom: 16,
-    textAlign: "left" as const,
   },
   title: {
     fontSize: 22,

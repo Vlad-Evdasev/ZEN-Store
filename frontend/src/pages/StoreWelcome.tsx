@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { BackButton } from "../components/BackButton";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 
@@ -31,9 +32,7 @@ export function StoreWelcome({ store: _store, categoryLabels: _categoryLabels, s
   return (
     <div style={{ ...styles.wrap, ...(showBack ? {} : styles.wrapNoHeader) }}>
       {showBack && (
-        <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
-          ← {t(lang, "back")}
-        </button>
+        <BackButton onClick={onBack} label={t(lang, "back")} />
       )}
       <h1
         style={{
@@ -65,15 +64,6 @@ export function StoreWelcome({ store: _store, categoryLabels: _categoryLabels, s
 const styles: Record<string, React.CSSProperties> = {
   wrap: { maxWidth: 420, margin: "0 auto", paddingBottom: 24 },
   wrapNoHeader: { paddingTop: 48 },
-  back: {
-    background: "none",
-    border: "none",
-    color: "var(--muted)",
-    fontFamily: "inherit",
-    fontSize: 14,
-    cursor: "pointer",
-    marginBottom: 32,
-  },
   title: {
     fontFamily: "Unbounded, sans-serif",
     fontSize: 26,

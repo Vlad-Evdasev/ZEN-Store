@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { getCart, createOrder, type CartItem } from "../api";
+import { BackButton } from "../components/BackButton";
 import { useSettings } from "../context/SettingsContext";
+import { t } from "../i18n";
 
 interface CheckoutProps {
   userId: string;
@@ -12,7 +14,8 @@ interface CheckoutProps {
 }
 
 export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, sellerLink }: CheckoutProps) {
-  const { formatPrice } = useSettings();
+  const { formatPrice, settings } = useSettings();
+  const lang = settings.lang;
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -102,9 +105,7 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, sel
 
   return (
     <div style={styles.wrap}>
-      <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
-        ← Назад
-      </button>
+      <BackButton onClick={onBack} label={t(lang, "back")} />
 
       <h2 style={styles.title}>Оформление заказа</h2>
 
@@ -159,15 +160,6 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, sel
 
 const styles: Record<string, React.CSSProperties> = {
   wrap: { maxWidth: 420, margin: "0 auto" },
-  back: {
-    background: "none",
-    border: "none",
-    color: "var(--muted)",
-    fontFamily: "inherit",
-    fontSize: 14,
-    cursor: "pointer",
-    marginBottom: 20,
-  },
   backBtn: {
     marginTop: 24,
     padding: 14,

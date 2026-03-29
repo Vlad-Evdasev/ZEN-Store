@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { getOrders, type Order } from "../api";
+import { BackButton } from "../components/BackButton";
 import { useSettings } from "../context/SettingsContext";
 import type { Lang } from "../context/SettingsContext";
 import { t } from "../i18n";
@@ -78,7 +79,7 @@ export function History({ userId, onBack, onProductClick }: HistoryProps) {
   if (loading) {
     return (
       <div style={styles.wrap}>
-        <button onClick={onBack} className="zen-back-link" style={styles.back} type="button">← {t(lang, "backToCatalog")}</button>
+        <BackButton onClick={onBack} label={t(lang, "backToCatalog")} />
         <p style={styles.loading}>{t(lang, "loading")}</p>
       </div>
     );
@@ -87,9 +88,7 @@ export function History({ userId, onBack, onProductClick }: HistoryProps) {
   return (
     <div style={styles.wrap}>
       <header style={styles.header}>
-        <button onClick={onBack} className="zen-back-link" style={styles.back} type="button">
-          ← {t(lang, "backToCatalog")}
-        </button>
+        <BackButton onClick={onBack} label={t(lang, "backToCatalog")} />
         <div style={styles.titleAndFilterWrap}>
           <h1 className="zen-page-title" style={styles.title}>{t(lang, "historyTitle")}</h1>
           <div style={styles.filterDropdownWrap} ref={filterDropdownRef} role="group" aria-label={t(lang, "historyTitle")}>
@@ -237,17 +236,6 @@ const styles: Record<string, React.CSSProperties> = {
   wrap: { maxWidth: 420, margin: "0 auto", paddingBottom: 32 },
   header: {
     marginBottom: 24,
-  },
-  back: {
-    display: "block",
-    background: "none",
-    border: "none",
-    color: "var(--muted)",
-    fontFamily: "inherit",
-    fontSize: 14,
-    cursor: "pointer",
-    marginBottom: 16,
-    padding: "4px 0",
   },
   title: {
     fontSize: 22,

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getCart, removeFromCart, type CartItem } from "../api";
+import { BackButton } from "../components/BackButton";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 
@@ -58,9 +59,7 @@ export function Cart({ userId, onBack, onCheckout, onCartChange, onProductClick 
   if (items.length === 0) {
     return (
       <div style={styles.wrap}>
-        <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
-          ← {t(lang, "toCatalog")}
-        </button>
+        <BackButton onClick={onBack} label={t(lang, "toCatalog")} />
         <div className="zen-empty-state">
           <strong>{t(lang, "cartEmpty")}</strong>
         </div>
@@ -70,9 +69,7 @@ export function Cart({ userId, onBack, onCheckout, onCartChange, onProductClick 
 
   return (
     <div style={styles.wrap}>
-      <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
-        ← {t(lang, "back")}
-      </button>
+      <BackButton onClick={onBack} label={t(lang, "back")} />
 
       <div style={styles.list}>
         {items.map((item) => (
@@ -120,15 +117,6 @@ export function Cart({ userId, onBack, onCheckout, onCartChange, onProductClick 
 
 const styles: Record<string, React.CSSProperties> = {
   wrap: { maxWidth: 420, margin: "0 auto" },
-  back: {
-    background: "none",
-    border: "none",
-    color: "var(--muted)",
-    fontFamily: "inherit",
-    fontSize: 14,
-    cursor: "pointer",
-    marginBottom: 20,
-  },
   list: { display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 },
   item: {
     display: "flex",

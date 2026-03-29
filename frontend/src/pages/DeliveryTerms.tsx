@@ -1,3 +1,4 @@
+import { BackButton } from "../components/BackButton";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 
@@ -10,9 +11,7 @@ export function DeliveryTerms({ onBack }: DeliveryTermsProps) {
   const lang = settings.lang;
   return (
     <div style={styles.wrap}>
-      <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
-        ← {t(lang, "back")}
-      </button>
+      <BackButton onClick={onBack} label={t(lang, "back")} />
       <h2 style={styles.title}>{t(lang, "deliveryTermsTitle")}</h2>
       <div style={styles.content}>
         <p style={styles.p}>{t(lang, "deliveryTermsP1")}</p>
@@ -25,15 +24,6 @@ export function DeliveryTerms({ onBack }: DeliveryTermsProps) {
 
 const styles: Record<string, React.CSSProperties> = {
   wrap: { maxWidth: 420, margin: "0 auto", paddingBottom: 24 },
-  back: {
-    background: "none",
-    border: "none",
-    color: "var(--muted)",
-    fontFamily: "inherit",
-    fontSize: 14,
-    cursor: "pointer",
-    marginBottom: 24,
-  },
   title: {
     fontFamily: "Unbounded, sans-serif",
     fontSize: 20,

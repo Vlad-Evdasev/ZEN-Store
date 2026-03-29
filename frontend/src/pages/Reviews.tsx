@@ -6,6 +6,7 @@ import {
   type Review,
   type ReviewComment,
 } from "../api";
+import { BackButton } from "../components/BackButton";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 
@@ -102,9 +103,7 @@ export function Reviews({ userId, firstName, onBack }: ReviewsProps) {
 
   return (
     <div style={styles.wrap}>
-      <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
-        ← {t(lang, "backToCatalog")}
-      </button>
+      <BackButton onClick={onBack} label={t(lang, "backToCatalog")} />
 
       <h2 className="zen-page-title" style={styles.title}>{t(lang, "reviewsTitle")}</h2>
 
@@ -222,15 +221,6 @@ export function Reviews({ userId, firstName, onBack }: ReviewsProps) {
 
 const styles: Record<string, React.CSSProperties> = {
   wrap: { maxWidth: 420, margin: "0 auto", paddingBottom: 24 },
-  back: {
-    background: "none",
-    border: "none",
-    color: "var(--muted)",
-    fontFamily: "inherit",
-    fontSize: 14,
-    cursor: "pointer",
-    marginBottom: 20,
-  },
   title: {
     fontFamily: "Unbounded, sans-serif",
     fontSize: 22,

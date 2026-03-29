@@ -1,3 +1,4 @@
+import { BackButton } from "../components/BackButton";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 
@@ -15,9 +16,7 @@ export function Profile({ userName, firstName, onBack, onOpenDeliveryTerms, onOp
   const lang = settings.lang;
   return (
     <div style={styles.wrap}>
-      <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
-        ← {t(lang, "backToCatalog")}
-      </button>
+      <BackButton onClick={onBack} label={t(lang, "backToCatalog")} />
 
       <div style={styles.avatar}>{firstName[0]?.toUpperCase() || "?"}</div>
       <h2 style={styles.name}>{firstName}</h2>
@@ -61,15 +60,6 @@ export function Profile({ userName, firstName, onBack, onOpenDeliveryTerms, onOp
 
 const styles: Record<string, React.CSSProperties> = {
   wrap: { maxWidth: 420, margin: "0 auto", paddingBottom: 24 },
-  back: {
-    background: "none",
-    border: "none",
-    color: "var(--muted)",
-    fontFamily: "inherit",
-    fontSize: 14,
-    cursor: "pointer",
-    marginBottom: 24,
-  },
   avatar: {
     width: 80,
     height: 80,

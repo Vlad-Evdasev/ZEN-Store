@@ -11,6 +11,7 @@ import {
   type SupportChat,
   type SupportMessage,
 } from "../api";
+import { BackButton } from "../components/BackButton";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 
@@ -205,9 +206,10 @@ export function Support({ userId, userName, firstName, onBack, onUnreadCountChan
     return (
       <div className="zen-support" style={styles.wrap}>
         <div style={styles.topRow}>
-          <button type="button" onClick={() => { setSelectedChatId(null); setPhotoDataUrl(null); }} className="zen-back-link" style={styles.back}>
-            ← {t(lang, "back")}
-          </button>
+          <BackButton
+            onClick={() => { setSelectedChatId(null); setPhotoDataUrl(null); }}
+            label={t(lang, "back")}
+          />
           <button onClick={handleDeleteChat} style={styles.deleteBtn}>
             {t(lang, "supportDeleteChat")}
           </button>
@@ -356,9 +358,7 @@ export function Support({ userId, userName, firstName, onBack, onUnreadCountChan
 
   return (
     <div className="zen-support" style={styles.wrap}>
-      <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
-        ← {t(lang, "back")}
-      </button>
+      <BackButton onClick={onBack} label={t(lang, "back")} />
       <button onClick={handleCreateChat} style={styles.newChatBtn} disabled={creating}>
         {creating ? "..." : t(lang, "supportNewChat")}
       </button>
@@ -433,15 +433,7 @@ export function Support({ userId, userName, firstName, onBack, onUnreadCountChan
 
 const styles: Record<string, React.CSSProperties> = {
   wrap: { maxWidth: 420, margin: "0 auto", paddingBottom: 0 },
-  topRow: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
-  back: {
-    background: "none",
-    border: "none",
-    color: "var(--muted)",
-    fontFamily: "inherit",
-    fontSize: 14,
-    cursor: "pointer",
-  },
+  topRow: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, gap: 8 },
   deleteBtn: {
     background: "none",
     border: "none",
