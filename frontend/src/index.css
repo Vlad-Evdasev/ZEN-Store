@@ -536,7 +536,6 @@ html[data-theme="light"] .zen-app .product-card-price {
 .zen-menu-item:nth-child(2) { animation-delay: 0.14s; }
 .zen-menu-item:nth-child(3) { animation-delay: 0.2s; }
 .zen-menu-item:nth-child(4) { animation-delay: 0.26s; }
-.zen-menu-item:nth-child(5) { animation-delay: 0.32s; }
 
 /* Открытие страниц корзины и избранного */
 @keyframes pageContentEnter {
@@ -792,14 +791,14 @@ html[data-theme="light"] .zen-app .product-card-price {
 
 /* Экшен-меню: премиум в духе RL */
 .zen-app .zen-menu-panel {
-  padding-top: max(24px, env(safe-area-inset-top));
-  padding-left: max(20px, env(safe-area-inset-left));
-  padding-right: 20px;
+  padding-top: max(10px, env(safe-area-inset-top));
+  padding-left: max(10px, env(safe-area-inset-left));
+  padding-right: 16px;
   padding-bottom: 24px;
   gap: 2px;
 }
 .zen-app .zen-menu-item {
-  padding: 16px 14px !important;
+  padding: 14px 8px 14px 6px !important;
   font-size: 15px !important;
   letter-spacing: 0.02em !important;
   border-radius: var(--radius-md) !important;
@@ -814,9 +813,6 @@ html[data-theme="light"] .zen-app .product-card-price {
 }
 .zen-app .zen-menu-item:hover {
   background: var(--surface-elevated) !important;
-}
-.zen-app .zen-menu-item.zen-menu-item-welcome {
-  color: var(--accent) !important;
 }
 
 /* Категории каталога: пилюли в стиле RL, концептуально */

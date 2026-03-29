@@ -60,15 +60,6 @@ function MenuIconSettings() {
     </svg>
   );
 }
-function MenuIconHome() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={iconStyle} aria-hidden>
-      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-      <polyline points="9 22 9 12 15 12 15 22" />
-    </svg>
-  );
-}
-
 const headerIconSize = 22;
 const headerIconStyle: React.CSSProperties = { width: headerIconSize, height: headerIconSize, flexShrink: 0, color: "currentColor", display: "block" };
 const headerIconCartStyle: React.CSSProperties = { width: headerIconSize, height: headerIconSize, flexShrink: 0, color: "currentColor", display: "block", transform: "scale(1.38)" };
@@ -286,11 +277,6 @@ function App() {
     setProductId(null);
   };
 
-  const goToWelcome = () => {
-    setMenuOpen(false);
-    setPage("catalog");
-  };
-
   const isCustomOrderForm = page === "customOrder";
   const hideHeader = isCustomOrderForm;
   const openCheckout = () => setPage("checkout");
@@ -375,12 +361,6 @@ function App() {
               <span style={styles.menuItemContent}>
                 <MenuIconSettings />
                 <span>{t(lang, "settings")}</span>
-              </span>
-            </button>
-            <button onClick={goToWelcome} type="button" className="zen-menu-item zen-menu-item-welcome" style={styles.menuWelcomeItem}>
-              <span style={styles.menuItemContent}>
-                <MenuIconHome />
-                <span>{t(lang, "menuToWelcome")}</span>
               </span>
             </button>
           </div>
@@ -617,7 +597,6 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     gap: 12,
   },
-  menuWelcomeItem: {},
   logo: {
     fontFamily: "Unbounded, sans-serif",
     fontSize: 22,
