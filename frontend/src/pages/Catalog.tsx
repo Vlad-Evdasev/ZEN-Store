@@ -7,6 +7,9 @@ import { StoreCard } from "../components/StoreCard";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 
+const DEFAULT_CUSTOM_IMG = "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800";
+const DEFAULT_ARRIVED_IMG = "https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=800";
+
 interface CatalogProps {
   products: Product[];
   stores: Store[];
@@ -575,6 +578,29 @@ export function Catalog({
         </div>
       )}
 
+      {(onCustomOrder || onNewArrivals) && (
+        <div style={catalogBannerStyles.row}>
+          {onCustomOrder && (
+            <button type="button" onClick={onCustomOrder} style={catalogBannerStyles.card(DEFAULT_CUSTOM_IMG)}>
+              <span className="landing-tile-overlay" />
+              <span style={catalogBannerStyles.inner}>
+                <span style={catalogBannerStyles.title}>Заказать не из каталога</span>
+                <span style={catalogBannerStyles.sub}>Под заказ из Китая</span>
+              </span>
+            </button>
+          )}
+          {onNewArrivals && (
+            <button type="button" onClick={onNewArrivals} style={catalogBannerStyles.card(DEFAULT_ARRIVED_IMG)}>
+              <span className="landing-tile-overlay" />
+              <span style={catalogBannerStyles.inner}>
+                <span style={catalogBannerStyles.title}>Товары которые мы привезли</span>
+                <span style={catalogBannerStyles.sub}>Вещи в наличии</span>
+              </span>
+            </button>
+          )}
+        </div>
+      )}
+
       <div className={`zen-catalog-search-row ${filtersOpen || filtersClosing ? "zen-catalog-search-row--filter-open" : ""}`}>
         {showPriceFilter && (
           <button
@@ -597,23 +623,6 @@ export function Catalog({
           aria-label={t(lang, "search")}
         />
       </div>
-
-      {(onCustomOrder || onNewArrivals) && (
-        <div style={catalogBannerStyles.row}>
-          {onCustomOrder && (
-            <button type="button" onClick={onCustomOrder} style={catalogBannerStyles.card}>
-              <span style={catalogBannerStyles.title}>Заказать не из каталога</span>
-              <span style={catalogBannerStyles.sub}>Под заказ из Китая</span>
-            </button>
-          )}
-          {onNewArrivals && (
-            <button type="button" onClick={onNewArrivals} style={catalogBannerStyles.card}>
-              <span style={catalogBannerStyles.title}>Товары которые мы привезли</span>
-              <span style={catalogBannerStyles.sub}>Вещи в наличии</span>
-            </button>
-          )}
-        </div>
-      )}
 
       {showPriceFilter && filtersOpen && (
         <>
@@ -899,39 +908,52 @@ const styles: Record<string, React.CSSProperties> = {
   empty: {},
 };
 
-const catalogBannerStyles: Record<string, React.CSSProperties> = {
+const catalogBannerStyles = {
   row: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
     gap: 10,
-    margin: "10px 0 4px",
-  },
-  card: {
+    margin: "0 0 12px",
+  } as React.CSSProperties,
+  card: (bgImg: string): React.CSSProperties => ({
+    position: "relative",
+    display: "flex",
+    alignItems: "flex-end",
+    justifyContent: "flex-start",
+    padding: "16px 14px",
+    minHeight: 130,
+    border: "none",
+    borderRadius: 16,
+    cursor: "pointer",
+    overflow: "hidden",
+    backgroundImage: `url(${bgImg})`,
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+  }),
+  inner: {
+    position: "relative",
+    zIndex: 1,
     display: "flex",
     flexDirection: "column",
     alignItems: "flex-start",
-    justifyContent: "flex-end",
-    padding: "14px 12px",
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: 16,
-    cursor: "pointer",
+    gap: 3,
     textAlign: "left",
-    minHeight: 90,
-    gap: 4,
-    transition: "background 0.15s",
-  },
+  } as React.CSSProperties,
   title: {
     fontSize: 13,
-    fontWeight: 600,
-    color: "var(--text)",
+    fontWeight: 700,
+    color: "#fff",
     lineHeight: 1.3,
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
+    textShadow: "0 1px 8px rgba(0,0,0,0.5)",
     fontFamily: "inherit",
-  },
+  } as React.CSSProperties,
   sub: {
     fontSize: 11,
-    color: "var(--muted)",
+    color: "rgba(255,255,255,0.88)",
     fontFamily: "inherit",
     lineHeight: 1.3,
-  },
+    textShadow: "0 1px 6px rgba(0,0,0,0.4)",
+  } as React.CSSProperties,
 };
