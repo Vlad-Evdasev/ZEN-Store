@@ -587,7 +587,7 @@ export function Catalog({
                   <br />
                   <span style={catalogBannerStyles.sub}>Под заказ из Китая</span>
                 </div>
-                <span style={catalogBannerStyles.arrow}>→</span>
+                <span style={catalogBannerStyles.arrow}>↓</span>
               </span>
             </button>
           )}
@@ -600,7 +600,7 @@ export function Catalog({
                   <br />
                   <span style={catalogBannerStyles.sub}>Вещи в наличии</span>
                 </div>
-                <span style={catalogBannerStyles.arrow}>→</span>
+                <span style={catalogBannerStyles.arrow}>↓</span>
               </span>
             </button>
           )}
