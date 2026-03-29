@@ -19,6 +19,7 @@
   --font-size-body: 15px;
   /* Тёмная тема: тот же тёплый тон, затемнённый */
   --bg: #0f0e0e;
+  --bg-rgb: 15, 14, 14;
   --surface: #1c1b1a;
   --surface-elevated: #262524;
   --border: #353432;
@@ -37,6 +38,7 @@
 /* Светлая тема: премиум в духе Ralph Lauren — белый/крем, чёткая типографика */
 html[data-theme="light"] {
   --bg: #faf9f7;
+  --bg-rgb: 250, 249, 247;
   --surface: #ffffff;
   --surface-elevated: #f5f3f0;
   --border: #e8e6e3;
