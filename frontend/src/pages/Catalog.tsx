@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import type { Product, Store, Category, ProductReviewStats } from "../api";
-import { getProductReviewStats } from "../api";
+import { getProductReviewStats, getSiteContent } from "../api";
 import { FilterIcon } from "../components/FilterIcon";
 import { ProductCard } from "../components/ProductCard";
 import { StoreCard } from "../components/StoreCard";
@@ -71,6 +71,8 @@ export function Catalog({
   const [selectedBrand, setSelectedBrand] = useState<string>("all");
   const [sectionOpen, setSectionOpen] = useState({ price: false, brand: false, categories: false });
   const [panelDragY, setPanelDragY] = useState(0);
+  const [customOrderImg, setCustomOrderImg] = useState(DEFAULT_CUSTOM_IMG);
+  const [arrivedImg, setArrivedImg] = useState(DEFAULT_ARRIVED_IMG);
   const scrollRef = useRef<HTMLDivElement>(null);
   const filtersPanelRef = useRef<HTMLDivElement>(null);
   const filtersDragHandleRef = useRef<HTMLDivElement>(null);
@@ -147,6 +149,12 @@ export function Catalog({
 
   useEffect(() => {
     getProductReviewStats().then(setReviewStats).catch(console.error);
+    getSiteContent()
+      .then((content) => {
+        if (content.custom_order_image_url) setCustomOrderImg(content.custom_order_image_url);
+        if (content.arrived_image_url) setArrivedImg(content.arrived_image_url);
+      })
+      .catch(console.error);
   }, []);
 
   useEffect(() => {
@@ -581,7 +589,7 @@ export function Catalog({
       {(onCustomOrder || onNewArrivals) && (
         <div style={catalogBannerStyles.row}>
           {onCustomOrder && (
-            <button type="button" onClick={onCustomOrder} style={catalogBannerStyles.card(DEFAULT_CUSTOM_IMG)}>
+            <button type="button" onClick={onCustomOrder} style={catalogBannerStyles.card(customOrderImg)}>
               <span className="landing-tile-overlay" />
               <span style={catalogBannerStyles.inner}>
                 <span style={catalogBannerStyles.title}>Заказать не из каталога</span>
@@ -590,7 +598,7 @@ export function Catalog({
             </button>
           )}
           {onNewArrivals && (
-            <button type="button" onClick={onNewArrivals} style={catalogBannerStyles.card(DEFAULT_ARRIVED_IMG)}>
+            <button type="button" onClick={onNewArrivals} style={catalogBannerStyles.card(arrivedImg)}>
               <span className="landing-tile-overlay" />
               <span style={catalogBannerStyles.inner}>
                 <span style={catalogBannerStyles.title}>Товары которые мы привезли</span>
