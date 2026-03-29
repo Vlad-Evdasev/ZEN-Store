@@ -8,6 +8,8 @@ import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 
 const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400";
+
+interface CatalogProps {
   products: Product[];
   stores: Store[];
   categories?: Category[];
@@ -36,7 +38,6 @@ const FALLBACK_BY_CODE: Record<string, { image: string; desc: string }> = {
   jacket: { image: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400", desc: "Куртки и аксессуары" },
   accessories: { image: "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=400", desc: "Аксессуары" },
 };
-const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400";
 
 export function Catalog({
   products,
