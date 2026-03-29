@@ -1025,7 +1025,7 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   border-bottom: 1px solid var(--border);
   transition: border-color 0.25s ease, border-width 0.2s ease;
   position: sticky;
-  top: 0;
+  top: 56px;
   background: var(--bg);
   z-index: 10;
 }
