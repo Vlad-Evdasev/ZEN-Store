@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { submitCustomOrder } from "../api";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
@@ -39,6 +39,10 @@ export function CustomOrderPage({ userId, userName, firstName, onBack }: CustomO
   const [customSuccess, setCustomSuccess] = useState(false);
   const [submitHover, setSubmitHover] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
