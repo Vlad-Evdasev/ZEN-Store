@@ -74,9 +74,9 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 16,
   },
   name: {
-    fontFamily: "Georgia, 'Times New Roman', serif",
+    fontFamily: "Proxima Nova, -apple-system, system-ui, sans-serif",
     fontSize: 22,
-    fontWeight: 400,
+    fontWeight: 600,
     marginBottom: 4,
     letterSpacing: "0.02em",
   },
