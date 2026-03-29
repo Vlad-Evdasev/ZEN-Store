@@ -1024,6 +1024,10 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   min-height: 44px;
   border-bottom: 1px solid var(--border);
   transition: border-color 0.25s ease, border-width 0.2s ease;
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 10;
 }
 .zen-app .zen-catalog-search-row:focus-within:not(.zen-catalog-search-row--filter-open) {
   border-bottom-width: 2px;
