@@ -312,7 +312,6 @@ function App() {
     storeCatalogStore &&
     "category" in storeCatalogStore &&
     storeCatalogStore.category === DEFAULT_WELCOME_STORE.category;
-  const isInitialWelcomeScreen = page === "storeCatalog" && storeCatalogView === "welcome" && isDefaultWelcomeStore;
   const isCustomOrderForm = page === "storeCatalog" && storeCatalogView === "customOrder";
   const hideHeader = isCustomOrderForm;
   const openCheckout = () => setPage("checkout");
