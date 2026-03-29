@@ -277,8 +277,6 @@ function App() {
     setProductId(null);
   };
 
-  const isCustomOrderForm = page === "customOrder";
-  const hideHeader = isCustomOrderForm;
   const openCheckout = () => setPage("checkout");
 
   const needsAuth = !isInTelegram && !userId;
@@ -296,39 +294,35 @@ function App() {
     <div style={styles.appWrapper}>
     <div className="zen-app" style={styles.app}>
       <SettingsSync />
-      {!hideHeader && (
-        <>
-          <header style={styles.header}>
-            <div style={styles.headerLeft} className="zen-header-left">
-              <button
-                type="button"
-                onClick={() => setMenuOpen(!menuOpen)}
-                className="zen-header-hamburger"
-                style={styles.hamburger}
-                aria-label="Меню"
-              >
-                <HeaderIconHamburger />
-              </button>
-            </div>
-            <div style={styles.headerCenter}>
-              <button onClick={openCatalog} className="zen-logo" style={styles.logo} aria-label="На главную">
-                RAW
-              </button>
-            </div>
-            <div style={styles.headerRight}>
-              <button onClick={openFavorites} style={styles.headerIconBtn} aria-label={t(lang, "favorites")}>
-                <HeaderIconFavorites />
-                <span style={{ ...styles.favBadge, ...styles.headerBadgePos, visibility: wishlistIds.size > 0 ? "visible" : "hidden" }}>{wishlistIds.size || "0"}</span>
-              </button>
-              <button onClick={openCart} style={styles.headerIconBtnCart} aria-label={t(lang, "cart")}>
-                <HeaderIconCart />
-                <span style={{ ...styles.cartBadge, ...styles.headerBadgePos, visibility: cartCount > 0 ? "visible" : "hidden" }}>{cartCount || "0"}</span>
-              </button>
-            </div>
-          </header>
-          <div style={styles.headerSpacer} aria-hidden />
-        </>
-      )}
+      <header style={styles.header}>
+        <div style={styles.headerLeft} className="zen-header-left">
+          <button
+            type="button"
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="zen-header-hamburger"
+            style={styles.hamburger}
+            aria-label="Меню"
+          >
+            <HeaderIconHamburger />
+          </button>
+        </div>
+        <div style={styles.headerCenter}>
+          <button onClick={openCatalog} className="zen-logo" style={styles.logo} aria-label="На главную">
+            RAW
+          </button>
+        </div>
+        <div style={styles.headerRight}>
+          <button onClick={openFavorites} style={styles.headerIconBtn} aria-label={t(lang, "favorites")}>
+            <HeaderIconFavorites />
+            <span style={{ ...styles.favBadge, ...styles.headerBadgePos, visibility: wishlistIds.size > 0 ? "visible" : "hidden" }}>{wishlistIds.size || "0"}</span>
+          </button>
+          <button onClick={openCart} style={styles.headerIconBtnCart} aria-label={t(lang, "cart")}>
+            <HeaderIconCart />
+            <span style={{ ...styles.cartBadge, ...styles.headerBadgePos, visibility: cartCount > 0 ? "visible" : "hidden" }}>{cartCount || "0"}</span>
+          </button>
+        </div>
+      </header>
+      <div style={styles.headerSpacer} aria-hidden />
 
       {menuOpen && (
         <>
