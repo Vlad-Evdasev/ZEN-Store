@@ -440,7 +440,7 @@ html[data-theme="light"] .zen-app .product-card-price {
 
 /* Каталог: минимальные отступы от краёв экрана */
 .zen-app main.zen-main--catalog {
-  padding-top: 8px;
+  padding-top: 130px;
   padding-left: max(6px, env(safe-area-inset-left));
   padding-right: max(6px, env(safe-area-inset-right));
   padding-bottom: 80px;
@@ -1027,10 +1027,16 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   min-height: 44px;
   border-bottom: 1px solid var(--border);
   transition: border-color 0.25s ease, border-width 0.2s ease;
-  position: sticky;
-  top: 0;
+  position: fixed;
+  top: 56px;
+  left: 0;
+  right: 0;
   background: var(--bg);
-  z-index: 10;
+  z-index: 12;
+  padding-left: max(6px, env(safe-area-inset-left));
+  padding-right: max(6px, env(safe-area-inset-right));
+  box-sizing: border-box;
+  width: 100%;
 }
 .zen-app .zen-catalog-search-row:focus-within:not(.zen-catalog-search-row--filter-open) {
   border-bottom-width: 2px;
