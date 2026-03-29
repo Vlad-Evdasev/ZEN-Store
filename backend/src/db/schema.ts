@@ -285,6 +285,46 @@ if (categoryCount.count === 0) {
   for (const c of defaultCategories) insertCat.run(...c);
 }
 
+// Posts, likes, comments tables
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS posts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      caption TEXT,
+      image_url TEXT,
+      image_data TEXT,
+      product_id INTEGER,
+      product_url TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+} catch {}
+
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS post_likes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      post_id INTEGER NOT NULL,
+      user_id TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(post_id, user_id)
+    )
+  `);
+} catch {}
+
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS post_comments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      post_id INTEGER NOT NULL,
+      user_id TEXT NOT NULL,
+      user_name TEXT,
+      text TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+} catch {}
+
 // Seed stores — 4 нишевых магазина
 const storeCount = db.prepare("SELECT COUNT(*) as count FROM stores").get() as { count: number };
 if (storeCount.count === 0) {

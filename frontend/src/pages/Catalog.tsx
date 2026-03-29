@@ -414,6 +414,23 @@ export function Catalog({
   useEffect(() => {
     const track = priceSliderTrackRef.current;
     if (!track || !filtersOpen || !sectionOpen.price) return;
+    const sliderTouchTargetRef = { current: null as HTMLElement | null };
+    const onTouchMove = (e: TouchEvent) => {
+      if (sliderActiveThumbRef.current && e.touches.length > 0) {
+        e.preventDefault();
+        handlePriceSliderTrackRef.current(e.touches[0].clientX);
+      }
+    };
+    const onTouchEnd = () => {
+      const el = sliderTouchTargetRef.current;
+      if (el) {
+        el.removeEventListener("touchmove", onTouchMove as EventListener, { passive: false } as EventListenerOptions);
+        el.removeEventListener("touchend", onTouchEnd as EventListener);
+        el.removeEventListener("touchcancel", onTouchEnd as EventListener);
+        sliderTouchTargetRef.current = null;
+      }
+      sliderActiveThumbRef.current = null;
+    };
     const onTouchStart = (e: TouchEvent) => {
       const t = e.target as HTMLElement;
       if (!track.contains(t)) return;
@@ -432,33 +449,22 @@ export function Catalog({
         sliderActiveThumbRef.current = toMin <= toMax ? "min" : "max";
       }
       handlePriceSliderTrackRef.current(clientX);
-    };
-    const onTouchMove = (e: TouchEvent) => {
-      if (sliderActiveThumbRef.current && e.touches.length > 0) {
-        e.preventDefault();
-        handlePriceSliderTrackRef.current(e.touches[0].clientX);
-      }
-    };
-    const onTouchEnd = () => {
-      sliderActiveThumbRef.current = null;
-      document.removeEventListener("touchmove", onTouchMove, { capture: true });
-      document.removeEventListener("touchend", onTouchEnd, { capture: true });
-      document.removeEventListener("touchcancel", onTouchEnd, { capture: true });
-    };
-    const onTouchStartCapture = (e: TouchEvent) => {
-      onTouchStart(e);
       if (sliderActiveThumbRef.current !== null) {
-        document.addEventListener("touchmove", onTouchMove, { passive: false, capture: true });
-        document.addEventListener("touchend", onTouchEnd, { capture: true });
-        document.addEventListener("touchcancel", onTouchEnd, { capture: true });
+        sliderTouchTargetRef.current = t;
+        t.addEventListener("touchmove", onTouchMove as EventListener, { passive: false });
+        t.addEventListener("touchend", onTouchEnd as EventListener);
+        t.addEventListener("touchcancel", onTouchEnd as EventListener);
       }
     };
-    track.addEventListener("touchstart", onTouchStartCapture, { passive: true, capture: true });
+    track.addEventListener("touchstart", onTouchStart, { passive: true, capture: true });
     return () => {
-      track.removeEventListener("touchstart", onTouchStartCapture, { capture: true });
-      document.removeEventListener("touchmove", onTouchMove, { capture: true });
-      document.removeEventListener("touchend", onTouchEnd, { capture: true });
-      document.removeEventListener("touchcancel", onTouchEnd, { capture: true });
+      track.removeEventListener("touchstart", onTouchStart, { capture: true });
+      const el = sliderTouchTargetRef.current;
+      if (el) {
+        el.removeEventListener("touchmove", onTouchMove as EventListener, { passive: false } as EventListenerOptions);
+        el.removeEventListener("touchend", onTouchEnd as EventListener);
+        el.removeEventListener("touchcancel", onTouchEnd as EventListener);
+      }
     };
   }, [filtersOpen, sectionOpen.price]);
 

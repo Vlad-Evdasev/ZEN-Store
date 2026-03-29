@@ -1,440 +1,597 @@
-import { useState, useMemo, useEffect, useRef } from "react";
-import type { Product, Category } from "../api";
-import { getProductReviewStats, type ProductReviewStats } from "../api";
-import { FilterIcon } from "../components/FilterIcon";
-import { ProductCard } from "../components/ProductCard";
-import { useSettings } from "../context/SettingsContext";
+import { useState, useEffect, useCallback, useRef } from "react";
+import {
+  getPosts,
+  togglePostLike,
+  getPostComments,
+  addPostComment,
+  type Post,
+  type PostComment,
+} from "../api";
+import { useSettings, type Lang } from "../context/SettingsContext";
 import { t } from "../i18n";
 
-const FALLBACK_CATEGORY_CODES = ["all", "tee", "hoodie", "pants", "jacket", "accessories"];
-
 interface NewArrivalsPageProps {
-  products: Product[];
-  categories?: Category[];
+  userId: string;
+  userName: string | null;
+  firstName: string;
   onBack: () => void;
   onProductClick: (id: number) => void;
-  wishlistIds: Set<number>;
-  onToggleWishlist: (id: number) => void;
 }
 
-export function NewArrivalsPage({
-  products,
-  categories = [],
-  onBack,
+function HeartIcon({ filled }: { filled: boolean }) {
+  if (filled) {
+    return (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="#ef4444" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+      </svg>
+    );
+  }
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+    </svg>
+  );
+}
+
+function CommentBubbleIcon() {
+  return (
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
+function ShopBagIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="rgba(255,255,255,0.9)" stroke="rgba(255,255,255,0.9)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <path d="M16 10a4 4 0 0 1-8 0" />
+    </svg>
+  );
+}
+
+function SendIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="22" y1="2" x2="11" y2="13" />
+      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+    </svg>
+  );
+}
+
+function formatPostDate(dateStr: string, lang: Lang): string {
+  const months: Record<string, string[]> = {
+    ru: ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"],
+    en: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+  };
+  const d = new Date(dateStr);
+  const day = d.getDate();
+  const monthArr = months[lang] ?? months.ru;
+  return `${day} ${monthArr[d.getMonth()]}`;
+}
+
+interface PostCardProps {
+  post: Post;
+  userId: string;
+  userName: string | null;
+  firstName: string;
+  lang: Lang;
+  onProductClick: (id: number) => void;
+  onLikeToggle: (postId: number, newLiked: boolean, newCount: number) => void;
+  onCommentsCountChange: (postId: number, newCount: number) => void;
+}
+
+function PostCard({
+  post,
+  userId,
+  userName,
+  firstName,
+  lang,
   onProductClick,
-  wishlistIds,
-  onToggleWishlist,
-}: NewArrivalsPageProps) {
-  const { settings } = useSettings();
-  const lang = settings.lang;
-  const [search, setSearch] = useState("");
-  const [priceMin, setPriceMin] = useState("");
-  const [priceMax, setPriceMax] = useState("");
-  const [priceSort, setPriceSort] = useState<"none" | "asc" | "desc">("none");
-  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set(["all"]));
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [sectionOpen, setSectionOpen] = useState({ price: true, categories: true });
-  const [panelDragY, setPanelDragY] = useState(0);
-  const filtersDragHandleRef = useRef<HTMLDivElement>(null);
-  const touchStartYRef = useRef(0);
-  const touchStartTimeRef = useRef(0);
-  const panelDragYRef = useRef(0);
-  const priceSliderTrackRef = useRef<HTMLDivElement>(null);
-  const sliderActiveThumbRef = useRef<"min" | "max" | null>(null);
-  const handlePriceSliderTrackRef = useRef<(clientX: number) => void>(() => {});
-  const priceMinPercentRef = useRef(0);
-  const priceMaxPercentRef = useRef(0);
-  const [reviewStats, setReviewStats] = useState<ProductReviewStats>({});
+  onLikeToggle,
+  onCommentsCountChange,
+}: PostCardProps) {
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [comments, setComments] = useState<PostComment[]>([]);
+  const [commentsLoaded, setCommentsLoaded] = useState(false);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [commentText, setCommentText] = useState("");
+  const [sendingComment, setSendingComment] = useState(false);
+  const commentInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    getProductReviewStats().then(setReviewStats).catch(console.error);
-  }, []);
+  const imageSrc = post.image_data || post.image_url;
+  const isTappable = post.product_id != null || post.product_url != null;
 
-  const categoryTabs = useMemo(() => {
-    if (categories.length > 0) {
-      return [{ code: "all", label: t(lang, "all") }, ...categories.map((c) => ({ code: c.code, label: c.name }))];
-    }
-    return FALLBACK_CATEGORY_CODES.map((code) => ({ code, label: t(lang, code) }));
-  }, [categories, lang]);
-
-  const baseListForPrice = useMemo(() => {
-    let list = products;
-    if (!selectedCategories.has("all")) {
-      list = list.filter((p) => selectedCategories.has(p.category));
-    }
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      list = list.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          (p.description && p.description.toLowerCase().includes(q))
-      );
-    }
-    return list;
-  }, [products, selectedCategories, search]);
-
-  const { catalogPriceMin, catalogPriceMax } = useMemo(() => {
-    if (baseListForPrice.length === 0) return { catalogPriceMin: 0, catalogPriceMax: 100000 };
-    const prices = baseListForPrice.map((p) => p.price);
-    return { catalogPriceMin: Math.min(...prices), catalogPriceMax: Math.max(...prices) };
-  }, [baseListForPrice]);
-
-  const countAfterPrice = useMemo(() => {
-    let list = baseListForPrice;
-    if (priceMin.trim() !== "") {
-      const min = Number(priceMin.trim());
-      if (!Number.isNaN(min)) list = list.filter((p) => p.price >= min);
-    }
-    if (priceMax.trim() !== "") {
-      const max = Number(priceMax.trim());
-      if (!Number.isNaN(max)) list = list.filter((p) => p.price <= max);
-    }
-    return list.length;
-  }, [baseListForPrice, priceMin, priceMax]);
-
-  const filtered = useMemo(() => {
-    let list = products;
-    if (!selectedCategories.has("all")) {
-      list = list.filter((p) => selectedCategories.has(p.category));
-    }
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      list = list.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          (p.description && p.description.toLowerCase().includes(q))
-      );
-    }
-    if (priceMin.trim() !== "") {
-      const min = Number(priceMin.trim());
-      if (!Number.isNaN(min)) list = list.filter((p) => p.price >= min);
-    }
-    if (priceMax.trim() !== "") {
-      const max = Number(priceMax.trim());
-      if (!Number.isNaN(max)) list = list.filter((p) => p.price <= max);
-    }
-    return list;
-  }, [products, selectedCategories, search, priceMin, priceMax]);
-
-  const displayList = useMemo(() => {
-    if (priceSort === "asc") return [...filtered].sort((a, b) => a.price - b.price);
-    if (priceSort === "desc") return [...filtered].sort((a, b) => b.price - a.price);
-    return filtered;
-  }, [filtered, priceSort]);
-
-  const handleCategoryClick = (cat: string) => {
-    if (cat === "all") {
-      setSelectedCategories(new Set(["all"]));
-      return;
-    }
-    setSelectedCategories((prev) => {
-      const next = new Set(prev);
-      next.delete("all");
-      if (next.has(cat)) next.delete(cat);
-      else next.add(cat);
-      if (next.size === 0) return new Set(["all"]);
-      return next;
-    });
-  };
-
-  const activeSummary = useMemo(() => {
-    const parts: { key: string; label: string; onClear: () => void }[] = [];
-    const minNum = priceMin.trim() !== "" ? Number(priceMin.trim()) : null;
-    const maxNum = priceMax.trim() !== "" ? Number(priceMax.trim()) : null;
-    if ((minNum != null && !Number.isNaN(minNum)) || (maxNum != null && !Number.isNaN(maxNum))) {
-      const label = [minNum != null && !Number.isNaN(minNum) ? String(minNum) : "", maxNum != null && !Number.isNaN(maxNum) ? String(maxNum) : ""].filter(Boolean).join(" – ");
-      if (label) parts.push({ key: "price", label, onClear: () => { setPriceMin(""); setPriceMax(""); } });
-    }
-    if (!selectedCategories.has("all") && selectedCategories.size > 0) {
-      const labels = categoryTabs.filter((t) => t.code !== "all" && selectedCategories.has(t.code)).map((t) => t.label);
-      if (labels.length) parts.push({ key: "cat", label: labels.join(", "), onClear: () => setSelectedCategories(new Set(["all"])) });
-    }
-    return parts;
-  }, [priceMin, priceMax, selectedCategories, categoryTabs]);
-
-  const priceRange = catalogPriceMax - catalogPriceMin || 1;
-  const priceMinNum = Math.max(catalogPriceMin, Math.min(catalogPriceMax, Number(priceMin.trim()) || catalogPriceMin));
-  const priceMaxNum = Math.min(catalogPriceMax, Math.max(catalogPriceMin, Number(priceMax.trim()) || catalogPriceMax));
-  const priceMinPercent = ((priceMinNum - catalogPriceMin) / priceRange) * 100;
-  const priceMaxPercent = ((priceMaxNum - catalogPriceMin) / priceRange) * 100;
-  const priceRangePercent = ((priceMaxNum - priceMinNum) / priceRange) * 100;
-
-  const handlePriceSliderTrack = (clientX: number) => {
-    const track = priceSliderTrackRef.current;
-    if (!track) return;
-    const rect = track.getBoundingClientRect();
-    const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    const value = Math.round(catalogPriceMin + percent * (catalogPriceMax - catalogPriceMin));
-    const thumb = sliderActiveThumbRef.current;
-    if (thumb === "min") {
-      setPriceMin(String(Math.max(catalogPriceMin, Math.min(value, priceMaxNum - 1))));
-    } else if (thumb === "max") {
-      setPriceMax(String(Math.min(catalogPriceMax, Math.max(value, priceMinNum + 1))));
+  const handleImageTap = () => {
+    if (post.product_id != null) {
+      onProductClick(post.product_id);
+    } else if (post.product_url) {
+      window.open(post.product_url, "_blank", "noopener");
     }
   };
-  useEffect(() => {
-    handlePriceSliderTrackRef.current = handlePriceSliderTrack;
-  });
-  useEffect(() => {
-    priceMinPercentRef.current = priceMinPercent;
-    priceMaxPercentRef.current = priceMaxPercent;
-  }, [priceMinPercent, priceMaxPercent]);
 
-  useEffect(() => {
-    const track = priceSliderTrackRef.current;
-    if (!track || !filtersOpen || !sectionOpen.price) return;
-    const onTouchStart = (e: TouchEvent) => {
-      const t = e.target as HTMLElement;
-      if (!track.contains(t)) return;
-      const rect = track.getBoundingClientRect();
-      const clientX = e.touches[0].clientX;
-      if (t.closest(".zen-filters-price-slider-thumb--min")) {
-        sliderActiveThumbRef.current = "min";
-      } else if (t.closest(".zen-filters-price-slider-thumb--max")) {
-        sliderActiveThumbRef.current = "max";
-      } else {
-        const pos = (clientX - rect.left) / rect.width;
-        const toMin = Math.abs(pos - priceMinPercentRef.current / 100);
-        const toMax = Math.abs(pos - priceMaxPercentRef.current / 100);
-        sliderActiveThumbRef.current = toMin <= toMax ? "min" : "max";
-      }
-      handlePriceSliderTrackRef.current(clientX);
-    };
-    const onTouchMove = (e: TouchEvent) => {
-      if (sliderActiveThumbRef.current && e.touches.length > 0) {
-        e.preventDefault();
-        handlePriceSliderTrackRef.current(e.touches[0].clientX);
-      }
-    };
-    const onTouchEnd = () => {
-      sliderActiveThumbRef.current = null;
-      document.removeEventListener("touchmove", onTouchMove, { capture: true });
-      document.removeEventListener("touchend", onTouchEnd, { capture: true });
-      document.removeEventListener("touchcancel", onTouchEnd, { capture: true });
-    };
-    const onTouchStartCapture = (e: TouchEvent) => {
-      onTouchStart(e);
-      if (sliderActiveThumbRef.current !== null) {
-        document.addEventListener("touchmove", onTouchMove, { passive: false, capture: true });
-        document.addEventListener("touchend", onTouchEnd, { capture: true });
-        document.addEventListener("touchcancel", onTouchEnd, { capture: true });
-      }
-    };
-    track.addEventListener("touchstart", onTouchStartCapture, { passive: true, capture: true });
-    return () => {
-      track.removeEventListener("touchstart", onTouchStartCapture, { capture: true });
-      document.removeEventListener("touchmove", onTouchMove, { capture: true });
-      document.removeEventListener("touchend", onTouchEnd, { capture: true });
-      document.removeEventListener("touchcancel", onTouchEnd, { capture: true });
-    };
-  }, [filtersOpen, sectionOpen.price]);
+  const handleLike = async () => {
+    const wasLiked = post.user_liked;
+    const prevCount = post.likes_count;
+    onLikeToggle(post.id, !wasLiked, wasLiked ? prevCount - 1 : prevCount + 1);
+    try {
+      const result = await togglePostLike(post.id, userId);
+      onLikeToggle(post.id, result.liked, result.likes_count);
+    } catch {
+      onLikeToggle(post.id, wasLiked, prevCount);
+    }
+  };
 
-  useEffect(() => {
-    panelDragYRef.current = panelDragY;
-  }, [panelDragY]);
-  useEffect(() => {
-    if (!filtersOpen) setPanelDragY(0);
-  }, [filtersOpen]);
-  useEffect(() => {
-    const handle = filtersDragHandleRef.current;
-    if (!filtersOpen || !handle) return;
-    const onStart = (clientY: number) => {
-      touchStartYRef.current = clientY;
-      touchStartTimeRef.current = Date.now();
-    };
-    const onMove = (clientY: number) => {
-      const val = Math.max(0, clientY - touchStartYRef.current);
-      panelDragYRef.current = val;
-      setPanelDragY(val);
-    };
-    const onEnd = () => {
-      const dy = panelDragYRef.current;
-      const dt = Date.now() - touchStartTimeRef.current;
-      const velocity = dt > 0 ? dy / dt : 0;
-      if (dy > 60 || velocity > 0.3) setFiltersOpen(false);
-      setPanelDragY(0);
-    };
-    const touchStart = (e: TouchEvent) => { onStart(e.touches[0].clientY); };
-    const touchMove = (e: TouchEvent) => { e.preventDefault(); onMove(e.touches[0].clientY); };
-    handle.addEventListener("touchstart", touchStart, { passive: true });
-    handle.addEventListener("touchmove", touchMove, { passive: false });
-    handle.addEventListener("touchend", onEnd);
-    handle.addEventListener("touchcancel", onEnd);
-    return () => {
-      handle.removeEventListener("touchstart", touchStart);
-      handle.removeEventListener("touchmove", touchMove);
-      handle.removeEventListener("touchend", onEnd);
-      handle.removeEventListener("touchcancel", onEnd);
-    };
-  }, [filtersOpen]);
+  const handleToggleComments = async () => {
+    const opening = !commentsOpen;
+    setCommentsOpen(opening);
+    if (opening && !commentsLoaded) {
+      setLoadingComments(true);
+      try {
+        const data = await getPostComments(post.id);
+        setComments(data);
+        setCommentsLoaded(true);
+      } catch {
+        /* silently fail */
+      } finally {
+        setLoadingComments(false);
+      }
+    }
+    if (opening) {
+      setTimeout(() => commentInputRef.current?.focus(), 100);
+    }
+  };
+
+  const handleSendComment = async () => {
+    const text = commentText.trim();
+    if (!text || sendingComment) return;
+    setSendingComment(true);
+    try {
+      const newComment = await addPostComment(post.id, userId, userName || firstName, text);
+      setComments((prev) => [...prev, newComment]);
+      setCommentText("");
+      onCommentsCountChange(post.id, comments.length + 1);
+    } catch {
+      /* silently fail */
+    } finally {
+      setSendingComment(false);
+    }
+  };
 
   return (
-    <div style={styles.wrap}>
-      <button type="button" onClick={onBack} className="zen-back-link" style={styles.back}>
-        ← {t(lang, "back")}
-      </button>
-      <h1 className="zen-new-arrivals-title" style={styles.title}>{t(lang, "newArrivals")}</h1>
+    <div style={cardStyles.card}>
+      {imageSrc && (
+        <div
+          style={cardStyles.imageWrap}
+          onClick={isTappable ? handleImageTap : undefined}
+          role={isTappable ? "button" : undefined}
+          tabIndex={isTappable ? 0 : undefined}
+          onKeyDown={isTappable ? (e) => { if (e.key === "Enter") handleImageTap(); } : undefined}
+          aria-label={isTappable ? "Open product" : undefined}
+        >
+          <img src={imageSrc} alt="" style={cardStyles.image} />
+          {isTappable && (
+            <div style={cardStyles.shopOverlay}>
+              <ShopBagIcon />
+            </div>
+          )}
+        </div>
+      )}
 
-      <div style={styles.gridArea}>
-      {filtersOpen && (
-            <>
-              <div className="zen-filters-overlay" onClick={() => setFiltersOpen(false)} aria-hidden />
-              <div
-                className="zen-filters-panel"
-                role="dialog"
-                style={panelDragY > 0 ? { transform: `translateY(${panelDragY}px)` } : undefined}
+      <div style={cardStyles.body}>
+        <div style={cardStyles.metaRow}>
+          <div style={cardStyles.actions}>
+            <button
+              type="button"
+              onClick={handleLike}
+              style={cardStyles.actionBtn}
+              aria-label={post.user_liked ? "Unlike" : "Like"}
+            >
+              <HeartIcon filled={post.user_liked} />
+              {post.likes_count > 0 && (
+                <span style={cardStyles.actionCount}>{post.likes_count}</span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={handleToggleComments}
+              style={cardStyles.actionBtn}
+              aria-label={t(lang, "postShowComments")}
+            >
+              <CommentBubbleIcon />
+              {post.comments_count > 0 && (
+                <span style={cardStyles.actionCount}>{post.comments_count}</span>
+              )}
+            </button>
+          </div>
+          <span style={cardStyles.date}>{formatPostDate(post.created_at, lang)}</span>
+        </div>
+
+        {post.caption && <p style={cardStyles.caption}>{post.caption}</p>}
+
+        {commentsOpen && (
+          <div style={cardStyles.commentsSection}>
+            {loadingComments && (
+              <div style={cardStyles.commentsLoading}>...</div>
+            )}
+            {!loadingComments && comments.length > 0 && (
+              <div style={cardStyles.commentsList}>
+                {comments.map((c) => (
+                  <div key={c.id} style={cardStyles.commentItem}>
+                    <div>
+                      <span style={cardStyles.commentAuthor}>{c.user_name || "—"}</span>{" "}
+                      <span style={cardStyles.commentText}>{c.text}</span>
+                    </div>
+                    <span style={cardStyles.commentDate}>{formatPostDate(c.created_at, lang)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={cardStyles.commentInputRow}>
+              <input
+                ref={commentInputRef}
+                type="text"
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleSendComment(); }}
+                placeholder={t(lang, "postCommentPlaceholder")}
+                style={cardStyles.commentInput}
+                disabled={sendingComment}
+              />
+              <button
+                type="button"
+                onClick={handleSendComment}
+                disabled={sendingComment || !commentText.trim()}
+                style={{
+                  ...cardStyles.commentSendBtn,
+                  opacity: sendingComment || !commentText.trim() ? 0.4 : 1,
+                }}
+                aria-label={t(lang, "postCommentSend")}
               >
-                <div ref={filtersDragHandleRef} className="zen-filters-panel-header zen-filters-panel-drag-handle">
-                  <span className="zen-filters-panel-drag-bar" aria-hidden />
-                  <h3 className="zen-filters-panel-title">{t(lang, "filters")}</h3>
-                </div>
-                <div className="zen-filters-panel-summary">
-                  <span className="zen-filters-panel-summary-count">{displayList.length} {t(lang, "resultsCount")}</span>
-                  {activeSummary.length > 0 && (
-                    <div className="zen-filters-panel-summary-tags">
-                      {activeSummary.map(({ key, label, onClear }) => (
-                        <button key={key} type="button" className="zen-filters-panel-summary-tag" onClick={onClear}>{label} ×</button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="zen-filters-panel-body">
-                  <section className={`zen-filters-panel-section zen-filters-panel-section--accordion ${sectionOpen.price ? "zen-filters-panel-section--open" : ""}`}>
-                    <button type="button" className="zen-filters-panel-section-head" onClick={() => setSectionOpen((s) => ({ ...s, price: !s.price }))} aria-expanded={sectionOpen.price}>
-                      <h4 className="zen-filters-panel-section-title">{t(lang, "priceFilter")}</h4>
-                      <span className="zen-filters-panel-section-count">{countAfterPrice}</span>
-                      <span className="zen-filters-panel-section-chevron" aria-hidden>▼</span>
-                    </button>
-                    <div className="zen-filters-panel-section-content">
-                      <div className="zen-filters-panel-price-row">
-                        <div className="zen-price-sort-segmented zen-filters-panel-sort" role="group" aria-label={t(lang, "priceFilter")}>
-                          <button type="button" className={`zen-price-sort-btn zen-price-sort-btn--first ${priceSort === "asc" ? "zen-price-sort-btn-active" : ""}`} onClick={() => setPriceSort((s) => (s === "asc" ? "none" : "asc"))} title={t(lang, "sortPriceAsc")} aria-pressed={priceSort === "asc"}><span className="zen-price-sort-icon" aria-hidden>↓</span></button>
-                          <button type="button" className={`zen-price-sort-btn zen-price-sort-btn--last ${priceSort === "desc" ? "zen-price-sort-btn-active" : ""}`} onClick={() => setPriceSort((s) => (s === "desc" ? "none" : "desc"))} title={t(lang, "sortPriceDesc")} aria-pressed={priceSort === "desc"}><span className="zen-price-sort-icon" aria-hidden>↑</span></button>
-                        </div>
-                        <div
-                          ref={priceSliderTrackRef}
-                          className="zen-filters-price-slider"
-                          onPointerDown={(e) => {
-                            if (e.button !== 0) return;
-                            const rect = priceSliderTrackRef.current?.getBoundingClientRect();
-                            if (!rect) return;
-                            const pos = (e.clientX - rect.left) / rect.width;
-                            sliderActiveThumbRef.current = Math.abs(pos - priceMinPercent / 100) <= Math.abs(pos - priceMaxPercent / 100) ? "min" : "max";
-                            handlePriceSliderTrack(e.clientX);
-                            (e.target as HTMLElement).setPointerCapture(e.pointerId);
-                          }}
-                          onPointerMove={(e) => { if (sliderActiveThumbRef.current) handlePriceSliderTrack(e.clientX); }}
-                          onPointerUp={(e) => { (e.target as HTMLElement).releasePointerCapture(e.pointerId); sliderActiveThumbRef.current = null; }}
-                          onPointerLeave={() => { sliderActiveThumbRef.current = null; }}
-                        >
-                          <div className="zen-filters-price-slider-track" />
-                          <div className="zen-filters-price-slider-range" style={{ left: `${priceMinPercent}%`, width: `${priceRangePercent}%` }} />
-                          <div className="zen-filters-price-slider-thumb zen-filters-price-slider-thumb--min" style={{ left: `${priceMinPercent}%` }} onPointerDown={(e) => { e.stopPropagation(); sliderActiveThumbRef.current = "min"; priceSliderTrackRef.current?.setPointerCapture(e.pointerId); }} />
-                          <div className="zen-filters-price-slider-thumb zen-filters-price-slider-thumb--max" style={{ left: `${priceMaxPercent}%` }} onPointerDown={(e) => { e.stopPropagation(); sliderActiveThumbRef.current = "max"; priceSliderTrackRef.current?.setPointerCapture(e.pointerId); }} />
-                        </div>
-                        <div className="zen-filters-price-slider-labels">
-                          <span>{priceMinNum}</span>
-                          <span>{priceMaxNum}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </section>
-                  <section className={`zen-filters-panel-section zen-filters-panel-section--accordion ${sectionOpen.categories ? "zen-filters-panel-section--open" : ""}`}>
-                    <button type="button" className="zen-filters-panel-section-head" onClick={() => setSectionOpen((s) => ({ ...s, categories: !s.categories }))} aria-expanded={sectionOpen.categories}>
-                      <h4 className="zen-filters-panel-section-title">{t(lang, "categories")}</h4>
-                      <span className="zen-filters-panel-section-count">{displayList.length}</span>
-                      <span className="zen-filters-panel-section-chevron" aria-hidden>▼</span>
-                    </button>
-                    <div className="zen-filters-panel-section-content">
-                      <div className="zen-filters-chip-row-wrap">
-                        <div className="zen-filters-chip-row">
-                          {categoryTabs.map(({ code, label }) => {
-                            const isSelected = code === "all" ? selectedCategories.has("all") : selectedCategories.has(code);
-                            return (
-                              <button key={code} type="button" className={`zen-filters-chip ${isSelected ? "zen-filters-chip-active" : ""}`} onClick={() => handleCategoryClick(code)}>
-                                {label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  </section>
-                </div>
-            <div className="zen-filters-panel-collapse-wrap">
-              <button type="button" className="zen-filters-panel-close-arrow" onClick={() => setFiltersOpen(false)} aria-label={t(lang, "close")}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
+                <SendIcon />
               </button>
             </div>
           </div>
-        </>
-      )}
-
-      {displayList.length === 0 ? (
-        <div className="zen-empty-state" style={styles.empty}>
-          <strong>{t(lang, "nothingFound")}</strong>
-        </div>
-      ) : (
-        <div className="catalog-grid catalog-grid--masonry catalog-grid--concept">
-          {displayList.map((p, idx) => (
-            <ProductCard
-              key={p.id}
-              product={p}
-              compact
-              sizeVariant={idx % 3 === 0 ? "tall" : "default"}
-              onClick={() => onProductClick(p.id)}
-              inWishlist={wishlistIds.has(p.id)}
-              onWishlistClick={(e) => {
-                e.stopPropagation();
-                onToggleWishlist(p.id);
-              }}
-              reviewCount={reviewStats[p.id]?.count}
-              reviewAvg={reviewStats[p.id]?.avg}
-            />
-          ))}
-        </div>
-      )}
-      </div>
-
-      <div className="zen-catalog-search-row" style={styles.searchRow}>
-        <button
-          type="button"
-          className="zen-filter-icon-btn"
-          onClick={() => setFiltersOpen(true)}
-          aria-label={t(lang, "filters")}
-          title={t(lang, "filters")}
-        >
-          <FilterIcon />
-        </button>
-        <input
-          type="search"
-          className="zen-input zen-catalog-search-input"
-          placeholder={t(lang, "search")}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          aria-label={t(lang, "search")}
-        />
+        )}
       </div>
     </div>
   );
 }
 
-const styles: Record<string, React.CSSProperties> = {
+function SkeletonCard() {
+  return (
+    <div style={cardStyles.card}>
+      <div style={skeletonStyles.image} />
+      <div style={cardStyles.body}>
+        <div style={skeletonStyles.line1} />
+        <div style={skeletonStyles.line2} />
+      </div>
+    </div>
+  );
+}
+
+export function NewArrivalsPage({
+  userId,
+  userName,
+  firstName,
+  onBack,
+  onProductClick,
+}: NewArrivalsPageProps) {
+  const { settings } = useSettings();
+  const lang = settings.lang;
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    getPosts(userId)
+      .then((data) => {
+        if (!cancelled) setPosts(data);
+      })
+      .catch(console.error)
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [userId]);
+
+  const handleLikeToggle = useCallback(
+    (postId: number, newLiked: boolean, newCount: number) => {
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === postId
+            ? { ...p, user_liked: newLiked, likes_count: newCount }
+            : p
+        )
+      );
+    },
+    []
+  );
+
+  const handleCommentsCountChange = useCallback(
+    (postId: number, newCount: number) => {
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === postId ? { ...p, comments_count: newCount } : p
+        )
+      );
+    },
+    []
+  );
+
+  return (
+    <div style={pageStyles.wrap}>
+      <div style={pageStyles.headerArea}>
+        <button
+          type="button"
+          onClick={onBack}
+          style={pageStyles.backBtn}
+        >
+          ← {t(lang, "backToMain")}
+        </button>
+        <h1 style={pageStyles.title}>{t(lang, "postsFeedTitle")}</h1>
+        <div style={pageStyles.divider} />
+      </div>
+
+      {loading && (
+        <div style={pageStyles.feed}>
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+      )}
+
+      {!loading && posts.length === 0 && (
+        <div style={pageStyles.empty}>
+          <span style={pageStyles.emptyText}>{t(lang, "postsEmpty")}</span>
+        </div>
+      )}
+
+      {!loading && posts.length > 0 && (
+        <div style={pageStyles.feed}>
+          {posts.map((post) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              userId={userId}
+              userName={userName}
+              firstName={firstName}
+              lang={lang}
+              onProductClick={onProductClick}
+              onLikeToggle={handleLikeToggle}
+              onCommentsCountChange={handleCommentsCountChange}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const pageStyles: Record<string, React.CSSProperties> = {
   wrap: {
-    display: "flex",
-    flexDirection: "column",
-    height: "100%",
-    minHeight: 0,
-    paddingBottom: 0,
+    maxWidth: 480,
+    margin: "0 auto",
+    paddingBottom: 32,
   },
-  back: { marginBottom: 8, flexShrink: 0 },
-  title: { margin: "0 0 12px", flexShrink: 0 },
-  gridArea: {
+  headerArea: {
+    marginBottom: 20,
+  },
+  backBtn: {
+    display: "block",
+    marginLeft: "auto",
+    background: "none",
+    border: "none",
+    color: "var(--muted)",
+    fontFamily: "inherit",
+    fontSize: 14,
+    cursor: "pointer",
+    padding: 0,
+    marginBottom: 16,
+    textAlign: "right" as const,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: 800,
+    color: "var(--text)",
+    margin: 0,
+    lineHeight: 1.25,
+    letterSpacing: "-0.02em",
+  },
+  divider: {
+    height: 1,
+    background: "var(--border)",
+    marginTop: 12,
+    opacity: 0.5,
+  },
+  feed: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 24,
+  },
+  empty: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 200,
+  },
+  emptyText: {
+    fontSize: 15,
+    color: "var(--muted)",
+    fontWeight: 500,
+  },
+};
+
+const cardStyles: Record<string, React.CSSProperties> = {
+  card: {
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: "var(--radius-lg)",
+    overflow: "hidden",
+  },
+  imageWrap: {
+    position: "relative" as const,
+    width: "100%",
+    aspectRatio: "1 / 1",
+    cursor: "pointer",
+    overflow: "hidden",
+  },
+  image: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover" as const,
+    display: "block",
+  },
+  shopOverlay: {
+    position: "absolute" as const,
+    bottom: 10,
+    right: 10,
+    width: 34,
+    height: 34,
+    borderRadius: "50%",
+    background: "rgba(0,0,0,0.5)",
+    backdropFilter: "blur(6px)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  body: {
+    padding: "12px 14px 14px",
+  },
+  metaRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+  actions: {
+    display: "flex",
+    alignItems: "center",
+    gap: 14,
+  },
+  actionBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 5,
+    background: "none",
+    border: "none",
+    padding: 0,
+    color: "var(--text)",
+    cursor: "pointer",
+    fontFamily: "inherit",
+    fontSize: 13,
+    fontWeight: 500,
+  },
+  actionCount: {
+    fontSize: 13,
+    fontWeight: 600,
+    color: "var(--text)",
+  },
+  date: {
+    fontSize: 12,
+    color: "var(--muted)",
+    fontWeight: 400,
+  },
+  caption: {
+    fontSize: 14,
+    color: "var(--text)",
+    lineHeight: 1.5,
+    margin: 0,
+    whiteSpace: "pre-wrap" as const,
+  },
+  commentsSection: {
+    marginTop: 12,
+    borderTop: "1px solid var(--border)",
+    paddingTop: 10,
+  },
+  commentsLoading: {
+    fontSize: 13,
+    color: "var(--muted)",
+    padding: "4px 0",
+  },
+  commentsList: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 8,
+    marginBottom: 10,
+  },
+  commentItem: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 1,
+  },
+  commentAuthor: {
+    fontWeight: 700,
+    fontSize: 13,
+    color: "var(--text)",
+  },
+  commentText: {
+    fontSize: 13,
+    color: "var(--text)",
+    fontWeight: 400,
+  },
+  commentDate: {
+    fontSize: 11,
+    color: "var(--muted)",
+  },
+  commentInputRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+  },
+  commentInput: {
     flex: 1,
-    minHeight: 0,
-    overflow: "auto",
+    padding: "8px 12px",
+    fontSize: 13,
+    fontFamily: "inherit",
+    background: "var(--bg)",
+    border: "1px solid var(--border)",
+    borderRadius: "var(--radius-md)",
+    color: "var(--text)",
+    outline: "none",
+  },
+  commentSendBtn: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 34,
+    height: 34,
+    flexShrink: 0,
+    borderRadius: "50%",
+    background: "var(--accent)",
+    border: "none",
+    color: "#fff",
+    cursor: "pointer",
+    transition: "opacity 0.15s",
+  },
+};
+
+const skeletonBg = "var(--border)";
+
+const skeletonStyles: Record<string, React.CSSProperties> = {
+  image: {
+    width: "100%",
+    aspectRatio: "1 / 1",
+    background: skeletonBg,
+    borderRadius: 0,
+  },
+  line1: {
+    width: "60%",
+    height: 14,
+    borderRadius: 6,
+    background: skeletonBg,
     marginBottom: 8,
   },
-  searchRow: { flexShrink: 0 },
-  empty: {},
+  line2: {
+    width: "40%",
+    height: 12,
+    borderRadius: 6,
+    background: skeletonBg,
+  },
 };

@@ -1,0 +1,13 @@
+---
+description: Triggers the manager-orchestrator skill for every implementation request — building features, fixing bugs, refactoring code, or reviewing changes. Reads the skill and follows its orchestration steps before doing any work.
+alwaysApply: true
+---
+
+# Manager Orchestrator
+
+Before doing any work on a request that involves **building features, fixing bugs, refactoring code, or reviewing changes**, you MUST:
+
+1. Read the skill file at `.cursor/skills/manager-orchestrator/SKILL.md` using the Read tool.
+2. Follow every step in the skill exactly as written.
+
+Skip orchestration only for purely conversational questions (e.g. "what does X do?", "explain Y").

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { flushSync } from "react-dom";
 import { useTelegram } from "./hooks/useTelegram";
 import { TelegramAuth } from "./components/TelegramAuth";
@@ -130,14 +130,6 @@ function App() {
   const [catalogSelectedCategories, setCatalogSelectedCategories] = useState<Set<string>>(() => new Set(["all"]));
   const mainScrollRef = useRef<HTMLElement | null>(null);
   const savedScrollTopRef = useRef(0);
-
-  const newArrivals = useMemo(
-    () =>
-      products
-        .filter((p) => p.new_arrival_sort_order != null)
-        .sort((a, b) => (a.new_arrival_sort_order ?? 0) - (b.new_arrival_sort_order ?? 0)),
-    [products]
-  );
 
   useEffect(() => {
     if (typeof history !== "undefined" && "scrollRestoration" in history) {
@@ -480,12 +472,11 @@ function App() {
         )}
         {page === "newArrivals" && (
           <NewArrivalsPage
-            products={newArrivals}
-            categories={categories}
+            userId={userId || ""}
+            userName={userName}
+            firstName={firstName}
             onBack={openCatalog}
             onProductClick={(id) => openProduct(id, "newArrivals")}
-            wishlistIds={wishlistIds}
-            onToggleWishlist={toggleWishlist}
           />
         )}
         {page === "product" && productId && (

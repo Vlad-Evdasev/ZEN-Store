@@ -142,6 +142,12 @@ const texts: Record<Lang, Record<string, string>> = {
     supportDeleteMessageConfirm: "Удалить сообщение?",
     send: "Отправить",
     save: "Сохранить",
+    postsFeedTitle: "Товары которые мы привезли",
+    postsEmpty: "Пока нет постов",
+    postsLoading: "",
+    postCommentPlaceholder: "Напишите комментарий...",
+    postCommentSend: "Отправить",
+    postShowComments: "Комментарии",
   },
   en: {
     search: "Search...",
@@ -284,6 +290,12 @@ const texts: Record<Lang, Record<string, string>> = {
     supportDeleteMessageConfirm: "Delete message?",
     send: "Send",
     save: "Save",
+    postsFeedTitle: "Products we brought",
+    postsEmpty: "No posts yet",
+    postsLoading: "",
+    postCommentPlaceholder: "Write a comment...",
+    postCommentSend: "Send",
+    postShowComments: "Comments",
   },
 };
 

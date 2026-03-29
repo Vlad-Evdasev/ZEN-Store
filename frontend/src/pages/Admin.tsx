@@ -27,12 +27,20 @@ import {
   updateCurrencyRateAdmin,
   getSiteContent,
   updateSiteContentAdmin,
+  getPosts,
+  createPost,
+  updatePost,
+  deletePost,
+  deletePostComment,
+  getPostComments,
   type Product,
   type Category,
   type Order,
   type CustomOrderAdmin,
   type SupportChat,
   type SupportMessage,
+  type Post,
+  type PostComment,
 } from "../api";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
@@ -57,7 +65,7 @@ function telegramChatLink(username?: string | null, userId?: string): string {
   return "#";
 }
 
-type Tab = "products" | "categories" | "orders" | "customOrders" | "support" | "currencyRate" | "newArrivals" | "siteContent";
+type Tab = "products" | "categories" | "orders" | "customOrders" | "support" | "currencyRate" | "newArrivals" | "siteContent" | "posts";
 
 export function Admin() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -179,6 +187,9 @@ export function Admin() {
           <button type="button" onClick={() => setTabAndReset("siteContent")} className={`admin-nav-btn ${tab === "siteContent" ? "active" : ""}`}>
             Главная (контент)
           </button>
+          <button type="button" onClick={() => setTabAndReset("posts")} className={`admin-nav-btn ${tab === "posts" ? "active" : ""}`}>
+            Посты
+          </button>
           <div style={{ flex: 1 }} />
           <div style={styles.sidebarFooter}>
             <button type="button" onClick={() => checkApiHealth().then(setApiStatus)} style={styles.checkBtn}>
@@ -269,6 +280,13 @@ export function Admin() {
 
       {tab === "siteContent" && (
         <SiteContentTab adminSecret={adminSecret} />
+      )}
+
+      {tab === "posts" && (
+        <PostsTab
+          products={products}
+          adminSecret={adminSecret}
+        />
       )}
 
           </div>
@@ -1579,6 +1597,339 @@ function ProductsTab({
             </div>
           </div>
         ))}
+      </div>
+    </>
+  );
+}
+
+function PostsTab({ products, adminSecret }: { products: Product[]; adminSecret: string }) {
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const [editingPost, setEditingPost] = useState<Post | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [formCaption, setFormCaption] = useState("");
+  const [formImageUrl, setFormImageUrl] = useState("");
+  const [formImageData, setFormImageData] = useState<string | null>(null);
+  const [formProductId, setFormProductId] = useState<string>("");
+  const [formProductUrl, setFormProductUrl] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [expandedPostId, setExpandedPostId] = useState<number | null>(null);
+  const [comments, setComments] = useState<PostComment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+
+  const loadPosts = async () => {
+    setLoading(true);
+    try {
+      const data = await getPosts();
+      setPosts(data);
+    } catch {
+      setMessage("Ошибка загрузки постов");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadPosts(); }, []);
+
+  const openCreate = () => {
+    setEditingPost(null);
+    setFormCaption("");
+    setFormImageUrl("");
+    setFormImageData(null);
+    setFormProductId("");
+    setFormProductUrl("");
+    setShowForm(true);
+  };
+
+  const openEdit = (post: Post) => {
+    setEditingPost(post);
+    setFormCaption(post.caption ?? "");
+    setFormImageUrl(post.image_url ?? "");
+    setFormImageData(post.image_data ?? null);
+    setFormProductId(post.product_id != null ? String(post.product_id) : "");
+    setFormProductUrl(post.product_url ?? "");
+    setShowForm(true);
+  };
+
+  const closeForm = () => {
+    setShowForm(false);
+    setEditingPost(null);
+  };
+
+  const onPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setMessage("Макс размер фото 5 МБ"); return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setFormImageData(reader.result as string);
+      setFormImageUrl("");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const savePost = async () => {
+    setBusy(true);
+    setMessage("");
+    try {
+      const data = {
+        caption: formCaption.trim() || null,
+        image_url: formImageData ? null : (formImageUrl.trim() || null),
+        image_data: formImageData || null,
+        product_id: formProductId ? parseInt(formProductId, 10) : null,
+        product_url: formProductUrl.trim() || null,
+      };
+      if (editingPost) {
+        await updatePost(editingPost.id, data, adminSecret);
+      } else {
+        await createPost(data, adminSecret);
+      }
+      setShowForm(false);
+      setEditingPost(null);
+      await loadPosts();
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Ошибка");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Удалить пост?")) return;
+    setBusy(true);
+    try {
+      await deletePost(id, adminSecret);
+      await loadPosts();
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Ошибка");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggleComments = async (postId: number) => {
+    if (expandedPostId === postId) {
+      setExpandedPostId(null);
+      setComments([]);
+      return;
+    }
+    setExpandedPostId(postId);
+    setCommentsLoading(true);
+    try {
+      const data = await getPostComments(postId);
+      setComments(data);
+    } catch {
+      setMessage("Ошибка загрузки комментариев");
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
+
+  const handleDeleteComment = async (postId: number, commentId: number) => {
+    if (!confirm("Удалить комментарий?")) return;
+    try {
+      await deletePostComment(postId, commentId, adminSecret);
+      setComments((prev) => prev.filter((c) => c.id !== commentId));
+      setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, comments_count: Math.max(0, p.comments_count - 1) } : p));
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Ошибка");
+    }
+  };
+
+  const previewSrc = formImageData || (formImageUrl.trim() ? formImageUrl.trim() : null);
+
+  if (loading) return <p style={styles.hint}>Загрузка постов...</p>;
+
+  return (
+    <>
+      {message && <p style={styles.message}>{message}</p>}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <h2 style={{ ...styles.pageTitle, marginBottom: 0 }}>Посты</h2>
+        {!showForm && (
+          <button type="button" onClick={openCreate} style={styles.submit}>
+            Создать пост
+          </button>
+        )}
+      </div>
+
+      {showForm && (
+        <div style={styles.form}>
+          <h3 style={styles.subtitle}>{editingPost ? "Редактировать пост" : "Новый пост"}</h3>
+
+          <label style={styles.label}>
+            Подпись
+            <textarea
+              value={formCaption}
+              onChange={(e) => setFormCaption(e.target.value)}
+              placeholder="Текст поста..."
+              rows={3}
+              style={{ ...styles.input, minHeight: 72 }}
+            />
+          </label>
+
+          <label style={styles.label}>
+            Картинка (URL)
+            <input
+              type="url"
+              value={formImageUrl}
+              onChange={(e) => { setFormImageUrl(e.target.value); if (e.target.value.trim()) setFormImageData(null); }}
+              placeholder="https://..."
+              style={styles.input}
+              disabled={!!formImageData}
+            />
+          </label>
+
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              style={styles.smallBtn}
+            >
+              Загрузить фото
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={onPhotoChange}
+              style={{ display: "none" }}
+            />
+            {formImageData && (
+              <button
+                type="button"
+                onClick={() => setFormImageData(null)}
+                style={{ ...styles.smallBtn, color: "#c62828" }}
+              >
+                Убрать фото
+              </button>
+            )}
+          </div>
+
+          {previewSrc && (
+            <img
+              src={previewSrc}
+              alt="Превью"
+              style={{ width: 120, height: 120, objectFit: "cover", borderRadius: 8, marginTop: 4 }}
+            />
+          )}
+
+          <label style={styles.label}>
+            Привязка к товару
+            <select
+              value={formProductId}
+              onChange={(e) => setFormProductId(e.target.value)}
+              style={styles.input}
+            >
+              <option value="">Не привязан</option>
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} {p.brand?.trim() ? `(${p.brand.trim()})` : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label style={styles.label}>
+            Внешняя ссылка на товар (URL)
+            <input
+              type="url"
+              value={formProductUrl}
+              onChange={(e) => setFormProductUrl(e.target.value)}
+              placeholder="https://..."
+              style={styles.input}
+            />
+          </label>
+
+          <div style={styles.formActions}>
+            <button type="button" onClick={savePost} disabled={busy} style={styles.submit}>
+              {busy ? "Сохранение…" : editingPost ? "Сохранить" : "Создать"}
+            </button>
+            <button type="button" onClick={closeForm} style={styles.cancelBtn}>
+              Отмена
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div style={styles.list}>
+        <h3 style={styles.subtitle}>Все посты ({posts.length})</h3>
+        {posts.length === 0 ? (
+          <p style={styles.hint}>Нет постов. Создайте первый.</p>
+        ) : (
+          posts.map((p) => {
+            const imgSrc = p.image_data || p.image_url;
+            const linkedProduct = p.product_id != null ? products.find((pr) => pr.id === p.product_id) : null;
+            return (
+              <div key={p.id}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: "1px solid var(--border)" }}>
+                  {imgSrc ? (
+                    <img src={imgSrc} alt="" style={{ width: 60, height: 60, objectFit: "cover", borderRadius: 8, flexShrink: 0 }} />
+                  ) : (
+                    <div style={{ width: 60, height: 60, borderRadius: 8, background: "var(--border)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "var(--muted)" }}>
+                      нет фото
+                    </div>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", margin: 0 }}>
+                      {p.caption?.trim() || "— без подписи —"}
+                    </p>
+                    <p style={{ fontSize: 13, color: "var(--muted)", margin: "4px 0 0" }}>
+                      {new Date(p.created_at).toLocaleString("ru")}
+                      {linkedProduct ? ` · 🔗 ${linkedProduct.name}` : ""}
+                      {p.product_url && !linkedProduct ? ` · 🔗 ссылка` : ""}
+                    </p>
+                    <p style={{ fontSize: 13, color: "var(--muted)", margin: "2px 0 0" }}>
+                      ❤️ {p.likes_count} · 💬 {p.comments_count}
+                    </p>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexShrink: 0, flexWrap: "wrap" }}>
+                    <button type="button" onClick={() => toggleComments(p.id)} style={styles.smallBtn}>
+                      {expandedPostId === p.id ? "Скрыть" : "Комм."}
+                    </button>
+                    <button type="button" onClick={() => openEdit(p)} style={styles.smallBtn} disabled={busy}>
+                      Изменить
+                    </button>
+                    <button type="button" onClick={() => handleDelete(p.id)} style={styles.deleteBtn} disabled={busy}>
+                      Удалить
+                    </button>
+                  </div>
+                </div>
+                {expandedPostId === p.id && (
+                  <div style={{ padding: "8px 0 8px 72px", borderBottom: "1px solid var(--border)" }}>
+                    {commentsLoading ? (
+                      <p style={styles.hint}>Загрузка…</p>
+                    ) : comments.length === 0 ? (
+                      <p style={styles.hint}>Нет комментариев</p>
+                    ) : (
+                      comments.map((c) => (
+                        <div key={c.id} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 8 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <span style={{ fontWeight: 600, fontSize: 13 }}>{c.user_name || c.user_id}</span>
+                            <span style={{ fontSize: 13, marginLeft: 8 }}>{c.text}</span>
+                            <span style={{ fontSize: 11, color: "var(--muted)", marginLeft: 8 }}>{new Date(c.created_at).toLocaleString("ru")}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteComment(p.id, c.id)}
+                            style={styles.deleteOrderIconBtn}
+                            aria-label="Удалить комментарий"
+                            title="Удалить"
+                          >
+                            <TrashIcon />
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
       </div>
     </>
   );
