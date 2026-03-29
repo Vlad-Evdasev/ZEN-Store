@@ -80,7 +80,7 @@ html, body, #root {
 }
 
 body {
-  font-family: "Inter", "SF Pro Display", -apple-system, system-ui, sans-serif;
+  font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
@@ -90,12 +90,12 @@ body {
   box-sizing: border-box;
 }
 
-/* Заголовки в стиле Ralph Lauren: серы, сдержанная типографика */
+/* Заголовки: Proxima Nova для единообразия */
 .zen-app h1,
 .zen-app h2,
 .zen-app .zen-heading {
-  font-family: Georgia, "Times New Roman", serif;
-  font-weight: 400;
+  font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
+  font-weight: 600;
   letter-spacing: 0.02em;
 }
 
@@ -361,15 +361,15 @@ button:active {
   flex-direction: column;
   gap: 6px;
 }
-/* Карточки: название и цена serif, описание просто под фото без блока */
+/* Карточки: название и цена Proxima Nova */
 .product-card-name,
 .zen-app .product-card-name {
-  font-family: Georgia, "Times New Roman", serif !important;
-  font-weight: 400 !important;
+  font-family: "Proxima Nova", -apple-system, system-ui, sans-serif !important;
+  font-weight: 600 !important;
 }
 .product-card-price,
 .zen-app .product-card-price {
-  font-family: Georgia, "Times New Roman", serif !important;
+  font-family: "Proxima Nova", -apple-system, system-ui, sans-serif !important;
   font-weight: 500 !important;
 }
 [data-theme="dark"] .product-card-price,
@@ -900,9 +900,9 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   border-bottom: 1px solid var(--border);
 }
 .zen-app .zen-price-filter-label {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
   font-size: 12px;
-  font-weight: 400;
+  font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--muted);
@@ -987,7 +987,7 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   border-radius: 999px;
   color: var(--text);
   font-size: 14px;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
   letter-spacing: 0.02em;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -1044,7 +1044,7 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   border-radius: 0;
   background: transparent;
   color: var(--text);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
   letter-spacing: 0.04em;
   caret-color: var(--accent);
   transition: color 0.2s ease;
@@ -1357,9 +1357,9 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   display: none;
 }
 .zen-app .zen-filters-panel-title {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
   font-size: 20px;
-  font-weight: 400;
+  font-weight: 600;
   letter-spacing: 0.08em;
   margin: 0;
   color: var(--text);
@@ -1698,9 +1698,9 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   flex-shrink: 0;
 }
 .zen-app .zen-new-arrivals-title {
-  font-family: Georgia, "Times New Roman", serif !important;
+  font-family: "Proxima Nova", -apple-system, system-ui, sans-serif !important;
   font-size: 22px;
-  font-weight: 400 !important;
+  font-weight: 600 !important;
   letter-spacing: 0.12em !important;
   color: var(--text);
   margin: 0;
@@ -1737,11 +1737,11 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   animation-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
-/* Логотип и бренд в стиле RL: серы, широкий letter-spacing */
+/* Логотип и бренд: Proxima Nova */
 .zen-app .zen-logo,
 .zen-app .zen-brand {
-  font-family: Georgia, "Times New Roman", serif !important;
-  font-weight: 400 !important;
+  font-family: "Proxima Nova", -apple-system, system-ui, sans-serif !important;
+  font-weight: 600 !important;
   letter-spacing: 0.18em !important;
   text-transform: uppercase;
 }
