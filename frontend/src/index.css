@@ -399,13 +399,18 @@ html[data-theme="light"] .zen-app .product-card-price {
 /* Картинки и карточки без скругления */
 .zen-app .product-card,
 .product-card,
-.zen-app .product-card .product-card__image-wrap,
-.zen-app .product-card .product-card__image-wrap img,
-.product-card .product-card__image-wrap,
-.product-card .product-card__image-wrap img,
 .zen-app .product-card .product-card-desc,
 .zen-app .product-card--text-below .product-card-desc {
   border-radius: 0 !important;
+}
+.zen-app .product-card .product-card__image-wrap,
+.product-card .product-card__image-wrap {
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+.zen-app .product-card .product-card__image-wrap img,
+.product-card .product-card__image-wrap img {
+  border-radius: 0;
 }
 
 /* Сетка каталога: 2 колонки */
@@ -415,15 +420,20 @@ html[data-theme="light"] .zen-app .product-card-price {
   gap: 20px;
   grid-auto-rows: auto;
 }
-/* Каталог (главный): минимальные отступы, одинаковый размер, без скруглений */
+/* Каталог (главный): минимальные отступы, одинаковый размер */
 .zen-app .catalog-grid.catalog-grid--tight {
   gap: 14px 6px;
 }
 .zen-app .catalog-grid.catalog-grid--tight .product-card,
-.zen-app .catalog-grid.catalog-grid--tight .product-card .product-card__image-wrap,
-.zen-app .catalog-grid.catalog-grid--tight .product-card .product-card__image-wrap img,
 .zen-app .catalog-grid.catalog-grid--tight .product-card .product-card-desc {
   border-radius: 0 !important;
+}
+.zen-app .catalog-grid.catalog-grid--tight .product-card .product-card__image-wrap {
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+.zen-app .catalog-grid.catalog-grid--tight .product-card .product-card__image-wrap img {
+  border-radius: 0;
 }
 
 /* Каталог: минимальные отступы от краёв экрана */
