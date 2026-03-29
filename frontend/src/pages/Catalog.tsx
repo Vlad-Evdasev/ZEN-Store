@@ -7,8 +7,8 @@ import { StoreCard } from "../components/StoreCard";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 
-const DEFAULT_CUSTOM_IMG = "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800";
-const DEFAULT_ARRIVED_IMG = "https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=800";
+const DEFAULT_CUSTOM_IMG = "https://images.unsplash.com/photo-1526868158330-2d5492f0e50b?w=800&q=75";
+const DEFAULT_ARRIVED_IMG = "https://images.unsplash.com/photo-1550355291-bbee04a92027?w=800&q=75";
 
 interface CatalogProps {
   products: Product[];
@@ -926,7 +926,7 @@ const catalogBannerStyles = {
     borderRadius: 16,
     cursor: "pointer",
     overflow: "hidden",
-    backgroundImage: `url(${bgImg})`,
+    backgroundImage: `linear-gradient(135deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.35) 100%), url(${bgImg})`,
     backgroundSize: "cover",
     backgroundPosition: "center",
   }),
