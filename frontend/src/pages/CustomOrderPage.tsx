@@ -115,9 +115,8 @@ export function CustomOrderPage({ userId, userName, firstName, onBack }: CustomO
 
       <form onSubmit={handleSubmit} style={styles.form}>
         <div style={styles.section}>
-          <span style={styles.sectionLabel}>{t(lang, "customOrderName")}</span>
+          <span style={styles.sectionLabel}>{t(lang, "customOrderName")} *</span>
           <div style={styles.fieldGroup}>
-            <label className="zen-label" style={styles.label}>{t(lang, "customOrderName")} *</label>
             <input
               type="text"
               className="zen-input"
@@ -143,9 +142,8 @@ export function CustomOrderPage({ userId, userName, firstName, onBack }: CustomO
         <div style={styles.divider} />
 
         <div style={styles.section}>
-          <span style={styles.sectionLabel}>{t(lang, "customOrderDesc")}</span>
+          <span style={styles.sectionLabel}>{t(lang, "customOrderDesc")} *</span>
           <div style={styles.fieldGroup}>
-            <label className="zen-label" style={styles.label}>{t(lang, "customOrderDesc")} *</label>
             <textarea
               className="zen-textarea"
               value={customDesc}
