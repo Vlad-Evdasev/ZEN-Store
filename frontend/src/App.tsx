@@ -18,6 +18,7 @@ import { CustomOrderPage } from "./pages/CustomOrderPage";
 import { Settings } from "./pages/Settings";
 import { History } from "./pages/History";
 import { Footer } from "./components/Footer";
+import { BottomNavBar } from "./components/BottomNavBar";
 import { SettingsSync } from "./components/SettingsSync";
 import { useSettings } from "./context/SettingsContext";
 import { t } from "./i18n";
@@ -256,8 +257,6 @@ function App() {
     setMenuOpen(false);
     setPage("history");
   };
-  const openNewArrivals = () => setPage("newArrivals");
-  const openCustomOrder = () => setPage("customOrder");
   const openDeliveryTerms = () => {
     setMenuOpen(false);
     setPage("deliveryTerms");
@@ -378,8 +377,6 @@ function App() {
                 onToggleWishlist={toggleWishlist}
                 hideStores
                 showPriceFilter
-                onCustomOrder={openCustomOrder}
-                onNewArrivals={openNewArrivals}
               />
             </section>
           </>
@@ -476,6 +473,31 @@ function App() {
       </main>
 
       {page !== "support" && <Footer />}
+      
+      {page === "catalog" && (
+        <BottomNavBar
+          activeTab="catalog"
+          onCatalog={() => setPage("catalog")}
+          onCustomOrder={() => setPage("customOrder")}
+          onArrivals={() => setPage("newArrivals")}
+        />
+      )}
+      {page === "customOrder" && (
+        <BottomNavBar
+          activeTab="custom"
+          onCatalog={() => setPage("catalog")}
+          onCustomOrder={() => setPage("customOrder")}
+          onArrivals={() => setPage("newArrivals")}
+        />
+      )}
+      {page === "newArrivals" && (
+        <BottomNavBar
+          activeTab="arrivals"
+          onCatalog={() => setPage("catalog")}
+          onCustomOrder={() => setPage("customOrder")}
+          onArrivals={() => setPage("newArrivals")}
+        />
+      )}
     </div>
     </div>
   );

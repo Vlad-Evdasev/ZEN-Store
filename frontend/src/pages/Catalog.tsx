@@ -23,9 +23,6 @@ interface CatalogProps {
   hideStores?: boolean;
   /** Показывать фильтр по цене (для страницы полного каталога) */
   showPriceFilter?: boolean;
-  /** Колбэки для карточек-баннеров */
-  onCustomOrder?: () => void;
-  onNewArrivals?: () => void;
 }
 
 /** Теги категорий в каталоге: «Всё» + категории из API (синхронизированы с админкой) */
@@ -51,8 +48,6 @@ export function Catalog({
   onToggleWishlist,
   hideStores = false,
   showPriceFilter = false,
-  onCustomOrder,
-  onNewArrivals,
 }: CatalogProps) {
   const { settings } = useSettings();
   const lang = settings.lang;
@@ -576,37 +571,6 @@ export function Catalog({
         </div>
       )}
 
-      {(onCustomOrder || onNewArrivals) && (
-        <div style={catalogBannerStyles.row}>
-          {onCustomOrder && (
-            <button type="button" onClick={onCustomOrder} style={catalogBannerStyles.card()}>
-              <span className="landing-tile-overlay" />
-              <span style={catalogBannerStyles.inner}>
-                <div>
-                  <span style={catalogBannerStyles.title}>Заказать не из каталога</span>
-                  <br />
-                  <span style={catalogBannerStyles.sub}>Под заказ из Китая</span>
-                </div>
-                <span style={catalogBannerStyles.arrow}><ChevronDownIcon /></span>
-              </span>
-            </button>
-          )}
-          {onNewArrivals && (
-            <button type="button" onClick={onNewArrivals} style={catalogBannerStyles.card()}>
-              <span className="landing-tile-overlay" />
-              <span style={catalogBannerStyles.inner}>
-                <div>
-                  <span style={catalogBannerStyles.title}>Товары которые мы привезли</span>
-                  <br />
-                  <span style={catalogBannerStyles.sub}>Вещи в наличии</span>
-                </div>
-                <span style={catalogBannerStyles.arrow}><ChevronDownIcon /></span>
-              </span>
-            </button>
-          )}
-        </div>
-      )}
-
       <div className={`zen-catalog-search-row ${filtersOpen || filtersClosing ? "zen-catalog-search-row--filter-open" : ""}`}>
         {showPriceFilter && (
           <button
@@ -914,76 +878,4 @@ const styles: Record<string, React.CSSProperties> = {
   empty: {},
 };
 
-const catalogBannerStyles = {
-  row: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 10,
-    margin: "0 0 12px",
-  } as React.CSSProperties,
-  card: (): React.CSSProperties => ({
-    position: "relative",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "12px",
-    minHeight: 110,
-    border: "none",
-    borderRadius: 16,
-    cursor: "pointer",
-    overflow: "hidden",
-    background: "linear-gradient(135deg, #a52a2a 0%, #c62828 100%)",
-  }),
-  inner: {
-    position: "relative",
-    zIndex: 1,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    textAlign: "center",
-    width: "100%",
-  } as React.CSSProperties,
-  title: {
-    fontSize: 11,
-    fontWeight: 700,
-    color: "#fff",
-    lineHeight: 1.2,
-    letterSpacing: "0.04em",
-    textTransform: "uppercase",
-    textShadow: "0 1px 8px rgba(0,0,0,0.3)",
-    fontFamily: "inherit",
-  } as React.CSSProperties,
-  sub: {
-    fontSize: 10,
-    color: "rgba(255,255,255,0.88)",
-    fontFamily: "inherit",
-    lineHeight: 1.2,
-    textShadow: "0 1px 6px rgba(0,0,0,0.4)",
-    display: "block",
-  } as React.CSSProperties,
-  arrow: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: 18,
-    height: 18,
-    color: "#fff",
-    opacity: 0.9,
-  } as React.CSSProperties,
-};
 
-function ChevronDownIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M6 9l6 6 6-6"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
