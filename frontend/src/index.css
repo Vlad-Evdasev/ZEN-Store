@@ -1037,6 +1037,9 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   padding-right: max(6px, env(safe-area-inset-right));
   box-sizing: border-box;
   width: 100%;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
 }
 .zen-app .zen-catalog-search-row:focus-within:not(.zen-catalog-search-row--filter-open) {
   border-bottom-width: 2px;
@@ -1809,5 +1812,19 @@ header .zen-header-hamburger svg {
   }
   .zen-support .zen-support-title-edit span:last-child {
     font-size: 28px !important;
+  }
+}
+
+/* Bottom nav bar SVG icons - outline only */
+nav svg {
+  fill: none !important;
+  stroke: currentColor !important;
+  stroke-width: 2 !important;
+}
+
+/* Ensure search row is properly positioned above products */
+@supports (position: fixed) {
+  .zen-app .zen-catalog-search-row {
+    position: fixed !important;
   }
 }
