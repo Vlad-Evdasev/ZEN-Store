@@ -112,7 +112,7 @@ function App() {
   const { wishlistIds, toggleWishlist, hasInWishlist } = useWishlist(userId);
   const DEFAULT_WELCOME_STORE: { category: string; name: string } = { category: "all", name: "RAW" };
 
-  const [page, setPage] = useState<Page>("storeCatalog");
+  const [page, setPage] = useState<Page>("catalog");
   const [productId, setProductId] = useState<number | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
@@ -314,7 +314,7 @@ function App() {
     storeCatalogStore.category === DEFAULT_WELCOME_STORE.category;
   const isInitialWelcomeScreen = page === "storeCatalog" && storeCatalogView === "welcome" && isDefaultWelcomeStore;
   const isCustomOrderForm = page === "storeCatalog" && storeCatalogView === "customOrder";
-  const hideHeader = isInitialWelcomeScreen || isCustomOrderForm;
+  const hideHeader = isCustomOrderForm;
   const openCheckout = () => setPage("checkout");
 
   const needsAuth = !isInTelegram && !userId;
@@ -426,6 +426,12 @@ function App() {
                 onToggleWishlist={toggleWishlist}
                 hideStores
                 showPriceFilter
+                onCustomOrder={() => {
+                  setStoreCatalogStore(DEFAULT_WELCOME_STORE);
+                  setStoreCatalogView("customOrder");
+                  setPage("storeCatalog");
+                }}
+                onNewArrivals={openNewArrivals}
               />
             </section>
           </>

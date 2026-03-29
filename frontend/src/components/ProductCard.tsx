@@ -120,6 +120,7 @@ const styles: Record<string, React.CSSProperties> = {
     aspectRatio: "1",
     overflow: "hidden",
     background: "var(--surface-elevated)",
+    borderRadius: 12,
   },
   image: {
     width: "100%",

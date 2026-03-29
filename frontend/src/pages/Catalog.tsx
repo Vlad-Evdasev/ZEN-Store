@@ -21,6 +21,9 @@ interface CatalogProps {
   hideStores?: boolean;
   /** Показывать фильтр по цене (для страницы полного каталога) */
   showPriceFilter?: boolean;
+  /** Колбэки для карточек-баннеров */
+  onCustomOrder?: () => void;
+  onNewArrivals?: () => void;
 }
 
 /** Теги категорий в каталоге: «Всё» + категории из API (синхронизированы с админкой) */
@@ -47,6 +50,8 @@ export function Catalog({
   onToggleWishlist,
   hideStores = false,
   showPriceFilter = false,
+  onCustomOrder,
+  onNewArrivals,
 }: CatalogProps) {
   const { settings } = useSettings();
   const lang = settings.lang;
@@ -593,6 +598,23 @@ export function Catalog({
         />
       </div>
 
+      {(onCustomOrder || onNewArrivals) && (
+        <div style={catalogBannerStyles.row}>
+          {onCustomOrder && (
+            <button type="button" onClick={onCustomOrder} style={catalogBannerStyles.card}>
+              <span style={catalogBannerStyles.title}>Заказать не из каталога</span>
+              <span style={catalogBannerStyles.sub}>Под заказ из Китая</span>
+            </button>
+          )}
+          {onNewArrivals && (
+            <button type="button" onClick={onNewArrivals} style={catalogBannerStyles.card}>
+              <span style={catalogBannerStyles.title}>Товары которые мы привезли</span>
+              <span style={catalogBannerStyles.sub}>Вещи в наличии</span>
+            </button>
+          )}
+        </div>
+      )}
+
       {showPriceFilter && filtersOpen && (
         <>
           <div className={`zen-filters-overlay ${filtersClosing ? "zen-filters-overlay--closing" : ""}`} onClick={closeFilters} aria-hidden />
@@ -875,4 +897,41 @@ const styles: Record<string, React.CSSProperties> = {
   },
   grid: {},
   empty: {},
+};
+
+const catalogBannerStyles: Record<string, React.CSSProperties> = {
+  row: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 10,
+    margin: "10px 0 4px",
+  },
+  card: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    justifyContent: "flex-end",
+    padding: "14px 12px",
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: 16,
+    cursor: "pointer",
+    textAlign: "left",
+    minHeight: 90,
+    gap: 4,
+    transition: "background 0.15s",
+  },
+  title: {
+    fontSize: 13,
+    fontWeight: 600,
+    color: "var(--text)",
+    lineHeight: 1.3,
+    fontFamily: "inherit",
+  },
+  sub: {
+    fontSize: 11,
+    color: "var(--muted)",
+    fontFamily: "inherit",
+    lineHeight: 1.3,
+  },
 };
