@@ -333,7 +333,7 @@ export function NewArrivalsPage({
           onClick={onBack}
           style={pageStyles.backBtn}
         >
-          ← {t(lang, "backToMain")}
+          ← {t(lang, "backToCatalog")}
         </button>
         <h1 style={pageStyles.title}>{t(lang, "postsFeedTitle")}</h1>
         <div style={pageStyles.divider} />
@@ -385,7 +385,7 @@ const pageStyles: Record<string, React.CSSProperties> = {
   },
   backBtn: {
     display: "block",
-    marginLeft: "auto",
+    marginLeft: 0,
     background: "none",
     border: "none",
     color: "var(--muted)",
@@ -394,7 +394,7 @@ const pageStyles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     padding: 0,
     marginBottom: 16,
-    textAlign: "right" as const,
+    textAlign: "left" as const,
   },
   title: {
     fontSize: 22,
