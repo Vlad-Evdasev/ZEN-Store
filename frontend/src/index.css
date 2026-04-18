@@ -440,7 +440,7 @@ html[data-theme="light"] .zen-app .product-card-price {
 
 /* Каталог: минимальные отступы от краёв экрана */
 .zen-app main.zen-main--catalog {
-  padding-top: 132px !important;
+  padding-top: 124px !important;
   padding-left: max(6px, env(safe-area-inset-left)) !important;
   padding-right: max(6px, env(safe-area-inset-right)) !important;
   padding-bottom: 80px !important;
