@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import type { Product, Store, Category, ProductReviewStats } from "../api";
 import { getProductReviewStats } from "../api";
 import { FilterIcon } from "../components/FilterIcon";
+import { SearchIcon } from "../components/SearchIcon";
 import { ProductCard } from "../components/ProductCard";
 import { StoreCard } from "../components/StoreCard";
 import { useSettings } from "../context/SettingsContext";
@@ -572,18 +573,9 @@ export function Catalog({
       )}
 
       <div className={`zen-catalog-search-row ${filtersOpen || filtersClosing ? "zen-catalog-search-row--filter-open" : ""}`}>
-        {showPriceFilter && (
-          <button
-            ref={filterButtonRef}
-            type="button"
-            className="zen-filter-icon-btn"
-            onClick={() => setFiltersOpen(true)}
-            aria-label={t(lang, "filters")}
-            title={t(lang, "filters")}
-          >
-            <FilterIcon />
-          </button>
-        )}
+        <span className="zen-catalog-search-icon" aria-hidden>
+          <SearchIcon />
+        </span>
         <input
           type="search"
           className="zen-input zen-catalog-search-input"
@@ -592,6 +584,21 @@ export function Catalog({
           onChange={(e) => setSearch(e.target.value)}
           aria-label={t(lang, "search")}
         />
+        {showPriceFilter && (
+          <button
+            ref={filterButtonRef}
+            type="button"
+            className={`zen-filter-icon-btn ${activeSummary.length > 0 ? "zen-filter-icon-btn--active" : ""}`}
+            onClick={() => setFiltersOpen(true)}
+            aria-label={t(lang, "filters")}
+            title={t(lang, "filters")}
+          >
+            <FilterIcon />
+            {activeSummary.length > 0 && (
+              <span className="zen-filter-icon-btn-dot" aria-hidden />
+            )}
+          </button>
+        )}
       </div>
 
       {showPriceFilter && filtersOpen && (

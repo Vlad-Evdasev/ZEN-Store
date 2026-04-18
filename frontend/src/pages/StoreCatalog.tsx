@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import type { Product } from "../api";
 import { ProductCard } from "../components/ProductCard";
+import { SearchIcon } from "../components/SearchIcon";
 import { BackButton } from "../components/BackButton";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
@@ -55,6 +56,9 @@ export function StoreCatalog({
     <div style={styles.wrap}>
       <BackButton onClick={onBack} label={backLabel} />
       <div className="zen-catalog-search-row">
+        <span className="zen-catalog-search-icon" aria-hidden>
+          <SearchIcon />
+        </span>
         <input
           type="search"
           className="zen-input zen-catalog-search-input"
