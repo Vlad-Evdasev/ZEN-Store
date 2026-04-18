@@ -1016,10 +1016,33 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   letter-spacing: 0.02em;
 }
 
-/* Подложка-shelf больше не используется — тень даём прямо у пилюли поиска
-   через box-shadow, чтобы не было видимой полосы фона под хедером. */
+/* Fade-зона под пилюлей поиска: карточки при скролле плавно «растворяются»
+   в цвет фона к верхней границе пилюли. Сверху (под хедером) полоса —
+   сплошной цвет фона, что визуально сливается с фоном приложения. Снизу
+   (у низа пилюли) — полностью прозрачно, чтобы ниже ничего не перекрывалось.
+   z-index: 9 — ниже хедера (10) и ниже пилюли (13). */
 .zen-app .zen-catalog-search-shelf {
-  display: none !important;
+  position: fixed;
+  top: 56px;
+  left: 0;
+  right: 0;
+  height: 68px;
+  z-index: 9;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    var(--bg) 0%,
+    var(--bg) 55%,
+    rgba(250, 249, 247, 0) 100%
+  );
+}
+.zen-app.theme-dark .zen-catalog-search-shelf {
+  background: linear-gradient(
+    to bottom,
+    var(--bg) 0%,
+    var(--bg) 55%,
+    rgba(15, 14, 14, 0) 100%
+  );
 }
 
 /* Строка поиска + иконка фильтра — «Floating glass» */
