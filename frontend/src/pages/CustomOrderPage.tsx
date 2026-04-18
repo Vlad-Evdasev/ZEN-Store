@@ -39,7 +39,7 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   const { settings } = useSettings();
   const lang = settings.lang;
 
-  const [customName, setCustomName] = useState(firstName || "");
+  const customName = firstName || "";
   const [customDesc, setCustomDesc] = useState("");
   const [customSize, setCustomSize] = useState("");
   const [showSizeField, setShowSizeField] = useState(false);
@@ -60,8 +60,7 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
     el.style.height = Math.min(el.scrollHeight, 180) + "px";
   }, [customDesc]);
 
-  const canSend =
-    customDesc.trim().length > 0 && customName.trim().length > 0 && !customSubmitting;
+  const canSend = customDesc.trim().length > 0 && !customSubmitting;
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -127,9 +126,6 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
     );
   }
 
-  const authorLabel = customName.trim() || firstName || t(lang, "customOrderPlaceholderName");
-  const usernameLabel = userName ? `@${userName.replace(/^@/, "")}` : "";
-
   return (
     <div style={styles.wrap}>
       <form onSubmit={handleSubmit} style={styles.form}>
@@ -144,24 +140,8 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
             {t(lang, "customOrderSubtitle")}
           </BotBubble>
 
-          {/* Name row (shown as author chip / editable if empty) */}
-          <div style={styles.authorRow}>
-            <div style={styles.avatar}>{(authorLabel[0] || "?").toUpperCase()}</div>
-            <div style={styles.authorTextCol}>
-              <input
-                type="text"
-                className="zen-input"
-                value={customName}
-                onChange={(e) => setCustomName(e.target.value)}
-                placeholder={t(lang, "customOrderPlaceholderName")}
-                style={styles.authorNameInput}
-                required
-                aria-label={t(lang, "customOrderName")}
-              />
-              {usernameLabel && (
-                <span style={styles.authorUsername}>{usernameLabel}</span>
-              )}
-            </div>
+          <div style={styles.replyHint}>
+            {t(lang, "customOrderReplyFrom")} @krot_eno
           </div>
 
           {/* Photo preview bubble (if attached) */}
@@ -354,9 +334,15 @@ const styles: Record<string, React.CSSProperties> = {
   thread: {
     display: "flex",
     flexDirection: "column",
-    gap: 8,
-    padding: "2px 0",
+    gap: 10,
+    padding: "28px 0 2px",
     flexShrink: 0,
+  },
+  replyHint: {
+    fontSize: 11,
+    color: "var(--muted)",
+    paddingLeft: 36,
+    letterSpacing: "0.04em",
   },
 
   /* Bot bubble */
