@@ -46,11 +46,7 @@ function CustomOrderIcon({ active }: IconProps) {
       strokeLinejoin="round"
       style={{ transition: "stroke-width 0.25s ease" }}
     >
-      <circle cx="6" cy="6" r="3" />
-      <circle cx="6" cy="18" r="3" />
-      <line x1="20" y1="4" x2="8.12" y2="15.88" />
-      <line x1="14.47" y1="14.48" x2="20" y2="20" />
-      <line x1="8.12" y1="8.12" x2="12" y2="12" />
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
     </svg>
   );
 }
@@ -69,8 +65,8 @@ function ArrivalsIcon({ active }: IconProps) {
       strokeLinejoin="round"
       style={{ transition: "stroke-width 0.25s ease" }}
     >
-      <path d="M12 3l2.2 4.6L19 9l-3.5 3.3.9 4.9L12 14.9 7.6 17.2l.9-4.9L5 9l4.8-1.4L12 3z" />
-      <path d="M5 20h14" opacity={active ? 1 : 0.5} strokeDasharray={active ? "0" : "2 3"} />
+      <path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3z" />
+      <path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z" opacity={active ? 1 : 0.55} />
     </svg>
   );
 }
