@@ -440,7 +440,7 @@ html[data-theme="light"] .zen-app .product-card-price {
 
 /* Каталог: минимальные отступы от краёв экрана */
 .zen-app main.zen-main--catalog {
-  padding-top: 148px;
+  padding-top: 172px;
   padding-left: max(6px, env(safe-area-inset-left));
   padding-right: max(6px, env(safe-area-inset-right));
   padding-bottom: 80px;
@@ -1853,10 +1853,9 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   text-transform: uppercase;
 }
 
-/* Хедер: минималистичная нижняя граница */
+/* Хедер: без разделительной линии — визуальное разделение даёт shelf под ним */
 .zen-app header {
-  border-bottom-width: 1px;
-  border-bottom-color: var(--border);
+  border-bottom: none;
 }
 
 /* Кнопка меню (гамбургер): крупнее и сдвиг влево */
