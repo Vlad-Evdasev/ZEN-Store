@@ -1016,29 +1016,28 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   letter-spacing: 0.02em;
 }
 
-/* Подложка под полем поиска — закрывает зону между шапкой и контентом,
-   чтобы карточки не просвечивали сквозь пилюлю. Начинается под шапкой (56px).
-   Тёмная полупрозрачная тень (вместо светлой), плавно растворяется к контенту. */
+/* Тень под полем поиска — только под пилюлей, не заходит на хедер.
+   Пилюля: top 68px, высота 50px → низ ~118px. Начинаем тень с ~118px. */
 .zen-app .zen-catalog-search-shelf {
   position: fixed;
-  top: 56px;
+  top: 118px;
   left: 0;
   right: 0;
-  height: 80px;
+  height: 56px;
   z-index: 9;
   pointer-events: none;
   background: linear-gradient(
     to bottom,
-    rgba(0, 0, 0, 0.22) 0%,
-    rgba(0, 0, 0, 0.14) 55%,
+    rgba(0, 0, 0, 0.18) 0%,
+    rgba(0, 0, 0, 0.10) 50%,
     rgba(0, 0, 0, 0) 100%
   );
 }
 .zen-app.theme-dark .zen-catalog-search-shelf {
   background: linear-gradient(
     to bottom,
-    rgba(0, 0, 0, 0.55) 0%,
-    rgba(0, 0, 0, 0.30) 55%,
+    rgba(0, 0, 0, 0.45) 0%,
+    rgba(0, 0, 0, 0.22) 50%,
     rgba(0, 0, 0, 0) 100%
   );
 }
