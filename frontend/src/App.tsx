@@ -3,7 +3,7 @@ import { flushSync } from "react-dom";
 import { useTelegram } from "./hooks/useTelegram";
 import { TelegramAuth } from "./components/TelegramAuth";
 import { useWishlist } from "./hooks/useWishlist";
-import { getProducts, getStores, getCategories, getCart, getReviews, getSupportUnreadCount, type Product, type Store, type Category } from "./api";
+import { getProducts, getStores, getCategories, getCart, getSupportUnreadCount, type Product, type Store, type Category } from "./api";
 import { Catalog } from "./pages/Catalog";
 import { Cart } from "./pages/Cart";
 import { Favorites } from "./pages/Favorites";
@@ -18,6 +18,7 @@ import { CustomOrderPage } from "./pages/CustomOrderPage";
 import { Settings } from "./pages/Settings";
 import { History } from "./pages/History";
 import { BottomNavBar } from "./components/BottomNavBar";
+import { HeaderArcMenu } from "./components/HeaderArcMenu";
 import { SettingsSync } from "./components/SettingsSync";
 import { useSettings } from "./context/SettingsContext";
 import { t } from "./i18n";
@@ -26,40 +27,6 @@ type Page = "catalog" | "cart" | "product" | "checkout" | "profile" | "reviews" 
 
 const SELLER_LINK = import.meta.env.VITE_SELLER_LINK || "";
 
-const iconSize = 22;
-const iconStyle: React.CSSProperties = { width: iconSize, height: iconSize, flexShrink: 0, color: "currentColor" };
-
-function MenuIconProfile() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={iconStyle} aria-hidden>
-      <circle cx="12" cy="8" r="2.5" />
-      <path d="M5 20v-2a5 5 0 0 1 10 0v2" />
-    </svg>
-  );
-}
-function MenuIconHistory() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={iconStyle} aria-hidden>
-      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-      <path d="M3 3v5h5" />
-    </svg>
-  );
-}
-function MenuIconReviews() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={iconStyle} aria-hidden>
-      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-    </svg>
-  );
-}
-function MenuIconSettings() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={iconStyle} aria-hidden>
-      <circle cx="12" cy="12" r="3" />
-      <path d="M12 2v2m0 16v2M2 12h2m16 0h2M5.64 5.64l1.41 1.41m11.32 11.32l1.41 1.41M5.64 18.36l1.41-1.41m11.32-11.32l1.41-1.41" />
-    </svg>
-  );
-}
 const headerIconSize = 22;
 const headerIconStyle: React.CSSProperties = { width: headerIconSize, height: headerIconSize, flexShrink: 0, color: "currentColor", display: "block" };
 
@@ -115,7 +82,6 @@ function App() {
   const [cartCount, setCartCount] = useState(0);
   const [supportUnreadCount, setSupportUnreadCount] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [avgRating, setAvgRating] = useState<number | null>(null);
   const [productReturnTo, setProductReturnTo] = useState<Page | null>(null);
   const [catalogSelectedCategories, setCatalogSelectedCategories] = useState<Set<string>>(() => new Set(["all"]));
   const mainScrollRef = useRef<HTMLElement | null>(null);
@@ -155,13 +121,6 @@ function App() {
         if (!cancelled) setSupportUnreadCount(Number(count) || 0);
       }).catch(() => {});
     }
-
-    getReviews().then((reviews) => {
-      if (!cancelled && reviews.length > 0) {
-        const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
-        setAvgRating(Math.round(avg * 10) / 10);
-      }
-    }).catch(() => {});
 
     return () => { cancelled = true; };
   }, [userId]);
@@ -302,15 +261,31 @@ function App() {
       <SettingsSync />
       <header style={styles.header}>
         <div style={styles.headerLeft} className="zen-header-left">
-          <button
-            type="button"
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="zen-header-hamburger"
-            style={styles.hamburger}
-            aria-label="Меню"
-          >
-            <HeaderIconHamburger />
-          </button>
+          <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+            <button
+              type="button"
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="zen-header-hamburger"
+              style={{
+                ...styles.hamburger,
+                color: menuOpen ? "var(--accent)" : "var(--text)",
+                transform: menuOpen ? "rotate(90deg)" : "rotate(0deg)",
+                transition: "transform 350ms cubic-bezier(0.22, 1, 0.36, 1), color 350ms ease",
+              }}
+              aria-label="Меню"
+              aria-expanded={menuOpen}
+            >
+              <HeaderIconHamburger />
+            </button>
+            <HeaderArcMenu
+              open={menuOpen}
+              onClose={() => setMenuOpen(false)}
+              onProfile={openProfile}
+              onHistory={openHistory}
+              onReviews={openReviews}
+              onSettings={openSettings}
+            />
+          </div>
         </div>
         <div style={styles.headerCenter}>
           <LogoMark onClick={openCatalog} label="На главную" />
@@ -327,43 +302,6 @@ function App() {
         </div>
       </header>
       <div style={styles.headerSpacer} aria-hidden />
-
-      {menuOpen && (
-        <>
-          <div
-            className="zen-menu-overlay"
-            style={styles.menuOverlay}
-            onClick={() => setMenuOpen(false)}
-            aria-hidden
-          />
-          <div className="zen-menu-panel" style={styles.menu}>
-            <button onClick={openProfile} className="zen-menu-item" style={styles.menuItem}>
-              <span style={styles.menuItemContent}>
-                <MenuIconProfile />
-                <span>{t(lang, "profile")}</span>
-              </span>
-            </button>
-            <button onClick={openHistory} className="zen-menu-item" style={styles.menuItem}>
-              <span style={styles.menuItemContent}>
-                <MenuIconHistory />
-                <span>{t(lang, "history")}</span>
-              </span>
-            </button>
-            <button onClick={openReviews} className="zen-menu-item" style={styles.menuItem}>
-              <span style={styles.menuItemContent}>
-                <MenuIconReviews />
-                <span>{t(lang, "reviews")}{avgRating != null ? ` ★ ${avgRating}` : ""}</span>
-              </span>
-            </button>
-            <button onClick={openSettings} className="zen-menu-item" style={styles.menuItem}>
-              <span style={styles.menuItemContent}>
-                <MenuIconSettings />
-                <span>{t(lang, "settings")}</span>
-              </span>
-            </button>
-          </div>
-        </>
-      )}
 
       <main ref={mainScrollRef} className={page === "catalog" ? "zen-main--catalog" : undefined} style={page === "support" ? { ...styles.main, paddingBottom: 0 } : styles.main}>
         <div key={page} className={page === "cart" || page === "favorites" ? "zen-page-enter" : ""} style={page === "newArrivals" ? { ...styles.mainContent, height: "100%" } : styles.mainContent}>
@@ -620,34 +558,6 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "50%",
     background: "var(--accent)",
     pointerEvents: "none",
-  },
-  menuOverlay: {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(0,0,0,0.5)",
-    zIndex: 20,
-  },
-  menu: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    bottom: 0,
-    width: 280,
-    maxWidth: "85vw",
-    background: "var(--menu-panel-bg)",
-    backdropFilter: "blur(12px)",
-    WebkitBackdropFilter: "blur(12px)",
-    borderRight: "1px solid var(--border)",
-    zIndex: 21,
-    display: "flex",
-    flexDirection: "column",
-    gap: 2,
-  },
-  menuItem: {},
-  menuItemContent: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
   },
   headerIconBtn: {
     position: "relative",
