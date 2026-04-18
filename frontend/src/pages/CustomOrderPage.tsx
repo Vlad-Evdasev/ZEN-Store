@@ -298,17 +298,20 @@ const styles: Record<string, React.CSSProperties> = {
   wrap: {
     maxWidth: 460,
     width: "100%",
-    margin: "0 auto",
-    minHeight: "calc(100dvh - 64px - env(safe-area-inset-bottom, 0px))",
+    margin: "-16px auto -16px",
+    height: "calc(100dvh - 56px - 64px)",
     display: "flex",
     flexDirection: "column",
+    overflow: "hidden",
+    paddingTop: 12,
   },
   headerBlock: {
-    padding: "8px 4px 10px",
+    padding: "0 4px 6px",
+    flexShrink: 0,
   },
   spacer: {
     flex: 1,
-    minHeight: 12,
+    minHeight: 0,
   },
   threadCentered: {
     flex: 1,
@@ -321,7 +324,7 @@ const styles: Record<string, React.CSSProperties> = {
     paddingBottom: 24,
   },
   title: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 800,
     margin: 0,
     color: "var(--text)",
@@ -329,23 +332,25 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: 1.25,
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: 12,
     color: "var(--muted)",
-    margin: "6px 0 0",
-    lineHeight: 1.45,
+    margin: "4px 0 0",
+    lineHeight: 1.4,
   },
 
   form: {
     flex: 1,
     display: "flex",
     flexDirection: "column",
-    gap: 14,
+    gap: 10,
+    minHeight: 0,
   },
   thread: {
     display: "flex",
     flexDirection: "column",
-    gap: 10,
-    padding: "4px 0",
+    gap: 8,
+    padding: "2px 0",
+    flexShrink: 0,
   },
 
   /* Bot bubble */
@@ -508,8 +513,9 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: 8,
-    paddingTop: 8,
-    paddingBottom: 8,
+    paddingTop: 6,
+    paddingBottom: 10,
+    flexShrink: 0,
   },
   composer: {
     display: "flex",
