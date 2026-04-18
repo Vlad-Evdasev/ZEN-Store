@@ -4,3 +4,4 @@ dist
 zen.db
 *.log
 .DS_Store
+.superpowers/
