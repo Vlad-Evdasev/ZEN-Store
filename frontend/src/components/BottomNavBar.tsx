@@ -7,62 +7,113 @@ interface BottomNavBarProps {
   onArrivals: () => void;
 }
 
-function CatalogIcon() {
+interface IconProps {
+  active: boolean;
+}
+
+function CatalogIcon({ active }: IconProps) {
+  const stroke = active ? 2.25 : 1.75;
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="7" height="7" />
-      <rect x="14" y="3" width="7" height="7" />
-      <rect x="14" y="14" width="7" height="7" />
-      <rect x="3" y="14" width="7" height="7" />
+    <svg
+      width="26"
+      height="26"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={stroke}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ transition: "stroke-width 0.25s ease, transform 0.25s ease", transform: active ? "translateY(-1px)" : "none" }}
+    >
+      <path d="M4 7.5l8-4 8 4-8 4-8-4z" />
+      <path d="M4 12l8 4 8-4" opacity={active ? 1 : 0.55} />
+      <path d="M4 16.5l8 4 8-4" opacity={active ? 1 : 0.35} />
     </svg>
   );
 }
 
-function FormIcon() {
+function CustomOrderIcon({ active }: IconProps) {
+  const stroke = active ? 2.25 : 1.75;
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    <svg
+      width="26"
+      height="26"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={stroke}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ transition: "stroke-width 0.25s ease, transform 0.25s ease", transform: active ? "translateY(-1px)" : "none" }}
+    >
+      <circle cx="6" cy="6" r="3" />
+      <circle cx="6" cy="18" r="3" />
+      <line x1="20" y1="4" x2="8.12" y2="15.88" />
+      <line x1="14.47" y1="14.48" x2="20" y2="20" />
+      <line x1="8.12" y1="8.12" x2="12" y2="12" />
     </svg>
   );
 }
 
-function BoxIcon() {
+function ArrivalsIcon({ active }: IconProps) {
+  const stroke = active ? 2.25 : 1.75;
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="12" y1="2" x2="12" y2="22" />
-      <path d="M17 5H9.5a1.5 1.5 0 0 0-1.5 1.5v5a1.5 1.5 0 0 0 1.5 1.5H17" />
-      <path d="M7 12.5H3.5a1.5 1.5 0 0 1-1.5-1.5V6a1.5 1.5 0 0 1 1.5-1.5H7" />
+    <svg
+      width="26"
+      height="26"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={stroke}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ transition: "stroke-width 0.25s ease, transform 0.25s ease", transform: active ? "translateY(-1px)" : "none" }}
+    >
+      <path d="M12 3l2.2 4.6L19 9l-3.5 3.3.9 4.9L12 14.9 7.6 17.2l.9-4.9L5 9l4.8-1.4L12 3z" />
+      <path d="M5 20h14" opacity={active ? 1 : 0.5} strokeDasharray={active ? "0" : "2 3"} />
     </svg>
   );
 }
 
 export function BottomNavBar({ activeTab, onCatalog, onCustomOrder, onArrivals }: BottomNavBarProps) {
+  const isCatalog = activeTab === "catalog";
+  const isCustom = activeTab === "custom";
+  const isArrivals = activeTab === "arrivals";
+
   return (
     <nav style={styles.nav}>
       <button
         type="button"
         onClick={onCatalog}
-        style={{ ...styles.btn, ...(activeTab === "catalog" ? styles.btnActive : {}) }}
+        style={{ ...styles.btn, ...(isCatalog ? styles.btnActive : {}) }}
         aria-label="Каталог"
+        aria-current={isCatalog ? "page" : undefined}
       >
-        <CatalogIcon />
+        <span style={{ ...styles.iconWrap, ...(isCatalog ? styles.iconWrapActive : {}) }}>
+          <CatalogIcon active={isCatalog} />
+        </span>
       </button>
       <button
         type="button"
         onClick={onCustomOrder}
-        style={{ ...styles.btn, ...(activeTab === "custom" ? styles.btnActive : {}) }}
+        style={{ ...styles.btn, ...(isCustom ? styles.btnActive : {}) }}
         aria-label="Заказать не из каталога"
+        aria-current={isCustom ? "page" : undefined}
       >
-        <FormIcon />
+        <span style={{ ...styles.iconWrap, ...(isCustom ? styles.iconWrapActive : {}) }}>
+          <CustomOrderIcon active={isCustom} />
+        </span>
       </button>
       <button
         type="button"
         onClick={onArrivals}
-        style={{ ...styles.btn, ...(activeTab === "arrivals" ? styles.btnActive : {}) }}
+        style={{ ...styles.btn, ...(isArrivals ? styles.btnActive : {}) }}
         aria-label="Товары которые мы привезли"
+        aria-current={isArrivals ? "page" : undefined}
       >
-        <BoxIcon />
+        <span style={{ ...styles.iconWrap, ...(isArrivals ? styles.iconWrapActive : {}) }}>
+          <ArrivalsIcon active={isArrivals} />
+        </span>
       </button>
     </nav>
   );
@@ -77,7 +128,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     justifyContent: "space-around",
     alignItems: "center",
-    height: 60,
+    height: 64,
     borderTop: "1px solid var(--border)",
     background: "rgba(var(--bg-rgb), 0.92)",
     backdropFilter: "blur(8px)",
@@ -89,15 +140,30 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    width: 48,
-    height: 48,
+    width: 56,
+    height: 56,
     background: "transparent",
     border: "none",
+    padding: 0,
     color: "var(--muted)",
     cursor: "pointer",
-    transition: "color 0.2s ease",
+    transition: "color 0.25s ease",
   },
   btnActive: {
     color: "var(--accent)",
+  },
+  iconWrap: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    border: "1.5px solid transparent",
+    transition: "border-color 0.25s ease, background-color 0.25s ease, transform 0.25s ease",
+  },
+  iconWrapActive: {
+    borderColor: "var(--accent)",
+    background: "transparent",
   },
 };
