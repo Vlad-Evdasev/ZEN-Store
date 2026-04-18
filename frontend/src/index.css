@@ -28,7 +28,7 @@
   --accent: #c62828;
   --accent-hover: #e53935;
   --accent-dim: #8b0000;
-  --header-bg: rgba(15,14,14,0.92);
+  --header-bg: #0f0e0e;
   --card-desc-bg: rgba(28,27,26,0.92);
   --card-desc-bleed: 2px;
   --card-desc-outer: none;
@@ -46,7 +46,7 @@ html[data-theme="light"] {
   --accent: #a52a2a;
   --accent-hover: #8b0000;
   --accent-dim: #6b1f1f;
-  --header-bg: rgba(250,249,247,0.95);
+  --header-bg: #faf9f7;
   --card-desc-bg: rgba(255,255,255,0.95);
   --card-desc-bleed: 2px;
   --card-desc-outer: none;

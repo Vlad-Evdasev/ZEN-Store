@@ -127,9 +127,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     height: 64,
     borderTop: "1px solid var(--border)",
-    background: "rgba(var(--bg-rgb), 0.92)",
-    backdropFilter: "blur(8px)",
-    WebkitBackdropFilter: "blur(8px)",
+    background: "var(--bg)",
     zIndex: 20,
   },
   btn: {

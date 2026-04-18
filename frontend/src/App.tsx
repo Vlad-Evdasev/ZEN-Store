@@ -486,8 +486,6 @@ const styles: Record<string, React.CSSProperties> = {
     paddingLeft: "max(12px, env(safe-area-inset-left))",
     paddingRight: "max(12px, env(safe-area-inset-right))",
     background: "var(--header-bg)",
-    backdropFilter: "saturate(180%) blur(12px)",
-    WebkitBackdropFilter: "saturate(180%) blur(12px)",
     zIndex: 10,
     gap: 8,
   },
