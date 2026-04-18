@@ -77,7 +77,8 @@ function HeaderIconHamburger() {
 function HeaderIconFavorites() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
-      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+      <path d="M12 3.5a2 2 0 1 0 1.8 2.9" />
+      <path d="M13.8 6.4L12 9l-9 8.5a1 1 0 0 0 .7 1.7h16.6a1 1 0 0 0 .7-1.7L12 9" />
     </svg>
   );
 }
@@ -85,8 +86,10 @@ function HeaderIconFavorites() {
 function HeaderIconCart() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
-      <path d="M6 8h12l-1 10.2a1.6 1.6 0 0 1-1.6 1.4H8.6A1.6 1.6 0 0 1 7 18.2L6 8z" />
-      <path d="M9.25 8V6a2.75 2.75 0 0 1 5.5 0v2" />
+      <path d="M3 7.5l9-4 9 4v9l-9 4-9-4v-9z" />
+      <path d="M3 7.5l9 4 9-4" />
+      <path d="M12 11.5v9" />
+      <path d="M8 5.5l9 4" />
     </svg>
   );
 }
