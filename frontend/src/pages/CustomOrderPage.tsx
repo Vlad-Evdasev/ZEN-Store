@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react";
 import { submitCustomOrder } from "../api";
-import { BackButton } from "../components/BackButton";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 
@@ -33,10 +32,10 @@ interface CustomOrderPageProps {
   userId: string;
   userName: string | null;
   firstName: string;
-  onBack: () => void;
+  onBack?: () => void;
 }
 
-export function CustomOrderPage({ userId, userName, firstName, onBack }: CustomOrderPageProps) {
+export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPageProps) {
   const { settings } = useSettings();
   const lang = settings.lang;
 
@@ -107,8 +106,7 @@ export function CustomOrderPage({ userId, userName, firstName, onBack }: CustomO
   if (customSuccess) {
     return (
       <div style={styles.wrap}>
-        <BackButton onClick={onBack} label={t(lang, "backToCatalog")} />
-        <div style={styles.thread}>
+        <div style={styles.threadCentered}>
           <BotBubble>
             <div style={styles.successInner}>
               <CheckCircleIcon />
@@ -134,14 +132,12 @@ export function CustomOrderPage({ userId, userName, firstName, onBack }: CustomO
 
   return (
     <div style={styles.wrap}>
-      <BackButton onClick={onBack} label={t(lang, "backToCatalog")} />
-
-      <div style={styles.headerBlock}>
-        <h2 style={styles.title}>{t(lang, "customOrderTitle")}</h2>
-        <p style={styles.subtitle}>{t(lang, "customOrderSubtitle")}</p>
-      </div>
-
       <form onSubmit={handleSubmit} style={styles.form}>
+        <div style={styles.headerBlock}>
+          <h2 style={styles.title}>{t(lang, "customOrderTitle")}</h2>
+          <p style={styles.subtitle}>{t(lang, "customOrderSubtitle")}</p>
+        </div>
+
         {/* Chat thread */}
         <div style={styles.thread}>
           <BotBubble>
@@ -214,6 +210,8 @@ export function CustomOrderPage({ userId, userName, firstName, onBack }: CustomO
             </div>
           ) : null}
         </div>
+
+        <div style={styles.spacer} />
 
         {/* Composer */}
         <div style={styles.composerWrap}>
@@ -299,13 +297,28 @@ function BotBubble({ children }: { children: React.ReactNode }) {
 const styles: Record<string, React.CSSProperties> = {
   wrap: {
     maxWidth: 460,
+    width: "100%",
     margin: "0 auto",
-    paddingBottom: 32,
+    minHeight: "calc(100dvh - 64px - env(safe-area-inset-bottom, 0px))",
     display: "flex",
     flexDirection: "column",
   },
   headerBlock: {
-    padding: "4px 4px 14px",
+    padding: "8px 4px 10px",
+  },
+  spacer: {
+    flex: 1,
+    minHeight: 12,
+  },
+  threadCentered: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    paddingTop: 32,
+    paddingBottom: 24,
   },
   title: {
     fontSize: 20,
@@ -323,9 +336,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   form: {
+    flex: 1,
     display: "flex",
     flexDirection: "column",
-    gap: 16,
+    gap: 14,
   },
   thread: {
     display: "flex",
@@ -491,13 +505,11 @@ const styles: Record<string, React.CSSProperties> = {
 
   /* Composer */
   composerWrap: {
-    position: "sticky",
-    bottom: 12,
-    background: "linear-gradient(to top, var(--bg) 60%, rgba(0,0,0,0))",
-    paddingTop: 12,
     display: "flex",
     flexDirection: "column",
     gap: 8,
+    paddingTop: 8,
+    paddingBottom: 8,
   },
   composer: {
     display: "flex",
