@@ -17,7 +17,6 @@ import { NewArrivalsPage } from "./pages/NewArrivalsPage";
 import { CustomOrderPage } from "./pages/CustomOrderPage";
 import { Settings } from "./pages/Settings";
 import { History } from "./pages/History";
-import { Footer } from "./components/Footer";
 import { BottomNavBar } from "./components/BottomNavBar";
 import { SettingsSync } from "./components/SettingsSync";
 import { useSettings } from "./context/SettingsContext";
@@ -478,8 +477,6 @@ function App() {
         </div>
       </main>
 
-      {page !== "support" && <Footer />}
-      
       {page === "catalog" && (
         <BottomNavBar
           activeTab="catalog"
