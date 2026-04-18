@@ -55,6 +55,7 @@ export function StoreCatalog({
   return (
     <div style={styles.wrap}>
       <BackButton onClick={onBack} label={backLabel} />
+      <div className="zen-catalog-search-shelf" aria-hidden />
       <div className="zen-catalog-search-row">
         <span className="zen-catalog-search-icon" aria-hidden>
           <SearchIcon />
