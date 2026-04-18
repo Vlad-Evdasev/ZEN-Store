@@ -1,4 +1,6 @@
 import React, { useEffect } from "react";
+import type { Lang } from "../context/SettingsContext";
+import { t } from "../i18n";
 
 // Родитель должен иметь `position: relative/absolute/fixed`: layer
 // рендерится абсолютно от центра родителя (top: 50%, left: 50%).
@@ -6,6 +8,7 @@ import React, { useEffect } from "react";
 // и за закрытие меню — компонент сам onClose при выборе пункта не вызывает.
 export interface HeaderArcMenuProps {
   open: boolean;
+  lang: Lang;
   onClose: () => void;
   onProfile: () => void;
   onHistory: () => void;
@@ -110,6 +113,7 @@ const positions: React.CSSProperties[] = ANGLES_DEG.map((deg) => {
 
 export function HeaderArcMenu({
   open,
+  lang,
   onClose,
   onProfile,
   onHistory,
@@ -126,11 +130,11 @@ export function HeaderArcMenu({
   }, [open, onClose]);
 
   // Порядок совпадает с ANGLES_DEG — i-ый пункт получает positions[i].
-  const items: Array<{ label: string; onClick: () => void; Icon: React.FC }> = [
-    { label: "Профиль", onClick: onProfile, Icon: IconProfile },
-    { label: "История", onClick: onHistory, Icon: IconHistory },
-    { label: "Отзывы", onClick: onReviews, Icon: IconReviews },
-    { label: "Настройки", onClick: onSettings, Icon: IconSettings },
+  const items: Array<{ key: string; label: string; onClick: () => void; Icon: React.FC }> = [
+    { key: "profile", label: t(lang, "profile"), onClick: onProfile, Icon: IconProfile },
+    { key: "history", label: t(lang, "history"), onClick: onHistory, Icon: IconHistory },
+    { key: "reviews", label: t(lang, "reviews"), onClick: onReviews, Icon: IconReviews },
+    { key: "settings", label: t(lang, "settings"), onClick: onSettings, Icon: IconSettings },
   ];
 
   return (
@@ -143,9 +147,9 @@ export function HeaderArcMenu({
         />
       )}
       <div className="zen-arc-layer" style={styles.layer} aria-hidden={!open}>
-        {items.map(({ label, onClick, Icon }, i) => (
+        {items.map(({ key, label, onClick, Icon }, i) => (
           <button
-            key={label}
+            key={key}
             type="button"
             onClick={onClick}
             aria-label={label}

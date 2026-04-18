@@ -1895,7 +1895,8 @@ nav svg {
 
 /* HeaderArcMenu: accessibility & fallbacks */
 @media (prefers-reduced-motion: reduce) {
-  .zen-arc-item {
+  .zen-arc-item,
+  .zen-header-hamburger {
     transition: none !important;
   }
 }

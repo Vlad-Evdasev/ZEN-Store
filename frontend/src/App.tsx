@@ -279,6 +279,7 @@ function App() {
             </button>
             <HeaderArcMenu
               open={menuOpen}
+              lang={lang}
               onClose={() => setMenuOpen(false)}
               onProfile={openProfile}
               onHistory={openHistory}
