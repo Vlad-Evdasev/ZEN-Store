@@ -1032,14 +1032,12 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   -webkit-backdrop-filter: blur(12px) saturate(140%);
   transition: border-color 0.25s ease, box-shadow 0.25s ease;
   position: fixed;
-  top: 60px;
-  left: 12px;
-  right: 12px;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 12;
-  width: calc(100% - 24px);
-  max-width: 468px;
-  margin-left: auto;
-  margin-right: auto;
+  width: calc(100% - 28px);
+  max-width: 460px;
 }
 /* Тёмная тема — стеклянная пилюля на тёмной поверхности */
 .zen-app.theme-dark .zen-catalog-search-row {
@@ -1056,32 +1054,64 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
   color: var(--muted);
   flex-shrink: 0;
   transition: color 0.2s ease;
 }
+.zen-app .zen-catalog-search-row .zen-catalog-search-icon svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
 .zen-app .zen-catalog-search-row:focus-within .zen-catalog-search-icon {
   color: var(--text);
 }
-/* Компактное поле поиска внутри пилюли */
+/* Компактное поле поиска внутри пилюли — переопределяем базовые стили .zen-input */
 .zen-app .zen-catalog-search-row .zen-catalog-search-input,
-.zen-app .zen-catalog-search-row input.zen-catalog-search-input {
+.zen-app .zen-catalog-search-row input.zen-catalog-search-input,
+.zen-app .zen-catalog-search-row input[type="search"].zen-catalog-search-input {
   flex: 1;
   min-width: 0;
+  width: auto;
   min-height: 42px !important;
   height: 42px;
   padding: 8px 4px !important;
   font-size: 15px;
   line-height: 1.3;
   box-sizing: border-box;
-  border: none;
-  border-radius: 0;
-  background: transparent;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
   color: var(--text);
   font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
   letter-spacing: 0.03em;
   caret-color: var(--accent);
+  box-shadow: none !important;
   transition: color 0.2s ease;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.zen-app .zen-catalog-search-row input[type="search"].zen-catalog-search-input:focus {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none;
+}
+/* Убираем встроенный крестик/декор в Safari для type="search" */
+.zen-app .zen-catalog-search-row input[type="search"].zen-catalog-search-input::-webkit-search-decoration,
+.zen-app .zen-catalog-search-row input[type="search"].zen-catalog-search-input::-webkit-search-cancel-button,
+.zen-app .zen-catalog-search-row input[type="search"].zen-catalog-search-input::-webkit-search-results-button,
+.zen-app .zen-catalog-search-row input[type="search"].zen-catalog-search-input::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
 }
 .zen-app .zen-catalog-search-input::placeholder {
   color: var(--muted);
