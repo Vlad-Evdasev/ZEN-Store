@@ -296,14 +296,20 @@ function BotBubble({ children }: { children: React.ReactNode }) {
 
 const styles: Record<string, React.CSSProperties> = {
   wrap: {
+    position: "fixed",
+    top: 56,
+    bottom: 64,
+    left: 0,
+    right: 0,
     maxWidth: 460,
     width: "100%",
-    margin: "-16px auto -16px",
-    height: "calc(100dvh - 56px - 64px)",
+    margin: "0 auto",
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",
-    paddingTop: 12,
+    padding: "10px max(16px, env(safe-area-inset-left)) 0 max(16px, env(safe-area-inset-right))",
+    background: "var(--bg)",
+    zIndex: 5,
   },
   headerBlock: {
     padding: "0 4px 6px",
