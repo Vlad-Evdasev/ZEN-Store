@@ -63,23 +63,20 @@ function MenuIconSettings() {
 }
 const headerIconSize = 22;
 const headerIconStyle: React.CSSProperties = { width: headerIconSize, height: headerIconSize, flexShrink: 0, color: "currentColor", display: "block" };
-const headerIconCartStyle: React.CSSProperties = { width: headerIconSize, height: headerIconSize, flexShrink: 0, color: "currentColor", display: "block", transform: "scale(1.38)" };
-const headerIconHamburgerSize = 26;
-const headerIconHamburgerStyle: React.CSSProperties = { width: headerIconHamburgerSize, height: headerIconHamburgerSize, flexShrink: 0, color: "currentColor", display: "block" };
 
 function HeaderIconHamburger() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={headerIconHamburgerStyle} aria-hidden>
-      <line x1="4" y1="6" x2="20" y2="6" />
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
+      <line x1="5" y1="7" x2="17" y2="7" />
       <line x1="4" y1="12" x2="20" y2="12" />
-      <line x1="4" y1="18" x2="20" y2="18" />
+      <line x1="7" y1="17" x2="19" y2="17" />
     </svg>
   );
 }
 
 function HeaderIconFavorites() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
     </svg>
   );
@@ -87,10 +84,18 @@ function HeaderIconFavorites() {
 
 function HeaderIconCart() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={headerIconCartStyle} aria-hidden>
-      <path d="M5 8h14l-1.2 9.6a1.5 1.5 0 01-1.5 1.2H7.7a1.5 1.5 0 01-1.5-1.2L5 8z" />
-      <path d="M9 8V5a3 3 0 016 0v3" />
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
+      <path d="M6 8h12l-1 10.2a1.6 1.6 0 0 1-1.6 1.4H8.6A1.6 1.6 0 0 1 7 18.2L6 8z" />
+      <path d="M9.25 8V6a2.75 2.75 0 0 1 5.5 0v2" />
     </svg>
+  );
+}
+
+function LogoMark({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button type="button" onClick={onClick} className="zen-logo-mark" style={styles.logoMark} aria-label={label}>
+      <span style={styles.logoMarkLetter}>R</span>
+    </button>
   );
 }
 
@@ -306,18 +311,16 @@ function App() {
           </button>
         </div>
         <div style={styles.headerCenter}>
-          <button onClick={openCatalog} className="zen-logo" style={styles.logo} aria-label="На главную">
-            RAW
-          </button>
+          <LogoMark onClick={openCatalog} label="На главную" />
         </div>
         <div style={styles.headerRight}>
-          <button onClick={openFavorites} style={styles.headerIconBtn} aria-label={t(lang, "favorites")}>
+          <button onClick={openFavorites} className="zen-header-icon-btn" style={styles.headerIconBtn} aria-label={t(lang, "favorites")}>
             <HeaderIconFavorites />
-            <span style={{ ...styles.favBadge, ...styles.headerBadgePos, visibility: wishlistIds.size > 0 ? "visible" : "hidden" }}>{wishlistIds.size || "0"}</span>
+            {wishlistIds.size > 0 && <span style={styles.headerDot} aria-hidden />}
           </button>
-          <button onClick={openCart} style={styles.headerIconBtnCart} aria-label={t(lang, "cart")}>
+          <button onClick={openCart} className="zen-header-icon-btn" style={styles.headerIconBtn} aria-label={t(lang, "cart")}>
             <HeaderIconCart />
-            <span style={{ ...styles.cartBadge, ...styles.headerBadgePos, visibility: cartCount > 0 ? "visible" : "hidden" }}>{cartCount || "0"}</span>
+            {cartCount > 0 && <span style={styles.headerDot} aria-hidden />}
           </button>
         </div>
       </header>
@@ -539,9 +542,9 @@ const styles: Record<string, React.CSSProperties> = {
     margin: "0 auto",
     display: "flex",
     alignItems: "center",
-    padding: "10px 8px",
-    paddingLeft: "max(16px, env(safe-area-inset-left))",
-    paddingRight: "max(8px, env(safe-area-inset-right))",
+    padding: "8px 8px",
+    paddingLeft: "max(12px, env(safe-area-inset-left))",
+    paddingRight: "max(12px, env(safe-area-inset-right))",
     background: "var(--header-bg)",
     backdropFilter: "saturate(180%) blur(12px)",
     WebkitBackdropFilter: "saturate(180%) blur(12px)",
@@ -573,7 +576,7 @@ const styles: Record<string, React.CSSProperties> = {
     marginLeft: "auto",
     display: "flex",
     alignItems: "center",
-    gap: 6,
+    gap: 2,
   },
   hamburger: {
     display: "flex",
@@ -583,6 +586,40 @@ const styles: Record<string, React.CSSProperties> = {
     border: "none",
     color: "var(--text)",
     cursor: "pointer",
+  },
+  logoMark: {
+    width: 38,
+    height: 38,
+    borderRadius: "50%",
+    border: "1.25px solid var(--text)",
+    background: "transparent",
+    color: "var(--text)",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    padding: 0,
+    pointerEvents: "auto",
+    transition: "background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease",
+  },
+  logoMarkLetter: {
+    fontFamily: "Unbounded, sans-serif",
+    fontSize: 15,
+    fontWeight: 700,
+    letterSpacing: "-0.02em",
+    lineHeight: 1,
+    display: "block",
+    marginTop: 1,
+  },
+  headerDot: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 6,
+    height: 6,
+    borderRadius: "50%",
+    background: "var(--accent)",
+    pointerEvents: "none",
   },
   menuOverlay: {
     position: "fixed",
@@ -612,30 +649,11 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     gap: 12,
   },
-  logo: {
-    fontFamily: "Unbounded, sans-serif",
-    fontSize: 22,
-    fontWeight: 700,
-    color: "var(--text)",
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    letterSpacing: "-0.02em",
-    padding: "6px 8px",
-    pointerEvents: "auto",
-  },
-  headerLink: {
-    padding: "8px 10px",
-    background: "none",
-    border: "none",
-    color: "var(--muted)",
-    fontFamily: "inherit",
-    fontSize: 13,
-    cursor: "pointer",
-  },
   headerIconBtn: {
     position: "relative",
-    padding: 8,
+    width: 40,
+    height: 40,
+    padding: 0,
     background: "none",
     border: "none",
     color: "var(--text)",
@@ -643,95 +661,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 8,
-  },
-  headerIconBtnCart: {
-    position: "relative",
-    padding: 8,
-    marginRight: 6,
-    background: "none",
-    border: "none",
-    color: "var(--accent)",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 8,
-  },
-  headerLinkWithBadge: {
-    position: "relative",
-    paddingLeft: 10,
-    paddingRight: 18,
-    paddingTop: 8,
-    paddingBottom: 8,
-    background: "var(--surface-elevated)",
-    border: "1px solid var(--border)",
-    color: "var(--text)",
-    fontFamily: "inherit",
-    fontSize: 13,
-    fontWeight: 500,
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 8,
-    minHeight: 40,
-  },
-  headerBtnLabel: {
-    display: "block",
-    marginLeft: 4,
-  },
-  headerBadgePos: {
-    position: "absolute",
-    right: -2,
-    top: 2,
-  },
-  favBadge: {
-    minWidth: 16,
-    height: 14,
-    padding: "0 3px",
-    borderRadius: 7,
-    background: "var(--accent)",
-    color: "#fff",
-    border: "1px solid var(--text)",
-    fontSize: 10,
-    fontWeight: 600,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerBtnWrapper: {
-    position: "relative",
-    paddingLeft: 10,
-    paddingRight: 18,
-    paddingTop: 8,
-    paddingBottom: 8,
-    background: "var(--accent)",
-    border: "none",
-    borderRadius: 8,
-    color: "#ffffff",
-    fontFamily: "inherit",
-    fontSize: 13,
-    fontWeight: 500,
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 40,
-  },
-  cartBadge: {
-    minWidth: 16,
-    height: 14,
-    padding: "0 3px",
-    borderRadius: 7,
-    background: "#fff",
-    color: "var(--accent)",
-    border: "1px solid var(--text)",
-    fontSize: 10,
-    fontWeight: 600,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
+    borderRadius: "50%",
   },
   main: {
     overflowX: "hidden",

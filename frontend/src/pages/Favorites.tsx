@@ -26,6 +26,10 @@ export function Favorites({
   return (
     <div style={styles.wrap}>
       <BackButton onClick={onBack} label={t(lang, "back")} />
+      <div style={styles.titleRow}>
+        <h1 className="zen-page-title" style={styles.title}>{t(lang, "favoritesTitle")}</h1>
+        {favorites.length > 0 && <span style={styles.count}>{favorites.length}</span>}
+      </div>
       {favorites.length === 0 ? (
         <div className="zen-empty-state">
           <strong>{t(lang, "favoritesEmpty")}</strong>
@@ -53,6 +57,22 @@ export function Favorites({
 
 const styles: Record<string, React.CSSProperties> = {
   wrap: { maxWidth: 420, margin: "0 auto", paddingBottom: 24 },
+  titleRow: {
+    display: "flex",
+    alignItems: "baseline",
+    gap: 10,
+    marginBottom: 16,
+    padding: "0 4px",
+  },
+  title: {
+    marginBottom: 0,
+  },
+  count: {
+    fontSize: 13,
+    color: "var(--muted)",
+    letterSpacing: "0.04em",
+    fontVariantNumeric: "tabular-nums",
+  },
   grid: {
     display: "grid",
     gridTemplateColumns: "repeat(2, 1fr)",

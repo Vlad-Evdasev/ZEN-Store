@@ -1872,23 +1872,41 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   border-bottom: none;
 }
 
-/* Кнопка меню (гамбургер): крупнее и сдвиг влево */
+/* Кнопка меню (гамбургер): унифицированная круглая hit-зона 40x40 */
 .zen-app .zen-header-left,
 header .zen-header-left {
-  margin-left: -8px !important;
+  margin-left: -4px !important;
 }
 .zen-app .zen-header-hamburger,
 header .zen-header-hamburger {
-  width: 48px !important;
-  min-width: 48px !important;
-  height: 48px !important;
-  min-height: 48px !important;
-  border-radius: 8px;
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
 }
 .zen-app .zen-header-hamburger svg,
 header .zen-header-hamburger svg {
-  width: 26px !important;
-  height: 26px !important;
+  width: 22px !important;
+  height: 22px !important;
+}
+.zen-app .zen-header-hamburger:active,
+.zen-app .zen-header-icon-btn:active {
+  background: var(--surface-elevated);
+}
+
+/* Логотип-монограмма: мягкая заливка при нажатии */
+.zen-app .zen-logo-mark {
+  -webkit-tap-highlight-color: transparent;
+}
+.zen-app .zen-logo-mark:active {
+  background: var(--accent) !important;
+  color: #fff !important;
+  border-color: var(--accent) !important;
 }
 
 /* Фокус для доступности: только ссылки и инпуты (кнопки — без обводки глобально) */
