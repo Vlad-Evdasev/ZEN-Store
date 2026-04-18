@@ -82,44 +82,39 @@ export function BottomNavBar({ activeTab, onCatalog, onCustomOrder, onArrivals }
 
   return (
     <nav style={styles.nav}>
-      {/* Ряд кнопок фиксированной высоты — не зависит от safe-area */}
-      <div style={styles.row}>
-        <button
-          type="button"
-          onClick={onCatalog}
-          style={{ ...styles.btn, ...(isCatalog ? styles.btnActive : {}) }}
-          aria-label="Каталог"
-          aria-current={isCatalog ? "page" : undefined}
-        >
-          <span style={{ ...styles.iconWrap, ...(isCatalog ? styles.iconWrapActive : {}) }}>
-            <CatalogIcon active={isCatalog} />
-          </span>
-        </button>
-        <button
-          type="button"
-          onClick={onCustomOrder}
-          style={{ ...styles.btn, ...(isCustom ? styles.btnActive : {}) }}
-          aria-label="Заказать не из каталога"
-          aria-current={isCustom ? "page" : undefined}
-        >
-          <span style={{ ...styles.iconWrap, ...(isCustom ? styles.iconWrapActive : {}) }}>
-            <CustomOrderIcon active={isCustom} />
-          </span>
-        </button>
-        <button
-          type="button"
-          onClick={onArrivals}
-          style={{ ...styles.btn, ...(isArrivals ? styles.btnActive : {}) }}
-          aria-label="Товары которые мы привезли"
-          aria-current={isArrivals ? "page" : undefined}
-        >
-          <span style={{ ...styles.iconWrap, ...(isArrivals ? styles.iconWrapActive : {}) }}>
-            <ArrivalsIcon active={isArrivals} />
-          </span>
-        </button>
-      </div>
-      {/* Safe-area заглушка — только пространство, без контента */}
-      <div style={styles.safeArea} />
+      <button
+        type="button"
+        onClick={onCatalog}
+        style={{ ...styles.btn, ...(isCatalog ? styles.btnActive : {}) }}
+        aria-label="Каталог"
+        aria-current={isCatalog ? "page" : undefined}
+      >
+        <span style={{ ...styles.iconWrap, ...(isCatalog ? styles.iconWrapActive : {}) }}>
+          <CatalogIcon active={isCatalog} />
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={onCustomOrder}
+        style={{ ...styles.btn, ...(isCustom ? styles.btnActive : {}) }}
+        aria-label="Заказать не из каталога"
+        aria-current={isCustom ? "page" : undefined}
+      >
+        <span style={{ ...styles.iconWrap, ...(isCustom ? styles.iconWrapActive : {}) }}>
+          <CustomOrderIcon active={isCustom} />
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={onArrivals}
+        style={{ ...styles.btn, ...(isArrivals ? styles.btnActive : {}) }}
+        aria-label="Товары которые мы привезли"
+        aria-current={isArrivals ? "page" : undefined}
+      >
+        <span style={{ ...styles.iconWrap, ...(isArrivals ? styles.iconWrapActive : {}) }}>
+          <ArrivalsIcon active={isArrivals} />
+        </span>
+      </button>
     </nav>
   );
 }
@@ -131,21 +126,15 @@ const styles: Record<string, React.CSSProperties> = {
     left: 0,
     right: 0,
     display: "flex",
-    flexDirection: "column",
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    height: 64,
     borderTop: "1px solid var(--border)",
     background: "rgba(var(--bg-rgb), 0.92)",
     backdropFilter: "blur(8px)",
     WebkitBackdropFilter: "blur(8px)",
     zIndex: 20,
-  },
-  row: {
-    display: "flex",
-    justifyContent: "space-around",
-    alignItems: "center",
-    height: 64,
-  },
-  safeArea: {
-    height: "env(safe-area-inset-bottom)",
   },
   btn: {
     display: "flex",
