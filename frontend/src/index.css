@@ -1017,7 +1017,8 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
 }
 
 /* Подложка под полем поиска — закрывает зону между шапкой и контентом,
-   чтобы карточки не просвечивали сквозь пилюлю. Начинается под шапкой (56px). */
+   чтобы карточки не просвечивали сквозь пилюлю. Начинается под шапкой (56px).
+   Тёмная полупрозрачная тень (вместо светлой), плавно растворяется к контенту. */
 .zen-app .zen-catalog-search-shelf {
   position: fixed;
   top: 56px;
@@ -1026,9 +1027,20 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   height: 80px;
   z-index: 9;
   pointer-events: none;
-  background: var(--bg);
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 70%, rgba(0,0,0,0) 100%);
-  mask-image: linear-gradient(to bottom, #000 0%, #000 70%, rgba(0,0,0,0) 100%);
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.22) 0%,
+    rgba(0, 0, 0, 0.14) 55%,
+    rgba(0, 0, 0, 0) 100%
+  );
+}
+.zen-app.theme-dark .zen-catalog-search-shelf {
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.55) 0%,
+    rgba(0, 0, 0, 0.30) 55%,
+    rgba(0, 0, 0, 0) 100%
+  );
 }
 
 /* Строка поиска + иконка фильтра — «Floating glass» */
