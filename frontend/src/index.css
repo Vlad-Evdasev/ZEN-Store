@@ -440,7 +440,7 @@ html[data-theme="light"] .zen-app .product-card-price {
 
 /* Каталог: минимальные отступы от краёв экрана */
 .zen-app main.zen-main--catalog {
-  padding-top: 130px;
+  padding-top: 148px;
   padding-left: max(6px, env(safe-area-inset-left));
   padding-right: max(6px, env(safe-area-inset-right));
   padding-bottom: 80px;
@@ -1016,19 +1016,19 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   letter-spacing: 0.02em;
 }
 
-/* Подложка под шапкой + полем поиска — чтобы контент не просвечивал сквозь пилюлю */
+/* Подложка под полем поиска — закрывает зону между шапкой и контентом,
+   чтобы карточки не просвечивали сквозь пилюлю. Начинается под шапкой (56px). */
 .zen-app .zen-catalog-search-shelf {
   position: fixed;
-  top: 0;
+  top: 56px;
   left: 0;
   right: 0;
-  height: 128px;
-  z-index: 11;
+  height: 80px;
+  z-index: 9;
   pointer-events: none;
   background: var(--bg);
-  /* плавное растворение в контент снизу */
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 80%, rgba(0,0,0,0) 100%);
-  mask-image: linear-gradient(to bottom, #000 0%, #000 80%, rgba(0,0,0,0) 100%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 70%, rgba(0,0,0,0) 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 70%, rgba(0,0,0,0) 100%);
 }
 
 /* Строка поиска + иконка фильтра — «Floating glass» */
