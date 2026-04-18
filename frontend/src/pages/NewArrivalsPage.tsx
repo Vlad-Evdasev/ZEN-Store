@@ -7,7 +7,6 @@ import {
   type Post,
   type PostComment,
 } from "../api";
-import { BackButton } from "../components/BackButton";
 import { useSettings, type Lang } from "../context/SettingsContext";
 import { t } from "../i18n";
 
@@ -22,13 +21,13 @@ interface NewArrivalsPageProps {
 function HeartIcon({ filled }: { filled: boolean }) {
   if (filled) {
     return (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="#ef4444" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="#ef4444" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
       </svg>
     );
   }
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
     </svg>
   );
@@ -36,7 +35,7 @@ function HeartIcon({ filled }: { filled: boolean }) {
 
 function CommentBubbleIcon() {
   return (
-    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
     </svg>
   );
@@ -260,13 +259,18 @@ function PostCard({
   );
 }
 
-function SkeletonCard() {
+const SKELETON_HEIGHTS = [140, 100, 120, 90] as const;
+
+function SkeletonCard({ index = 0 }: { index?: number }) {
+  const h = SKELETON_HEIGHTS[index % SKELETON_HEIGHTS.length];
   return (
-    <div style={cardStyles.card}>
-      <div style={skeletonStyles.image} />
-      <div style={cardStyles.body}>
-        <div style={skeletonStyles.line1} />
-        <div style={skeletonStyles.line2} />
+    <div style={pageStyles.masonryItem}>
+      <div style={cardStyles.card}>
+        <div style={{ ...skeletonStyles.image, height: h }} />
+        <div style={cardStyles.body}>
+          <div style={skeletonStyles.line1} />
+          <div style={skeletonStyles.line2} />
+        </div>
       </div>
     </div>
   );
@@ -276,9 +280,8 @@ export function NewArrivalsPage({
   userId,
   userName,
   firstName,
-  onBack,
   onProductClick,
-}: NewArrivalsPageProps) {
+}: Omit<NewArrivalsPageProps, "onBack"> & { onBack?: NewArrivalsPageProps["onBack"] }) {
   const { settings } = useSettings();
   const lang = settings.lang;
   const [posts, setPosts] = useState<Post[]>([]);
@@ -329,16 +332,24 @@ export function NewArrivalsPage({
   return (
     <div style={pageStyles.wrap}>
       <div style={pageStyles.headerArea}>
-        <BackButton onClick={onBack} label={t(lang, "backToCatalog")} />
-        <h1 style={pageStyles.title}>{t(lang, "postsFeedTitle")}</h1>
-        <div style={pageStyles.divider} />
+        <div style={pageStyles.bubbleRow}>
+          <div style={pageStyles.avatar}>R</div>
+          <div style={pageStyles.bubbleMain}>
+            <div style={pageStyles.bubbleTitle}>{t(lang, "postsInspireTitle")}</div>
+            <div style={pageStyles.bubbleSubtitle}>{t(lang, "postsInspireSubtitle")}</div>
+          </div>
+        </div>
+        {!loading && posts.length > 0 && (
+          <div style={pageStyles.bubbleSmall}>{t(lang, "postsInspireScrollHint")}</div>
+        )}
       </div>
 
       {loading && (
-        <div style={pageStyles.feed}>
-          <SkeletonCard />
-          <SkeletonCard />
-          <SkeletonCard />
+        <div style={pageStyles.feedMasonry}>
+          <SkeletonCard index={0} />
+          <SkeletonCard index={1} />
+          <SkeletonCard index={2} />
+          <SkeletonCard index={3} />
         </div>
       )}
 
@@ -349,19 +360,20 @@ export function NewArrivalsPage({
       )}
 
       {!loading && posts.length > 0 && (
-        <div style={pageStyles.feed}>
+        <div style={pageStyles.feedMasonry}>
           {posts.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              userId={userId}
-              userName={userName}
-              firstName={firstName}
-              lang={lang}
-              onProductClick={onProductClick}
-              onLikeToggle={handleLikeToggle}
-              onCommentsCountChange={handleCommentsCountChange}
-            />
+            <div key={post.id} style={pageStyles.masonryItem}>
+              <PostCard
+                post={post}
+                userId={userId}
+                userName={userName}
+                firstName={firstName}
+                lang={lang}
+                onProductClick={onProductClick}
+                onLikeToggle={handleLikeToggle}
+                onCommentsCountChange={handleCommentsCountChange}
+              />
+            </div>
           ))}
         </div>
       )}
@@ -373,29 +385,76 @@ const pageStyles: Record<string, React.CSSProperties> = {
   wrap: {
     maxWidth: 480,
     margin: "0 auto",
-    paddingBottom: 32,
+    padding: "8px 0 32px",
   },
   headerArea: {
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 800,
-    color: "var(--text)",
-    margin: 0,
-    lineHeight: 1.25,
-    letterSpacing: "-0.02em",
-  },
-  divider: {
-    height: 1,
-    background: "var(--border)",
-    marginTop: 12,
-    opacity: 0.5,
-  },
-  feed: {
     display: "flex",
     flexDirection: "column" as const,
-    gap: 24,
+    gap: 6,
+    marginBottom: 16,
+  },
+  bubbleRow: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  avatar: {
+    width: 30,
+    height: 30,
+    borderRadius: "50%",
+    background: "var(--accent)",
+    color: "#fff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 12,
+    fontWeight: 800,
+    letterSpacing: "0.06em",
+    flexShrink: 0,
+    marginTop: 2,
+  },
+  bubbleMain: {
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: "16px 16px 16px 4px",
+    padding: "10px 13px",
+    maxWidth: "86%",
+    boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
+  },
+  bubbleTitle: {
+    fontSize: 15,
+    fontWeight: 800,
+    lineHeight: 1.2,
+    letterSpacing: "-0.01em",
+    color: "var(--text)",
+  },
+  bubbleSubtitle: {
+    fontSize: 12.5,
+    color: "var(--muted)",
+    marginTop: 4,
+    lineHeight: 1.4,
+  },
+  bubbleSmall: {
+    alignSelf: "flex-start",
+    marginLeft: 38,
+    marginTop: 2,
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: 14,
+    padding: "6px 12px",
+    fontSize: 12,
+    color: "var(--text)",
+    maxWidth: "75%",
+  },
+  feedMasonry: {
+    columnCount: 2,
+    columnGap: 10,
+  },
+  masonryItem: {
+    breakInside: "avoid",
+    pageBreakInside: "avoid",
+    marginBottom: 10,
+    display: "block",
   },
   empty: {
     display: "flex",
@@ -414,28 +473,27 @@ const cardStyles: Record<string, React.CSSProperties> = {
   card: {
     background: "var(--surface)",
     border: "1px solid var(--border)",
-    borderRadius: "var(--radius-lg)",
+    borderRadius: 14,
     overflow: "hidden",
   },
   imageWrap: {
     position: "relative" as const,
     width: "100%",
-    aspectRatio: "1 / 1",
     cursor: "pointer",
     overflow: "hidden",
   },
   image: {
     width: "100%",
-    height: "100%",
+    height: "auto",
     objectFit: "cover" as const,
     display: "block",
   },
   shopOverlay: {
     position: "absolute" as const,
-    bottom: 10,
-    right: 10,
-    width: 34,
-    height: 34,
+    bottom: 8,
+    right: 8,
+    width: 28,
+    height: 28,
     borderRadius: "50%",
     background: "rgba(0,0,0,0.5)",
     backdropFilter: "blur(6px)",
@@ -444,48 +502,52 @@ const cardStyles: Record<string, React.CSSProperties> = {
     justifyContent: "center",
   },
   body: {
-    padding: "12px 14px 14px",
+    padding: "8px 10px 10px",
   },
   metaRow: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   actions: {
     display: "flex",
     alignItems: "center",
-    gap: 14,
+    gap: 10,
   },
   actionBtn: {
     display: "inline-flex",
     alignItems: "center",
-    gap: 5,
+    gap: 4,
     background: "none",
     border: "none",
     padding: 0,
     color: "var(--text)",
     cursor: "pointer",
     fontFamily: "inherit",
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 500,
   },
   actionCount: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 600,
     color: "var(--text)",
   },
   date: {
-    fontSize: 12,
+    fontSize: 11,
     color: "var(--muted)",
     fontWeight: 400,
   },
   caption: {
-    fontSize: 14,
+    fontSize: 12.5,
     color: "var(--text)",
-    lineHeight: 1.5,
+    lineHeight: 1.4,
     margin: 0,
     whiteSpace: "pre-wrap" as const,
+    overflow: "hidden",
+    display: "-webkit-box",
+    WebkitLineClamp: 3,
+    WebkitBoxOrient: "vertical" as const,
   },
   commentsSection: {
     marginTop: 12,
@@ -559,7 +621,6 @@ const skeletonBg = "var(--border)";
 const skeletonStyles: Record<string, React.CSSProperties> = {
   image: {
     width: "100%",
-    aspectRatio: "1 / 1",
     background: skeletonBg,
     borderRadius: 0,
   },

@@ -149,6 +149,9 @@ const texts: Record<Lang, Record<string, string>> = {
     postCommentPlaceholder: "Напишите комментарий...",
     postCommentSend: "Отправить",
     postShowComments: "Комментарии",
+    postsInspireTitle: "Тут можно вдохновиться",
+    postsInspireSubtitle: "…если не знаешь, что заказать. Мы собрали то, что нам самим понравилось.",
+    postsInspireScrollHint: "Листайте ленту ниже 👇",
   },
   en: {
     search: "Search...",
@@ -298,6 +301,9 @@ const texts: Record<Lang, Record<string, string>> = {
     postCommentPlaceholder: "Write a comment...",
     postCommentSend: "Send",
     postShowComments: "Comments",
+    postsInspireTitle: "Get inspired here",
+    postsInspireSubtitle: "…if you're not sure what to order. We picked what we loved ourselves.",
+    postsInspireScrollHint: "Scroll the feed below 👇",
   },
 };
 
