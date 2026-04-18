@@ -142,7 +142,7 @@ export function HeaderArcMenu({
           aria-hidden
         />
       )}
-      <div style={styles.layer} aria-hidden={!open}>
+      <div className="zen-arc-layer" style={styles.layer} aria-hidden={!open}>
         {items.map(({ label, onClick, Icon }, i) => (
           <button
             key={label}
@@ -150,6 +150,7 @@ export function HeaderArcMenu({
             onClick={onClick}
             aria-label={label}
             tabIndex={open ? 0 : -1}
+            className={open ? "zen-arc-item" : "zen-arc-item zen-arc-item--closed"}
             style={{ ...styles.item, ...positions[i], ...(open ? styles.itemOpen : styles.itemClosed) }}
           >
             <Icon />

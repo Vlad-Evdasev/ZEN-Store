@@ -1892,3 +1892,16 @@ nav svg {
     position: fixed !important;
   }
 }
+
+/* HeaderArcMenu: accessibility & fallbacks */
+@media (prefers-reduced-motion: reduce) {
+  .zen-arc-item {
+    transition: none !important;
+  }
+}
+
+@supports not ((backdrop-filter: blur(10px)) or (-webkit-backdrop-filter: blur(10px))) {
+  .zen-arc-item {
+    background: rgba(var(--bg-rgb), 0.95) !important;
+  }
+}
