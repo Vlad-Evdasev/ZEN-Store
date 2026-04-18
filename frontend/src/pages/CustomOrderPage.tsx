@@ -121,20 +121,14 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   return (
     <div style={styles.wrap}>
       <form onSubmit={handleSubmit} style={styles.form}>
-        <div style={styles.headerBlock}>
-          <h2 style={styles.title}>{t(lang, "customOrderTitle")}</h2>
-          <p style={styles.subtitle}>{t(lang, "customOrderSubtitle")}</p>
-        </div>
-
         {/* Chat thread */}
         <div style={styles.thread}>
           <BotBubble>
-            {t(lang, "customOrderSubtitle")}
+            <div>{t(lang, "customOrderSubtitle")}</div>
+            <div style={styles.botBubbleMeta}>
+              {t(lang, "customOrderReplyFrom")} @krot_eno
+            </div>
           </BotBubble>
-
-          <div style={styles.replyHint}>
-            {t(lang, "customOrderReplyFrom")} @krot_eno
-          </div>
 
           {/* Photo preview bubble (if attached) */}
           {customPhoto && (
@@ -359,6 +353,12 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: 1.45,
     color: "var(--text)",
     maxWidth: "82%",
+  },
+  botBubbleMeta: {
+    marginTop: 6,
+    fontSize: 11,
+    color: "var(--muted)",
+    letterSpacing: "0.04em",
   },
 
   /* Author row */
