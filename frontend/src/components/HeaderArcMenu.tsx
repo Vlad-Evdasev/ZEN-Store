@@ -1,14 +1,18 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useLayoutEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Lang } from "../context/SettingsContext";
 import { t } from "../i18n";
 
-// Родитель должен иметь `position: relative/absolute/fixed`: layer
-// рендерится абсолютно от центра родителя (top: 50%, left: 50%).
+// Меню рендерится через React portal в document.body, поэтому не зависит
+// от stacking context хедера и гарантированно отображается поверх всего контента.
+// `anchorRef` указывает на элемент-триггер (кнопку бургера): позиции кружков
+// вычисляются от его центра в viewport-координатах.
 // Каждый из onProfile/onHistory/onReviews/onSettings отвечает и за переход,
 // и за закрытие меню — компонент сам onClose при выборе пункта не вызывает.
 export interface HeaderArcMenuProps {
   open: boolean;
   lang: Lang;
+  anchorRef: React.RefObject<HTMLElement>;
   onClose: () => void;
   onProfile: () => void;
   onHistory: () => void;
@@ -95,11 +99,13 @@ function IconSettings() {
   );
 }
 
-// Позиции кружков по дуге радиуса 90px от центра бургера.
-// Углы считаются от вертикали вниз (0°) по часовой к горизонтали (90°).
-// Порядок: Профиль (83°, ближе к горизонтали) → ... → Настройки (17°, ближе к вертикали).
-const RADIUS = 90;
-const ANGLES_DEG = [83, 61, 39, 17];
+// Позиции кружков по дуге радиуса 120px от центра бургера.
+// Углы отсчитываются от вертикали вниз (0°) по часовой к горизонтали (90°).
+// Равномерный шаг 24° даёт минимальный зазор между соседними кружками ≈ 50px
+// (при диаметре 40px) и визуальные отступы от осей сверху/сбоку.
+// Порядок: Профиль (82°, ближе к горизонтали) → История → Отзывы → Настройки (10°, ближе к вертикали).
+const RADIUS = 120;
+const ANGLES_DEG = [82, 58, 34, 10];
 
 const positions: React.CSSProperties[] = ANGLES_DEG.map((deg) => {
   const rad = (deg * Math.PI) / 180;
@@ -114,12 +120,36 @@ const positions: React.CSSProperties[] = ANGLES_DEG.map((deg) => {
 export function HeaderArcMenu({
   open,
   lang,
+  anchorRef,
   onClose,
   onProfile,
   onHistory,
   onReviews,
   onSettings,
 }: HeaderArcMenuProps) {
+  const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
+
+  // Позицию anchor пересчитываем при открытии и на resize/scroll, пока open.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const updatePosition = () => {
+      const el = anchorRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      setAnchor({
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      });
+    };
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open, anchorRef]);
+
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
@@ -137,7 +167,17 @@ export function HeaderArcMenu({
     { key: "settings", label: t(lang, "settings"), onClick: onSettings, Icon: IconSettings },
   ];
 
-  return (
+  // Если меню закрыто и anchor ещё не измерялся — не рендерим вообще.
+  // В открытом состоянии ждём первого замера (редкий edge-case: пока SSR/первая раскладка).
+  if (!open && !anchor) return null;
+
+  const layerStyle: React.CSSProperties = {
+    ...styles.layer,
+    left: anchor?.x ?? 0,
+    top: anchor?.y ?? 0,
+  };
+
+  return createPortal(
     <>
       {open && (
         <div
@@ -146,7 +186,7 @@ export function HeaderArcMenu({
           aria-hidden
         />
       )}
-      <div className="zen-arc-layer" style={styles.layer} aria-hidden={!open}>
+      <div className="zen-arc-layer" style={layerStyle} aria-hidden={!open}>
         {items.map(({ key, label, onClick, Icon }, i) => (
           <button
             key={key}
@@ -161,27 +201,27 @@ export function HeaderArcMenu({
           </button>
         ))}
       </div>
-    </>
+    </>,
+    document.body
   );
 }
 
-// Иерархия z-index: BottomNavBar = 20. Overlay (18) под нижней навигацией,
-// чтобы та оставалась кликабельной; кружки меню (22) — выше всего хедера.
+// Иерархия z-index: хедер = 10, BottomNavBar = 20, search-row = 13, модалка фильтров = 100+.
+// Overlay (1000) и layer (1001) намеренно выше всего основного UI — меню портал-рендерится
+// в document.body, поэтому числа сравниваются глобально, без stacking-context-ловушек.
 const styles: Record<string, React.CSSProperties> = {
   overlay: {
     position: "fixed",
     inset: 0,
     background: "transparent",
-    zIndex: 18,
+    zIndex: 1000,
   },
   layer: {
-    position: "absolute",
-    top: "50%",
-    left: "50%",
+    position: "fixed",
     width: 0,
     height: 0,
     pointerEvents: "none",
-    zIndex: 22,
+    zIndex: 1001,
   },
   item: {
     position: "absolute",

@@ -82,6 +82,7 @@ function App() {
   const [cartCount, setCartCount] = useState(0);
   const [supportUnreadCount, setSupportUnreadCount] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
+  const hamburgerRef = useRef<HTMLButtonElement | null>(null);
   const [productReturnTo, setProductReturnTo] = useState<Page | null>(null);
   const [catalogSelectedCategories, setCatalogSelectedCategories] = useState<Set<string>>(() => new Set(["all"]));
   const mainScrollRef = useRef<HTMLElement | null>(null);
@@ -261,32 +262,32 @@ function App() {
       <SettingsSync />
       <header style={styles.header}>
         <div style={styles.headerLeft} className="zen-header-left">
-          <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
-            <button
-              type="button"
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="zen-header-hamburger"
-              style={{
-                ...styles.hamburger,
-                color: menuOpen ? "var(--accent)" : "var(--text)",
-                transform: menuOpen ? "rotate(90deg)" : "rotate(0deg)",
-                transition: "transform 350ms cubic-bezier(0.22, 1, 0.36, 1), color 350ms ease",
-              }}
-              aria-label="Меню"
-              aria-expanded={menuOpen}
-            >
-              <HeaderIconHamburger />
-            </button>
-            <HeaderArcMenu
-              open={menuOpen}
-              lang={lang}
-              onClose={() => setMenuOpen(false)}
-              onProfile={openProfile}
-              onHistory={openHistory}
-              onReviews={openReviews}
-              onSettings={openSettings}
-            />
-          </div>
+          <button
+            ref={hamburgerRef}
+            type="button"
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="zen-header-hamburger"
+            style={{
+              ...styles.hamburger,
+              color: menuOpen ? "var(--accent)" : "var(--text)",
+              transform: menuOpen ? "rotate(90deg)" : "rotate(0deg)",
+              transition: "transform 350ms cubic-bezier(0.22, 1, 0.36, 1), color 350ms ease",
+            }}
+            aria-label="Меню"
+            aria-expanded={menuOpen}
+          >
+            <HeaderIconHamburger />
+          </button>
+          <HeaderArcMenu
+            open={menuOpen}
+            lang={lang}
+            anchorRef={hamburgerRef}
+            onClose={() => setMenuOpen(false)}
+            onProfile={openProfile}
+            onHistory={openHistory}
+            onReviews={openReviews}
+            onSettings={openSettings}
+          />
         </div>
         <div style={styles.headerCenter}>
           <LogoMark onClick={openCatalog} label="На главную" />
