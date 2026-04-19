@@ -12,7 +12,7 @@ interface IconProps {
 }
 
 function CatalogIcon({ active }: IconProps) {
-  const stroke = active ? 2.25 : 1.75;
+  const stroke = active ? 1.9 : 1.6;
   return (
     <svg
       width="26"
@@ -26,14 +26,14 @@ function CatalogIcon({ active }: IconProps) {
       style={{ transition: "stroke-width 0.25s ease" }}
     >
       <path d="M4 7.5l8-4 8 4-8 4-8-4z" />
-      <path d="M4 12l8 4 8-4" opacity={active ? 1 : 0.55} />
-      <path d="M4 16.5l8 4 8-4" opacity={active ? 1 : 0.35} />
+      <path d="M4 12l8 4 8-4" opacity={active ? 1 : 0.75} />
+      <path d="M4 16.5l8 4 8-4" opacity={active ? 1 : 0.55} />
     </svg>
   );
 }
 
 function CustomOrderIcon({ active }: IconProps) {
-  const stroke = active ? 2.25 : 1.75;
+  const stroke = active ? 1.9 : 1.6;
   return (
     <svg
       width="26"
@@ -48,13 +48,13 @@ function CustomOrderIcon({ active }: IconProps) {
     >
       <path d="M15.2 4.6l4.2 4.2" />
       <path d="M17.4 2.4a2 2 0 0 1 2.8 0l1.4 1.4a2 2 0 0 1 0 2.8L8.5 20.7 3 21l.3-5.5L17.4 2.4z" />
-      <path d="M5 19l1.8-.3L6.3 17" opacity={active ? 1 : 0.55} />
+      <path d="M5 19l1.8-.3L6.3 17" opacity={active ? 1 : 0.75} />
     </svg>
   );
 }
 
 function ArrivalsIcon({ active }: IconProps) {
-  const stroke = active ? 2.25 : 1.75;
+  const stroke = active ? 1.9 : 1.6;
   return (
     <svg
       width="26"
@@ -68,7 +68,7 @@ function ArrivalsIcon({ active }: IconProps) {
       style={{ transition: "stroke-width 0.25s ease" }}
     >
       <path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3z" />
-      <path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z" opacity={active ? 1 : 0.55} />
+      <path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z" opacity={active ? 1 : 0.75} />
     </svg>
   );
 }
@@ -141,7 +141,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: "transparent",
     border: "none",
     padding: 0,
-    color: "var(--muted)",
+    color: "color-mix(in srgb, var(--text) 75%, transparent)",
     cursor: "pointer",
     transition: "color 0.25s ease",
   },
