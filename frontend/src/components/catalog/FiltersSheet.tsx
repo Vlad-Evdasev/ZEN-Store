@@ -2,6 +2,7 @@ import {
   forwardRef,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -144,6 +145,27 @@ export const FiltersSheet = forwardRef<FiltersSheetHandle, FiltersSheetProps>(
     const panelDragYRef = useRef(0);
     const [panelDragY, setPanelDragY] = useState(0);
 
+    // Анимация «шторки»: панель растёт по max-height от 0 до реальной высоты
+    // контента (меньше, чем остаток вьюпорта). Мы держим целевую высоту в
+    // стейте и двигаем её синхронно с `open` / `closing`.
+    const panelRef = useRef<HTMLDivElement>(null);
+    const [panelMaxHeight, setPanelMaxHeight] = useState<number>(0);
+    const measurePanelHeight = () => {
+      const el = panelRef.current;
+      if (!el) return 0;
+      // Чтобы получить реальный scrollHeight, временно снимаем верхний
+      // лимит max-height: иначе scrollHeight равен тому, что уже выставлено.
+      const prev = el.style.maxHeight;
+      el.style.maxHeight = "none";
+      const content = el.scrollHeight;
+      el.style.maxHeight = prev;
+      const viewportCap =
+        typeof window !== "undefined"
+          ? Math.max(0, window.innerHeight - 118 - 20)
+          : content;
+      return Math.min(content, viewportCap);
+    };
+
     const { catalogPriceMin, catalogPriceMax } = props;
 
     const priceMinNum =
@@ -227,9 +249,39 @@ export const FiltersSheet = forwardRef<FiltersSheetHandle, FiltersSheetProps>(
         });
         setPanelDragY(0);
         panelDragYRef.current = 0;
+        setPanelMaxHeight(0);
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open]);
+
+    // Как только DOM готов, измеряем высоту и запускаем transition.
+    // Используем useLayoutEffect, чтобы перейти от 0 к финальной высоте
+    // уже после первой раскладки — иначе transition не сыграет.
+    useLayoutEffect(() => {
+      if (!open || closing) return;
+      // requestAnimationFrame гарантирует, что стартовый max-height:0 был
+      // применён отдельным кадром до финального значения.
+      const id = requestAnimationFrame(() => {
+        setPanelMaxHeight(measurePanelHeight());
+      });
+      return () => cancelAnimationFrame(id);
+    }, [open, closing]);
+
+    // При смене контента (размер/количество брендов) обновляем целевую
+    // высоту, чтобы панель «дотягивалась» без перерисовки.
+    useEffect(() => {
+      if (!open || closing) return;
+      const id = requestAnimationFrame(() => {
+        setPanelMaxHeight(measurePanelHeight());
+      });
+      return () => cancelAnimationFrame(id);
+    }, [open, closing, draft, props.uniqueBrands.length, props.categoryTabs.length, hasAnyActiveDraft]);
+
+    // Ставим стартовое max-height:0 сразу при переходе в closing, чтобы
+    // transition сыграл обратно.
+    useLayoutEffect(() => {
+      if (closing) setPanelMaxHeight(0);
+    }, [closing]);
 
     const count = useMemo(() => countForDraft(draft), [draft, countForDraft]);
 
@@ -342,11 +394,24 @@ export const FiltersSheet = forwardRef<FiltersSheetHandle, FiltersSheetProps>(
           aria-hidden
         />
         <div
-          className={`zen-filters-panel ${closing ? "zen-filters-panel--closing" : ""}`}
+          ref={panelRef}
+          className="zen-filters-panel"
+          data-state={closing ? "closing" : "open"}
           role="dialog"
           aria-label={t(lang, "filters")}
-          onAnimationEnd={onAnimationEnd}
-          style={!closing && panelDragY > 0 ? { transform: `translateX(-50%) translateY(${panelDragY}px)` } : undefined}
+          onTransitionEnd={(e) => {
+            // Игнорируем transition-конец других свойств (transform от свайпа,
+            // box-shadow). Завершаем open/close жизненный цикл только после
+            // окончания max-height.
+            if (e.propertyName !== "max-height") return;
+            onAnimationEnd();
+          }}
+          style={{
+            maxHeight: `${panelMaxHeight}px`,
+            ...(!closing && panelDragY > 0
+              ? { transform: `translateX(-50%) translateY(${panelDragY}px)` }
+              : {}),
+          }}
         >
           <div
             ref={filtersDragHandleRef}
