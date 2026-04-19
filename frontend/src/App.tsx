@@ -25,12 +25,12 @@ type Page = "catalog" | "cart" | "product" | "checkout" | "reviews" | "favorites
 
 const SELLER_LINK = import.meta.env.VITE_SELLER_LINK || "";
 
-const headerIconSize = 22;
+const headerIconSize = 26;
 const headerIconStyle: React.CSSProperties = { width: headerIconSize, height: headerIconSize, flexShrink: 0, color: "currentColor", display: "block" };
 
 function HeaderIconHamburger() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
       <line x1="5" y1="7" x2="17" y2="7" />
       <line x1="4" y1="12" x2="20" y2="12" />
       <line x1="7" y1="17" x2="19" y2="17" />
@@ -40,20 +40,17 @@ function HeaderIconHamburger() {
 
 function HeaderIconFavorites() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
-      <path d="M12 3.5a2 2 0 1 0 1.8 2.9" />
-      <path d="M13.8 6.4L12 9l-9 8.5a1 1 0 0 0 .7 1.7h16.6a1 1 0 0 0 .7-1.7L12 9" />
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
+      <path d="M12 20.3s-7.5-4.6-9.3-9.2C1.4 7.6 3.6 4 7 4c2 0 3.7 1.1 5 2.8C13.3 5.1 15 4 17 4c3.4 0 5.6 3.6 4.3 7.1-1.8 4.6-9.3 9.2-9.3 9.2z" />
     </svg>
   );
 }
 
 function HeaderIconCart() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
-      <path d="M3 7.5l9-4 9 4v9l-9 4-9-4v-9z" />
-      <path d="M3 7.5l9 4 9-4" />
-      <path d="M12 11.5v9" />
-      <path d="M8 5.5l9 4" />
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
+      <path d="M5 8h14l-1.1 11.2a2 2 0 0 1-2 1.8H8.1a2 2 0 0 1-2-1.8L5 8z" />
+      <path d="M9 11V7a3 3 0 0 1 6 0v4" />
     </svg>
   );
 }
@@ -458,7 +455,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   headerSpacer: {
     flexShrink: 0,
-    height: 56,
+    height: 62,
   },
   headerLeft: {
     flexShrink: 0,
@@ -493,8 +490,8 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
   },
   logoMark: {
-    width: 38,
-    height: 38,
+    width: 44,
+    height: 44,
     borderRadius: "50%",
     border: "1.25px solid var(--text)",
     background: "transparent",
@@ -509,7 +506,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   logoMarkLetter: {
     fontFamily: "Unbounded, sans-serif",
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: 700,
     letterSpacing: "-0.02em",
     lineHeight: 1,
@@ -518,18 +515,18 @@ const styles: Record<string, React.CSSProperties> = {
   },
   headerDot: {
     position: "absolute",
-    top: 8,
-    right: 8,
-    width: 6,
-    height: 6,
+    top: 9,
+    right: 9,
+    width: 7,
+    height: 7,
     borderRadius: "50%",
     background: "var(--accent)",
     pointerEvents: "none",
   },
   headerIconBtn: {
     position: "relative",
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     padding: 0,
     background: "none",
     border: "none",
