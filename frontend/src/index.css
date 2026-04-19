@@ -1230,11 +1230,15 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
 .zen-filters-overlay--closing {
   animation: zenFiltersOverlayOut 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
+/* Панель появляется сразу под поисковой пилюлей:
+   .zen-catalog-search-row закреплена на top:68px и имеет height:50px ⇒ её низ = 118px.
+   +8px дышащий зазор ⇒ 126px. env(safe-area-inset-top) здесь не используется,
+   потому что сам search-row задан в абсолютных px и не сдвигается safe-area'ой. */
 .zen-filters-panel {
   position: fixed;
   left: 16px;
   right: 16px;
-  top: calc(max(16px, env(safe-area-inset-top)) + 56px + 8px);
+  top: 126px;
   bottom: max(20px, env(safe-area-inset-bottom));
   background: var(--surface);
   border-radius: 28px;
@@ -1249,8 +1253,8 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   animation: zenFiltersPanelOpen 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   touch-action: pan-y;
   transition: transform 0.15s ease-out;
-  max-height: calc(100vh - calc(max(16px, env(safe-area-inset-top)) + 56px + 8px) - max(20px, env(safe-area-inset-bottom)));
-  max-height: calc(100dvh - calc(max(16px, env(safe-area-inset-top)) + 56px + 8px) - max(20px, env(safe-area-inset-bottom)));
+  max-height: calc(100vh - 126px - max(20px, env(safe-area-inset-bottom)));
+  max-height: calc(100dvh - 126px - max(20px, env(safe-area-inset-bottom)));
 }
 .zen-filters-panel--closing {
   animation: zenFiltersPanelClose 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
