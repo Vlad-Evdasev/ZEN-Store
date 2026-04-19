@@ -1181,59 +1181,73 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
 .zen-filters-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   z-index: 100;
-  animation: filtersOverlayFade 0.25s ease forwards;
+  opacity: 0;
+  animation: zenFiltersOverlayIn 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@supports not ((backdrop-filter: blur(0)) or (-webkit-backdrop-filter: blur(0))) {
+  .zen-filters-overlay {
+    background: rgba(255, 255, 255, 0.6);
+  }
+}
+.zen-filters-overlay--closing {
+  animation: zenFiltersOverlayOut 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 .zen-filters-panel {
   position: fixed;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: fit-content;
-  max-height: min(90vh, 90dvh);
+  left: 16px;
+  right: 16px;
+  top: calc(max(16px, env(safe-area-inset-top)) + 56px + 8px);
+  bottom: max(20px, env(safe-area-inset-bottom));
   background: var(--surface);
-  border-radius: 0 0 20px 20px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+  border-radius: 28px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
   z-index: 101;
   overflow: hidden;
-  overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  padding: max(16px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) 16px max(20px, env(safe-area-inset-left));
-  padding-bottom: max(16px, env(safe-area-inset-bottom));
-  animation: filtersPanelSlideFromTop 0.35s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+  transform-origin: top center;
+  transform: scaleY(0.92);
+  opacity: 0;
+  animation: zenFiltersPanelOpen 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   touch-action: pan-y;
   transition: transform 0.15s ease-out;
+  max-height: calc(100vh - calc(max(16px, env(safe-area-inset-top)) + 56px + 8px) - max(20px, env(safe-area-inset-bottom)));
+  max-height: calc(100dvh - calc(max(16px, env(safe-area-inset-top)) + 56px + 8px) - max(20px, env(safe-area-inset-bottom)));
+}
+.zen-filters-panel--closing {
+  animation: zenFiltersPanelClose 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 .zen-filters-panel-body {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   min-height: 0;
-  max-height: min(60vh, 60dvh, calc(90vh - 252px), calc(90dvh - 252px));
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-}
-.zen-filters-panel--closing {
-  animation: filtersPanelSlideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  transition: none;
-}
-.zen-filters-overlay--closing {
-  animation: filtersOverlayFadeOut 0.25s ease forwards;
+  padding: 8px 20px 20px;
+  position: relative;
 }
 .zen-filters-panel-drag-handle {
-  padding: 10px 0;
+  flex: 0 0 auto;
+  width: 100%;
+  padding: 10px 0 12px;
+  display: flex;
+  justify-content: center;
   cursor: grab;
   touch-action: none;
-  -webkit-tap-highlight-color: transparent;
+  position: relative;
 }
 .zen-filters-panel-drag-handle:active {
   cursor: grabbing;
 }
 .zen-filters-panel-drag-bar {
-  display: none;
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.15);
 }
 .zen-filters-price-slider {
   position: relative;
@@ -1284,17 +1298,14 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
 }
 /* Футер панели: Сбросить всё + стрелка (как на ноутбуке — отступы не меняются при раскрытии) */
 .zen-filters-panel-footer {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px max(20px, env(safe-area-inset-right)) 12px max(20px, env(safe-area-inset-left));
-  padding-bottom: max(12px, env(safe-area-inset-bottom));
-  border-top: 1px solid var(--border);
-  background: var(--surface);
-  flex-shrink: 0;
-  min-height: 0;
+  flex: 0 0 auto;
+  padding: 16px 20px calc(16px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid transparent;
+  transition: border-color 0.18s ease;
+}
+.zen-filters-panel-body.is-scrolled ~ .zen-filters-panel-footer,
+.zen-filters-panel--scrollable .zen-filters-panel-footer {
+  border-top-color: #EEE;
 }
 .zen-filters-chip {
   flex-shrink: 0;
@@ -1334,6 +1345,22 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
 @keyframes zen-chip-select {
   from { transform: scale(0.95); opacity: 0.9; }
   to { transform: scale(1); opacity: 1; }
+}
+@keyframes zenFiltersOverlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes zenFiltersOverlayOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes zenFiltersPanelOpen {
+  from { opacity: 0; transform: scaleY(0.92) translateY(-4px); }
+  to { opacity: 1; transform: scaleY(1) translateY(0); }
+}
+@keyframes zenFiltersPanelClose {
+  from { opacity: 1; transform: scaleY(1) translateY(0); }
+  to { opacity: 0; transform: scaleY(0.92) translateY(-4px); }
 }
 /* Секция «Новинки»: заголовок в стиле RL + ссылка «Смотреть все» */
 .zen-app .zen-new-arrivals-header {
