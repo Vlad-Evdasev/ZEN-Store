@@ -436,6 +436,7 @@ export interface ReviewComment {
   user_id: string;
   user_name: string;
   text: string;
+  image_url?: string | null;
   created_at: string;
 }
 
@@ -460,7 +461,7 @@ export async function addReview(
 export async function addReviewComment(
   reviewId: number,
   userId: string,
-  data: { user_name?: string; text: string }
+  data: { user_name?: string; text: string; image_url?: string | null }
 ) {
   const res = await fetch(`${API_URL}/api/reviews/${reviewId}/comments`, {
     method: "POST",

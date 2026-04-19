@@ -9,7 +9,7 @@ reviewsRouter.get("/", (_req, res) => {
     .all() as { id: number; user_id: string; user_name: string; rating: number; text: string; created_at: string }[];
   const comments = db
     .prepare("SELECT * FROM review_comments ORDER BY created_at ASC")
-    .all() as { id: number; review_id: number; user_id: string; user_name: string; text: string; created_at: string }[];
+    .all() as { id: number; review_id: number; user_id: string; user_name: string; text: string; image_url: string | null; created_at: string }[];
 
   const byReview = new Map<number, typeof comments>();
   for (const c of comments) {
@@ -40,13 +40,17 @@ reviewsRouter.post("/", (req, res) => {
 
 reviewsRouter.post("/:reviewId/comments", (req, res) => {
   const reviewId = parseInt(req.params.reviewId, 10);
-  const { user_id, user_name, text } = req.body;
-  if (!user_id || !text) return res.status(400).json({ error: "user_id and text required" });
+  const { user_id, user_name, text, image_url } = req.body;
+  const safeText = typeof text === "string" ? text : "";
+  const safeImage = typeof image_url === "string" && image_url ? image_url : null;
+  if (!user_id || (!safeText.trim() && !safeImage)) {
+    return res.status(400).json({ error: "user_id and text or image required" });
+  }
   const name = user_name || "Гость";
 
   db.prepare(
-    "INSERT INTO review_comments (review_id, user_id, user_name, text) VALUES (?, ?, ?, ?)"
-  ).run(reviewId, user_id, name, String(text));
+    "INSERT INTO review_comments (review_id, user_id, user_name, text, image_url) VALUES (?, ?, ?, ?, ?)"
+  ).run(reviewId, user_id, name, safeText, safeImage);
   const id = db.prepare("SELECT last_insert_rowid() as id").get() as { id: number };
   res.status(201).json({ id: id.id, ok: true });
 });

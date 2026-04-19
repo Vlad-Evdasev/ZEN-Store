@@ -76,6 +76,7 @@ db.exec(`
     user_id TEXT NOT NULL,
     user_name TEXT,
     text TEXT NOT NULL,
+    image_url TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (review_id) REFERENCES reviews(id)
   );
@@ -162,6 +163,9 @@ try {
 } catch {}
 try {
   db.exec("ALTER TABLE support_messages ADD COLUMN image_url TEXT");
+} catch {}
+try {
+  db.exec("ALTER TABLE review_comments ADD COLUMN image_url TEXT");
 } catch {}
 
 try {
