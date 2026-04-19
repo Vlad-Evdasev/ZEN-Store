@@ -1009,14 +1009,15 @@ html[data-theme="dark"] .zen-app .zen-catalog-search-shelf {
   z-index: 13;
   width: calc(100% - 28px);
   max-width: 460px;
-  /* Закрытое состояние — шапка 50px, контент-секция свёрнута в 0. */
   height: 50px;
   overflow: hidden;
+  /* Все свойства морфинга едут по ОДНОЙ длительности и ОДНОЙ кривой —
+     иначе форма визуально «дрожит» из‑за рассинхрона height/radius.
+     Кривая Material standard — равномерная, без «догоняния» в конце. */
   transition:
-    height 0.34s cubic-bezier(0.22, 1, 0.36, 1),
-    border-radius 0.32s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 0.25s ease,
-    box-shadow 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+    height 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+    border-radius 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.38s cubic-bezier(0.4, 0, 0.2, 1);
 }
 /* Шапка внутри единой формы — всегда 50px, row-layout, не зависит от
    открытого состояния. */
@@ -1396,9 +1397,6 @@ html[data-theme="dark"] .zen-app .zen-filter-icon-btn-dot {
   flex-direction: column;
   gap: 14px;
   padding: 20px 0;
-  opacity: 0;
-  transform: translateY(8px);
-  animation: zenFiltersStagger 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 .zen-filters-section-label {
   font-size: 11px;
@@ -1486,7 +1484,6 @@ html[data-theme="dark"] .zen-app .zen-filter-icon-btn-dot {
   color: #8A8A8A;
   cursor: pointer;
   z-index: 2;
-  animation: zenFiltersStagger 0.16s ease forwards;
   -webkit-tap-highlight-color: transparent;
 }
 .zen-filters-reset-top:active {

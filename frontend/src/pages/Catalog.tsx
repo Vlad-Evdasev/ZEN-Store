@@ -145,35 +145,39 @@ export function Catalog({
   };
 
   // Анимация «расширения» search-row в форму фильтров.
-  // При открытии — замеряем полный scrollHeight (с временно снятым inline
-  // height) и ставим его как целевой height. При закрытии — возвращаем
-  // null, что означает «пусть CSS восстановит 50px». CSS-transition
-  // делает всё плавно.
+  // scrollHeight возвращает полную высоту контента даже при overflow:hidden,
+  // так что явный inline `height: auto` не нужен — браузер и так знает
+  // сколько ему надо. Ставим целевое значение следующим кадром после того,
+  // как контент фильтров уже попал в DOM, — transition сыграет 50→X плавно.
   useEffect(() => {
     const el = searchRowRef.current;
     if (!el) return;
     if (filtersOpen && !filtersClosing) {
-      // Фаза открытия: даём React отрисовать контент фильтров (на этом
-      // кадре height ещё 50px из CSS), затем следующим кадром измеряем
-      // и ставим реальную высоту — transition сыграет 50px → Xpx.
-      const id = requestAnimationFrame(() => {
-        const prev = el.style.height;
-        el.style.height = "auto";
-        const full = el.scrollHeight;
-        el.style.height = prev;
-        const viewportCap =
-          typeof window !== "undefined"
-            ? Math.max(100, window.innerHeight - 68 - 20)
-            : full;
-        setSearchRowHeight(Math.min(full, viewportCap));
+      // Двойной requestAnimationFrame: первый кадр отдаём браузеру, чтобы
+      // он применил стартовое состояние (height из CSS = 50px); вторым
+      // кадром переключаемся на измеренное значение, и transition
+      // гарантированно видит переход 50 → X. Без двойного rAF браузер
+      // иногда «склеивает» два стиля в один коммит и пропускает анимацию.
+      let raf2 = 0;
+      const raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => {
+          const full = el.scrollHeight;
+          const viewportCap =
+            typeof window !== "undefined"
+              ? Math.max(100, window.innerHeight - 68 - 20)
+              : full;
+          setSearchRowHeight(Math.min(full, viewportCap));
+        });
       });
-      return () => cancelAnimationFrame(id);
+      return () => {
+        cancelAnimationFrame(raf1);
+        if (raf2) cancelAnimationFrame(raf2);
+      };
     }
     if (filtersClosing) {
       setSearchRowHeight(50);
       return;
     }
-    // Идеальное закрытое состояние — пусть CSS держит 50px.
     setSearchRowHeight(null);
   }, [filtersOpen, filtersClosing]);
 

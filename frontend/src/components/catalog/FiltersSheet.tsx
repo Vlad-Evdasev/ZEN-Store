@@ -311,10 +311,7 @@ export const FiltersSheet = forwardRef<FiltersSheetHandle, FiltersSheetProps>(
 
           <div className="zen-filters-panel-body">
             {props.showPriceFilter && (
-              <section
-                className="zen-filters-section"
-                style={{ animationDelay: "120ms" }}
-              >
+              <section className="zen-filters-section">
                 <div className="zen-filters-section-label">{t(lang, "priceFilter")}</div>
                 <PriceSlider
                   priceMinNum={priceMinNum}
@@ -365,10 +362,7 @@ export const FiltersSheet = forwardRef<FiltersSheetHandle, FiltersSheetProps>(
 
             {props.showPriceFilter && <div className="zen-filters-divider" />}
 
-            <section
-              className="zen-filters-section"
-              style={{ animationDelay: "160ms" }}
-            >
+            <section className="zen-filters-section">
               <div className="zen-filters-section-label">{t(lang, "categories")}</div>
               <div className="zen-filters-chip-wrap">
                 {props.categoryTabs.map(({ code, label }) => {
@@ -391,10 +385,7 @@ export const FiltersSheet = forwardRef<FiltersSheetHandle, FiltersSheetProps>(
             {props.uniqueBrands.length >= 2 && (
               <>
                 <div className="zen-filters-divider" />
-                <section
-                  className="zen-filters-section"
-                  style={{ animationDelay: "200ms" }}
-                >
+                <section className="zen-filters-section">
                   <div className="zen-filters-section-label">{t(lang, "brand")}</div>
                   <div className="zen-filters-chip-wrap">
                     <button
