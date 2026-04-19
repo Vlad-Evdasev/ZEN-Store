@@ -215,9 +215,13 @@ export function HeaderArcMenu({
   );
 }
 
-// Иерархия z-index: хедер = 10, BottomNavBar = 20, search-row = 13, модалка фильтров = 100+.
-// Overlay (1000) и layer (1001) намеренно выше всего основного UI — меню портал-рендерится
-// в document.body, поэтому числа сравниваются глобально, без stacking-context-ловушек.
+// Иерархия z-index: хедер = 10 (auto, пока меню открыто — см. App.tsx),
+// BottomNavBar = 20, search-row = 13, модалка фильтров = 100+.
+// Overlay (1000) и layer арки (1001) портал-рендерятся в document.body и
+// сравниваются глобально. Кнопка-триггер в хедере при menuOpen получает
+// position: relative + z-index: 1002, чтобы быть над оверлеем, — это
+// возможно только потому, что хедер временно без собственного z-index и
+// не создаёт stacking-context.
 const styles: Record<string, React.CSSProperties> = {
   // Затемнение + блюр заднего фона при раскрытом меню.
   // Анимируем opacity, чтобы при закрытии был плавный fade-out (а не мгновенный unmount).

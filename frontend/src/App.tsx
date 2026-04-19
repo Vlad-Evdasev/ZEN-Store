@@ -253,7 +253,17 @@ function App() {
     <div style={styles.appWrapper}>
     <div className="zen-app" style={styles.app}>
       <SettingsSync />
-      <header style={styles.header}>
+      <header
+        style={{
+          ...styles.header,
+          // Пока арк-меню открыто, убираем z-index у хедера, чтобы сбросить
+          // его stacking-context. Тогда кнопка-триггер внутри сможет через
+          // position: relative + z-index вылезти над оверлеем HeaderArcMenu,
+          // а сам хедер (с непрозрачным фоном и прочими иконками) останется
+          // под затемнением/блюром — ровно как мы хотим.
+          zIndex: menuOpen ? "auto" : styles.header.zIndex,
+        }}
+      >
         <div style={styles.headerLeft} className="zen-header-left">
           <button
             ref={hamburgerRef}
@@ -265,9 +275,12 @@ function App() {
               color: menuOpen ? "var(--accent)" : "var(--text)",
               transform: menuOpen ? "rotate(90deg)" : "rotate(0deg)",
               transition: "transform 350ms cubic-bezier(0.22, 1, 0.36, 1), color 350ms ease",
-              // Пока меню открыто — поднимаем кнопку над оверлеем HeaderArcMenu
-              // (overlay = 1000, layer = 1001), чтобы сам триггер оставался виден
-              // и кликабелен для обратного закрытия.
+              // Пока меню открыто — поднимаем только саму кнопку-триггер
+              // над оверлеем HeaderArcMenu (overlay = 1000). Остальные
+              // элементы хедера остаются под затемнением/блюром.
+              // Работает за счёт того, что хедер в этот момент без
+              // собственного z-index (см. <header> выше), так что его
+              // stacking-context не ограничивает эту кнопку.
               position: "relative",
               zIndex: menuOpen ? 1002 : undefined,
             }}
