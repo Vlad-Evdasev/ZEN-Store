@@ -1370,16 +1370,11 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
 .zen-filters-price-bubble--merged {
   font-size: 13px;
 }
-/* Футер панели: Сбросить всё + стрелка (как на ноутбуке — отступы не меняются при раскрытии) */
+/* Футер панели со sticky-кнопкой «Показать N». */
 .zen-filters-panel-footer {
   flex: 0 0 auto;
   padding: 16px 20px calc(16px + env(safe-area-inset-bottom, 0px));
-  border-top: 1px solid transparent;
-  transition: border-color 0.18s ease;
-}
-.zen-filters-panel-body.is-scrolled ~ .zen-filters-panel-footer,
-.zen-filters-panel--scrollable .zen-filters-panel-footer {
-  border-top-color: #EEE;
+  border-top: 1px solid #EEE;
 }
 .zen-filters-section {
   display: flex;
