@@ -23,10 +23,11 @@ export function Favorites({
 
   return (
     <div style={styles.wrap}>
-      <div style={styles.titleRow}>
-        <h1 className="zen-page-title" style={styles.title}>{t(lang, "favoritesTitle")}</h1>
-        {favorites.length > 0 && <span style={styles.count}>{favorites.length}</span>}
-      </div>
+      {favorites.length > 0 && (
+        <div style={styles.titleRow}>
+          <span style={styles.count}>{favorites.length}</span>
+        </div>
+      )}
       {favorites.length === 0 ? (
         <div className="zen-empty-state">
           <strong>{t(lang, "favoritesEmpty")}</strong>
