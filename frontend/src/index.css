@@ -1254,26 +1254,19 @@ html[data-theme="dark"] .zen-app .zen-filter-icon-btn-dot {
 }
 
 /* Панель фильтров (мобил): выезжает сверху, брендовый стиль */
-/* Overlay начинается ПОД пилюлей поиска, чтобы сама пилюля не тускнела: она
-   остаётся активной шапкой панели, в инпуте можно продолжать набирать текст.
-   Низ пилюли = 68px + 50px = 118px. */
+/* Overlay — прозрачная ловушка кликов ПОД пилюлей поиска. Задача: ловить
+   тап вне панели и закрывать её. Без blur / тонирования фона, чтобы
+   страница под фильтрами оставалась читаемой и не «уплывала». */
 .zen-filters-overlay {
   position: fixed;
   left: 0;
   right: 0;
   top: 118px;
   bottom: 0;
-  background: rgba(255, 255, 255, 0.35);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: transparent;
   z-index: 100;
   opacity: 0;
   animation: zenFiltersOverlayIn 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-@supports not ((backdrop-filter: blur(0)) or (-webkit-backdrop-filter: blur(0))) {
-  .zen-filters-overlay {
-    background: rgba(255, 255, 255, 0.6);
-  }
 }
 .zen-filters-overlay--closing {
   animation: zenFiltersOverlayOut 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
@@ -1569,14 +1562,8 @@ html[data-theme="dark"] .zen-app .zen-filter-icon-btn-dot {
    здесь мы перекрываем их, используя токены (--surface, --text,
    --border, --muted) + инверсный контраст для активных состояний.
    ────────────────────────────────────────────────────────── */
-html[data-theme="dark"] .zen-app .zen-filters-overlay {
-  background: rgba(0, 0, 0, 0.45);
-}
-@supports not ((backdrop-filter: blur(0)) or (-webkit-backdrop-filter: blur(0))) {
-  html[data-theme="dark"] .zen-app .zen-filters-overlay {
-    background: rgba(0, 0, 0, 0.72);
-  }
-}
+/* Тёмная тема: overlay тоже остаётся прозрачным — затемнение фона отключено
+   по UX-решению, панель «парит» над контентом без dimming. */
 html[data-theme="dark"] .zen-app .zen-filters-panel {
   background: var(--surface);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
