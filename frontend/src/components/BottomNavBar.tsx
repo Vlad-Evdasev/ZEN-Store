@@ -26,8 +26,8 @@ function CatalogIcon({ active }: IconProps) {
       style={{ transition: "stroke-width 0.25s ease" }}
     >
       <path d="M4 7.5l8-4 8 4-8 4-8-4z" />
-      <path d="M4 12l8 4 8-4" opacity={active ? 1 : 0.75} />
-      <path d="M4 16.5l8 4 8-4" opacity={active ? 1 : 0.55} />
+      <path d="M4 12l8 4 8-4" />
+      <path d="M4 16.5l8 4 8-4" />
     </svg>
   );
 }
@@ -46,9 +46,10 @@ function CustomOrderIcon({ active }: IconProps) {
       strokeLinejoin="round"
       style={{ transition: "stroke-width 0.25s ease" }}
     >
-      <path d="M15.2 4.6l4.2 4.2" />
-      <path d="M17.4 2.4a2 2 0 0 1 2.8 0l1.4 1.4a2 2 0 0 1 0 2.8L8.5 20.7 3 21l.3-5.5L17.4 2.4z" />
-      <path d="M5 19l1.8-.3L6.3 17" opacity={active ? 1 : 0.75} />
+      <circle cx="11" cy="11" r="6.5" />
+      <line x1="20.5" y1="20.5" x2="16.1" y2="16.1" />
+      <line x1="11" y1="8" x2="11" y2="14" />
+      <line x1="8" y1="11" x2="14" y2="11" />
     </svg>
   );
 }
@@ -68,7 +69,7 @@ function ArrivalsIcon({ active }: IconProps) {
       style={{ transition: "stroke-width 0.25s ease" }}
     >
       <path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3z" />
-      <path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z" opacity={active ? 1 : 0.75} />
+      <path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z" />
     </svg>
   );
 }
@@ -141,7 +142,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: "transparent",
     border: "none",
     padding: 0,
-    color: "color-mix(in srgb, var(--text) 75%, transparent)",
+    color: "var(--text)",
     cursor: "pointer",
     transition: "color 0.25s ease",
   },
