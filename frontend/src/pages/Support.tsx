@@ -32,6 +32,7 @@ export function Support({
   const [chatOpen, setChatOpen] = useState(supportUnreadCount > 0);
 
   const [chatId, setChatId] = useState<number | null>(null);
+  const [chatError, setChatError] = useState(false);
   const resolvingRef = useRef(false);
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
@@ -53,6 +54,7 @@ export function Support({
   const resolveChatId = useCallback(() => {
     if (!userId || resolvingRef.current) return;
     resolvingRef.current = true;
+    setChatError(false);
     getSupportChats(userId)
       .then((chats) => {
         if (chats.length === 0) {
@@ -69,15 +71,18 @@ export function Support({
         return sorted[0].id;
       })
       .then((id) => { if (id != null) setChatId(id); })
-      .catch(console.error)
+      .catch((err) => {
+        console.error(err);
+        setChatError(true);
+      })
       .finally(() => { resolvingRef.current = false; });
   }, [userId, firstName, userName]);
 
   useEffect(() => {
-    if (chatOpen && chatId == null) {
+    if (chatOpen && chatId == null && !chatError) {
       resolveChatId();
     }
-  }, [chatOpen, chatId, resolveChatId]);
+  }, [chatOpen, chatId, chatError, resolveChatId]);
 
   const loadMessages = useCallback((isPolling?: boolean) => {
     if (chatId == null) return;
@@ -210,7 +215,14 @@ export function Support({
         badge={supportUnreadCount}
         badgeLabel={t(lang, "unread")}
       >
-        {chatId == null ? (
+        {chatError ? (
+          <div style={styles.errorBlock}>
+            <p style={styles.emptyState}>{t(lang, "supportChatLoadError")}</p>
+            <button type="button" onClick={resolveChatId} style={styles.retryBtn}>
+              {t(lang, "supportRetry")}
+            </button>
+          </div>
+        ) : chatId == null ? (
           <p style={styles.emptyState}>{t(lang, "loading")}...</p>
         ) : (
           <>
@@ -533,7 +545,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: 36,
     height: 36,
     borderRadius: 12,
-    background: "rgba(165,42,42,0.08)",
+    background: "color-mix(in srgb, var(--accent) 8%, transparent)",
     color: "var(--accent)",
     flexShrink: 0,
   },
@@ -695,6 +707,24 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: "center",
     padding: 24,
     margin: 0,
+  },
+  errorBlock: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 8,
+    padding: "16px 0",
+  },
+  retryBtn: {
+    padding: "8px 20px",
+    background: "var(--accent)",
+    color: "#fff",
+    border: "none",
+    borderRadius: 16,
+    fontFamily: "inherit",
+    fontSize: 13,
+    fontWeight: 500,
+    cursor: "pointer",
   },
 
   imageOverlay: {
