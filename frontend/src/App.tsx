@@ -256,12 +256,11 @@ function App() {
       <header
         style={{
           ...styles.header,
-          // Пока арк-меню открыто, убираем z-index у хедера, чтобы сбросить
-          // его stacking-context. Тогда кнопка-триггер внутри сможет через
-          // position: relative + z-index вылезти над оверлеем HeaderArcMenu,
-          // а сам хедер (с непрозрачным фоном и прочими иконками) останется
-          // под затемнением/блюром — ровно как мы хотим.
-          zIndex: menuOpen ? "auto" : styles.header.zIndex,
+          // Пока арк-меню открыто, весь хедер поднимаем над оверлеем
+          // HeaderArcMenu (overlay = 1000), чтобы хедер с триггером и
+          // остальными иконками не попадал под блюр/затемнение. Блюр
+          // накрывает только контент под хедером.
+          zIndex: menuOpen ? 1002 : styles.header.zIndex,
         }}
       >
         <div style={styles.headerLeft} className="zen-header-left">
@@ -275,14 +274,6 @@ function App() {
               color: menuOpen ? "var(--accent)" : "var(--text)",
               transform: menuOpen ? "rotate(90deg)" : "rotate(0deg)",
               transition: "transform 350ms cubic-bezier(0.22, 1, 0.36, 1), color 350ms ease",
-              // Пока меню открыто — поднимаем только саму кнопку-триггер
-              // над оверлеем HeaderArcMenu (overlay = 1000). Остальные
-              // элементы хедера остаются под затемнением/блюром.
-              // Работает за счёт того, что хедер в этот момент без
-              // собственного z-index (см. <header> выше), так что его
-              // stacking-context не ограничивает эту кнопку.
-              position: "relative",
-              zIndex: menuOpen ? 1002 : undefined,
             }}
             aria-label="Меню"
             aria-expanded={menuOpen}
