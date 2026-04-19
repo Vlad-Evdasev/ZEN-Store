@@ -16,8 +16,6 @@ export interface FiltersSheetHandle {
 }
 
 interface PriceSliderProps {
-  draftMin: string;
-  draftMax: string;
   priceMinNum: number;
   priceMaxNum: number;
   priceMinPercent: number;
@@ -237,6 +235,9 @@ export const FiltersSheet = forwardRef<FiltersSheetHandle, FiltersSheetProps>(
     const categoriesHasActive = !draft.categories.has("all");
     const hasAnyActiveDraft = priceHasActive || brandHasActive || categoriesHasActive;
 
+    // При каждом открытии панели сбрасываем draft к текущим applied-* значениям.
+    // Намеренно зависим только от `open`: изменения applied-* во время открытой
+    // панели не должны затирать пользовательский draft в процессе редактирования.
     useEffect(() => {
       if (open) {
         setDraft({
@@ -254,21 +255,26 @@ export const FiltersSheet = forwardRef<FiltersSheetHandle, FiltersSheetProps>(
 
     const count = useMemo(() => countForDraft(draft), [draft, countForDraft]);
 
-    const commitAndClose = () => {
-      onApply(draftRef.current);
-      onClose();
-    };
+    // Применяет текущий draft и закрывает панель. Держим актуальную функцию в ref,
+    // чтобы effect'ы и imperative handle никогда не захватывали stale onApply/onClose.
+    const commitAndCloseRef = useRef<() => void>(() => {});
+    useEffect(() => {
+      commitAndCloseRef.current = () => {
+        onApply(draftRef.current);
+        onClose();
+      };
+    });
+    const commitAndClose = () => commitAndCloseRef.current();
 
-    useImperativeHandle(ref, () => ({ commitAndClose }), []);
+    useImperativeHandle(ref, () => ({ commitAndClose: () => commitAndCloseRef.current() }), []);
 
     useEffect(() => {
       if (!open) return;
       const onKey = (e: KeyboardEvent) => {
-        if (e.key === "Escape") commitAndClose();
+        if (e.key === "Escape") commitAndCloseRef.current();
       };
       window.addEventListener("keydown", onKey);
       return () => window.removeEventListener("keydown", onKey);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open]);
 
     useEffect(() => {
@@ -300,7 +306,7 @@ export const FiltersSheet = forwardRef<FiltersSheetHandle, FiltersSheetProps>(
         const shouldClose = dy > 60 || velocity > 0.3;
         setPanelDragY(0);
         panelDragYRef.current = 0;
-        if (shouldClose) commitAndClose();
+        if (shouldClose) commitAndCloseRef.current();
       };
       const touchStart = (e: TouchEvent) => {
         onStart(e.touches[0].clientY);
@@ -319,7 +325,6 @@ export const FiltersSheet = forwardRef<FiltersSheetHandle, FiltersSheetProps>(
         handle.removeEventListener("touchend", onEnd);
         handle.removeEventListener("touchcancel", onEnd);
       };
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open]);
 
     if (!open) return null;
@@ -371,8 +376,6 @@ export const FiltersSheet = forwardRef<FiltersSheetHandle, FiltersSheetProps>(
               >
                 <div className="zen-filters-section-label">{t(lang, "priceFilter")}</div>
                 <PriceSlider
-                  draftMin={draft.priceMin}
-                  draftMax={draft.priceMax}
                   priceMinNum={priceMinNum}
                   priceMaxNum={priceMaxNum}
                   priceMinPercent={priceMinPercent}

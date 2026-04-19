@@ -1149,38 +1149,9 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
 .zen-app.theme-dark .zen-filter-icon-btn-dot {
   border-color: var(--surface);
 }
-/* Fallback для StoreCatalog и прочих мест, где используется старый .zen-filter-icon-btn */
-.zen-app .zen-filter-icon-btn {
-  flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-radius: 50%;
-  color: var(--muted);
-  cursor: pointer;
-  transition: color 0.2s ease;
-  -webkit-tap-highlight-color: transparent;
-}
-.zen-app .zen-filter-icon-btn:hover {
-  color: var(--text);
-}
-.zen-app .zen-filter-icon-btn:focus {
-  outline: none;
-}
-.zen-app .zen-filter-icon-btn:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
 
-/* Морф иконки фильтра в крестик (×) при открытой панели */
-.zen-app .zen-catalog-search-row .zen-filter-icon-btn {
-  position: relative;
-}
+/* Морф иконки фильтра в крестик (×) при открытой панели.
+   position: relative уже задан в основном правиле .zen-filter-icon-btn выше. */
 .zen-app .zen-catalog-search-row .zen-filter-icon-btn .zen-filter-icon-main,
 .zen-app .zen-catalog-search-row .zen-filter-icon-btn .zen-filter-icon-btn-x {
   transition: opacity 0.2s ease, transform 0.2s ease;

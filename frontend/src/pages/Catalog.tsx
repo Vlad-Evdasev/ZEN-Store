@@ -67,7 +67,6 @@ export function Catalog({
   const [filtersClosing, setFiltersClosing] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState<string>("all");
   const scrollRef = useRef<HTMLDivElement>(null);
-  const filterButtonRef = useRef<HTMLButtonElement>(null);
   const filtersSheetRef = useRef<FiltersSheetHandle>(null);
   const marqueePausedRef = useRef(false);
   const pauseTimeoutRef = useRef<number | null>(null);
@@ -381,7 +380,6 @@ export function Catalog({
         />
         {showPriceFilter && (
           <button
-            ref={filterButtonRef}
             type="button"
             className={`zen-filter-icon-btn ${hasActiveFilters ? "zen-filter-icon-btn--active" : ""} ${(filtersOpen && !filtersClosing) ? "zen-filter-icon-btn--open" : ""}`}
             onClick={() => {
