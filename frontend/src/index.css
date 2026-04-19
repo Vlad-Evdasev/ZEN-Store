@@ -1018,76 +1018,61 @@ html[data-theme="dark"] .zen-app .zen-catalog-search-row {
   border-color: var(--accent);
   box-shadow: 0 8px 28px rgba(165, 42, 42, 0.18), 0 2px 6px rgba(0, 0, 0, 0.05);
 }
-/* Пилюля анимирует скругления, высоту и тень синхронно с панелью (0.32s
-   по той же кривой), чтобы открытие и закрытие выглядели как единый
-   обратимый морфинг, а не как две последовательные анимации. */
+/* Пилюля при морфинге физически НЕ двигается: тот же padding, тот же
+   border. Меняется только радиус углов + тонкая подстройка тени. Всё
+   остальное делается кросс-фейдом содержимого ниже. Так морф
+   воспринимается как «форма растворилась / переформатировалась», а не
+   как «что-то поехало». */
 .zen-app .zen-catalog-search-row {
   transition:
     border-radius 0.32s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 0.32s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.32s cubic-bezier(0.22, 1, 0.36, 1),
-    padding 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
 /* При открытых фильтрах пилюля становится шапкой панели фильтров: углы
-   сверху выпрямляются до радиуса панели (28px), снизу — 0; нижний border
-   исчезает, чтобы стык с панелью читался как одна форма; z-index над
-   overlay, чтобы крестик и drag оставались кликабельны. */
+   сверху выпрямляются до радиуса панели (28px), снизу — 0; z-index над
+   overlay, чтобы крестик оставался кликабельным. Нижний border
+   сохраняется того же цвета, что и border панели, — так стык читается
+   естественно без лишней transition-вспышки. */
 .zen-app .zen-catalog-search-row--filter-open {
   border-radius: 28px 28px 0 0;
-  border-bottom-color: transparent;
-  box-shadow: 0 -12px 24px -14px rgba(0, 0, 0, 0.18);
+  /* Нижний бордер пилюли «сливается» с поверхностью панели, чтобы стык
+     был визуально бесшовным. Меняется МГНОВЕННО (не через transition),
+     чтобы не было мерцания линии во время морфинга. */
+  border-bottom-color: var(--surface);
+  box-shadow: none;
   z-index: 102;
-  padding: 4px 10px 4px 20px;
 }
-html[data-theme="dark"] .zen-app .zen-catalog-search-row--filter-open {
-  box-shadow: 0 -14px 28px -16px rgba(0, 0, 0, 0.7);
-}
-/* Кросс-фейд содержимого пилюли: при `--filter-open` поисковые слоты
-   (лупа + input) исчезают, «Фильтры» — проявляются. Оба слоя живут в
-   общем flex-ряду, поэтому место в ряду резервируется корректно. */
+/* Кросс-фейд содержимого пилюли: при `--filter-open` поиск (лупа + input)
+   тает через opacity, «Фильтры» — проявляется в ТОЙ ЖЕ точке (left:18px —
+   там, где была лупа). Никаких translate, никаких движений — только
+   opacity. Это и создаёт ощущение, что пилюля «переформатировалась». */
 .zen-app .zen-catalog-search-row .zen-catalog-search-row-search-slot {
-  /* По умолчанию (закрытое состояние) — быстрый возврат поиска без
-     задержки, чтобы при закрытии пилюля сразу перестала выглядеть как
-     шапка фильтров. */
-  transition:
-    opacity 0.18s ease,
-    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity 0.22s ease;
 }
 .zen-app .zen-catalog-search-row--filter-open .zen-catalog-search-row-search-slot {
   opacity: 0;
   pointer-events: none;
-  transform: translateY(-4px);
-  /* При открытии поиск уходит первым — без задержки; «Фильтры» появится
-     чуть позже с небольшой задержкой (см. ниже). */
-  transition:
-    opacity 0.16s ease,
-    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .zen-app .zen-catalog-search-row-filters-title {
   position: absolute;
-  left: 20px;
+  left: 18px;
   top: 50%;
-  transform: translateY(-50%) translateX(-4px);
+  transform: translateY(-50%);
   font-size: 16px;
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--text);
   pointer-events: none;
   opacity: 0;
-  /* По умолчанию (закрытие / закрытое состояние) — без задержки, иначе
-     заголовок «зависает» пока панель уже уехала. */
-  transition:
-    opacity 0.16s ease,
-    transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+  /* Default = закрытое состояние / закрытие: уходит быстрее, чтобы к моменту
+     появления поиска заголовок уже растаял (иначе видно «двойной слой»). */
+  transition: opacity 0.14s ease;
 }
 .zen-app .zen-catalog-search-row--filter-open .zen-catalog-search-row-filters-title {
   opacity: 1;
-  transform: translateY(-50%) translateX(0);
-  /* Только при открытии — «Фильтры» проявляется чуть позже поиска,
-     чтобы избежать кросс-фейда двух видимых надписей одновременно. */
-  transition:
-    opacity 0.22s ease 0.08s,
-    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1) 0.08s;
+  /* Открытие: небольшая задержка — поиск успевает стать прозрачным прежде,
+     чем проявится заголовок. */
+  transition: opacity 0.22s ease 0.12s;
 }
 /* Иконка лупы внутри пилюли */
 .zen-app .zen-catalog-search-row .zen-catalog-search-icon {
