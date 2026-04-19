@@ -3,7 +3,7 @@ import { flushSync } from "react-dom";
 import { useTelegram } from "./hooks/useTelegram";
 import { TelegramAuth } from "./components/TelegramAuth";
 import { useWishlist } from "./hooks/useWishlist";
-import { getProducts, getStores, getCategories, getCart, getSupportUnreadCount, type Product, type Store, type Category } from "./api";
+import { getProducts, getStores, getCategories, getCart, getSupportUnreadCount, getOrders, type Product, type Store, type Category, type Order } from "./api";
 import { Catalog } from "./pages/Catalog";
 import { Cart } from "./pages/Cart";
 import { Favorites } from "./pages/Favorites";
@@ -81,6 +81,7 @@ function App() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [cartCount, setCartCount] = useState(0);
   const [supportUnreadCount, setSupportUnreadCount] = useState(0);
+  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const hamburgerRef = useRef<HTMLButtonElement | null>(null);
   const [productReturnTo, setProductReturnTo] = useState<Page | null>(null);
@@ -121,6 +122,13 @@ function App() {
       getSupportUnreadCount(userId).then(({ count }) => {
         if (!cancelled) setSupportUnreadCount(Number(count) || 0);
       }).catch(() => {});
+      getOrders(userId)
+        .then((orders) => {
+          if (!cancelled) setRecentOrders(orders.slice(0, 3));
+        })
+        .catch(() => {});
+    } else if (!cancelled) {
+      setRecentOrders([]);
     }
 
     return () => { cancelled = true; };
@@ -382,6 +390,11 @@ function App() {
             onOpenDeliveryTerms={openDeliveryTerms}
             onOpenSupport={openSupport}
             supportUnreadCount={supportUnreadCount}
+            recentOrders={recentOrders}
+            favoriteProducts={products.filter((p) => wishlistIds.has(p.id)).slice(0, 5)}
+            onOpenHistory={() => setPage("history")}
+            onOpenSettings={() => setPage("settings")}
+            onProductClick={(id) => openProduct(id, "profile")}
           />
         )}
         {page === "deliveryTerms" && (
