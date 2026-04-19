@@ -87,7 +87,7 @@ export function BottomNavBar({ activeTab, onCatalog, onCustomOrder, onArrivals }
         aria-label="Каталог"
         aria-current={isCatalog ? "page" : undefined}
       >
-        <span style={{ ...styles.iconWrap, ...(isCatalog ? styles.iconWrapActive : {}) }}>
+        <span style={styles.iconWrap}>
           <CatalogIcon active={isCatalog} />
         </span>
       </button>
@@ -98,7 +98,7 @@ export function BottomNavBar({ activeTab, onCatalog, onCustomOrder, onArrivals }
         aria-label="Заказать не из каталога"
         aria-current={isCustom ? "page" : undefined}
       >
-        <span style={{ ...styles.iconWrap, ...(isCustom ? styles.iconWrapActive : {}) }}>
+        <span style={styles.iconWrap}>
           <CustomOrderIcon active={isCustom} />
         </span>
       </button>
@@ -109,7 +109,7 @@ export function BottomNavBar({ activeTab, onCatalog, onCustomOrder, onArrivals }
         aria-label="Товары которые мы привезли"
         aria-current={isArrivals ? "page" : undefined}
       >
-        <span style={{ ...styles.iconWrap, ...(isArrivals ? styles.iconWrapActive : {}) }}>
+        <span style={styles.iconWrap}>
           <ArrivalsIcon active={isArrivals} />
         </span>
       </button>
@@ -152,14 +152,5 @@ const styles: Record<string, React.CSSProperties> = {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    border: "1.5px solid transparent",
-    transition: "border-color 0.25s ease, background-color 0.25s ease",
-  },
-  iconWrapActive: {
-    borderColor: "var(--accent)",
-    background: "transparent",
   },
 };
