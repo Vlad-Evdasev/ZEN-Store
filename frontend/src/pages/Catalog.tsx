@@ -68,6 +68,11 @@ export function Catalog({
   const [selectedBrand, setSelectedBrand] = useState<string>("all");
   const scrollRef = useRef<HTMLDivElement>(null);
   const filtersSheetRef = useRef<FiltersSheetHandle>(null);
+  // Референс на search-row — единая форма, которая «расширяется» в
+  // фильтры. Мы анимируем её height здесь, чтобы в момент клика по
+  // кнопке фильтров форма росла из 50px в замеренную высоту контента.
+  const searchRowRef = useRef<HTMLDivElement>(null);
+  const [searchRowHeight, setSearchRowHeight] = useState<number | null>(null);
   const marqueePausedRef = useRef(false);
   const pauseTimeoutRef = useRef<number | null>(null);
   const lastAutoScrollRef = useRef(0);
@@ -138,6 +143,58 @@ export function Catalog({
       setFiltersClosing(false);
     }
   };
+
+  // Анимация «расширения» search-row в форму фильтров.
+  // При открытии — замеряем полный scrollHeight (с временно снятым inline
+  // height) и ставим его как целевой height. При закрытии — возвращаем
+  // null, что означает «пусть CSS восстановит 50px». CSS-transition
+  // делает всё плавно.
+  useEffect(() => {
+    const el = searchRowRef.current;
+    if (!el) return;
+    if (filtersOpen && !filtersClosing) {
+      // Фаза открытия: даём React отрисовать контент фильтров (на этом
+      // кадре height ещё 50px из CSS), затем следующим кадром измеряем
+      // и ставим реальную высоту — transition сыграет 50px → Xpx.
+      const id = requestAnimationFrame(() => {
+        const prev = el.style.height;
+        el.style.height = "auto";
+        const full = el.scrollHeight;
+        el.style.height = prev;
+        const viewportCap =
+          typeof window !== "undefined"
+            ? Math.max(100, window.innerHeight - 68 - 20)
+            : full;
+        setSearchRowHeight(Math.min(full, viewportCap));
+      });
+      return () => cancelAnimationFrame(id);
+    }
+    if (filtersClosing) {
+      setSearchRowHeight(50);
+      return;
+    }
+    // Идеальное закрытое состояние — пусть CSS держит 50px.
+    setSearchRowHeight(null);
+  }, [filtersOpen, filtersClosing]);
+
+  // Click-outside: закрываем фильтры, когда пользователь тапает вне
+  // search-row (оверлея визуально нет — форма и так «одна»).
+  useEffect(() => {
+    if (!filtersOpen || filtersClosing) return;
+    const onDocPointer = (e: MouseEvent | TouchEvent) => {
+      const el = searchRowRef.current;
+      if (!el) return;
+      const target = e.target as Node | null;
+      if (target && el.contains(target)) return;
+      filtersSheetRef.current?.commitAndClose();
+    };
+    document.addEventListener("mousedown", onDocPointer);
+    document.addEventListener("touchstart", onDocPointer, { passive: true });
+    return () => {
+      document.removeEventListener("mousedown", onDocPointer);
+      document.removeEventListener("touchstart", onDocPointer);
+    };
+  }, [filtersOpen, filtersClosing]);
 
   const handleApplyFilters = (draft: DraftFiltersValue) => {
     setPriceMin(draft.priceMin);
@@ -366,78 +423,89 @@ export function Catalog({
       )}
 
       <div className="zen-catalog-search-shelf" aria-hidden />
-      <div className={`zen-catalog-search-row ${filtersOpen && !filtersClosing ? "zen-catalog-search-row--filter-open" : ""}`}>
-        <span className="zen-catalog-search-icon zen-catalog-search-row-search-slot" aria-hidden>
-          <SearchIcon />
-        </span>
-        <input
-          type="search"
-          className="zen-input zen-catalog-search-input zen-catalog-search-row-search-slot"
-          placeholder={t(lang, "search")}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          aria-label={t(lang, "search")}
-          aria-hidden={filtersOpen && !filtersClosing}
-          tabIndex={filtersOpen && !filtersClosing ? -1 : 0}
-        />
-        <span
-          className="zen-catalog-search-row-filters-title"
-          aria-hidden={!(filtersOpen || filtersClosing)}
-        >
-          {t(lang, "filters")}
-        </span>
-        {showPriceFilter && (
-          <button
-            type="button"
-            className={`zen-filter-icon-btn ${hasActiveFilters ? "zen-filter-icon-btn--active" : ""} ${(filtersOpen && !filtersClosing) ? "zen-filter-icon-btn--open" : ""}`}
-            onClick={() => {
-              if (filtersOpen && !filtersClosing) {
-                filtersSheetRef.current?.commitAndClose();
-              } else {
-                setFiltersOpen(true);
-              }
-            }}
-            aria-label={t(lang, "filters")}
-            aria-expanded={filtersOpen && !filtersClosing}
-            title={t(lang, "filters")}
+      <div
+        ref={searchRowRef}
+        className={`zen-catalog-search-row ${filtersOpen && !filtersClosing ? "zen-catalog-search-row--filter-open" : ""}`}
+        style={searchRowHeight !== null ? { height: `${searchRowHeight}px` } : undefined}
+        onTransitionEnd={(e) => {
+          if (e.propertyName !== "height") return;
+          if (e.target !== e.currentTarget) return;
+          handleFiltersPanelAnimationEnd();
+        }}
+      >
+        <div className="zen-catalog-search-row-header">
+          <span className="zen-catalog-search-icon zen-catalog-search-row-search-slot" aria-hidden>
+            <SearchIcon />
+          </span>
+          <input
+            type="search"
+            className="zen-input zen-catalog-search-input zen-catalog-search-row-search-slot"
+            placeholder={t(lang, "search")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label={t(lang, "search")}
+            aria-hidden={filtersOpen && !filtersClosing}
+            tabIndex={filtersOpen && !filtersClosing ? -1 : 0}
+          />
+          <span
+            className="zen-catalog-search-row-filters-title"
+            aria-hidden={!(filtersOpen || filtersClosing)}
           >
-            <span className="zen-filter-icon-main" aria-hidden>
-              <FilterIcon />
-            </span>
-            <svg
-              className="zen-filter-icon-btn-x"
-              viewBox="0 0 16 16"
-              aria-hidden
+            {t(lang, "filters")}
+          </span>
+          {showPriceFilter && (
+            <button
+              type="button"
+              className={`zen-filter-icon-btn ${hasActiveFilters ? "zen-filter-icon-btn--active" : ""} ${(filtersOpen && !filtersClosing) ? "zen-filter-icon-btn--open" : ""}`}
+              onClick={() => {
+                if (filtersOpen && !filtersClosing) {
+                  filtersSheetRef.current?.commitAndClose();
+                } else {
+                  setFiltersOpen(true);
+                }
+              }}
+              aria-label={t(lang, "filters")}
+              aria-expanded={filtersOpen && !filtersClosing}
+              title={t(lang, "filters")}
             >
-              <path d="M4 4 L12 12 M12 4 L4 12" strokeLinecap="round" />
-            </svg>
-            {hasActiveFilters && (
-              <span className="zen-filter-icon-btn-dot" aria-hidden />
-            )}
-          </button>
-        )}
-      </div>
+              <span className="zen-filter-icon-main" aria-hidden>
+                <FilterIcon />
+              </span>
+              <svg
+                className="zen-filter-icon-btn-x"
+                viewBox="0 0 16 16"
+                aria-hidden
+              >
+                <path d="M4 4 L12 12 M12 4 L4 12" strokeLinecap="round" />
+              </svg>
+              {hasActiveFilters && (
+                <span className="zen-filter-icon-btn-dot" aria-hidden />
+              )}
+            </button>
+          )}
+        </div>
 
-      <FiltersSheet
-        ref={filtersSheetRef}
-        open={showPriceFilter && filtersOpen}
-        closing={filtersClosing}
-        onAnimationEnd={handleFiltersPanelAnimationEnd}
-        onClose={closeFilters}
-        appliedPriceMin={priceMin}
-        appliedPriceMax={priceMax}
-        appliedPriceSort={priceSort}
-        appliedBrand={selectedBrand}
-        appliedCategories={selectedCategories}
-        catalogPriceMin={catalogPriceMin}
-        catalogPriceMax={catalogPriceMax}
-        uniqueBrands={uniqueBrands}
-        categoryTabs={categoryTabs}
-        showPriceFilter={showPriceFilter}
-        countForDraft={countForDraft}
-        onApply={handleApplyFilters}
-        lang={lang}
-      />
+        <FiltersSheet
+          ref={filtersSheetRef}
+          open={showPriceFilter && filtersOpen}
+          closing={filtersClosing}
+          onAnimationEnd={handleFiltersPanelAnimationEnd}
+          onClose={closeFilters}
+          appliedPriceMin={priceMin}
+          appliedPriceMax={priceMax}
+          appliedPriceSort={priceSort}
+          appliedBrand={selectedBrand}
+          appliedCategories={selectedCategories}
+          catalogPriceMin={catalogPriceMin}
+          catalogPriceMax={catalogPriceMax}
+          uniqueBrands={uniqueBrands}
+          categoryTabs={categoryTabs}
+          showPriceFilter={showPriceFilter}
+          countForDraft={countForDraft}
+          onApply={handleApplyFilters}
+          lang={lang}
+        />
+      </div>
 
       {displayList.length === 0 ? (
         <div className="zen-empty-state" style={styles.empty}>

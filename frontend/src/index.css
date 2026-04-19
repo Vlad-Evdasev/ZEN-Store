@@ -988,18 +988,20 @@ html[data-theme="dark"] .zen-app .zen-catalog-search-shelf {
 }
 
 /* Строка поиска + иконка фильтра — «Floating glass» */
+/* Единая форма: в закрытом состоянии — пилюля 50px с круглыми углами
+   (только шапка с поиском). В открытом — тот же самый контейнер, но
+   выросший по высоте и с уменьшенным радиусом; внутри появляется блок
+   с фильтрами. Это физически один элемент: высота и радиус меняются
+   transition'ом, поэтому визуально «поле поиска расширяется», а не
+   «панель подъехала». */
 .zen-app .zen-catalog-search-row {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 50px;
-  padding: 4px 6px 4px 18px;
+  flex-direction: column;
   box-sizing: border-box;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 999px;
   box-shadow: 0 16px 28px -10px rgba(0, 0, 0, 0.28), 0 6px 14px -6px rgba(0, 0, 0, 0.18);
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
   position: fixed;
   top: 68px;
   left: 50%;
@@ -1007,6 +1009,26 @@ html[data-theme="dark"] .zen-app .zen-catalog-search-shelf {
   z-index: 13;
   width: calc(100% - 28px);
   max-width: 460px;
+  /* Закрытое состояние — шапка 50px, контент-секция свёрнута в 0. */
+  height: 50px;
+  overflow: hidden;
+  transition:
+    height 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+    border-radius 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s ease,
+    box-shadow 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* Шапка внутри единой формы — всегда 50px, row-layout, не зависит от
+   открытого состояния. */
+.zen-app .zen-catalog-search-row-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 50px;
+  flex: 0 0 50px;
+  padding: 4px 6px 4px 18px;
+  box-sizing: border-box;
+  position: relative;
 }
 /* Тёмная тема — плотная пилюля на тёмной поверхности */
 html[data-theme="dark"] .zen-app .zen-catalog-search-row {
@@ -1018,29 +1040,15 @@ html[data-theme="dark"] .zen-app .zen-catalog-search-row {
   border-color: var(--accent);
   box-shadow: 0 8px 28px rgba(165, 42, 42, 0.18), 0 2px 6px rgba(0, 0, 0, 0.05);
 }
-/* Пилюля при морфинге физически НЕ двигается: тот же padding, тот же
-   border. Меняется только радиус углов + тонкая подстройка тени. Всё
-   остальное делается кросс-фейдом содержимого ниже. Так морф
-   воспринимается как «форма растворилась / переформатировалась», а не
-   как «что-то поехало». */
-.zen-app .zen-catalog-search-row {
-  transition:
-    border-radius 0.32s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.32s cubic-bezier(0.22, 1, 0.36, 1);
-}
-/* При открытых фильтрах пилюля становится шапкой панели фильтров: углы
-   сверху выпрямляются до радиуса панели (28px), снизу — 0; z-index над
-   overlay, чтобы крестик оставался кликабельным. Нижний border
-   сохраняется того же цвета, что и border панели, — так стык читается
-   естественно без лишней transition-вспышки. */
+/* При открытых фильтрах форма «вырастает»: все 4 угла одинаково
+   скругляются до 28px (это уже не пилюля, а прямоугольник со
+   скруглениями). Высота задаётся inline-стилем из JS (замеренная
+   высота содержимого). Тень усиливается. */
 .zen-app .zen-catalog-search-row--filter-open {
-  border-radius: 28px 28px 0 0;
-  /* Нижний бордер пилюли «сливается» с поверхностью панели, чтобы стык
-     был визуально бесшовным. Меняется МГНОВЕННО (не через transition),
-     чтобы не было мерцания линии во время морфинга. */
-  border-bottom-color: var(--surface);
-  box-shadow: none;
+  border-radius: 28px;
   z-index: 102;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.14),
+              0 6px 16px -6px rgba(0, 0, 0, 0.18);
 }
 /* Кросс-фейд содержимого пилюли: при `--filter-open` поиск (лупа + input)
    тает через opacity, «Фильтры» — проявляется в ТОЙ ЖЕ точке (left:18px —
@@ -1238,57 +1246,23 @@ html[data-theme="dark"] .zen-app .zen-filter-icon-btn-dot {
   transform: translate(-50%, -50%) rotate(0deg);
 }
 
-/* Панель фильтров (мобил): выезжает сверху, брендовый стиль */
-/* Overlay — прозрачная ловушка кликов ПОД пилюлей поиска. Задача: ловить
-   тап вне панели и закрывать её. Без blur / тонирования фона, чтобы
-   страница под фильтрами оставалась читаемой и не «уплывала». */
-.zen-filters-overlay {
-  position: fixed;
-  left: 0;
-  right: 0;
-  top: 118px;
-  bottom: 0;
-  background: transparent;
-  z-index: 100;
-  opacity: 0;
-  animation: zenFiltersOverlayIn 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-.zen-filters-overlay--closing {
-  animation: zenFiltersOverlayOut 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-/* Панель стыкуется с низом пилюли. Анимация морфинга сделана через
-   `max-height`: панель «вырастает» сверху вниз от нуля до реальной
-   высоты контента (считается в JS при open). За счёт overflow: hidden
-   содержимое раскрывается как шторка — визуально это «пилюля
-   расширяется в форму фильтров», а не «панель подъехала». */
+/* Overlay/sheet удалены: фильтры теперь живут внутри search-row как
+   единая форма. Закрытие по клику вне обрабатывается JS-ом в Catalog. */
+/* Блок фильтров внутри единой формы search-row. Без фиксированного
+   позиционирования, без собственного фона/границ — он наследует
+   поверхность от search-row. Рост высоты контейнера (search-row)
+   показывает/скрывает этот блок за счёт overflow: hidden выше.
+   Собственного transition у него нет — анимация высоты идёт
+   на уровне .zen-catalog-search-row. */
 .zen-filters-panel {
-  position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  top: 118px;
-  width: calc(100% - 28px);
-  max-width: 460px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-top: 0;
-  border-radius: 0 0 28px 28px;
-  box-shadow: none;
-  z-index: 101;
-  overflow: hidden;
+  position: relative;
+  width: 100%;
+  background: transparent;
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
   touch-action: pan-y;
-  /* Стартовое состояние: нулевая высота — как будто панели нет. Внутренний
-     контент уже в DOM, но скрыт overflow'ом. Inline-style задаст реальную
-     высоту при open. */
-  max-height: 0;
-  transition:
-    max-height 0.34s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.15s ease-out,
-    box-shadow 0.32s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.zen-filters-panel[data-state="open"] {
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
 }
 .zen-filters-panel-body {
   flex: 1 1 auto;
@@ -1631,14 +1605,6 @@ html[data-theme="dark"] .zen-app .zen-filters-apply-btn:disabled {
   color: var(--muted);
 }
 
-@keyframes zenFiltersOverlayIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-@keyframes zenFiltersOverlayOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
 /* zenFiltersPanelOpen/Close удалены — панель теперь анимируется через
    max-height (см. .zen-filters-panel выше), без scale/opacity. */
 /* Секция «Новинки»: заголовок в стиле RL + ссылка «Смотреть все» */
