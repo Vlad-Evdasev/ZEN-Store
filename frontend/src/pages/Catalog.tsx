@@ -6,6 +6,7 @@ import { SearchIcon } from "../components/SearchIcon";
 import { ProductCard } from "../components/ProductCard";
 import { StoreCard } from "../components/StoreCard";
 import { FiltersSheet } from "../components/catalog/FiltersSheet";
+import type { FiltersSheetHandle } from "../components/catalog/FiltersSheet";
 import type { DraftFiltersValue } from "../components/catalog/FiltersSheet.types";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
@@ -67,6 +68,7 @@ export function Catalog({
   const [selectedBrand, setSelectedBrand] = useState<string>("all");
   const scrollRef = useRef<HTMLDivElement>(null);
   const filterButtonRef = useRef<HTMLButtonElement>(null);
+  const filtersSheetRef = useRef<FiltersSheetHandle>(null);
   const marqueePausedRef = useRef(false);
   const pauseTimeoutRef = useRef<number | null>(null);
   const lastAutoScrollRef = useRef(0);
@@ -384,7 +386,7 @@ export function Catalog({
             className={`zen-filter-icon-btn ${hasActiveFilters ? "zen-filter-icon-btn--active" : ""} ${(filtersOpen && !filtersClosing) ? "zen-filter-icon-btn--open" : ""}`}
             onClick={() => {
               if (filtersOpen && !filtersClosing) {
-                closeFilters();
+                filtersSheetRef.current?.commitAndClose();
               } else {
                 setFiltersOpen(true);
               }
@@ -411,6 +413,7 @@ export function Catalog({
       </div>
 
       <FiltersSheet
+        ref={filtersSheetRef}
         open={showPriceFilter && filtersOpen}
         closing={filtersClosing}
         onAnimationEnd={handleFiltersPanelAnimationEnd}
