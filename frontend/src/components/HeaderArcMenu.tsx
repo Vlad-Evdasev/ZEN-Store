@@ -147,6 +147,13 @@ export function HeaderArcMenu({
   onSettings,
 }: HeaderArcMenuProps) {
   const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
+  // `animate` управляет стилями открыт/закрыт и отстаёт от `open` на rAF при
+  // ВКЛЮЧЕНИИ, чтобы при первом монтировании браузер успел зафиксировать
+  // «закрытое» состояние (opacity:0, scale:0.6) и корректно отработал transition.
+  // Без этого первое открытие происходит без анимации: элементы сразу
+  // вставляются в открытом виде и браузеру не от чего интерполировать.
+  // При ЗАКРЫТИИ переключаемся мгновенно — fade-out как и раньше.
+  const [animate, setAnimate] = useState(false);
 
   // Позицию anchor пересчитываем при открытии и на resize/scroll, пока open.
   useLayoutEffect(() => {
@@ -178,6 +185,24 @@ export function HeaderArcMenu({
     return () => window.removeEventListener("keydown", handler);
   }, [open, onClose]);
 
+  // Синхронизация animate с open. При open=true ждём два rAF: первый кадр
+  // фиксирует закрытое состояние в DOM, на следующем кадре включаем открытое —
+  // transition корректно анимируется. При open=false — сразу выключаем.
+  useEffect(() => {
+    if (!open) {
+      setAnimate(false);
+      return;
+    }
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setAnimate(true));
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      if (raf2) cancelAnimationFrame(raf2);
+    };
+  }, [open]);
+
   // Порядок совпадает с ANGLES_DEG — i-ый пункт получает positions[i].
   const items: Array<{ key: string; label: string; onClick: () => void; Icon: React.FC; badge?: boolean }> = [
     { key: "support", label: t(lang, "support"), onClick: onSupport, Icon: IconSupport, badge: supportUnreadCount > 0 },
@@ -197,10 +222,11 @@ export function HeaderArcMenu({
   };
 
   // Оверлей рендерится всегда (когда вообще есть anchor), чтобы работал fade-out
-  // при закрытии. Видимость/pointer-events переключаются через open.
+  // при закрытии. Видимость переключаем через animate (а не open), чтобы при
+  // первом открытии был плавный fade-in от 0 к 1.
   const overlayStyle: React.CSSProperties = {
     ...styles.overlay,
-    opacity: open ? 1 : 0,
+    opacity: animate ? 1 : 0,
     pointerEvents: open ? "auto" : "none",
   };
 
@@ -222,8 +248,8 @@ export function HeaderArcMenu({
           onClick={onClose}
           aria-label={lang === "en" ? "Close" : "Закрыть"}
           tabIndex={open ? 0 : -1}
-          className={open ? "zen-arc-close" : "zen-arc-close zen-arc-close--closed"}
-          style={{ ...styles.item, ...styles.close, ...(open ? styles.closeOpen : styles.closeClosed) }}
+          className={animate ? "zen-arc-close" : "zen-arc-close zen-arc-close--closed"}
+          style={{ ...styles.item, ...styles.close, ...(animate ? styles.closeOpen : styles.closeClosed) }}
         >
           <IconClose />
         </button>
@@ -234,8 +260,8 @@ export function HeaderArcMenu({
             onClick={onClick}
             aria-label={label}
             tabIndex={open ? 0 : -1}
-            className={open ? "zen-arc-item" : "zen-arc-item zen-arc-item--closed"}
-            style={{ ...styles.item, ...positions[i], ...(open ? styles.itemOpen : styles.itemClosed) }}
+            className={animate ? "zen-arc-item" : "zen-arc-item zen-arc-item--closed"}
+            style={{ ...styles.item, ...positions[i], ...(animate ? styles.itemOpen : styles.itemClosed) }}
           >
             <Icon />
             {badge && <span style={styles.itemDot} aria-hidden />}
