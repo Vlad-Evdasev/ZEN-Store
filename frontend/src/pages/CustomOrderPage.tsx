@@ -11,6 +11,17 @@ function SendArrowIcon() {
   );
 }
 
+function PaperclipIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+    </svg>
+  );
+}
+
+const SELLER_TG_URL = "https://t.me/krot_eno";
+const SELLER_HANDLE = "@krot_eno";
+
 function CheckCircleIcon() {
   return (
     <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -33,8 +44,6 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
 
   const customName = firstName || "";
   const [customDesc, setCustomDesc] = useState("");
-  const [customSize, setCustomSize] = useState("");
-  const [showSizeField, setShowSizeField] = useState(false);
   const [customPhoto, setCustomPhoto] = useState<string | null>(null);
   const [customSubmitting, setCustomSubmitting] = useState(false);
   const [customSuccess, setCustomSuccess] = useState(false);
@@ -63,13 +72,11 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
         user_name: customName.trim() || undefined,
         user_username: userName ?? undefined,
         description: customDesc.trim(),
-        size: customSize.trim(),
+        size: "",
         image_data: customPhoto || undefined,
       });
       setCustomSuccess(true);
       setCustomDesc("");
-      setCustomSize("");
-      setShowSizeField(false);
       setCustomPhoto(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (err) {
@@ -125,9 +132,6 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
         <div style={styles.thread}>
           <BotBubble>
             <div style={styles.botBubbleTitle}>{t(lang, "customOrderSubtitle")}</div>
-            <div style={styles.botBubbleMeta}>
-              {t(lang, "customOrderReplyFrom")} @krot_eno
-            </div>
           </BotBubble>
 
           {/* Photo preview bubble (if attached) */}
@@ -146,35 +150,6 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
               </div>
             </div>
           )}
-
-          {/* Size chip/field (optional) */}
-          {showSizeField ? (
-            <div style={styles.userBubbleRow}>
-              <div style={styles.sizeChipOpen}>
-                <span style={styles.sizeChipLabel}>{t(lang, "customOrderSize")}</span>
-                <input
-                  type="text"
-                  className="zen-input"
-                  value={customSize}
-                  onChange={(e) => setCustomSize(e.target.value)}
-                  placeholder={t(lang, "customOrderPlaceholderSize")}
-                  style={styles.sizeChipInput}
-                  aria-label={t(lang, "customOrderSize")}
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowSizeField(false);
-                    setCustomSize("");
-                  }}
-                  style={styles.sizeChipClose}
-                  aria-label={t(lang, "close")}
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-          ) : null}
         </div>
 
         <div style={styles.spacer} />
@@ -190,6 +165,15 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
               style={styles.fileHidden}
               aria-hidden
             />
+
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              style={styles.composerIconBtn}
+              aria-label={t(lang, "customOrderPhotoAdd")}
+            >
+              <PaperclipIcon />
+            </button>
 
             <textarea
               ref={textareaRef}
@@ -216,26 +200,16 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
             </button>
           </div>
 
-          {/* Optional chips row */}
-          <div style={styles.chipsRow}>
-            {!showSizeField && !customSize && (
-              <button
-                type="button"
-                onClick={() => setShowSizeField(true)}
-                style={styles.addChip}
-              >
-                + {t(lang, "customOrderSize")}
-              </button>
-            )}
-            {!customPhoto && (
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                style={styles.addChip}
-              >
-                + {t(lang, "customOrderPhoto")}
-              </button>
-            )}
+          <div style={styles.replyHintRow}>
+            {t(lang, "customOrderReplyFrom")}{" "}
+            <a
+              href={SELLER_TG_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={styles.replyHintLink}
+            >
+              {SELLER_HANDLE}
+            </a>
           </div>
         </div>
       </form>
@@ -361,13 +335,6 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: "-0.01em",
     color: "var(--text)",
   },
-  botBubbleMeta: {
-    marginTop: 4,
-    fontSize: 12.5,
-    color: "var(--muted)",
-    lineHeight: 1.4,
-  },
-
   /* Author row */
   authorRow: {
     display: "flex",
@@ -448,49 +415,6 @@ const styles: Record<string, React.CSSProperties> = {
     backdropFilter: "blur(4px)",
   },
 
-  sizeChipOpen: {
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: 999,
-    padding: "4px 6px 4px 12px",
-    maxWidth: "85%",
-  },
-  sizeChipLabel: {
-    fontSize: 10,
-    fontWeight: 700,
-    letterSpacing: "0.1em",
-    textTransform: "uppercase",
-    color: "var(--muted)",
-    flexShrink: 0,
-  },
-  sizeChipInput: {
-    flex: 1,
-    minHeight: 28,
-    padding: "2px 8px",
-    fontSize: 13,
-    background: "transparent",
-    border: "1px solid transparent",
-    borderRadius: 999,
-    minWidth: 0,
-  },
-  sizeChipClose: {
-    width: 24,
-    height: 24,
-    borderRadius: "50%",
-    background: "transparent",
-    color: "var(--muted)",
-    border: "none",
-    cursor: "pointer",
-    fontSize: 12,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-
   /* Composer */
   composerWrap: {
     display: "flex",
@@ -503,11 +427,11 @@ const styles: Record<string, React.CSSProperties> = {
   composer: {
     display: "flex",
     alignItems: "flex-end",
-    gap: 6,
+    gap: 2,
     background: "var(--surface)",
     border: "1px solid var(--border)",
     borderRadius: 22,
-    padding: "6px 6px 6px 8px",
+    padding: "4px 6px 4px 4px",
     boxShadow: "0 4px 18px rgba(0,0,0,0.06)",
   },
   composerIconBtn: {
@@ -522,6 +446,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
+    padding: 0,
   },
   composerTextarea: {
     flex: 1,
@@ -554,23 +479,18 @@ const styles: Record<string, React.CSSProperties> = {
     opacity: 0.35,
     cursor: "not-allowed",
   },
-  chipsRow: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 6,
-    paddingLeft: 4,
-  },
-  addChip: {
-    padding: "5px 12px",
-    fontSize: 11,
-    fontWeight: 600,
-    letterSpacing: "0.04em",
+  replyHintRow: {
+    paddingLeft: 14,
+    paddingRight: 14,
+    fontSize: 12,
     color: "var(--muted)",
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: 999,
-    cursor: "pointer",
-    fontFamily: "inherit",
+    lineHeight: 1.4,
+    letterSpacing: "0.01em",
+  },
+  replyHintLink: {
+    color: "var(--accent)",
+    textDecoration: "none",
+    fontWeight: 600,
   },
 
   fileHidden: {
