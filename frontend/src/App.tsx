@@ -49,8 +49,9 @@ function HeaderIconFavorites() {
 function HeaderIconCart() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
-      <path d="M5 8h14l-1.1 11.2a2 2 0 0 1-2 1.8H8.1a2 2 0 0 1-2-1.8L5 8z" />
-      <path d="M9 11V7a3 3 0 0 1 6 0v4" />
+      <path d="M6 8h12l-.9 11.2a2 2 0 0 1-2 1.8H8.9a2 2 0 0 1-2-1.8L6 8z" />
+      <path d="M6 8l1.3-2.6A2 2 0 0 1 9.1 4.3h5.8a2 2 0 0 1 1.8 1.1L18 8" />
+      <path d="M9.5 11.5c.6 1.4 1.6 2 2.5 2s1.9-.6 2.5-2" />
     </svg>
   );
 }
