@@ -1177,6 +1177,40 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   outline-offset: 2px;
 }
 
+/* Морф иконки фильтра в крестик (×) при открытой панели */
+.zen-app .zen-catalog-search-row .zen-filter-icon-btn {
+  position: relative;
+}
+.zen-app .zen-catalog-search-row .zen-filter-icon-btn .zen-filter-icon-main,
+.zen-app .zen-catalog-search-row .zen-filter-icon-btn .zen-filter-icon-btn-x {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.zen-app .zen-catalog-search-row .zen-filter-icon-btn .zen-filter-icon-btn-x {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  transform: translate(-50%, -50%) rotate(-180deg);
+  opacity: 0;
+  pointer-events: none;
+  color: #111;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  fill: none;
+}
+.zen-app .zen-catalog-search-row .zen-filter-icon-btn--open .zen-filter-icon-main {
+  opacity: 0;
+  transform: rotate(180deg);
+}
+.zen-app .zen-catalog-search-row .zen-filter-icon-btn--open .zen-filter-icon-btn-x {
+  opacity: 1;
+  transform: translate(-50%, -50%) rotate(0deg);
+}
+
 /* Панель фильтров (мобил): выезжает сверху, брендовый стиль */
 .zen-filters-overlay {
   position: fixed;
