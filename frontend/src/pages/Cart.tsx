@@ -69,10 +69,11 @@ export function Cart({ userId, onCheckout, onCartChange, onProductClick }: CartP
 
   return (
     <div style={styles.wrap}>
-      <div style={styles.titleRow}>
-        <h1 className="zen-page-title" style={styles.title}>{t(lang, "cart")}</h1>
-        {totalCount > 0 && <span style={styles.count}>{totalCount}</span>}
-      </div>
+      {totalCount > 0 && (
+        <div style={styles.titleRow}>
+          <span style={styles.count}>{totalCount}</span>
+        </div>
+      )}
 
       <div style={styles.list}>
         {items.map((item) => (
