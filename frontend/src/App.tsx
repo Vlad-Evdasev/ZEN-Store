@@ -417,25 +417,9 @@ function App() {
         </div>
       </main>
 
-      {page === "catalog" && (
+      {(["catalog", "customOrder", "newArrivals", "profile", "history", "settings", "reviews"] as Page[]).includes(page) && (
         <BottomNavBar
-          activeTab="catalog"
-          onCatalog={() => setPage("catalog")}
-          onCustomOrder={() => setPage("customOrder")}
-          onArrivals={() => setPage("newArrivals")}
-        />
-      )}
-      {page === "customOrder" && (
-        <BottomNavBar
-          activeTab="custom"
-          onCatalog={() => setPage("catalog")}
-          onCustomOrder={() => setPage("customOrder")}
-          onArrivals={() => setPage("newArrivals")}
-        />
-      )}
-      {page === "newArrivals" && (
-        <BottomNavBar
-          activeTab="arrivals"
+          activeTab={page === "customOrder" ? "custom" : page === "newArrivals" ? "arrivals" : "catalog"}
           onCatalog={() => setPage("catalog")}
           onCustomOrder={() => setPage("customOrder")}
           onArrivals={() => setPage("newArrivals")}
