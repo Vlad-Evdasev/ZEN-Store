@@ -7,14 +7,15 @@ import { t } from "../i18n";
 // от stacking context хедера и гарантированно отображается поверх всего контента.
 // `anchorRef` указывает на элемент-триггер (кнопку бургера): позиции кружков
 // вычисляются от его центра в viewport-координатах.
-// Каждый из onProfile/onHistory/onReviews/onSettings отвечает и за переход,
+// Каждый из onSupport/onHistory/onReviews/onSettings отвечает и за переход,
 // и за закрытие меню — компонент сам onClose при выборе пункта не вызывает.
 export interface HeaderArcMenuProps {
   open: boolean;
   lang: Lang;
   anchorRef: React.RefObject<HTMLElement>;
+  supportUnreadCount?: number;
   onClose: () => void;
-  onProfile: () => void;
+  onSupport: () => void;
   onHistory: () => void;
   onReviews: () => void;
   onSettings: () => void;
@@ -28,7 +29,7 @@ const iconStyle: React.CSSProperties = {
   color: "currentColor",
 };
 
-function IconProfile() {
+function IconSupport() {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -40,8 +41,7 @@ function IconProfile() {
       style={iconStyle}
       aria-hidden
     >
-      <circle cx="12" cy="8" r="2.5" />
-      <path d="M5 20v-2a5 5 0 0 1 10 0v2" />
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
     </svg>
   );
 }
@@ -103,7 +103,7 @@ function IconSettings() {
 // Углы отсчитываются от вертикали вниз (0°) по часовой к горизонтали (90°).
 // Равномерный шаг 24° даёт минимальный зазор между соседними кружками ≈ 50px
 // (при диаметре 40px) и визуальные отступы от осей сверху/сбоку.
-// Порядок: Профиль (82°, ближе к горизонтали) → История → Отзывы → Настройки (10°, ближе к вертикали).
+// Порядок: Поддержка (82°, ближе к горизонтали) → История → Отзывы → Настройки (10°, ближе к вертикали).
 const RADIUS = 120;
 const ANGLES_DEG = [82, 58, 34, 10];
 
@@ -121,8 +121,9 @@ export function HeaderArcMenu({
   open,
   lang,
   anchorRef,
+  supportUnreadCount = 0,
   onClose,
-  onProfile,
+  onSupport,
   onHistory,
   onReviews,
   onSettings,
@@ -160,8 +161,8 @@ export function HeaderArcMenu({
   }, [open, onClose]);
 
   // Порядок совпадает с ANGLES_DEG — i-ый пункт получает positions[i].
-  const items: Array<{ key: string; label: string; onClick: () => void; Icon: React.FC }> = [
-    { key: "profile", label: t(lang, "profile"), onClick: onProfile, Icon: IconProfile },
+  const items: Array<{ key: string; label: string; onClick: () => void; Icon: React.FC; badge?: boolean }> = [
+    { key: "support", label: t(lang, "support"), onClick: onSupport, Icon: IconSupport, badge: supportUnreadCount > 0 },
     { key: "history", label: t(lang, "history"), onClick: onHistory, Icon: IconHistory },
     { key: "reviews", label: t(lang, "reviews"), onClick: onReviews, Icon: IconReviews },
     { key: "settings", label: t(lang, "settings"), onClick: onSettings, Icon: IconSettings },
@@ -187,7 +188,7 @@ export function HeaderArcMenu({
         />
       )}
       <div className="zen-arc-layer" style={layerStyle} aria-hidden={!open}>
-        {items.map(({ key, label, onClick, Icon }, i) => (
+        {items.map(({ key, label, onClick, Icon, badge }, i) => (
           <button
             key={key}
             type="button"
@@ -198,6 +199,7 @@ export function HeaderArcMenu({
             style={{ ...styles.item, ...positions[i], ...(open ? styles.itemOpen : styles.itemClosed) }}
           >
             <Icon />
+            {badge && <span style={styles.itemDot} aria-hidden />}
           </button>
         ))}
       </div>
@@ -255,6 +257,20 @@ const styles: Record<string, React.CSSProperties> = {
   itemClosed: {
     transform: "translate(0px, 0px) scale(0.6)",
     opacity: 0,
+    pointerEvents: "none",
+  },
+  // Чуть крупнее и с бордером (в отличие от styles.headerDot в App.tsx),
+  // т.к. дот сидит поверх полупрозрачного blurred-фона арк-кружка
+  // и должен оставаться читаемым на разных подложках.
+  itemDot: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 8,
+    height: 8,
+    borderRadius: "50%",
+    background: "var(--accent)",
+    border: "1.5px solid var(--bg)",
     pointerEvents: "none",
   },
 };
