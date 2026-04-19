@@ -102,7 +102,6 @@ export function History({
   return (
     <div style={styles.wrap} className="zen-page-enter">
       <header style={styles.header}>
-        <span style={styles.kicker}>{t(lang, "history")}</span>
         <h1 className="zen-page-title" style={styles.title}>
           {t(lang, "historyTitle")}
         </h1>
@@ -520,15 +519,6 @@ const styles: Record<string, React.CSSProperties> = {
   loading: { textAlign: "center", color: "var(--muted)", padding: 64 },
 
   header: { marginBottom: 28 },
-  kicker: {
-    display: "block",
-    fontSize: 11,
-    fontWeight: 600,
-    letterSpacing: "0.18em",
-    textTransform: "uppercase",
-    color: "var(--muted)",
-    marginBottom: 6,
-  },
   title: {
     fontSize: 26,
     fontWeight: 500,
