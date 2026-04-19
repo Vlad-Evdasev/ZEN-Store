@@ -1216,28 +1216,6 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
 }
-.zen-filters-panel-section {
-  padding: 20px 0;
-  border-bottom: 1px solid var(--border);
-}
-.zen-filters-panel-section--accordion {
-  padding: 0;
-}
-.zen-filters-panel-section--accordion:last-child {
-  border-bottom: none;
-}
-.zen-filters-panel-section:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-.zen-filters-panel-section-title {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin: 0 0 14px 0;
-}
 .zen-filters-price-block {
   display: flex;
   flex-direction: column;
@@ -1285,13 +1263,6 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-}
-.zen-filters-price-sort-caption {
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.03em;
-  color: var(--muted);
-  flex-shrink: 0;
 }
 /* Кнопки сортировки: технологичный сегментированный вид */
 .zen-filters-sort-segmented {
@@ -1343,22 +1314,6 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
 }
 .zen-filters-sort-text {
   white-space: nowrap;
-}
-.zen-filters-panel-price-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-.zen-filters-panel-sort {
-  flex-shrink: 0;
-}
-.zen-filters-panel-inputs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
 }
 .zen-filters-panel-input {
   flex: 1;
@@ -1516,86 +1471,6 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   color: var(--text);
   text-transform: uppercase;
 }
-.zen-filters-panel-summary {
-  padding: 0 4px 12px;
-  margin-bottom: 0;
-  border-bottom: 1px solid var(--border);
-}
-.zen-filters-panel-summary-count {
-  display: block;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text);
-  margin-bottom: 8px;
-}
-.zen-filters-panel-summary-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.zen-filters-panel-summary-tag {
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--accent);
-  background: rgba(196, 40, 40, 0.08);
-  color: var(--accent);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: transform 0.15s ease, background 0.15s ease;
-  -webkit-tap-highlight-color: transparent;
-}
-.zen-filters-panel-summary-tag:hover {
-  background: rgba(196, 40, 40, 0.14);
-}
-.zen-filters-panel-summary-tag:active {
-  transform: scale(0.97);
-}
-.zen-filters-panel-section--accordion .zen-filters-panel-section-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 12px 0;
-  border: none;
-  background: none;
-  cursor: pointer;
-  text-align: left;
-  -webkit-tap-highlight-color: transparent;
-}
-.zen-filters-panel-section--accordion .zen-filters-panel-section-title {
-  margin: 0;
-  flex: 1;
-}
-.zen-filters-panel-section-count {
-  font-size: 12px;
-  color: var(--muted);
-  font-weight: 500;
-}
-.zen-filters-panel-section-chevron {
-  font-size: 10px;
-  color: var(--muted);
-  transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
-  display: inline-block;
-}
-.zen-filters-panel-section--open .zen-filters-panel-section-chevron {
-  transform: rotate(90deg);
-}
-.zen-filters-panel-section--accordion .zen-filters-panel-section-content {
-  overflow: hidden;
-  max-height: 0;
-  padding-top: 0;
-  padding-bottom: 0;
-  margin: 0;
-  overflow-x: hidden;
-  min-width: 0;
-  transition: max-height 0.4s cubic-bezier(0.32, 0.72, 0, 1), padding-top 0.4s cubic-bezier(0.32, 0.72, 0, 1), padding-bottom 0.4s cubic-bezier(0.32, 0.72, 0, 1);
-}
-.zen-filters-panel-section--accordion.zen-filters-panel-section--open .zen-filters-panel-section-content {
-  max-height: 420px;
-  padding-top: 12px;
-  padding-bottom: 20px;
-}
 .zen-filters-price-slider {
   position: relative;
   height: 32px;
@@ -1706,39 +1581,6 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
 .zen-filters-reset-btn:hover {
   color: var(--text);
 }
-/* Стрелка свернуть — фиксированный зазор до кнопки «Сбросить всё» (едино на ноутбуке и телефоне) */
-.zen-filters-panel-collapse-wrap {
-  display: flex;
-  justify-content: center;
-  margin-top: 14px;
-  flex-shrink: 0;
-}
-.zen-filters-panel-close-arrow {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  transition: color 0.2s ease, transform 0.2s ease;
-  -webkit-tap-highlight-color: transparent;
-}
-.zen-filters-panel-close-arrow:hover {
-  color: var(--text);
-  transform: translateY(-2px);
-}
-.zen-filters-panel-close-arrow:active {
-  transform: translateY(0) scale(0.96);
-}
-.zen-filters-panel-close-arrow svg {
-  width: 24px;
-  height: 24px;
-}
 @keyframes filtersOverlayFade {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -1815,57 +1657,6 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   from { transform: scale(0.95); opacity: 0.9; }
   to { transform: scale(1); opacity: 1; }
 }
-.zen-app .zen-filters-apply-btn {
-  width: 100%;
-  min-height: 52px;
-  margin-top: 24px;
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: 999px;
-  font-size: 15px;
-  font-weight: 500;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-  transition: background 0.2s ease, transform 0.15s ease;
-}
-.zen-app .zen-filters-apply-btn:hover {
-  filter: brightness(1.08);
-}
-.zen-app .zen-filters-apply-btn:active {
-  transform: scale(0.98);
-}
-
-/* Плавающая кнопка «Фильтры» на мобиле */
-.zen-app .zen-filters-fab {
-  position: fixed;
-  bottom: max(24px, env(safe-area-inset-bottom));
-  left: 50%;
-  transform: translateX(-50%);
-  min-height: 48px;
-  padding: 12px 24px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  z-index: 50;
-  cursor: pointer;
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
-}
-.zen-app .zen-filters-fab:hover {
-  border-color: var(--muted);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
-}
-@media (min-width: 769px) {
-  .zen-app .zen-filters-fab {
-    display: none;
-  }
-}
-
 /* Секция «Новинки»: заголовок в стиле RL + ссылка «Смотреть все» */
 .zen-app .zen-new-arrivals-header {
   display: flex;
