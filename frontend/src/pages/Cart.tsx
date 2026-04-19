@@ -61,6 +61,7 @@ export function Cart({ userId, onCheckout, onCartChange, onProductClick }: CartP
       <div style={styles.wrap}>
         <div className="zen-empty-state">
           <strong>{t(lang, "cartEmpty")}</strong>
+          <span>{t(lang, "cartEmptyHint")}</span>
         </div>
       </div>
     );
