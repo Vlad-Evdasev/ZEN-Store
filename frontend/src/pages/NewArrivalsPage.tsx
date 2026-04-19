@@ -395,7 +395,7 @@ const pageStyles: Record<string, React.CSSProperties> = {
   },
   bubbleRow: {
     display: "flex",
-    alignItems: "flex-start",
+    alignItems: "flex-end",
     gap: 8,
   },
   avatar: {
@@ -411,7 +411,7 @@ const pageStyles: Record<string, React.CSSProperties> = {
     fontWeight: 800,
     letterSpacing: "0.06em",
     flexShrink: 0,
-    marginTop: 2,
+    marginBottom: 0,
   },
   bubbleMain: {
     background: "var(--surface)",
