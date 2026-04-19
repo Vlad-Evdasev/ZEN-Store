@@ -1018,6 +1018,23 @@ html[data-theme="dark"] .zen-app .zen-catalog-search-row {
   border-color: var(--accent);
   box-shadow: 0 8px 28px rgba(165, 42, 42, 0.18), 0 2px 6px rgba(0, 0, 0, 0.05);
 }
+/* При открытых фильтрах пилюля визуально становится шапкой панели:
+   теряет нижние скругления, поднимается над overlay (чтобы инпут оставался
+   кликабельным и не тускнел), тень уводим только вверх, чтобы не было
+   двойной тени на стыке с панелью. */
+.zen-app .zen-catalog-search-row--filter-open {
+  border-radius: 24px 24px 0 0;
+  border-bottom-color: transparent;
+  box-shadow: 0 -12px 24px -14px rgba(0, 0, 0, 0.18);
+  z-index: 102;
+  transition:
+    border-radius 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+html[data-theme="dark"] .zen-app .zen-catalog-search-row--filter-open {
+  box-shadow: 0 -14px 28px -16px rgba(0, 0, 0, 0.7);
+}
 /* Иконка лупы внутри пилюли */
 .zen-app .zen-catalog-search-row .zen-catalog-search-icon {
   display: inline-flex;
@@ -1183,9 +1200,15 @@ html[data-theme="dark"] .zen-app .zen-filter-icon-btn-dot {
 }
 
 /* Панель фильтров (мобил): выезжает сверху, брендовый стиль */
+/* Overlay начинается ПОД пилюлей поиска, чтобы сама пилюля не тускнела: она
+   остаётся активной шапкой панели, в инпуте можно продолжать набирать текст.
+   Низ пилюли = 68px + 50px = 118px. */
 .zen-filters-overlay {
   position: fixed;
-  inset: 0;
+  left: 0;
+  right: 0;
+  top: 118px;
+  bottom: 0;
   background: rgba(255, 255, 255, 0.35);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -1201,31 +1224,35 @@ html[data-theme="dark"] .zen-app .zen-filter-icon-btn-dot {
 .zen-filters-overlay--closing {
   animation: zenFiltersOverlayOut 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
-/* Панель появляется сразу под поисковой пилюлей:
-   .zen-catalog-search-row закреплена на top:68px и имеет height:50px ⇒ её низ = 118px.
-   +8px дышащий зазор ⇒ 126px. env(safe-area-inset-top) здесь не используется,
-   потому что сам search-row задан в абсолютных px и не сдвигается safe-area'ой. */
+/* Панель стыкуется с низом пилюли и повторяет её горизонтальную геометрию:
+   width: calc(100% - 28px); max-width: 460px; left:50%; translateX(-50%).
+   Верхние скругления 0 — низ пилюли и верх панели смыкаются в одну форму;
+   нижние скругления 28px. transform-origin: top center — при открытии панель
+   «выезжает» из‑под пилюли scaleY. */
 .zen-filters-panel {
   position: fixed;
-  left: 16px;
-  right: 16px;
-  top: 126px;
+  left: 50%;
+  transform: translateX(-50%) scaleY(0.92);
+  top: 118px;
   bottom: max(20px, env(safe-area-inset-bottom));
+  width: calc(100% - 28px);
+  max-width: 460px;
   background: var(--surface);
-  border-radius: 28px;
+  border: 1px solid var(--border);
+  border-top: 0;
+  border-radius: 0 0 28px 28px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
   z-index: 101;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   transform-origin: top center;
-  transform: scaleY(0.92);
   opacity: 0;
   animation: zenFiltersPanelOpen 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   touch-action: pan-y;
   transition: transform 0.15s ease-out;
-  max-height: calc(100vh - 126px - max(20px, env(safe-area-inset-bottom)));
-  max-height: calc(100dvh - 126px - max(20px, env(safe-area-inset-bottom)));
+  max-height: calc(100vh - 118px - max(20px, env(safe-area-inset-bottom)));
+  max-height: calc(100dvh - 118px - max(20px, env(safe-area-inset-bottom)));
 }
 .zen-filters-panel--closing {
   animation: zenFiltersPanelClose 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
@@ -1586,12 +1613,12 @@ html[data-theme="dark"] .zen-app .zen-filters-apply-btn:disabled {
   to { opacity: 0; }
 }
 @keyframes zenFiltersPanelOpen {
-  from { opacity: 0; transform: scaleY(0.92) translateY(-4px); }
-  to { opacity: 1; transform: scaleY(1) translateY(0); }
+  from { opacity: 0; transform: translateX(-50%) scaleY(0.92) translateY(-4px); }
+  to { opacity: 1; transform: translateX(-50%) scaleY(1) translateY(0); }
 }
 @keyframes zenFiltersPanelClose {
-  from { opacity: 1; transform: scaleY(1) translateY(0); }
-  to { opacity: 0; transform: scaleY(0.92) translateY(-4px); }
+  from { opacity: 1; transform: translateX(-50%) scaleY(1) translateY(0); }
+  to { opacity: 0; transform: translateX(-50%) scaleY(0.92) translateY(-4px); }
 }
 /* Секция «Новинки»: заголовок в стиле RL + ссылка «Смотреть все» */
 .zen-app .zen-new-arrivals-header {

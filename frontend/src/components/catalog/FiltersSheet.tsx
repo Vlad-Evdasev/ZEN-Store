@@ -346,7 +346,7 @@ export const FiltersSheet = forwardRef<FiltersSheetHandle, FiltersSheetProps>(
           role="dialog"
           aria-label={t(lang, "filters")}
           onAnimationEnd={onAnimationEnd}
-          style={!closing && panelDragY > 0 ? { transform: `translateY(${panelDragY}px)` } : undefined}
+          style={!closing && panelDragY > 0 ? { transform: `translateX(-50%) translateY(${panelDragY}px)` } : undefined}
         >
           <div
             ref={filtersDragHandleRef}
