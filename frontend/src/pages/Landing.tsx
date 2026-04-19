@@ -67,7 +67,7 @@ export function Landing({ onGoToCatalog, onCustomOrder, onGoToArrived }: Landing
 
   const heroTitle = (content.hero_title ?? "").trim() || "RAW";
   const heroSubtitle = (content.hero_subtitle ?? "").trim() || "Оригинальная одежда из брендовых магазинов";
-  const aboutText = (content.about_text ?? "").trim() || t(lang, "profileAboutText");
+  const aboutText = (content.about_text ?? "").trim() || t(lang, "landingAboutFallback");
   const catalogCta = (content.catalog_cta ?? "").trim() || t(lang, "storeWelcomeToCatalog");
   const customOrderCta = (content.custom_order_cta ?? "").trim() || t(lang, "storeWelcomeCustomOrder");
   const arrivedTitle = (content.arrived_title ?? "").trim() || "Уже привезли";
