@@ -1000,7 +1000,10 @@ html[data-theme="dark"] .zen-app .zen-catalog-search-shelf {
   box-sizing: border-box;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 999px;
+  /* 25px — ровно половина высоты закрытой пилюли (50px). В закрытом
+     состоянии это даёт идеальный полукруг (= пилюля), а в открытом
+     состоянии углы остаются такими же, как у пилюли поиска. */
+  border-radius: 25px;
   box-shadow: 0 16px 28px -10px rgba(0, 0, 0, 0.28), 0 6px 14px -6px rgba(0, 0, 0, 0.18);
   position: fixed;
   top: 68px;
@@ -1011,11 +1014,10 @@ html[data-theme="dark"] .zen-app .zen-catalog-search-shelf {
   max-width: 460px;
   height: 50px;
   overflow: hidden;
-  /* Радиус НЕ анимируется: в обоих состояниях — 999px (капсула).
-     По мере роста высоты браузер автоматически клампит радиус на
-     половину меньшей стороны, и форма выглядит как «вытянутая
-     таблетка». Так при анимации не видно переходов между круглым
-     и прямоугольным состоянием — только плавный рост/сужение. */
+  /* Радиус фиксирован на 25px и НЕ анимируется. В закрытом состоянии
+     это = половина высоты пилюли (идеальный полукруг), в открытом —
+     те же самые углы, что и у пилюли поиска. Анимируется только
+     высота и тень, скругление остаётся одинаковым на всём пути. */
   transition:
     height 0.38s cubic-bezier(0.4, 0, 0.2, 1),
     box-shadow 0.38s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1272,9 +1274,7 @@ html[data-theme="dark"] .zen-app .zen-filter-icon-btn-dot {
 }
 .zen-filters-panel-body {
   flex: 0 0 auto;
-  /* Горизонтальный padding 28px, чтобы контент не пересекал
-     полукруглые боковые скругления пилюли в открытом состоянии. */
-  padding: 8px 28px 20px;
+  padding: 8px 20px 20px;
   position: relative;
 }
 .zen-filters-panel-drag-handle {
@@ -1392,7 +1392,7 @@ html[data-theme="dark"] .zen-app .zen-filter-icon-btn-dot {
 /* Футер панели со sticky-кнопкой «Показать N». */
 .zen-filters-panel-footer {
   flex: 0 0 auto;
-  padding: 16px 28px calc(16px + env(safe-area-inset-bottom, 0px));
+  padding: 16px 20px calc(16px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid #EEE;
 }
 .zen-filters-section {
