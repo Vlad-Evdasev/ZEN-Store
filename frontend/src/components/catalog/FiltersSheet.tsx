@@ -6,8 +6,9 @@ import {
   useRef,
   useState,
 } from "react";
-import type { MutableRefObject, RefObject } from "react";
+import type { MutableRefObject, PointerEvent as ReactPointerEvent, RefObject } from "react";
 import { t } from "../../i18n";
+import { useSettings } from "../../context/SettingsContext";
 import type { DraftFiltersValue, FiltersSheetProps } from "./FiltersSheet.types";
 
 export interface FiltersSheetHandle {
@@ -25,41 +26,47 @@ interface PriceSliderProps {
   trackRef: RefObject<HTMLDivElement>;
   activeThumbRef: MutableRefObject<"min" | "max" | null>;
   handleTrack: (clientX: number) => void;
+  formatValue: (n: number) => string;
 }
 
 function PriceSlider(p: PriceSliderProps) {
-  const bubblesMerged = p.priceMaxPercent - p.priceMinPercent < 15;
-  const currencyFormat = (n: number) => `₽${n.toLocaleString("ru-RU")}`;
+  // Подписи min/max приклеены к краям трека — так читается стабильнее и не
+  // «скачет» за полозком на мобильных. Совпадающие значения отображаем как
+  // одиночную подпись посередине.
+  const isCollapsed = p.priceMaxNum - p.priceMinNum <= 0;
+
+  const beginDragFromTrack = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    const rect = p.trackRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const trackLeft = rect.left + p.SLIDER_PAD;
+    const trackWidth = rect.width - p.SLIDER_PAD * 2;
+    const pos = trackWidth > 0 ? (e.clientX - trackLeft) / trackWidth : 0;
+    const toMin = Math.abs(pos - p.priceMinPercent / 100);
+    const toMax = Math.abs(pos - p.priceMaxPercent / 100);
+    p.activeThumbRef.current = toMin <= toMax ? "min" : "max";
+    p.handleTrack(e.clientX);
+  };
+
+  const beginDragFromThumb = (thumb: "min" | "max") => (e: ReactPointerEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    p.activeThumbRef.current = thumb;
+  };
 
   return (
     <div className="zen-filters-price-block">
       <div className="zen-filters-price-bubbles" aria-hidden>
-        {bubblesMerged ? (
-          <span
-            className="zen-filters-price-bubble zen-filters-price-bubble--merged"
-            style={{
-              left: `calc(${p.SLIDER_PAD}px + (100% - ${p.SLIDER_PAD * 2}px) * ${(p.priceMinPercent + p.priceMaxPercent) / 200 / 100})`,
-            }}
-          >
-            {currencyFormat(p.priceMinNum)} – {currencyFormat(p.priceMaxNum)}
+        {isCollapsed ? (
+          <span className="zen-filters-price-bubble zen-filters-price-bubble--sticky-center">
+            {p.formatValue(p.priceMinNum)}
           </span>
         ) : (
           <>
-            <span
-              className="zen-filters-price-bubble"
-              style={{
-                left: `calc(${p.SLIDER_PAD}px + (100% - ${p.SLIDER_PAD * 2}px) * ${p.priceMinPercent / 100})`,
-              }}
-            >
-              {currencyFormat(p.priceMinNum)}
+            <span className="zen-filters-price-bubble zen-filters-price-bubble--sticky-left">
+              {p.formatValue(p.priceMinNum)}
             </span>
-            <span
-              className="zen-filters-price-bubble"
-              style={{
-                left: `calc(${p.SLIDER_PAD}px + (100% - ${p.SLIDER_PAD * 2}px) * ${p.priceMaxPercent / 100})`,
-              }}
-            >
-              {currencyFormat(p.priceMaxNum)}
+            <span className="zen-filters-price-bubble zen-filters-price-bubble--sticky-right">
+              {p.formatValue(p.priceMaxNum)}
             </span>
           </>
         )}
@@ -67,29 +74,7 @@ function PriceSlider(p: PriceSliderProps) {
       <div
         ref={p.trackRef}
         className="zen-filters-price-slider"
-        onPointerDown={(e) => {
-          if (e.button !== 0) return;
-          const rect = p.trackRef.current?.getBoundingClientRect();
-          if (!rect) return;
-          const trackLeft = rect.left + p.SLIDER_PAD;
-          const trackWidth = rect.width - p.SLIDER_PAD * 2;
-          const pos = trackWidth > 0 ? (e.clientX - trackLeft) / trackWidth : 0;
-          const toMin = Math.abs(pos - p.priceMinPercent / 100);
-          const toMax = Math.abs(pos - p.priceMaxPercent / 100);
-          p.activeThumbRef.current = toMin <= toMax ? "min" : "max";
-          p.handleTrack(e.clientX);
-          (e.target as HTMLElement).setPointerCapture(e.pointerId);
-        }}
-        onPointerMove={(e) => {
-          if (p.activeThumbRef.current) p.handleTrack(e.clientX);
-        }}
-        onPointerUp={(e) => {
-          (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-          p.activeThumbRef.current = null;
-        }}
-        onPointerLeave={() => {
-          p.activeThumbRef.current = null;
-        }}
+        onPointerDown={beginDragFromTrack}
       >
         <div className="zen-filters-price-slider-track" />
         <div
@@ -104,22 +89,14 @@ function PriceSlider(p: PriceSliderProps) {
           style={{
             left: `calc(${p.SLIDER_PAD}px + (100% - ${p.SLIDER_PAD * 2}px) * ${p.priceMinPercent / 100})`,
           }}
-          onPointerDown={(e) => {
-            e.stopPropagation();
-            p.activeThumbRef.current = "min";
-            p.trackRef.current?.setPointerCapture(e.pointerId);
-          }}
+          onPointerDown={beginDragFromThumb("min")}
         />
         <div
           className="zen-filters-price-slider-thumb zen-filters-price-slider-thumb--max"
           style={{
             left: `calc(${p.SLIDER_PAD}px + (100% - ${p.SLIDER_PAD * 2}px) * ${p.priceMaxPercent / 100})`,
           }}
-          onPointerDown={(e) => {
-            e.stopPropagation();
-            p.activeThumbRef.current = "max";
-            p.trackRef.current?.setPointerCapture(e.pointerId);
-          }}
+          onPointerDown={beginDragFromThumb("max")}
         />
       </div>
     </div>
@@ -159,6 +136,7 @@ export const FiltersSheet = forwardRef<FiltersSheetHandle, FiltersSheetProps>(
     const priceSliderTrackRef = useRef<HTMLDivElement>(null);
     const sliderActiveThumbRef = useRef<"min" | "max" | null>(null);
     const SLIDER_PAD = 14;
+    const { formatPrice } = useSettings();
 
     const filtersDragHandleRef = useRef<HTMLDivElement>(null);
     const touchStartYRef = useRef(0);
@@ -277,6 +255,33 @@ export const FiltersSheet = forwardRef<FiltersSheetHandle, FiltersSheetProps>(
       return () => window.removeEventListener("keydown", onKey);
     }, [open]);
 
+    // Глобальные pointer-обработчики для ползунков цены: пока любой из thumbs
+    // «захвачен», мы продолжаем двигать выбранное значение даже если палец/курсор
+    // уходит за пределы трека. Так драг на мобильных не обрывается.
+    const handleTrackRef = useRef(handlePriceSliderTrack);
+    useEffect(() => {
+      handleTrackRef.current = handlePriceSliderTrack;
+    });
+    useEffect(() => {
+      if (!open) return;
+      const onMove = (e: PointerEvent) => {
+        if (!sliderActiveThumbRef.current) return;
+        e.preventDefault();
+        handleTrackRef.current(e.clientX);
+      };
+      const onUp = () => {
+        sliderActiveThumbRef.current = null;
+      };
+      window.addEventListener("pointermove", onMove, { passive: false });
+      window.addEventListener("pointerup", onUp);
+      window.addEventListener("pointercancel", onUp);
+      return () => {
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+        window.removeEventListener("pointercancel", onUp);
+      };
+    }, [open]);
+
     useEffect(() => {
       if (!open && !closing) return;
       const prev = document.body.style.overflow;
@@ -385,6 +390,7 @@ export const FiltersSheet = forwardRef<FiltersSheetHandle, FiltersSheetProps>(
                   trackRef={priceSliderTrackRef}
                   activeThumbRef={sliderActiveThumbRef}
                   handleTrack={handlePriceSliderTrack}
+                  formatValue={formatPrice}
                 />
                 <div className="zen-filters-sort-round">
                   <button

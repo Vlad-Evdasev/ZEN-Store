@@ -978,7 +978,7 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
     rgba(250, 249, 247, 0) 100%
   );
 }
-.zen-app.theme-dark .zen-catalog-search-shelf {
+html[data-theme="dark"] .zen-app .zen-catalog-search-shelf {
   background: linear-gradient(
     to bottom,
     var(--bg) 0%,
@@ -1009,7 +1009,7 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   max-width: 460px;
 }
 /* Тёмная тема — плотная пилюля на тёмной поверхности */
-.zen-app.theme-dark .zen-catalog-search-row {
+html[data-theme="dark"] .zen-app .zen-catalog-search-row {
   background: var(--surface);
   border-color: rgba(255, 255, 255, 0.08);
   box-shadow: 0 18px 32px -10px rgba(0, 0, 0, 0.70), 0 6px 14px -6px rgba(0, 0, 0, 0.45);
@@ -1114,7 +1114,7 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   border-color: var(--muted);
   background: rgba(0, 0, 0, 0.04);
 }
-.zen-app.theme-dark .zen-catalog-search-row .zen-filter-icon-btn:hover {
+html[data-theme="dark"] .zen-app .zen-catalog-search-row .zen-filter-icon-btn:hover {
   background: rgba(255, 255, 255, 0.06);
 }
 .zen-app .zen-catalog-search-row .zen-filter-icon-btn:active {
@@ -1146,7 +1146,7 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   box-sizing: content-box;
   pointer-events: none;
 }
-.zen-app.theme-dark .zen-filter-icon-btn-dot {
+html[data-theme="dark"] .zen-app .zen-filter-icon-btn-dot {
   border-color: var(--surface);
 }
 
@@ -1330,20 +1330,26 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   position: relative;
   height: 22px;
   margin-bottom: 4px;
+  padding: 0 14px;
 }
 .zen-filters-price-bubble {
   position: absolute;
   top: 0;
-  transform: translateX(-50%);
   font-size: 13px;
   font-weight: 600;
   color: #111;
   white-space: nowrap;
   line-height: 22px;
-  transition: left 0.08s linear;
 }
-.zen-filters-price-bubble--merged {
-  font-size: 13px;
+.zen-filters-price-bubble--sticky-left {
+  left: 14px;
+}
+.zen-filters-price-bubble--sticky-right {
+  right: 14px;
+}
+.zen-filters-price-bubble--sticky-center {
+  left: 50%;
+  transform: translateX(-50%);
 }
 /* Футер панели со sticky-кнопкой «Показать N». */
 .zen-filters-panel-footer {
@@ -1482,91 +1488,91 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
    здесь мы перекрываем их, используя токены (--surface, --text,
    --border, --muted) + инверсный контраст для активных состояний.
    ────────────────────────────────────────────────────────── */
-.zen-app.theme-dark .zen-filters-overlay {
+html[data-theme="dark"] .zen-app .zen-filters-overlay {
   background: rgba(0, 0, 0, 0.45);
 }
 @supports not ((backdrop-filter: blur(0)) or (-webkit-backdrop-filter: blur(0))) {
-  .zen-app.theme-dark .zen-filters-overlay {
+  html[data-theme="dark"] .zen-app .zen-filters-overlay {
     background: rgba(0, 0, 0, 0.72);
   }
 }
-.zen-app.theme-dark .zen-filters-panel {
+html[data-theme="dark"] .zen-app .zen-filters-panel {
   background: var(--surface);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
 }
-.zen-app.theme-dark .zen-catalog-search-row .zen-filter-icon-btn .zen-filter-icon-btn-x {
+html[data-theme="dark"] .zen-app .zen-catalog-search-row .zen-filter-icon-btn .zen-filter-icon-btn-x {
   color: var(--text);
 }
-.zen-app.theme-dark .zen-filters-panel-drag-bar {
+html[data-theme="dark"] .zen-app .zen-filters-panel-drag-bar {
   background: rgba(255, 255, 255, 0.22);
 }
-.zen-app.theme-dark .zen-filters-section-label,
-.zen-app.theme-dark .zen-filters-reset-top {
+html[data-theme="dark"] .zen-app .zen-filters-section-label,
+html[data-theme="dark"] .zen-app .zen-filters-reset-top {
   color: var(--muted);
 }
-.zen-app.theme-dark .zen-filters-reset-top:active {
+html[data-theme="dark"] .zen-app .zen-filters-reset-top:active {
   color: var(--text);
 }
-.zen-app.theme-dark .zen-filters-divider,
-.zen-app.theme-dark .zen-filters-panel-footer {
+html[data-theme="dark"] .zen-app .zen-filters-divider,
+html[data-theme="dark"] .zen-app .zen-filters-panel-footer {
   border-color: var(--border);
 }
-.zen-app.theme-dark .zen-filters-divider {
+html[data-theme="dark"] .zen-app .zen-filters-divider {
   background: var(--border);
 }
-.zen-app.theme-dark .zen-filters-panel-footer {
+html[data-theme="dark"] .zen-app .zen-filters-panel-footer {
   border-top-color: var(--border);
 }
 /* Слайдер цены */
-.zen-app.theme-dark .zen-filters-price-slider-track {
+html[data-theme="dark"] .zen-app .zen-filters-price-slider-track {
   background: var(--border);
 }
-.zen-app.theme-dark .zen-filters-price-slider-range {
+html[data-theme="dark"] .zen-app .zen-filters-price-slider-range {
   background: var(--text);
 }
-.zen-app.theme-dark .zen-filters-price-slider-thumb {
+html[data-theme="dark"] .zen-app .zen-filters-price-slider-thumb {
   background: var(--surface-elevated);
   border-color: var(--border);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
-.zen-app.theme-dark .zen-filters-price-slider-thumb:active {
+html[data-theme="dark"] .zen-app .zen-filters-price-slider-thumb:active {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
 }
-.zen-app.theme-dark .zen-filters-price-slider-thumb::after {
+html[data-theme="dark"] .zen-app .zen-filters-price-slider-thumb::after {
   background: rgba(255, 255, 255, 0.08);
 }
-.zen-app.theme-dark .zen-filters-price-bubble {
+html[data-theme="dark"] .zen-app .zen-filters-price-bubble {
   color: var(--text);
 }
 /* Круглые кнопки сортировки */
-.zen-app.theme-dark .zen-filters-sort-round-btn {
+html[data-theme="dark"] .zen-app .zen-filters-sort-round-btn {
   background: var(--surface-elevated);
   border-color: var(--border);
   color: var(--text);
 }
-.zen-app.theme-dark .zen-filters-sort-round-btn--active {
+html[data-theme="dark"] .zen-app .zen-filters-sort-round-btn--active {
   background: var(--text);
   color: var(--surface);
   border-color: var(--text);
 }
 /* Чипы категорий/брендов */
-.zen-app.theme-dark .zen-filters-chip {
+html[data-theme="dark"] .zen-app .zen-filters-chip {
   background: var(--surface-elevated);
   border-color: var(--border);
   color: var(--text);
 }
-.zen-app.theme-dark .zen-filters-chip-active {
+html[data-theme="dark"] .zen-app .zen-filters-chip-active {
   background: var(--text);
   color: var(--surface);
   border-color: var(--text);
 }
 /* Главная кнопка «Показать N товаров» */
-.zen-app.theme-dark .zen-filters-apply-btn {
+html[data-theme="dark"] .zen-app .zen-filters-apply-btn {
   background: var(--text);
   color: var(--surface);
 }
-.zen-app.theme-dark .zen-filters-apply-btn--disabled,
-.zen-app.theme-dark .zen-filters-apply-btn:disabled {
+html[data-theme="dark"] .zen-app .zen-filters-apply-btn--disabled,
+html[data-theme="dark"] .zen-app .zen-filters-apply-btn:disabled {
   background: var(--surface-elevated);
   color: var(--muted);
 }
