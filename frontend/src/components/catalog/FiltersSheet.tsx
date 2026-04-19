@@ -91,6 +91,32 @@ export function FiltersSheet(props: FiltersSheetProps) {
     return range;
   })();
 
+  const toggleCategoryInDraft = (code: string) => {
+    setDraft((d) => {
+      const next = new Set(d.categories);
+      if (code === "all") {
+        return { ...d, categories: new Set(["all"]) };
+      }
+      if (next.has("all")) {
+        return { ...d, categories: new Set([code]) };
+      }
+      if (next.has(code)) {
+        next.delete(code);
+        if (next.size === 0) return { ...d, categories: new Set(["all"]) };
+        return { ...d, categories: next };
+      }
+      next.add(code);
+      return { ...d, categories: next };
+    });
+  };
+
+  const brandHasActive = draft.brand !== "all";
+
+  const categoriesSelectedLabels = props.categoryTabs
+    .filter((ct) => ct.code !== "all" && draft.categories.has(ct.code))
+    .map((ct) => ({ code: ct.code, label: ct.label }));
+  const categoriesHasActive = !draft.categories.has("all") && categoriesSelectedLabels.length > 0;
+
   useEffect(() => {
     if (open) {
       setDraft({
@@ -321,21 +347,117 @@ export function FiltersSheet(props: FiltersSheetProps) {
             </>
           )}
           {props.uniqueBrands.length >= 2 && (
-            <div className="zen-filters-facet">
-              <span className="zen-filters-facet-name">{t(lang, "brand")}</span>
+            <>
+              <div
+                className={`zen-filters-facet ${sectionOpen.brand ? "zen-filters-facet--open" : ""}`}
+                onClick={() => setSectionOpen((s) => ({ ...s, brand: !s.brand }))}
+                role="button"
+                aria-expanded={sectionOpen.brand}
+              >
+                <span className="zen-filters-facet-name">{t(lang, "brand")}</span>
+                <span className="zen-filters-facet-values">
+                  {brandHasActive ? (
+                    <span className="zen-filters-facet-chip">
+                      <span className="zen-filters-facet-chip-label">{draft.brand}</span>
+                      <button
+                        type="button"
+                        className="zen-filters-facet-chip-x"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDraft((d) => ({ ...d, brand: "all" }));
+                        }}
+                        aria-label="×"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ) : (
+                    <span className="zen-filters-facet-empty">{t(lang, "filtersAllValue")}</span>
+                  )}
+                </span>
+                <span className="zen-filters-facet-arrow" aria-hidden>▸</span>
+              </div>
+              {sectionOpen.brand && (
+                <div className="zen-filters-facet-expanded">
+                  <div className="zen-filters-chip-row-wrap">
+                    <div className="zen-filters-chip-row">
+                      <button
+                        type="button"
+                        className={`zen-filters-chip ${draft.brand === "all" ? "zen-filters-chip-active" : ""}`}
+                        onClick={() => setDraft((d) => ({ ...d, brand: "all" }))}
+                      >
+                        {t(lang, "all")}
+                      </button>
+                      {props.uniqueBrands.map((b) => (
+                        <button
+                          key={b}
+                          type="button"
+                          className={`zen-filters-chip ${draft.brand === b ? "zen-filters-chip-active" : ""}`}
+                          onClick={() => setDraft((d) => ({ ...d, brand: b }))}
+                        >
+                          {b}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+          <>
+            <div
+              className={`zen-filters-facet ${sectionOpen.categories ? "zen-filters-facet--open" : ""}`}
+              onClick={() => setSectionOpen((s) => ({ ...s, categories: !s.categories }))}
+              role="button"
+              aria-expanded={sectionOpen.categories}
+            >
+              <span className="zen-filters-facet-name">{t(lang, "categories")}</span>
               <span className="zen-filters-facet-values">
-                <span className="zen-filters-facet-empty">{t(lang, "filtersAllValue")}</span>
+                {categoriesHasActive ? (
+                  categoriesSelectedLabels.map(({ code, label }) => (
+                    <span key={code} className="zen-filters-facet-chip">
+                      <span className="zen-filters-facet-chip-label">{label}</span>
+                      <button
+                        type="button"
+                        className="zen-filters-facet-chip-x"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleCategoryInDraft(code);
+                        }}
+                        aria-label="×"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))
+                ) : (
+                  <span className="zen-filters-facet-empty">{t(lang, "filtersAllValue")}</span>
+                )}
               </span>
               <span className="zen-filters-facet-arrow" aria-hidden>▸</span>
             </div>
-          )}
-          <div className="zen-filters-facet">
-            <span className="zen-filters-facet-name">{t(lang, "categories")}</span>
-            <span className="zen-filters-facet-values">
-              <span className="zen-filters-facet-empty">{t(lang, "filtersAllValue")}</span>
-            </span>
-            <span className="zen-filters-facet-arrow" aria-hidden>▸</span>
-          </div>
+            {sectionOpen.categories && (
+              <div className="zen-filters-facet-expanded">
+                <div className="zen-filters-chip-row-wrap">
+                  <div className="zen-filters-chip-row">
+                    {props.categoryTabs.map(({ code, label }) => {
+                      const isSelected = code === "all" ? draft.categories.has("all") : draft.categories.has(code);
+                      return (
+                        <button
+                          key={code}
+                          type="button"
+                          className={`zen-filters-chip ${isSelected ? "zen-filters-chip-active" : ""}`}
+                          onClick={() => toggleCategoryInDraft(code)}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         </div>
 
         {/* TODO: final footer (Task 8) */}
