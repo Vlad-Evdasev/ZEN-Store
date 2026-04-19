@@ -132,6 +132,7 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
         <div style={styles.thread}>
           <BotBubble>
             <div style={styles.botBubbleTitle}>{t(lang, "customOrderSubtitle")}</div>
+            <div style={styles.botBubbleSubtitle}>{t(lang, "customOrderSubtitleHint")}</div>
           </BotBubble>
 
           {/* Photo preview bubble (if attached) */}
@@ -335,6 +336,12 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: 1.2,
     letterSpacing: "-0.01em",
     color: "var(--text)",
+  },
+  botBubbleSubtitle: {
+    fontSize: 12.5,
+    color: "var(--muted)",
+    marginTop: 4,
+    lineHeight: 1.4,
   },
   /* Author row */
   authorRow: {
