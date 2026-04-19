@@ -1,7 +1,7 @@
 import React from "react";
 
 interface BottomNavBarProps {
-  activeTab: "catalog" | "custom" | "arrivals";
+  activeTab: "catalog" | "custom" | "arrivals" | "none";
   onCatalog: () => void;
   onCustomOrder: () => void;
   onArrivals: () => void;

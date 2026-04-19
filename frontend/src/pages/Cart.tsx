@@ -1,18 +1,17 @@
 import { useEffect, useState } from "react";
 import { getCart, removeFromCart, type CartItem } from "../api";
-import { BackButton } from "../components/BackButton";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 
 interface CartProps {
   userId: string;
-  onBack: () => void;
+  onBack?: () => void;
   onCheckout: () => void;
   onCartChange?: () => void;
   onProductClick?: (productId: number) => void;
 }
 
-export function Cart({ userId, onBack, onCheckout, onCartChange, onProductClick }: CartProps) {
+export function Cart({ userId, onCheckout, onCartChange, onProductClick }: CartProps) {
   const { formatPrice, settings } = useSettings();
   const lang = settings.lang;
   const [items, setItems] = useState<CartItem[]>([]);
@@ -60,7 +59,6 @@ export function Cart({ userId, onBack, onCheckout, onCartChange, onProductClick 
   if (items.length === 0) {
     return (
       <div style={styles.wrap}>
-        <BackButton onClick={onBack} label={t(lang, "back")} />
         <div className="zen-empty-state">
           <strong>{t(lang, "cartEmpty")}</strong>
         </div>
@@ -70,8 +68,6 @@ export function Cart({ userId, onBack, onCheckout, onCartChange, onProductClick 
 
   return (
     <div style={styles.wrap}>
-      <BackButton onClick={onBack} label={t(lang, "back")} />
-
       <div style={styles.titleRow}>
         <h1 className="zen-page-title" style={styles.title}>{t(lang, "cart")}</h1>
         {totalCount > 0 && <span style={styles.count}>{totalCount}</span>}

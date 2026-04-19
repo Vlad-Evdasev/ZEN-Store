@@ -1,6 +1,5 @@
 import type { Product } from "../api";
 import { ProductCard } from "../components/ProductCard";
-import { BackButton } from "../components/BackButton";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 
@@ -9,7 +8,7 @@ interface FavoritesProps {
   wishlistIds: Set<number>;
   onProductClick: (id: number) => void;
   onToggleWishlist: (id: number) => void;
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 export function Favorites({
@@ -17,7 +16,6 @@ export function Favorites({
   wishlistIds,
   onProductClick,
   onToggleWishlist,
-  onBack,
 }: FavoritesProps) {
   const { settings } = useSettings();
   const lang = settings.lang;
@@ -25,7 +23,6 @@ export function Favorites({
 
   return (
     <div style={styles.wrap}>
-      <BackButton onClick={onBack} label={t(lang, "back")} />
       <div style={styles.titleRow}>
         <h1 className="zen-page-title" style={styles.title}>{t(lang, "favoritesTitle")}</h1>
         {favorites.length > 0 && <span style={styles.count}>{favorites.length}</span>}
