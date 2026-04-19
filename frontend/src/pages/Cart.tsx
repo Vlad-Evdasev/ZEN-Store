@@ -46,7 +46,6 @@ export function Cart({ userId, onCheckout, onCartChange, onProductClick }: CartP
   };
 
   const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  const totalCount = items.reduce((sum, i) => sum + i.quantity, 0);
 
   if (loading) {
     return (
@@ -69,12 +68,6 @@ export function Cart({ userId, onCheckout, onCartChange, onProductClick }: CartP
 
   return (
     <div style={styles.wrap}>
-      {totalCount > 0 && (
-        <div style={styles.titleRow}>
-          <span style={styles.count}>{totalCount}</span>
-        </div>
-      )}
-
       <div style={styles.list}>
         {items.map((item) => (
           <div
@@ -121,22 +114,6 @@ export function Cart({ userId, onCheckout, onCartChange, onProductClick }: CartP
 
 const styles: Record<string, React.CSSProperties> = {
   wrap: { maxWidth: 420, margin: "0 auto" },
-  titleRow: {
-    display: "flex",
-    alignItems: "baseline",
-    gap: 10,
-    marginBottom: 16,
-    padding: "0 4px",
-  },
-  title: {
-    marginBottom: 0,
-  },
-  count: {
-    fontSize: 13,
-    color: "var(--muted)",
-    letterSpacing: "0.04em",
-    fontVariantNumeric: "tabular-nums",
-  },
   list: { display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 },
   item: {
     display: "flex",
