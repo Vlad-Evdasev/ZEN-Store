@@ -178,15 +178,22 @@ export function HeaderArcMenu({
     top: anchor?.y ?? 0,
   };
 
+  // Оверлей рендерится всегда (когда вообще есть anchor), чтобы работал fade-out
+  // при закрытии. Видимость/pointer-events переключаются через open.
+  const overlayStyle: React.CSSProperties = {
+    ...styles.overlay,
+    opacity: open ? 1 : 0,
+    pointerEvents: open ? "auto" : "none",
+  };
+
   return createPortal(
     <>
-      {open && (
-        <div
-          style={styles.overlay}
-          onClick={onClose}
-          aria-hidden
-        />
-      )}
+      <div
+        className="zen-arc-overlay"
+        style={overlayStyle}
+        onClick={onClose}
+        aria-hidden
+      />
       <div className="zen-arc-layer" style={layerStyle} aria-hidden={!open}>
         {items.map(({ key, label, onClick, Icon, badge }, i) => (
           <button
@@ -212,10 +219,15 @@ export function HeaderArcMenu({
 // Overlay (1000) и layer (1001) намеренно выше всего основного UI — меню портал-рендерится
 // в document.body, поэтому числа сравниваются глобально, без stacking-context-ловушек.
 const styles: Record<string, React.CSSProperties> = {
+  // Затемнение + блюр заднего фона при раскрытом меню.
+  // Анимируем opacity, чтобы при закрытии был плавный fade-out (а не мгновенный unmount).
   overlay: {
     position: "fixed",
     inset: 0,
-    background: "transparent",
+    background: "rgba(0, 0, 0, 0.45)",
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
+    transition: "opacity 280ms cubic-bezier(0.22, 1, 0.36, 1)",
     zIndex: 1000,
   },
   layer: {
