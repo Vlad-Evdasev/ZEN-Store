@@ -1,16 +1,14 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { flushSync } from "react-dom";
 import { useTelegram } from "./hooks/useTelegram";
 import { TelegramAuth } from "./components/TelegramAuth";
 import { useWishlist } from "./hooks/useWishlist";
-import { getProducts, getStores, getCategories, getCart, getSupportUnreadCount, getOrders, type Product, type Store, type Category, type Order } from "./api";
+import { getProducts, getStores, getCategories, getCart, getSupportUnreadCount, type Product, type Store, type Category } from "./api";
 import { Catalog } from "./pages/Catalog";
 import { Cart } from "./pages/Cart";
 import { Favorites } from "./pages/Favorites";
 import { ProductPage } from "./pages/ProductPage";
 import { Checkout } from "./pages/Checkout";
-import { Profile } from "./pages/Profile";
-import { DeliveryTerms } from "./pages/DeliveryTerms";
 import { Support } from "./pages/Support";
 import { Reviews } from "./pages/Reviews";
 import { NewArrivalsPage } from "./pages/NewArrivalsPage";
@@ -23,7 +21,7 @@ import { SettingsSync } from "./components/SettingsSync";
 import { useSettings } from "./context/SettingsContext";
 import { t } from "./i18n";
 
-type Page = "catalog" | "cart" | "product" | "checkout" | "profile" | "reviews" | "favorites" | "newArrivals" | "customOrder" | "settings" | "history" | "deliveryTerms" | "support";
+type Page = "catalog" | "cart" | "product" | "checkout" | "reviews" | "favorites" | "newArrivals" | "customOrder" | "settings" | "history" | "support";
 
 const SELLER_LINK = import.meta.env.VITE_SELLER_LINK || "";
 
@@ -81,7 +79,6 @@ function App() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [cartCount, setCartCount] = useState(0);
   const [supportUnreadCount, setSupportUnreadCount] = useState(0);
-  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const hamburgerRef = useRef<HTMLButtonElement | null>(null);
   const [productReturnTo, setProductReturnTo] = useState<Page | null>(null);
@@ -94,6 +91,13 @@ function App() {
       history.scrollRestoration = "manual";
     }
   }, []);
+
+  const refreshSupportUnread = useCallback(() => {
+    if (!userId) return;
+    getSupportUnreadCount(userId)
+      .then(({ count }) => setSupportUnreadCount(Number(count) || 0))
+      .catch(() => {});
+  }, [userId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -122,30 +126,21 @@ function App() {
       getSupportUnreadCount(userId).then(({ count }) => {
         if (!cancelled) setSupportUnreadCount(Number(count) || 0);
       }).catch(() => {});
-      getOrders(userId)
-        .then((orders) => {
-          if (!cancelled) setRecentOrders(orders.slice(0, 3));
-        })
-        .catch(() => {});
-    } else if (!cancelled) {
-      setRecentOrders([]);
     }
 
     return () => { cancelled = true; };
   }, [userId]);
 
   useEffect(() => {
-    if ((page !== "profile" && page !== "support") || !userId) return;
-    getSupportUnreadCount(userId).then(({ count }) => setSupportUnreadCount(Number(count) || 0)).catch(() => {});
-  }, [page, userId]);
+    if (page !== "support") return;
+    refreshSupportUnread();
+  }, [page, refreshSupportUnread]);
 
   useEffect(() => {
     if (!userId) return;
-    const t = setInterval(() => {
-      getSupportUnreadCount(userId).then(({ count }) => setSupportUnreadCount(Number(count) || 0)).catch(() => {});
-    }, 25000);
+    const t = setInterval(refreshSupportUnread, 25000);
     return () => clearInterval(t);
-  }, [userId]);
+  }, [userId, refreshSupportUnread]);
 
   const scrollableCatalogPages: Page[] = ["catalog", "newArrivals"];
   useEffect(() => {
@@ -212,10 +207,6 @@ function App() {
     setMenuOpen(false);
     setPage("cart");
   };
-  const openProfile = () => {
-    setMenuOpen(false);
-    setPage("profile");
-  };
   const openReviews = () => {
     setMenuOpen(false);
     setPage("reviews");
@@ -231,10 +222,6 @@ function App() {
   const openHistory = () => {
     setMenuOpen(false);
     setPage("history");
-  };
-  const openDeliveryTerms = () => {
-    setMenuOpen(false);
-    setPage("deliveryTerms");
   };
   const openSupport = () => {
     setMenuOpen(false);
@@ -290,8 +277,9 @@ function App() {
             open={menuOpen}
             lang={lang}
             anchorRef={hamburgerRef}
+            supportUnreadCount={supportUnreadCount}
             onClose={() => setMenuOpen(false)}
-            onProfile={openProfile}
+            onSupport={openSupport}
             onHistory={openHistory}
             onReviews={openReviews}
             onSettings={openSettings}
@@ -382,31 +370,13 @@ function App() {
             sellerLink={SELLER_LINK}
           />
         )}
-        {page === "profile" && (
-          <Profile
-            userName={userName}
-            firstName={firstName}
-            onBack={openCatalog}
-            onOpenDeliveryTerms={openDeliveryTerms}
-            onOpenSupport={openSupport}
-            supportUnreadCount={supportUnreadCount}
-            recentOrders={recentOrders}
-            favoriteProducts={products.filter((p) => wishlistIds.has(p.id)).slice(0, 5)}
-            onOpenHistory={() => setPage("history")}
-            onOpenSettings={() => setPage("settings")}
-            onProductClick={(id) => openProduct(id, "profile")}
-          />
-        )}
-        {page === "deliveryTerms" && (
-          <DeliveryTerms onBack={openProfile} />
-        )}
         {page === "support" && (
           <Support
             userId={userId || ""}
             userName={userName}
             firstName={firstName}
-            onBack={openProfile}
-            onUnreadCountChange={userId ? () => getSupportUnreadCount(userId).then(({ count }) => setSupportUnreadCount(Number(count) || 0)).catch(() => {}) : undefined}
+            supportUnreadCount={supportUnreadCount}
+            onUnreadCountChange={userId ? refreshSupportUnread : undefined}
           />
         )}
         {page === "reviews" && (
@@ -430,7 +400,7 @@ function App() {
         </div>
       </main>
 
-      {(["catalog", "customOrder", "newArrivals", "profile", "history", "settings", "reviews"] as Page[]).includes(page) && (
+      {(["catalog", "customOrder", "newArrivals", "support", "history", "settings", "reviews"] as Page[]).includes(page) && (
         <BottomNavBar
           activeTab={page === "customOrder" ? "custom" : page === "newArrivals" ? "arrivals" : "catalog"}
           onCatalog={() => setPage("catalog")}
