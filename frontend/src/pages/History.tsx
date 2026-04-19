@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { getOrders, type Order } from "../api";
-import { BackButton } from "../components/BackButton";
 import { useSettings } from "../context/SettingsContext";
 import type { Lang } from "../context/SettingsContext";
 import { t } from "../i18n";
@@ -27,14 +26,12 @@ function formatDate(s: string) {
 
 type HistoryFilter = "all" | "processing" | "in_progress" | "delivered";
 
-export function History({ userId, onBack, onProductClick }: HistoryProps) {
+export function History({ userId, onBack: _onBack, onProductClick }: HistoryProps) {
   const { formatPrice, settings } = useSettings();
   const lang = settings.lang;
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<HistoryFilter>("all");
-  const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
-  const filterDropdownRef = useRef<HTMLDivElement>(null);
 
   const filterOptions: { value: HistoryFilter; labelKey: string }[] = [
     { value: "all", labelKey: "historyFilterAll" },
@@ -42,20 +39,6 @@ export function History({ userId, onBack, onProductClick }: HistoryProps) {
     { value: "in_progress", labelKey: "historyFilterInProgress" },
     { value: "delivered", labelKey: "historyFilterDelivered" },
   ];
-
-  const currentFilterLabel = filterOptions.find((o) => o.value === filter)?.labelKey ?? "historyFilterAll";
-
-  useEffect(() => {
-    const close = (e: MouseEvent) => {
-      if (filterDropdownRef.current && !filterDropdownRef.current.contains(e.target as Node)) {
-        setFilterDropdownOpen(false);
-      }
-    };
-    if (filterDropdownOpen) {
-      document.addEventListener("click", close);
-      return () => document.removeEventListener("click", close);
-    }
-  }, [filterDropdownOpen]);
 
   useEffect(() => {
     getOrders(userId).then(setOrders).catch(console.error).finally(() => setLoading(false));
@@ -79,7 +62,6 @@ export function History({ userId, onBack, onProductClick }: HistoryProps) {
   if (loading) {
     return (
       <div style={styles.wrap}>
-        <BackButton onClick={onBack} label={t(lang, "backToCatalog")} />
         <p style={styles.loading}>{t(lang, "loading")}</p>
       </div>
     );
@@ -88,44 +70,28 @@ export function History({ userId, onBack, onProductClick }: HistoryProps) {
   return (
     <div style={styles.wrap}>
       <header style={styles.header}>
-        <BackButton onClick={onBack} label={t(lang, "backToCatalog")} />
-        <div style={styles.titleAndFilterWrap}>
-          <h1 className="zen-page-title" style={styles.title}>{t(lang, "historyTitle")}</h1>
-          <div style={styles.filterDropdownWrap} ref={filterDropdownRef} role="group" aria-label={t(lang, "historyTitle")}>
-          <button
-            type="button"
-            className="settings-opt-btn"
-            onClick={() => setFilterDropdownOpen((v) => !v)}
-            style={{ ...styles.filterDropdownTrigger, ...(filterDropdownOpen ? styles.filterTabActive : {}) }}
-            aria-expanded={filterDropdownOpen}
-            aria-haspopup="listbox"
-          >
-            {t(lang, currentFilterLabel)}
-            <span style={styles.filterDropdownChevron}>{filterDropdownOpen ? "▲" : "▼"}</span>
-          </button>
-          {filterDropdownOpen && (
-            <ul style={styles.filterDropdownList} role="listbox">
-              {filterOptions.map((opt) => (
-                <li key={opt.value} role="option" aria-selected={filter === opt.value}>
-                  <button
-                    type="button"
-                    className="settings-opt-btn"
-                    style={{
-                      ...styles.filterDropdownItem,
-                      ...(filter === opt.value ? styles.filterTabActive : {}),
-                    }}
-                    onClick={() => {
-                      setFilter(opt.value);
-                      setFilterDropdownOpen(false);
-                    }}
-                  >
-                    {t(lang, opt.labelKey)}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          </div>
+        <h1 className="zen-page-title" style={styles.title}>{t(lang, "historyTitle")}</h1>
+        <div style={styles.filterRow} role="tablist" aria-label={t(lang, "historyTitle")}>
+          {filterOptions.map((opt) => {
+            const count =
+              opt.value === "all" ? orders.length :
+              opt.value === "processing" ? processingOrders.length :
+              opt.value === "in_progress" ? inTransitOrders.length :
+              deliveredOrders.length;
+            const active = filter === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setFilter(opt.value)}
+                style={{ ...styles.filterPill, ...(active ? styles.filterPillActive : {}) }}
+              >
+                {t(lang, opt.labelKey)}{opt.value === "all" ? ` · ${count}` : ""}
+              </button>
+            );
+          })}
         </div>
       </header>
 
@@ -192,13 +158,14 @@ function OrderCard({
   onProductClick?: (productId: number) => void;
 }) {
   let items: { product_id?: number; image_url?: string; name?: string; price?: number; quantity?: number }[] = [];
-  try {
-    items = JSON.parse(order.items);
-  } catch {}
+  try { items = JSON.parse(order.items); } catch {}
   const firstItem = items[0];
   const productId = firstItem?.product_id;
   const imageUrl = firstItem?.image_url;
   const isClickable = onProductClick && productId != null;
+
+  const isDelivered = order.status === "delivered" || order.status === "completed";
+  const statusLabel = orderStatusLabel(order.status, lang, t);
 
   return (
     <div
@@ -208,32 +175,37 @@ function OrderCard({
       tabIndex={isClickable ? 0 : undefined}
       onKeyDown={isClickable ? (e) => { if (e.key === "Enter" || e.key === " ") onProductClick!(productId); } : undefined}
     >
-      <div style={styles.cardHead}>
-        <span style={styles.orderId}>#{order.id}</span>
-        <span style={styles.date}>{formatDate(order.created_at)}</span>
+      <div style={styles.timelineCol} aria-hidden>
+        <span style={{ ...styles.timelineDot, ...(isDelivered ? styles.timelineDotDone : {}) }} />
+        <span style={styles.timelineLine} />
       </div>
-      <div style={styles.cardBody}>
-        {imageUrl && (
-          <img src={imageUrl} alt="" style={styles.cardThumb} />
-        )}
-        <div style={styles.cardContent}>
-          <div style={styles.items}>
-            {items.map((i, idx) => (
-              <p key={idx} style={styles.item}>
-                {i.name || "Товар"} × {i.quantity || 1} — {formatPrice((i.price || 0) * (i.quantity || 1))}
-              </p>
-            ))}
-          </div>
-          <p style={styles.total}>{t(lang, "total")}: {formatPrice(order.total)}</p>
-          <p style={styles.status}>{orderStatusLabel(order.status, lang, t)}</p>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={styles.cardHead}>
+          <span style={styles.orderId}>#{order.id}</span>
+          <span style={styles.date}>{formatDate(order.created_at)}</span>
         </div>
+        <div style={styles.cardBody}>
+          {imageUrl && <img src={imageUrl} alt="" style={styles.cardThumb} />}
+          <div style={styles.cardContent}>
+            {firstItem && (
+              <p style={styles.itemName}>
+                {firstItem.name || "Товар"} × {firstItem.quantity || 1}
+                {items.length > 1 && <span style={styles.itemMore}> · + {items.length - 1}</span>}
+              </p>
+            )}
+            <p style={styles.total}>{formatPrice(order.total)}</p>
+          </div>
+        </div>
+        <span style={{ ...styles.statusPill, ...(isDelivered ? styles.statusPillMuted : {}) }}>
+          {statusLabel}
+        </span>
       </div>
     </div>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  wrap: { maxWidth: 420, margin: "0 auto", paddingBottom: 32 },
+  wrap: { maxWidth: 420, margin: "0 auto", padding: "8px 0 96px" },
   header: {
     marginBottom: 24,
   },
@@ -243,86 +215,21 @@ const styles: Record<string, React.CSSProperties> = {
     margin: "0 0 16px 0",
     lineHeight: 1.25,
   },
-  filterRow: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  titleAndFilterWrap: {
-    display: "inline-block",
-    maxWidth: "100%",
-    width: "fit-content",
-  },
-  filterDropdownWrap: {
-    position: "relative",
-    width: "100%",
-  },
-  filterDropdownTrigger: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
-    padding: "10px 16px",
-    background: "var(--surface)",
-    border: "1px solid var(--surface)",
-    borderRadius: 20,
-    color: "var(--muted)",
-    fontSize: 13,
-    fontFamily: "inherit",
-    cursor: "pointer",
-    boxShadow: "none",
-    outline: "none",
-  },
-  filterDropdownChevron: {
-    marginLeft: 8,
-    fontSize: 10,
-    opacity: 0.8,
-  },
-  filterDropdownList: {
-    position: "absolute",
-    top: "100%",
-    left: 0,
-    right: 0,
-    margin: 0,
-    marginTop: 6,
-    padding: 6,
-    listStyle: "none",
+  filterRow: { display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 },
+  filterPill: {
+    padding: "8px 14px",
+    borderRadius: 999,
     background: "var(--surface)",
     border: "1px solid var(--border)",
-    borderRadius: 12,
-    boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
-    zIndex: 10,
-  },
-  filterDropdownItem: {
-    display: "block",
-    width: "100%",
-    padding: "10px 14px",
-    background: "transparent",
-    border: "none",
-    borderRadius: 8,
     color: "var(--muted)",
-    fontSize: 13,
-    fontFamily: "inherit",
+    fontSize: 12,
+    fontWeight: 600,
     cursor: "pointer",
-    boxShadow: "none",
-    outline: "none",
-    textAlign: "left",
-  },
-  filterTab: {
-    padding: "10px 16px",
-    background: "var(--surface)",
-    border: "1px solid var(--surface)",
-    borderRadius: 20,
-    color: "var(--muted)",
-    fontSize: 13,
     fontFamily: "inherit",
-    cursor: "pointer",
-    boxShadow: "none",
-    outline: "none",
   },
-  filterTabActive: {
+  filterPillActive: {
     background: "var(--accent)",
-    border: "1px solid var(--accent)",
+    borderColor: "var(--accent)",
     color: "#fff",
   },
   emptyWrap: {
@@ -337,39 +244,46 @@ const styles: Record<string, React.CSSProperties> = {
     textTransform: "uppercase",
   },
   card: {
-    padding: 16,
-    background: "var(--surface)",
-    borderRadius: 12,
-    border: "1px solid var(--border)",
-    marginBottom: 12,
-  },
-  cardClickable: {
-    cursor: "pointer",
-  },
-  cardHead: {
-    display: "flex",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  orderId: { fontWeight: 600 },
-  date: { fontSize: 13, color: "var(--muted)" },
-  cardBody: {
-    display: "flex",
+    display: "grid",
+    gridTemplateColumns: "auto 1fr",
     gap: 12,
-    alignItems: "flex-start",
+    padding: 14,
+    background: "var(--surface)",
+    borderRadius: 14,
+    border: "1px solid var(--border)",
+    marginBottom: 10,
   },
-  cardThumb: {
-    width: 72,
-    height: 72,
-    borderRadius: 8,
-    objectFit: "cover",
+  cardClickable: { cursor: "pointer" },
+  timelineCol: { display: "flex", flexDirection: "column", alignItems: "center", gap: 6, paddingTop: 4 },
+  timelineDot: {
+    width: 12, height: 12, borderRadius: "50%",
+    border: "2px solid var(--accent)",
+    background: "var(--surface)",
     flexShrink: 0,
   },
+  timelineDotDone: { background: "var(--accent)" },
+  timelineLine: { width: 2, flex: 1, minHeight: 16, background: "var(--border)" },
+  cardHead: { display: "flex", justifyContent: "space-between", marginBottom: 10 },
+  orderId: { fontWeight: 700, fontSize: 13 },
+  date: { fontSize: 11, color: "var(--muted)" },
+  cardBody: { display: "flex", gap: 12, alignItems: "center" },
+  cardThumb: { width: 44, height: 44, borderRadius: 10, objectFit: "cover", flexShrink: 0 },
   cardContent: { flex: 1, minWidth: 0 },
-  items: { marginBottom: 8 },
-  item: { fontSize: 14, marginBottom: 4 },
-  total: { fontWeight: 600, color: "var(--accent)", marginBottom: 4 },
-  status: { fontSize: 12, color: "var(--muted)" },
-  empty: { margin: 0, color: "var(--muted)", fontSize: 15, lineHeight: 1.5 },
+  itemName: { fontSize: 13, fontWeight: 600, margin: 0, marginBottom: 4 },
+  itemMore: { color: "var(--muted)", fontWeight: 400, fontSize: 12 },
+  total: { fontSize: 14, fontWeight: 700, color: "var(--accent)", margin: 0 },
+  statusPill: {
+    display: "inline-block",
+    marginTop: 8,
+    fontSize: 10,
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
+    padding: "3px 10px",
+    borderRadius: 999,
+    background: "rgba(165,42,42,0.08)",
+    color: "var(--accent)",
+  },
+  statusPillMuted: { background: "var(--surface-elevated)", color: "var(--muted)" },
   loading: { textAlign: "center", color: "var(--muted)", padding: 48 },
 };
