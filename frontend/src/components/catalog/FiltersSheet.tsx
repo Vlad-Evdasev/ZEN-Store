@@ -37,6 +37,12 @@ export function FiltersSheet(props: FiltersSheetProps) {
   const sliderActiveThumbRef = useRef<"min" | "max" | null>(null);
   const SLIDER_PAD = 14;
 
+  const filtersDragHandleRef = useRef<HTMLDivElement>(null);
+  const touchStartYRef = useRef(0);
+  const touchStartTimeRef = useRef(0);
+  const panelDragYRef = useRef(0);
+  const [panelDragY, setPanelDragY] = useState(0);
+
   const { catalogPriceMin, catalogPriceMax } = props;
 
   const priceMinNum =
@@ -127,6 +133,8 @@ export function FiltersSheet(props: FiltersSheetProps) {
         categories: new Set(appliedCategories),
       });
       setSectionOpen({ price: false, brand: false, categories: false });
+      setPanelDragY(0);
+      panelDragYRef.current = 0;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -157,6 +165,43 @@ export function FiltersSheet(props: FiltersSheetProps) {
     };
   }, [open, closing]);
 
+  useEffect(() => {
+    const handle = filtersDragHandleRef.current;
+    if (!open || !handle) return;
+    const onStart = (clientY: number) => {
+      touchStartYRef.current = clientY;
+      touchStartTimeRef.current = Date.now();
+    };
+    const onMove = (clientY: number) => {
+      const dy = clientY - touchStartYRef.current;
+      const val = Math.max(0, dy);
+      panelDragYRef.current = val;
+      setPanelDragY(val);
+    };
+    const onEnd = () => {
+      const dy = panelDragYRef.current;
+      const dt = Date.now() - touchStartTimeRef.current;
+      const velocity = dt > 0 ? dy / dt : 0;
+      const shouldClose = dy > 60 || velocity > 0.3;
+      setPanelDragY(0);
+      panelDragYRef.current = 0;
+      if (shouldClose) commitAndClose();
+    };
+    const touchStart = (e: TouchEvent) => { onStart(e.touches[0].clientY); };
+    const touchMove = (e: TouchEvent) => { e.preventDefault(); onMove(e.touches[0].clientY); };
+    handle.addEventListener("touchstart", touchStart, { passive: true });
+    handle.addEventListener("touchmove", touchMove, { passive: false });
+    handle.addEventListener("touchend", onEnd);
+    handle.addEventListener("touchcancel", onEnd);
+    return () => {
+      handle.removeEventListener("touchstart", touchStart);
+      handle.removeEventListener("touchmove", touchMove);
+      handle.removeEventListener("touchend", onEnd);
+      handle.removeEventListener("touchcancel", onEnd);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   if (!open) return null;
 
   return (
@@ -171,8 +216,12 @@ export function FiltersSheet(props: FiltersSheetProps) {
         role="dialog"
         aria-label={t(lang, "filters")}
         onAnimationEnd={onAnimationEnd}
+        style={!closing && panelDragY > 0 ? { transform: `translateY(${panelDragY}px)` } : undefined}
       >
-        <div className="zen-filters-panel-header">
+        <div
+          ref={filtersDragHandleRef}
+          className="zen-filters-panel-header zen-filters-panel-drag-handle"
+        >
           <span className="zen-filters-panel-drag-bar" aria-hidden />
           <h3 className="zen-filters-panel-title">{t(lang, "filters")}</h3>
         </div>
