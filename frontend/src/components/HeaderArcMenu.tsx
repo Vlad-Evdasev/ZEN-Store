@@ -99,18 +99,22 @@ function IconSettings() {
   );
 }
 
-// Вертикальное раскрытие вниз от центра бургера.
-// Первый кружок — на FIRST_OFFSET ниже, дальше с шагом STEP.
-// Диаметр кружка 40px, шаг 56px даёт зазор 16px между соседними.
-// Порядок: Поддержка → История → Отзывы → Настройки (сверху вниз).
-const FIRST_OFFSET = 48;
-const STEP = 56;
-const ITEMS_COUNT = 4;
+// Позиции кружков по дуге радиуса RADIUS от центра бургера.
+// Углы отсчитываются от вертикали вниз (0°) по часовой к горизонтали (90°).
+// Равномерный шаг 24° даёт визуальные отступы от осей сверху/сбоку.
+// Порядок: Поддержка (82°, ближе к горизонтали) → История → Отзывы → Настройки (10°, ближе к вертикали).
+const RADIUS = 85;
+const ANGLES_DEG = [82, 58, 34, 10];
 
-const positions: React.CSSProperties[] = Array.from({ length: ITEMS_COUNT }, (_, i) => ({
-  ["--arc-x" as string]: "0px",
-  ["--arc-y" as string]: `${FIRST_OFFSET + i * STEP}px`,
-}));
+const positions: React.CSSProperties[] = ANGLES_DEG.map((deg) => {
+  const rad = (deg * Math.PI) / 180;
+  const x = Math.sin(rad) * RADIUS;
+  const y = Math.cos(rad) * RADIUS;
+  return {
+    ["--arc-x" as string]: `${x}px`,
+    ["--arc-y" as string]: `${y}px`,
+  };
+});
 
 export function HeaderArcMenu({
   open,
