@@ -1018,15 +1018,15 @@ html[data-theme="dark"] .zen-app .zen-catalog-search-row {
   border-color: var(--accent);
   box-shadow: 0 8px 28px rgba(165, 42, 42, 0.18), 0 2px 6px rgba(0, 0, 0, 0.05);
 }
-/* Пилюля анимирует скругления, высоту и тень при любом переходе между
-   закрытым и открытым состоянием — так морфинг выглядит плавно даже во
-   время ввода текста. */
+/* Пилюля анимирует скругления, высоту и тень синхронно с панелью (0.32s
+   по той же кривой), чтобы открытие и закрытие выглядели как единый
+   обратимый морфинг, а не как две последовательные анимации. */
 .zen-app .zen-catalog-search-row {
   transition:
-    border-radius 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-    padding 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    border-radius 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    padding 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
 /* При открытых фильтрах пилюля становится шапкой панели фильтров: углы
    сверху выпрямляются до радиуса панели (28px), снизу — 0; нижний border
@@ -1046,12 +1046,22 @@ html[data-theme="dark"] .zen-app .zen-catalog-search-row--filter-open {
    (лупа + input) исчезают, «Фильтры» — проявляются. Оба слоя живут в
    общем flex-ряду, поэтому место в ряду резервируется корректно. */
 .zen-app .zen-catalog-search-row .zen-catalog-search-row-search-slot {
-  transition: opacity 0.2s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  /* По умолчанию (закрытое состояние) — быстрый возврат поиска без
+     задержки, чтобы при закрытии пилюля сразу перестала выглядеть как
+     шапка фильтров. */
+  transition:
+    opacity 0.18s ease,
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .zen-app .zen-catalog-search-row--filter-open .zen-catalog-search-row-search-slot {
   opacity: 0;
   pointer-events: none;
   transform: translateY(-4px);
+  /* При открытии поиск уходит первым — без задержки; «Фильтры» появится
+     чуть позже с небольшой задержкой (см. ниже). */
+  transition:
+    opacity 0.16s ease,
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .zen-app .zen-catalog-search-row-filters-title {
   position: absolute;
@@ -1064,12 +1074,20 @@ html[data-theme="dark"] .zen-app .zen-catalog-search-row--filter-open {
   color: var(--text);
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.22s ease 0.06s, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1) 0.06s;
-  white-space: nowrap;
+  /* По умолчанию (закрытие / закрытое состояние) — без задержки, иначе
+     заголовок «зависает» пока панель уже уехала. */
+  transition:
+    opacity 0.16s ease,
+    transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .zen-app .zen-catalog-search-row--filter-open .zen-catalog-search-row-filters-title {
   opacity: 1;
   transform: translateY(-50%) translateX(0);
+  /* Только при открытии — «Фильтры» проявляется чуть позже поиска,
+     чтобы избежать кросс-фейда двух видимых надписей одновременно. */
+  transition:
+    opacity 0.22s ease 0.08s,
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1) 0.08s;
 }
 /* Иконка лупы внутри пилюли */
 .zen-app .zen-catalog-search-row .zen-catalog-search-icon {
@@ -1649,12 +1667,15 @@ html[data-theme="dark"] .zen-app .zen-filters-apply-btn:disabled {
   to { opacity: 0; }
 }
 @keyframes zenFiltersPanelOpen {
-  from { opacity: 0; transform: translateX(-50%) scaleY(0.92) translateY(-4px); }
+  from { opacity: 0; transform: translateX(-50%) scaleY(0.88) translateY(-6px); }
   to { opacity: 1; transform: translateX(-50%) scaleY(1) translateY(0); }
 }
+/* Закрытие — панель «втягивается» обратно в пилюлю: scaleY уезжает к 0 от
+   верхнего края (transform-origin: top center задан в .zen-filters-panel),
+   чтобы обратный морфинг был заметным, а не просто fade-out. */
 @keyframes zenFiltersPanelClose {
   from { opacity: 1; transform: translateX(-50%) scaleY(1) translateY(0); }
-  to { opacity: 0; transform: translateX(-50%) scaleY(0.92) translateY(-4px); }
+  to { opacity: 0; transform: translateX(-50%) scaleY(0) translateY(-8px); }
 }
 /* Секция «Новинки»: заголовок в стиле RL + ссылка «Смотреть все» */
 .zen-app .zen-new-arrivals-header {

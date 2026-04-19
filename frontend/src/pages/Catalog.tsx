@@ -366,7 +366,7 @@ export function Catalog({
       )}
 
       <div className="zen-catalog-search-shelf" aria-hidden />
-      <div className={`zen-catalog-search-row ${filtersOpen || filtersClosing ? "zen-catalog-search-row--filter-open" : ""}`}>
+      <div className={`zen-catalog-search-row ${filtersOpen && !filtersClosing ? "zen-catalog-search-row--filter-open" : ""}`}>
         <span className="zen-catalog-search-icon zen-catalog-search-row-search-slot" aria-hidden>
           <SearchIcon />
         </span>
