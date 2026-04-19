@@ -1787,6 +1787,7 @@ nav svg {
 /* HeaderArcMenu: accessibility & fallbacks */
 @media (prefers-reduced-motion: reduce) {
   .zen-arc-item,
+  .zen-arc-close,
   .zen-arc-overlay,
   .zen-header-hamburger {
     transition: none !important;
@@ -1794,7 +1795,8 @@ nav svg {
 }
 
 @supports not ((backdrop-filter: blur(10px)) or (-webkit-backdrop-filter: blur(10px))) {
-  .zen-arc-item {
+  .zen-arc-item,
+  .zen-arc-close {
     background: rgba(var(--bg-rgb), 0.95) !important;
   }
   /* Без поддержки backdrop-filter компенсируем более плотным затемнением. */

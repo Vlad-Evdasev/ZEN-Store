@@ -99,6 +99,24 @@ function IconSettings() {
   );
 }
 
+function IconClose() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={iconStyle}
+      aria-hidden
+    >
+      <line x1="6" y1="6" x2="18" y2="18" />
+      <line x1="18" y1="6" x2="6" y2="18" />
+    </svg>
+  );
+}
+
 // Позиции кружков по дуге радиуса RADIUS от центра бургера.
 // Углы отсчитываются от вертикали вниз (0°) по часовой к горизонтали (90°).
 // При RADIUS=85 и диаметре 40px шаг 30° даёт ~4px зазор (без перекрытий).
@@ -195,6 +213,20 @@ export function HeaderArcMenu({
         aria-hidden
       />
       <div className="zen-arc-layer" style={layerStyle} aria-hidden={!open}>
+        {/* Красный крестик в точке anchor — визуально замещает бургер,
+            который в это время уходит под блюр. Сам бургер остаётся
+            в DOM как кликабельный триггер, но при открытом меню мы
+            хотим чистый «close»-аффорданс поверх затемнения. */}
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={lang === "en" ? "Close" : "Закрыть"}
+          tabIndex={open ? 0 : -1}
+          className={open ? "zen-arc-close" : "zen-arc-close zen-arc-close--closed"}
+          style={{ ...styles.item, ...styles.close, ...(open ? styles.closeOpen : styles.closeClosed) }}
+        >
+          <IconClose />
+        </button>
         {items.map(({ key, label, onClick, Icon, badge }, i) => (
           <button
             key={key}
@@ -215,13 +247,11 @@ export function HeaderArcMenu({
   );
 }
 
-// Иерархия z-index: хедер = 10 (или 1002, пока меню открыто — см. App.tsx),
-// BottomNavBar = 20, search-row = 13, модалка фильтров = 100+.
-// Overlay (1000) < header при menuOpen (1002) < layer арки (1003).
-// Такой порядок: блюр/затемнение перекрывает контент под хедером, хедер
-// остаётся чистым (над блюром), а кружки арки — над хедером, чтобы верхние
-// иконки не уходили под непрозрачный фон хедера.
-// Меню портал-рендерится в document.body, поэтому числа сравниваются глобально.
+// Иерархия z-index: хедер = 10, BottomNavBar = 20, search-row = 13,
+// модалка фильтров = 100+. Overlay (1000) < layer арки + крестик (1001).
+// Весь хедер и контент уходят под блюр/затемнение оверлея; поверх
+// оставляем только крестик (в точке бургера) и 4 кружка арки.
+// Меню портал-рендерится в document.body, числа сравниваются глобально.
 const styles: Record<string, React.CSSProperties> = {
   // Затемнение + блюр заднего фона при раскрытом меню.
   // Анимируем opacity, чтобы при закрытии был плавный fade-out (а не мгновенный unmount).
@@ -239,9 +269,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: 0,
     height: 0,
     pointerEvents: "none",
-    // Выше хедера (1002 при открытом меню), иначе верхние кружки арки,
-    // попадающие в зону хедера, уходят под его непрозрачный фон.
-    zIndex: 1003,
+    zIndex: 1001,
   },
   item: {
     position: "absolute",
@@ -274,6 +302,25 @@ const styles: Record<string, React.CSSProperties> = {
   },
   itemClosed: {
     transform: "translate(0px, 0px) scale(0.6)",
+    opacity: 0,
+    pointerEvents: "none",
+  },
+  // Красный крестик-замена бургера. Сидит в точке anchor (translate(0,0)),
+  // поверх блюра. Цвет/фон акцентом, чтобы читался как CTA «закрыть».
+  close: {
+    background: "rgba(var(--bg-rgb), 0.85)",
+    border: "1px solid var(--accent)",
+    color: "var(--accent)",
+    boxShadow: "0 4px 14px rgba(0, 0, 0, 0.18)",
+  },
+  closeOpen: {
+    transform: "translate(0px, 0px) scale(1) rotate(0deg)",
+    opacity: 1,
+    pointerEvents: "auto",
+  },
+  // При закрытии крестик «ужимается» обратно в точку бургера, как и кружки.
+  closeClosed: {
+    transform: "translate(0px, 0px) scale(0.6) rotate(-90deg)",
     opacity: 0,
     pointerEvents: "none",
   },

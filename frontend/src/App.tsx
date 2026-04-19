@@ -253,16 +253,7 @@ function App() {
     <div style={styles.appWrapper}>
     <div className="zen-app" style={styles.app}>
       <SettingsSync />
-      <header
-        style={{
-          ...styles.header,
-          // Пока арк-меню открыто, весь хедер поднимаем над оверлеем
-          // HeaderArcMenu (overlay = 1000), чтобы хедер с триггером и
-          // остальными иконками не попадал под блюр/затемнение. Блюр
-          // накрывает только контент под хедером.
-          zIndex: menuOpen ? 1002 : styles.header.zIndex,
-        }}
-      >
+      <header style={styles.header}>
         <div style={styles.headerLeft} className="zen-header-left">
           <button
             ref={hamburgerRef}
