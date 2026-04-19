@@ -1011,12 +1011,13 @@ html[data-theme="dark"] .zen-app .zen-catalog-search-shelf {
   max-width: 460px;
   height: 50px;
   overflow: hidden;
-  /* Все свойства морфинга едут по ОДНОЙ длительности и ОДНОЙ кривой —
-     иначе форма визуально «дрожит» из‑за рассинхрона height/radius.
-     Кривая Material standard — равномерная, без «догоняния» в конце. */
+  /* Радиус НЕ анимируется: в обоих состояниях — 999px (капсула).
+     По мере роста высоты браузер автоматически клампит радиус на
+     половину меньшей стороны, и форма выглядит как «вытянутая
+     таблетка». Так при анимации не видно переходов между круглым
+     и прямоугольным состоянием — только плавный рост/сужение. */
   transition:
     height 0.38s cubic-bezier(0.4, 0, 0.2, 1),
-    border-radius 0.38s cubic-bezier(0.4, 0, 0.2, 1),
     box-shadow 0.38s cubic-bezier(0.4, 0, 0.2, 1);
 }
 /* Шапка внутри единой формы — всегда 50px, row-layout, не зависит от
@@ -1041,12 +1042,10 @@ html[data-theme="dark"] .zen-app .zen-catalog-search-row {
   border-color: var(--accent);
   box-shadow: 0 8px 28px rgba(165, 42, 42, 0.18), 0 2px 6px rgba(0, 0, 0, 0.05);
 }
-/* При открытых фильтрах форма «вырастает»: все 4 угла одинаково
-   скругляются до 28px (это уже не пилюля, а прямоугольник со
-   скруглениями). Высота задаётся inline-стилем из JS (замеренная
-   высота содержимого). Тень усиливается. */
+/* Открытое состояние: форма выросла по высоте, радиус остаётся 999px
+   (наследуется). Тень чуть усиливается — для визуального «поднятия»
+   над контентом. z-index поднимаем выше shelf. */
 .zen-app .zen-catalog-search-row--filter-open {
-  border-radius: 28px;
   z-index: 102;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.14),
               0 6px 16px -6px rgba(0, 0, 0, 0.18);
@@ -1254,24 +1253,28 @@ html[data-theme="dark"] .zen-app .zen-filter-icon-btn-dot {
    поверхность от search-row. Рост высоты контейнера (search-row)
    показывает/скрывает этот блок за счёт overflow: hidden выше.
    Собственного transition у него нет — анимация высоты идёт
-   на уровне .zen-catalog-search-row. */
+   на уровне .zen-catalog-search-row.
+
+   ВАЖНО: `flex: 0 0 auto`, не `1 1 auto`. При `flex: 1 1 auto` в
+   закрытом состоянии (родитель 50px) panel получает computed height
+   0 из-за flex-shrink, и его контент пропадает из layout — scrollHeight
+   у search-row не учитывает настоящую высоту panel'а. С
+   `flex: 0 0 auto` panel всегда занимает ровно столько, сколько нужно
+   его содержимому; search-row просто клипает overflow. */
 .zen-filters-panel {
   position: relative;
   width: 100%;
   background: transparent;
   display: flex;
   flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
+  flex: 0 0 auto;
   touch-action: pan-y;
 }
 .zen-filters-panel-body {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  padding: 8px 20px 20px;
+  flex: 0 0 auto;
+  /* Горизонтальный padding 28px, чтобы контент не пересекал
+     полукруглые боковые скругления пилюли в открытом состоянии. */
+  padding: 8px 28px 20px;
   position: relative;
 }
 .zen-filters-panel-drag-handle {
@@ -1389,7 +1392,7 @@ html[data-theme="dark"] .zen-app .zen-filter-icon-btn-dot {
 /* Футер панели со sticky-кнопкой «Показать N». */
 .zen-filters-panel-footer {
   flex: 0 0 auto;
-  padding: 16px 20px calc(16px + env(safe-area-inset-bottom, 0px));
+  padding: 16px 28px calc(16px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid #EEE;
 }
 .zen-filters-section {
