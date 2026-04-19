@@ -1286,50 +1286,89 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
 }
 .zen-filters-price-slider {
   position: relative;
-  height: 32px;
-  margin: 4px 0 0;
+  height: 44px;
+  display: flex;
+  align-items: center;
   padding: 0 14px;
+  margin: 0 -14px;
   touch-action: none;
-  box-sizing: border-box;
+  user-select: none;
 }
 .zen-filters-price-slider-track {
   position: absolute;
   left: 14px;
   right: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  height: 6px;
-  border-radius: 3px;
-  background: var(--surface-elevated);
+  height: 2px;
+  background: #EEE;
+  border-radius: 1px;
 }
 .zen-filters-price-slider-range {
   position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  height: 6px;
-  border-radius: 3px;
-  background: var(--accent);
+  height: 2px;
+  background: #111;
+  border-radius: 1px;
   pointer-events: none;
 }
 .zen-filters-price-slider-thumb {
   position: absolute;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  background: var(--surface);
-  border: 2px solid var(--accent);
+  background: #FFF;
+  border: 1px solid #E4E4E4;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  transform: translateX(-50%);
   cursor: grab;
-  z-index: 1;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  box-sizing: border-box;
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+.zen-filters-price-slider-thumb::before {
+  content: "";
+  position: absolute;
+  inset: -11px;
+  border-radius: 50%;
+}
+.zen-filters-price-slider-thumb::after {
+  content: "";
+  position: absolute;
+  inset: -12px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.06);
+  opacity: 0;
+  transition: opacity 0.14s ease;
+  pointer-events: none;
 }
 .zen-filters-price-slider-thumb:active {
+  transform: translateX(-50%) scale(1.08);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
   cursor: grabbing;
-  transform: translate(-50%, -50%) scale(1.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+.zen-filters-price-slider-thumb:active::after {
+  opacity: 1;
+}
+.zen-filters-price-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.zen-filters-price-bubbles {
+  position: relative;
+  height: 22px;
+  margin-bottom: 4px;
+}
+.zen-filters-price-bubble {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font-size: 13px;
+  font-weight: 600;
+  color: #111;
+  white-space: nowrap;
+  line-height: 22px;
+  transition: left 0.08s linear;
+}
+.zen-filters-price-bubble--merged {
+  font-size: 13px;
 }
 /* Футер панели: Сбросить всё + стрелка (как на ноутбуке — отступы не меняются при раскрытии) */
 .zen-filters-panel-footer {
@@ -1342,44 +1381,129 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
 .zen-filters-panel--scrollable .zen-filters-panel-footer {
   border-top-color: #EEE;
 }
-.zen-filters-chip {
-  flex-shrink: 0;
-  padding: 10px 18px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease, transform 0.18s ease;
-  -webkit-tap-highlight-color: transparent;
-  outline: none;
+.zen-filters-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 0;
+  opacity: 0;
+  transform: translateY(8px);
+  animation: zenFiltersStagger 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
-.zen-filters-chip:hover {
-  color: var(--text);
-  border-color: var(--muted);
+.zen-filters-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8A8A8A;
+}
+.zen-filters-divider {
+  height: 1px;
+  background: #EEE;
+  margin: 0;
+}
+@keyframes zenFiltersStagger {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.zen-filters-sort-round {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+.zen-filters-sort-round-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid #E4E4E4;
+  background: #FFF;
+  color: #111;
+  font-size: 16px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.08s ease;
+  padding: 0;
+}
+.zen-filters-sort-round-btn:active {
+  transform: scale(0.92);
+}
+.zen-filters-sort-round-btn--active {
+  background: #111;
+  color: #FFF;
+  border-color: #111;
+}
+.zen-filters-chip-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.zen-filters-chip {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid #E4E4E4;
+  background: #FFF;
+  color: #111;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.08s cubic-bezier(0.34, 1.56, 0.64, 1);
+  white-space: nowrap;
 }
 .zen-filters-chip:active {
   transform: scale(0.96);
 }
 .zen-filters-chip-active {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: #fff;
-  animation: zen-chip-select 0.2s ease;
+  background: #111;
+  color: #FFF;
+  border-color: #111;
 }
-.zen-filters-chip-active:hover {
-  color: #fff;
-  border-color: var(--accent);
+.zen-filters-reset-top {
+  position: absolute;
+  top: 12px;
+  right: 20px;
+  background: transparent;
+  border: none;
+  padding: 4px 6px;
+  font-size: 13px;
+  color: #8A8A8A;
+  cursor: pointer;
+  z-index: 2;
+  animation: zenFiltersStagger 0.16s ease forwards;
+  -webkit-tap-highlight-color: transparent;
 }
-.zen-filters-chip-active:active {
+.zen-filters-reset-top:active {
+  color: #111;
+  text-decoration: underline;
+}
+.zen-filters-apply-btn {
+  width: 100%;
+  height: 52px;
+  border-radius: 999px;
+  border: none;
+  background: #111;
+  color: #FFF;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.12s ease, background-color 0.18s ease, color 0.18s ease;
+}
+.zen-filters-apply-btn:active {
   transform: scale(0.98);
 }
-@keyframes zen-chip-select {
-  from { transform: scale(0.95); opacity: 0.9; }
-  to { transform: scale(1); opacity: 1; }
+.zen-filters-apply-btn--disabled,
+.zen-filters-apply-btn:disabled {
+  background: #E4E4E4;
+  color: #8A8A8A;
+  cursor: not-allowed;
+  transform: none;
 }
 @keyframes zenFiltersOverlayIn {
   from { opacity: 0; }
