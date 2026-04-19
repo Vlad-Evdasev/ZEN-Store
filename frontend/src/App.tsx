@@ -265,6 +265,11 @@ function App() {
               color: menuOpen ? "var(--accent)" : "var(--text)",
               transform: menuOpen ? "rotate(90deg)" : "rotate(0deg)",
               transition: "transform 350ms cubic-bezier(0.22, 1, 0.36, 1), color 350ms ease",
+              // Пока меню открыто — поднимаем кнопку над оверлеем HeaderArcMenu
+              // (overlay = 1000, layer = 1001), чтобы сам триггер оставался виден
+              // и кликабелен для обратного закрытия.
+              position: "relative",
+              zIndex: menuOpen ? 1002 : undefined,
             }}
             aria-label="Меню"
             aria-expanded={menuOpen}
