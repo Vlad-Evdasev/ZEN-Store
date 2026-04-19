@@ -1239,6 +1239,7 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   cursor: grab;
   touch-action: none;
   position: relative;
+  -webkit-tap-highlight-color: transparent;
 }
 .zen-filters-panel-drag-handle:active {
   cursor: grabbing;
