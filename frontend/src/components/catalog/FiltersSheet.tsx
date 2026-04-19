@@ -90,10 +90,31 @@ export function FiltersSheet(props: FiltersSheetProps) {
           <h3 className="zen-filters-panel-title">{t(lang, "filters")}</h3>
         </div>
 
-        {/* TODO: facets (Task 5+) */}
         <div className="zen-filters-panel-body">
-          <div style={{ padding: "20px", color: "var(--muted)" }}>
-            [DEBUG] draft count = {count}
+          {props.showPriceFilter && (
+            <div className="zen-filters-facet">
+              <span className="zen-filters-facet-name">{t(lang, "priceFilter")}</span>
+              <span className="zen-filters-facet-values">
+                <span className="zen-filters-facet-empty">{t(lang, "filtersAllValue")}</span>
+              </span>
+              <span className="zen-filters-facet-arrow" aria-hidden>▸</span>
+            </div>
+          )}
+          {props.uniqueBrands.length >= 2 && (
+            <div className="zen-filters-facet">
+              <span className="zen-filters-facet-name">{t(lang, "brand")}</span>
+              <span className="zen-filters-facet-values">
+                <span className="zen-filters-facet-empty">{t(lang, "filtersAllValue")}</span>
+              </span>
+              <span className="zen-filters-facet-arrow" aria-hidden>▸</span>
+            </div>
+          )}
+          <div className="zen-filters-facet">
+            <span className="zen-filters-facet-name">{t(lang, "categories")}</span>
+            <span className="zen-filters-facet-values">
+              <span className="zen-filters-facet-empty">{t(lang, "filtersAllValue")}</span>
+            </span>
+            <span className="zen-filters-facet-arrow" aria-hidden>▸</span>
           </div>
         </div>
 

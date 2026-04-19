@@ -1394,6 +1394,94 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
 @keyframes filtersPanelSlideUp {
   to { transform: translateY(-100%); }
 }
+.zen-filters-facet {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.zen-filters-facet:last-child {
+  border-bottom: none;
+}
+.zen-filters-facet--open {
+  background: var(--surface-elevated);
+}
+.zen-filters-facet-name {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text);
+  min-width: 96px;
+  flex-shrink: 0;
+}
+.zen-filters-facet-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+}
+.zen-filters-facet-empty {
+  font-size: 13px;
+  color: var(--muted);
+  opacity: 0.7;
+}
+.zen-filters-facet-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 12px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+  max-width: 100%;
+}
+.zen-filters-facet-chip-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.zen-filters-facet-chip-x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.zen-filters-facet-chip-x:hover {
+  color: var(--text);
+}
+.zen-filters-facet-arrow {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--muted);
+  transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+  flex-shrink: 0;
+}
+.zen-filters-facet--open .zen-filters-facet-arrow {
+  transform: rotate(90deg);
+}
+.zen-filters-facet-expanded {
+  padding: 10px 4px 18px;
+  background: var(--surface-elevated);
+  border-bottom: 1px solid var(--border);
+}
 .zen-filters-overlay--closing {
   animation: filtersOverlayFadeOut 0.25s ease forwards;
 }
