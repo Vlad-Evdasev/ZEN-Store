@@ -381,12 +381,28 @@ export function Catalog({
           <button
             ref={filterButtonRef}
             type="button"
-            className={`zen-filter-icon-btn ${hasActiveFilters ? "zen-filter-icon-btn--active" : ""}`}
-            onClick={() => setFiltersOpen(true)}
+            className={`zen-filter-icon-btn ${hasActiveFilters ? "zen-filter-icon-btn--active" : ""} ${(filtersOpen && !filtersClosing) ? "zen-filter-icon-btn--open" : ""}`}
+            onClick={() => {
+              if (filtersOpen && !filtersClosing) {
+                closeFilters();
+              } else {
+                setFiltersOpen(true);
+              }
+            }}
             aria-label={t(lang, "filters")}
+            aria-expanded={filtersOpen && !filtersClosing}
             title={t(lang, "filters")}
           >
-            <FilterIcon />
+            <span className="zen-filter-icon-main" aria-hidden>
+              <FilterIcon />
+            </span>
+            <svg
+              className="zen-filter-icon-btn-x"
+              viewBox="0 0 16 16"
+              aria-hidden
+            >
+              <path d="M4 4 L12 12 M12 4 L4 12" strokeLinecap="round" />
+            </svg>
             {hasActiveFilters && (
               <span className="zen-filter-icon-btn-dot" aria-hidden />
             )}
