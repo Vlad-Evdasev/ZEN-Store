@@ -1653,15 +1653,43 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
 /* Футер панели: Сбросить всё + стрелка (как на ноутбуке — отступы не меняются при раскрытии) */
 .zen-filters-panel-footer {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 0;
-  padding: 16px max(20px, env(safe-area-inset-right)) 12px max(20px, env(safe-area-inset-left));
-  padding-bottom: 12px;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px max(20px, env(safe-area-inset-right)) 12px max(20px, env(safe-area-inset-left));
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
   border-top: 1px solid var(--border);
   background: var(--surface);
   flex-shrink: 0;
   min-height: 0;
+}
+.zen-filters-footer-cta {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 20px;
+  background: var(--text);
+  color: var(--surface);
+  border: none;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: transform 0.1s ease, opacity 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  min-width: 0;
+}
+.zen-filters-footer-cta:active {
+  transform: scale(0.98);
+}
+.zen-filters-footer-cta:disabled,
+.zen-filters-footer-cta[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
 }
 .zen-filters-reset-btn {
   padding: 12px 16px;

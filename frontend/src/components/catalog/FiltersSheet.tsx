@@ -460,14 +460,32 @@ export function FiltersSheet(props: FiltersSheetProps) {
           </>
         </div>
 
-        {/* TODO: final footer (Task 8) */}
         <div className="zen-filters-panel-footer">
           <button
             type="button"
             className="zen-filters-footer-cta"
             onClick={commitAndClose}
+            disabled={count === 0}
+            aria-disabled={count === 0}
           >
-            [DEBUG] Закрыть / применить ({count})
+            {count === 0
+              ? t(lang, "filtersNothingFound")
+              : t(lang, "filtersShowN").replace("{n}", String(count))}
+          </button>
+          <button
+            type="button"
+            className="zen-filters-reset-btn"
+            onClick={() =>
+              setDraft({
+                priceMin: "",
+                priceMax: "",
+                priceSort: "none",
+                brand: "all",
+                categories: new Set(["all"]),
+              })
+            }
+          >
+            {t(lang, "resetFilters")}
           </button>
         </div>
       </div>
