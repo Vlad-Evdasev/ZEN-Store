@@ -124,7 +124,7 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
         {/* Chat thread */}
         <div style={styles.thread}>
           <BotBubble>
-            <div>{t(lang, "customOrderSubtitle")}</div>
+            <div style={styles.botBubbleTitle}>{t(lang, "customOrderSubtitle")}</div>
             <div style={styles.botBubbleMeta}>
               {t(lang, "customOrderReplyFrom")} @krot_eno
             </div>
@@ -255,7 +255,7 @@ function BotBubble({ children }: { children: React.ReactNode }) {
 const styles: Record<string, React.CSSProperties> = {
   wrap: {
     position: "fixed",
-    top: 56,
+    top: 62,
     bottom: 64,
     left: 0,
     right: 0,
@@ -265,7 +265,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",
-    padding: "10px max(16px, env(safe-area-inset-left)) 0 max(16px, env(safe-area-inset-right))",
+    padding: "16px max(16px, env(safe-area-inset-left)) 0 max(16px, env(safe-area-inset-right))",
     background: "var(--bg)",
     zIndex: 5,
   },
@@ -313,7 +313,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: 10,
-    padding: "28px 0 2px",
+    padding: "8px 0 2px",
     flexShrink: 0,
   },
   replyHint: {
@@ -354,11 +354,18 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--text)",
     maxWidth: "82%",
   },
+  botBubbleTitle: {
+    fontSize: 15,
+    fontWeight: 600,
+    lineHeight: 1.2,
+    letterSpacing: "-0.01em",
+    color: "var(--text)",
+  },
   botBubbleMeta: {
-    marginTop: 6,
-    fontSize: 11,
+    marginTop: 4,
+    fontSize: 12.5,
     color: "var(--muted)",
-    letterSpacing: "0.04em",
+    lineHeight: 1.4,
   },
 
   /* Author row */

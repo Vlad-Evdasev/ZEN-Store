@@ -423,7 +423,7 @@ const pageStyles: Record<string, React.CSSProperties> = {
   },
   bubbleTitle: {
     fontSize: 15,
-    fontWeight: 800,
+    fontWeight: 600,
     lineHeight: 1.2,
     letterSpacing: "-0.01em",
     color: "var(--text)",
