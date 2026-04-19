@@ -367,17 +367,25 @@ export function Catalog({
 
       <div className="zen-catalog-search-shelf" aria-hidden />
       <div className={`zen-catalog-search-row ${filtersOpen || filtersClosing ? "zen-catalog-search-row--filter-open" : ""}`}>
-        <span className="zen-catalog-search-icon" aria-hidden>
+        <span className="zen-catalog-search-icon zen-catalog-search-row-search-slot" aria-hidden>
           <SearchIcon />
         </span>
         <input
           type="search"
-          className="zen-input zen-catalog-search-input"
+          className="zen-input zen-catalog-search-input zen-catalog-search-row-search-slot"
           placeholder={t(lang, "search")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           aria-label={t(lang, "search")}
+          aria-hidden={filtersOpen && !filtersClosing}
+          tabIndex={filtersOpen && !filtersClosing ? -1 : 0}
         />
+        <span
+          className="zen-catalog-search-row-filters-title"
+          aria-hidden={!(filtersOpen || filtersClosing)}
+        >
+          {t(lang, "filters")}
+        </span>
         {showPriceFilter && (
           <button
             type="button"

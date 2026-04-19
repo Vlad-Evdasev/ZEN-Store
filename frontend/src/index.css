@@ -1018,22 +1018,58 @@ html[data-theme="dark"] .zen-app .zen-catalog-search-row {
   border-color: var(--accent);
   box-shadow: 0 8px 28px rgba(165, 42, 42, 0.18), 0 2px 6px rgba(0, 0, 0, 0.05);
 }
-/* При открытых фильтрах пилюля визуально становится шапкой панели:
-   теряет нижние скругления, поднимается над overlay (чтобы инпут оставался
-   кликабельным и не тускнел), тень уводим только вверх, чтобы не было
-   двойной тени на стыке с панелью. */
+/* Пилюля анимирует скругления, высоту и тень при любом переходе между
+   закрытым и открытым состоянием — так морфинг выглядит плавно даже во
+   время ввода текста. */
+.zen-app .zen-catalog-search-row {
+  transition:
+    border-radius 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    padding 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* При открытых фильтрах пилюля становится шапкой панели фильтров: углы
+   сверху выпрямляются до радиуса панели (28px), снизу — 0; нижний border
+   исчезает, чтобы стык с панелью читался как одна форма; z-index над
+   overlay, чтобы крестик и drag оставались кликабельны. */
 .zen-app .zen-catalog-search-row--filter-open {
-  border-radius: 24px 24px 0 0;
+  border-radius: 28px 28px 0 0;
   border-bottom-color: transparent;
   box-shadow: 0 -12px 24px -14px rgba(0, 0, 0, 0.18);
   z-index: 102;
-  transition:
-    border-radius 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  padding: 4px 10px 4px 20px;
 }
 html[data-theme="dark"] .zen-app .zen-catalog-search-row--filter-open {
   box-shadow: 0 -14px 28px -16px rgba(0, 0, 0, 0.7);
+}
+/* Кросс-фейд содержимого пилюли: при `--filter-open` поисковые слоты
+   (лупа + input) исчезают, «Фильтры» — проявляются. Оба слоя живут в
+   общем flex-ряду, поэтому место в ряду резервируется корректно. */
+.zen-app .zen-catalog-search-row .zen-catalog-search-row-search-slot {
+  transition: opacity 0.2s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.zen-app .zen-catalog-search-row--filter-open .zen-catalog-search-row-search-slot {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+}
+.zen-app .zen-catalog-search-row-filters-title {
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%) translateX(-4px);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.22s ease 0.06s, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1) 0.06s;
+  white-space: nowrap;
+}
+.zen-app .zen-catalog-search-row--filter-open .zen-catalog-search-row-filters-title {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
 }
 /* Иконка лупы внутри пилюли */
 .zen-app .zen-catalog-search-row .zen-catalog-search-icon {
