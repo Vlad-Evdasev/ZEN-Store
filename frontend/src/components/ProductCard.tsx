@@ -106,7 +106,19 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
           <p className="product-card-price" style={priceStyle}>{formatPrice(product.price)}</p>
           {hasReviews && (
             <span style={{ ...(compact ? styles.reviewsCompact : styles.reviews), ...noShrink }}>
-              <span aria-hidden="true" style={styles.reviewsStar}>★</span>
+              <svg
+                aria-hidden="true"
+                focusable="false"
+                width={compact ? 10 : 11}
+                height={compact ? 10 : 11}
+                viewBox="0 0 24 24"
+                style={styles.reviewsStar}
+              >
+                <path
+                  d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                  fill="currentColor"
+                />
+              </svg>
               {reviewAvg?.toFixed(1) ?? "—"}
             </span>
           )}
@@ -309,10 +321,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   reviewsStar: {
     color: "var(--accent)",
-    fontSize: "1em",
-    lineHeight: 1,
-    transform: "translateY(-0.5px)",
-    display: "inline-block",
+    display: "block",
+    flexShrink: 0,
   },
   cardCompact: { borderRadius: 0 },
   cardFillHeight: { flex: 1, minHeight: 0, height: "100%" },
