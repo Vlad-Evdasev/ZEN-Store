@@ -3,7 +3,6 @@ import { getOrders, type Order, type Product } from "../api";
 import { useSettings } from "../context/SettingsContext";
 import type { Lang } from "../context/SettingsContext";
 import { t } from "../i18n";
-import { ProductCard } from "../components/ProductCard";
 
 interface HistoryProps {
   userId: string;
@@ -47,11 +46,7 @@ function getStepIndex(status: string): number {
 
 export function History({
   userId,
-  onBack: _onBack,
   onProductClick,
-  products = [],
-  wishlistIds,
-  onToggleWishlist,
   onOpenCatalog,
 }: HistoryProps) {
   const { formatPrice, settings } = useSettings();
@@ -78,17 +73,6 @@ export function History({
     return { activeOrders: active, deliveredOrders: delivered };
   }, [orders]);
 
-  const recommended = useMemo(() => {
-    if (!products.length) return [];
-    const sorted = [...products].sort((a, b) => {
-      const ao = a.new_arrival_sort_order ?? Number.MAX_SAFE_INTEGER;
-      const bo = b.new_arrival_sort_order ?? Number.MAX_SAFE_INTEGER;
-      if (ao !== bo) return ao - bo;
-      return b.id - a.id;
-    });
-    return sorted.slice(0, 4);
-  }, [products]);
-
   if (loading) {
     return (
       <div style={styles.wrap}>
@@ -102,20 +86,13 @@ export function History({
   return (
     <div style={styles.wrap} className="zen-page-enter">
       <header style={styles.header}>
-        <h1 className="zen-page-title" style={styles.title}>
+        <h2 className="zen-page-title" style={styles.title}>
           {t(lang, "historyTitle")}
-        </h1>
+        </h2>
       </header>
 
       {isEmpty ? (
-        <EmptyState
-          lang={lang}
-          products={recommended}
-          wishlistIds={wishlistIds}
-          onProductClick={onProductClick}
-          onToggleWishlist={onToggleWishlist}
-          onOpenCatalog={onOpenCatalog}
-        />
+        <EmptyState lang={lang} onOpenCatalog={onOpenCatalog} />
       ) : (
         <>
           {activeOrders.length > 0 && (
@@ -392,17 +369,9 @@ function DeliveredOrderRow({
 
 function EmptyState({
   lang,
-  products,
-  wishlistIds,
-  onProductClick,
-  onToggleWishlist,
   onOpenCatalog,
 }: {
   lang: Lang;
-  products: Product[];
-  wishlistIds?: Set<number>;
-  onProductClick?: (productId: number) => void;
-  onToggleWishlist?: (productId: number) => void;
   onOpenCatalog?: () => void;
 }) {
   return (
@@ -431,35 +400,6 @@ function EmptyState({
           </button>
         )}
       </div>
-
-      {products.length > 0 && (
-        <div style={styles.recommendBlock}>
-          <div style={styles.recommendHeader}>
-            <span style={styles.recommendKicker}>
-              {t(lang, "historyRecommendTitle")}
-            </span>
-            <span style={styles.recommendRule} />
-          </div>
-          <div style={styles.recommendGrid}>
-            {products.map((p) => (
-              <ProductCard
-                key={p.id}
-                product={p}
-                onClick={() => onProductClick?.(p.id)}
-                inWishlist={wishlistIds?.has(p.id)}
-                onWishlistClick={
-                  onToggleWishlist
-                    ? (e) => {
-                        e.stopPropagation();
-                        onToggleWishlist(p.id);
-                      }
-                    : undefined
-                }
-              />
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -519,13 +459,7 @@ const styles: Record<string, React.CSSProperties> = {
   loading: { textAlign: "center", color: "var(--muted)", padding: 64 },
 
   header: { marginBottom: 28 },
-  title: {
-    fontSize: 26,
-    fontWeight: 500,
-    margin: 0,
-    letterSpacing: "0.01em",
-    lineHeight: 1.2,
-  },
+  title: { margin: 0 },
 
   section: { marginBottom: 36 },
   sectionHeader: {
@@ -832,30 +766,5 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     fontFamily: "inherit",
     transition: "background-color 0.2s ease, transform 0.2s ease",
-  },
-  recommendBlock: { marginTop: 8 },
-  recommendHeader: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 18,
-  },
-  recommendKicker: {
-    fontSize: 11,
-    fontWeight: 600,
-    letterSpacing: "0.18em",
-    textTransform: "uppercase",
-    color: "var(--muted)",
-    flexShrink: 0,
-  },
-  recommendRule: {
-    flex: 1,
-    height: 1,
-    background: "var(--border)",
-  },
-  recommendGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(2, 1fr)",
-    gap: 16,
   },
 };
