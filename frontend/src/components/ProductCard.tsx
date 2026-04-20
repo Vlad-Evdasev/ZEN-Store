@@ -69,35 +69,35 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
           alt={product.name}
           style={styles.image}
         />
+        {onWishlistClick && (
+          <button
+            type="button"
+            className="product-card-wishlist-btn"
+            onClick={(e) => { e.stopPropagation(); onWishlistClick(e); }}
+            style={wishlistBtnStyle}
+            aria-label={inWishlist ? "Убрать из избранного" : "В избранное"}
+          >
+            <svg
+              width={compact ? 16 : 18}
+              height={compact ? 16 : 18}
+              viewBox="0 0 24 24"
+              fill={inWishlist ? "var(--accent)" : "rgba(255,255,255,0.95)"}
+              stroke={inWishlist ? "var(--accent)" : "rgba(255,255,255,0.95)"}
+              strokeWidth={1.8}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              focusable="false"
+              style={{ display: "block", filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.35))" }}
+            >
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+            </svg>
+          </button>
+        )}
       </div>
       <div className="product-card-desc" style={descWrapStyle}>
         <div style={compact ? styles.nameRowCompact : styles.nameRow}>
           <p className="product-card-name" style={nameStyle} title={product.name}>{product.name}</p>
-          {onWishlistClick && (
-            <button
-              type="button"
-              className="product-card-wishlist-btn"
-              onClick={(e) => { e.stopPropagation(); onWishlistClick(e); }}
-              style={{ ...wishlistBtnStyle, color: inWishlist ? "var(--accent)" : "var(--muted)" }}
-              aria-label={inWishlist ? "Убрать из избранного" : "В избранное"}
-            >
-              <svg
-                width={compact ? 15 : 16}
-                height={compact ? 15 : 16}
-                viewBox="0 0 24 24"
-                fill={inWishlist ? "currentColor" : "none"}
-                stroke="currentColor"
-                strokeWidth={1.8}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-                focusable="false"
-                style={{ display: "block" }}
-              >
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-              </svg>
-            </button>
-          )}
         </div>
         {product.brand?.trim() && (
           <span style={compact ? styles.brandCompact : styles.brand}>{product.brand.trim()}</span>
@@ -157,23 +157,31 @@ const styles: Record<string, React.CSSProperties> = {
     minHeight: 0,
   },
   wishlistBtn: {
-    flexShrink: 0,
+    position: "absolute",
+    top: 8,
+    right: 8,
+    zIndex: 2,
+    width: 32,
+    height: 32,
     padding: 0,
     margin: 0,
-    width: 20,
-    height: 20,
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
     border: "none",
-    background: "none",
+    borderRadius: "50%",
+    background: "rgba(0,0,0,0.22)",
+    backdropFilter: "blur(6px)",
+    WebkitBackdropFilter: "blur(6px)",
     cursor: "pointer",
     lineHeight: 0,
-    transition: "transform var(--transition-fast), color var(--transition-fast)",
+    transition: "transform var(--transition-fast), background var(--transition-fast)",
   },
   wishlistBtnCompact: {
-    width: 18,
-    height: 18,
+    top: 6,
+    right: 6,
+    width: 28,
+    height: 28,
   },
   descWrap: {
     position: "relative",
