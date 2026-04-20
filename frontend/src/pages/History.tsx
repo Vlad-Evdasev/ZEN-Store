@@ -61,16 +61,14 @@ export function History({
       .finally(() => setLoading(false));
   }, [userId]);
 
-  const { activeOrders, deliveredOrders } = useMemo(() => {
+  const activeOrders = useMemo(() => {
     const active: Order[] = [];
-    const delivered: Order[] = [];
     for (const o of orders) {
-      if (o.status === "delivered" || o.status === "completed") delivered.push(o);
-      else active.push(o);
+      if (o.status === "delivered" || o.status === "completed") continue;
+      active.push(o);
     }
     active.sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
-    delivered.sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
-    return { activeOrders: active, deliveredOrders: delivered };
+    return active;
   }, [orders]);
 
   if (loading) {
@@ -81,7 +79,7 @@ export function History({
     );
   }
 
-  const isEmpty = orders.length === 0;
+  const isEmpty = activeOrders.length === 0;
 
   return (
     <div style={styles.wrap} className="zen-page-enter">
@@ -94,57 +92,20 @@ export function History({
       {isEmpty ? (
         <EmptyState lang={lang} onOpenCatalog={onOpenCatalog} />
       ) : (
-        <>
-          {activeOrders.length > 0 && (
-            <section style={styles.section}>
-              <SectionHeader
-                title={t(lang, "historySectionActive")}
-                count={activeOrders.length}
+        <section style={styles.section}>
+          <div style={styles.activeList}>
+            {activeOrders.map((o) => (
+              <ActiveOrderCard
+                key={o.id}
+                order={o}
+                formatPrice={formatPrice}
+                lang={lang}
+                onProductClick={onProductClick}
               />
-              <div style={styles.activeList}>
-                {activeOrders.map((o) => (
-                  <ActiveOrderCard
-                    key={o.id}
-                    order={o}
-                    formatPrice={formatPrice}
-                    lang={lang}
-                    onProductClick={onProductClick}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {deliveredOrders.length > 0 && (
-            <section style={styles.section}>
-              <SectionHeader
-                title={t(lang, "historySectionDelivered")}
-                count={deliveredOrders.length}
-              />
-              <div style={styles.deliveredList}>
-                {deliveredOrders.map((o) => (
-                  <DeliveredOrderRow
-                    key={o.id}
-                    order={o}
-                    formatPrice={formatPrice}
-                    lang={lang}
-                    onProductClick={onProductClick}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-        </>
+            ))}
+          </div>
+        </section>
       )}
-    </div>
-  );
-}
-
-function SectionHeader({ title, count }: { title: string; count: number }) {
-  return (
-    <div style={styles.sectionHeader}>
-      <h2 style={styles.sectionTitle}>{title}</h2>
-      <span style={styles.sectionCount}>{count}</span>
     </div>
   );
 }
@@ -189,9 +150,6 @@ function ActiveOrderCard({
     <article style={styles.activeCard}>
       <div style={styles.activeCardHeader}>
         <div>
-          <span style={styles.activeOrderLabel}>
-            {t(lang, "historyOrderLabel")} #{order.id}
-          </span>
           <span style={styles.activeOrderDate}>
             {formatDate(order.created_at, lang)}
           </span>
@@ -255,14 +213,20 @@ function ActiveOrderCard({
       </div>
 
       <div style={styles.timelineWrap} aria-label="order progress">
-        {steps.map((step, idx) => {
-          const done = idx <= stepIndex;
-          const current = idx === stepIndex;
-          const showConnector = idx < steps.length - 1;
-          const nextDone = idx + 1 <= stepIndex;
-          return (
-            <div key={step.key} style={styles.timelineStep}>
-              <div style={styles.timelineStepCore}>
+        <div style={styles.timelineTrack}>
+          {steps.map((step, idx) => {
+            const done = idx <= stepIndex;
+            const current = idx === stepIndex;
+            const showConnector = idx < steps.length - 1;
+            const nextDone = idx + 1 <= stepIndex;
+            return (
+              <div
+                key={step.key}
+                style={{
+                  ...styles.timelineNodeWrap,
+                  ...(showConnector ? styles.timelineNodeWrapGrow : {}),
+                }}
+              >
                 <span
                   style={{
                     ...styles.timelineNode,
@@ -283,87 +247,46 @@ function ActiveOrderCard({
                   />
                 )}
               </div>
-              <span
+            );
+          })}
+        </div>
+        <div style={styles.timelineLabels}>
+          {steps.map((step, idx) => {
+            const done = idx <= stepIndex;
+            const current = idx === stepIndex;
+            const isFirst = idx === 0;
+            const isLast = idx === steps.length - 1;
+            const align: React.CSSProperties = isFirst
+              ? { justifyContent: "flex-start" }
+              : isLast
+                ? { justifyContent: "flex-end" }
+                : { justifyContent: "center" };
+            return (
+              <div
+                key={step.key}
                 style={{
-                  ...styles.timelineLabel,
-                  ...(done ? styles.timelineLabelDone : {}),
-                  ...(current ? styles.timelineLabelCurrent : {}),
+                  ...styles.timelineLabelSlot,
+                  ...align,
+                  ...(isFirst || isLast
+                    ? styles.timelineLabelSlotEdge
+                    : styles.timelineLabelSlotMid),
                 }}
               >
-                {t(lang, step.labelKey)}
-              </span>
-            </div>
-          );
-        })}
+                <span
+                  style={{
+                    ...styles.timelineLabel,
+                    ...(done ? styles.timelineLabelDone : {}),
+                    ...(current ? styles.timelineLabelCurrent : {}),
+                  }}
+                >
+                  {t(lang, step.labelKey)}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </article>
-  );
-}
-
-function DeliveredOrderRow({
-  order,
-  formatPrice,
-  lang,
-  onProductClick,
-}: {
-  order: Order;
-  formatPrice: (n: number) => string;
-  lang: Lang;
-  onProductClick?: (productId: number) => void;
-}) {
-  const items = parseItems(order.items);
-  const first = items[0];
-  const totalCount = items.reduce((s, i) => s + (i.quantity || 1), 0);
-  const productId = first?.product_id;
-  const isClickable = onProductClick && productId != null;
-
-  return (
-    <div
-      style={{
-        ...styles.deliveredRow,
-        ...(isClickable ? styles.deliveredRowClickable : {}),
-      }}
-      onClick={isClickable ? () => onProductClick!(productId!) : undefined}
-      role={isClickable ? "button" : undefined}
-      tabIndex={isClickable ? 0 : undefined}
-      onKeyDown={
-        isClickable
-          ? (e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                onProductClick!(productId!);
-              }
-            }
-          : undefined
-      }
-    >
-      <div style={styles.deliveredThumb}>
-        {first?.image_url ? (
-          <img src={first.image_url} alt="" style={styles.thumbImg} />
-        ) : (
-          <div style={styles.thumbPlaceholder} />
-        )}
-      </div>
-      <div style={styles.deliveredMeta}>
-        <span style={styles.deliveredName}>
-          {first?.name || `${t(lang, "historyOrderLabel")} #${order.id}`}
-          {items.length > 1 && (
-            <span style={styles.deliveredNameMore}> · +{items.length - 1}</span>
-          )}
-        </span>
-        <span style={styles.deliveredSubline}>
-          {formatDate(order.created_at, lang)} ·{" "}
-          {t(lang, "historyItemsCount").replace("{n}", String(totalCount))}
-        </span>
-      </div>
-      <div style={styles.deliveredRight}>
-        <span style={styles.deliveredPrice}>{formatPrice(order.total)}</span>
-        <span style={styles.deliveredTag}>
-          <CheckIcon />
-          {t(lang, "historyStatusDelivered")}
-        </span>
-      </div>
-    </div>
   );
 }
 
@@ -439,28 +362,6 @@ const styles: Record<string, React.CSSProperties> = {
   title: { margin: 0 },
 
   section: { marginBottom: 36 },
-  sectionHeader: {
-    display: "flex",
-    alignItems: "baseline",
-    gap: 10,
-    marginBottom: 14,
-    paddingBottom: 10,
-    borderBottom: "1px solid var(--border)",
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: 600,
-    textTransform: "uppercase",
-    letterSpacing: "0.14em",
-    color: "var(--text)",
-    margin: 0,
-  },
-  sectionCount: {
-    fontSize: 12,
-    color: "var(--muted)",
-    fontWeight: 500,
-    letterSpacing: "0.04em",
-  },
 
   activeList: { display: "flex", flexDirection: "column", gap: 14 },
 
@@ -478,15 +379,6 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: "space-between",
     alignItems: "flex-start",
     gap: 12,
-  },
-  activeOrderLabel: {
-    display: "block",
-    fontSize: 12,
-    fontWeight: 600,
-    letterSpacing: "0.1em",
-    textTransform: "uppercase",
-    color: "var(--muted)",
-    marginBottom: 4,
   },
   activeOrderDate: {
     display: "block",
@@ -559,23 +451,40 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   timelineWrap: {
-    display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
-    gap: 0,
-    marginTop: 4,
-  },
-  timelineStep: {
     display: "flex",
     flexDirection: "column",
-    alignItems: "flex-start",
-    minWidth: 0,
+    gap: 8,
+    marginTop: 4,
   },
-  timelineStepCore: {
+  timelineTrack: {
     display: "flex",
     alignItems: "center",
     width: "100%",
     height: 20,
-    marginBottom: 8,
+  },
+  timelineNodeWrap: {
+    display: "flex",
+    alignItems: "center",
+    flex: "0 0 auto",
+  },
+  timelineNodeWrapGrow: {
+    flex: "1 1 auto",
+    minWidth: 0,
+  },
+  timelineLabels: {
+    display: "flex",
+    width: "100%",
+  },
+  timelineLabelSlot: {
+    display: "flex",
+    alignItems: "flex-start",
+  },
+  timelineLabelSlotEdge: {
+    flex: "0 0 auto",
+  },
+  timelineLabelSlotMid: {
+    flex: "1 1 0",
+    minWidth: 0,
   },
   timelineNode: {
     width: 18,
@@ -622,77 +531,11 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--muted)",
     fontWeight: 500,
     letterSpacing: "0.02em",
-    paddingRight: 4,
     lineHeight: 1.3,
+    whiteSpace: "nowrap",
   },
   timelineLabelDone: { color: "var(--text)" },
   timelineLabelCurrent: { color: "var(--accent)", fontWeight: 600 },
-
-  deliveredList: {
-    display: "flex",
-    flexDirection: "column",
-  },
-  deliveredRow: {
-    display: "grid",
-    gridTemplateColumns: "56px 1fr auto",
-    gap: 14,
-    alignItems: "center",
-    padding: "14px 4px",
-    borderBottom: "1px solid var(--border)",
-  },
-  deliveredRowClickable: { cursor: "pointer" },
-  deliveredThumb: {
-    width: 56,
-    height: 56,
-    borderRadius: 12,
-    overflow: "hidden",
-    background: "var(--surface-elevated)",
-    flexShrink: 0,
-  },
-  deliveredMeta: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 4,
-    minWidth: 0,
-  },
-  deliveredName: {
-    fontSize: 14,
-    fontWeight: 500,
-    color: "var(--text)",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-    letterSpacing: "0.01em",
-  },
-  deliveredNameMore: { color: "var(--muted)", fontWeight: 400 },
-  deliveredSubline: {
-    fontSize: 12,
-    color: "var(--muted)",
-    letterSpacing: "0.02em",
-  },
-  deliveredRight: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-end",
-    gap: 4,
-  },
-  deliveredPrice: {
-    fontSize: 15,
-    fontWeight: 600,
-    color: "var(--text)",
-    letterSpacing: "0.01em",
-    whiteSpace: "nowrap",
-  },
-  deliveredTag: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 4,
-    fontSize: 10,
-    fontWeight: 600,
-    letterSpacing: "0.08em",
-    textTransform: "uppercase",
-    color: "var(--muted)",
-  },
 
   emptyBubbleRow: {
     display: "flex",
