@@ -21,26 +21,25 @@ export function Support() {
         <QuestionBubble text={t(lang, "deliveryTermsTitle")} />
         <AnswerBubble>
           <p style={styles.p}>{t(lang, "deliveryTermsP1")}</p>
-          <p style={styles.p}>{t(lang, "deliveryTermsP2")}</p>
           <p style={{ ...styles.p, marginBottom: 0 }}>
-            {t(lang, "deliveryTermsP3")}
+            {t(lang, "deliveryTermsP2")}
           </p>
         </AnswerBubble>
 
         <QuestionBubble text={t(lang, "supportContactsTitle")} />
         <AnswerBubble>
-          <a
-            href={ADMIN_TG_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={styles.contactRow}
-          >
-            <span style={styles.contactRole}>
-              {t(lang, "supportContactAdmin")}
-            </span>
-            <span style={styles.contactHandle}>{ADMIN_TG_HANDLE}</span>
-            <IconExternal />
-          </a>
+          <p style={{ ...styles.p, marginBottom: 0 }}>
+            {t(lang, "supportContactAdmin")}{" "}
+            <a
+              href={ADMIN_TG_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={styles.contactLink}
+            >
+              {ADMIN_TG_HANDLE}
+              <IconExternal />
+            </a>
+          </p>
         </AnswerBubble>
       </div>
     </div>
@@ -76,7 +75,7 @@ function IconExternal() {
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden
-      style={{ flexShrink: 0, color: "var(--muted)" }}
+      style={{ flexShrink: 0, color: "currentColor" }}
     >
       <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
       <polyline points="15 3 21 3 21 9" />
@@ -150,29 +149,12 @@ const styles: Record<string, React.CSSProperties> = {
     margin: "0 0 10px",
   },
 
-  contactRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    padding: "10px 12px",
-    background: "var(--bg)",
-    border: "1px solid var(--border)",
-    borderRadius: 12,
-    color: "var(--text)",
-    textDecoration: "none",
-    fontSize: 14,
-  },
-  contactRole: {
-    fontWeight: 600,
-    color: "var(--text)",
-  },
-  contactHandle: {
-    flex: 1,
+  contactLink: {
     color: "var(--accent)",
-    fontWeight: 500,
-    letterSpacing: "0.01em",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
+    textDecoration: "none",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 4,
     whiteSpace: "nowrap",
   },
 };
