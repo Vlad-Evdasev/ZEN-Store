@@ -245,65 +245,89 @@
   opacity: 1;
 }
 
+/* ─── UNIFIED SECTION HEADS (Размер / Отзывы) ─── */
+.product-v2__section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.product-v2__section-title {
+  font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+  color: var(--text);
+  margin: 0;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.product-v2__section-meta {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+}
+
+/* Universal ghost pill button (sizeGuide / leaveReview) */
+.product-v2__pill-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 16px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+}
+.product-v2__pill-btn:active {
+  transform: scale(0.96);
+}
+@media (hover: hover) {
+  .product-v2__pill-btn--ghost:hover {
+    border-color: var(--text);
+  }
+}
+
 /* ─── SIZES ─── */
 .product-v2__size-block {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  padding-bottom: 8px;
 }
-.product-v2__size-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-}
-.product-v2__label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.product-v2__size-guide-btn {
-  background: none;
-  border: none;
-  padding: 0;
-  color: var(--text);
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  position: relative;
-  padding-bottom: 2px;
-}
-.product-v2__size-guide-btn::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 1px;
-  background: currentColor;
-  opacity: 0.5;
-}
-
 .product-v2__sizes {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  padding-bottom: 10px;
 }
 .product-v2__size {
-  min-width: 58px;
-  height: 58px;
-  padding: 0 16px;
+  position: relative;
+  min-width: 56px;
+  height: 56px;
+  padding: 0 14px;
   border-radius: 50%;
   border: 1px solid var(--border);
-  background: var(--surface);
+  background: transparent;
   color: var(--text);
   font-family: inherit;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -313,17 +337,36 @@
   box-shadow: none !important;
   -webkit-tap-highlight-color: transparent;
 }
+.product-v2__size-label {
+  position: relative;
+  z-index: 1;
+}
 .product-v2__size:active {
   transform: scale(0.94);
 }
+/* Active: тонкий «двойной ободок» — outline из text-цвета + inset ring.
+   Это создаёт ощущение медальона/значка. */
 .product-v2__size.is-active {
-  background: var(--text);
-  color: var(--bg);
   border-color: var(--text);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--text) !important;
+}
+/* Точка-индикатор под активным размером — уникальный акцентный штрих */
+.product-v2__size.is-active::after {
+  content: "";
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
 }
 @media (hover: hover) {
   .product-v2__size:not(.is-active):hover {
     border-color: var(--text);
+    color: var(--text);
   }
 }
 
@@ -331,54 +374,6 @@
 .product-v2__reviews {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-}
-.product-v2__reviews-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.product-v2__reviews-title {
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: -0.005em;
-  margin: 0;
-  display: inline-flex;
-  align-items: baseline;
-  gap: 8px;
-}
-.product-v2__reviews-count {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--muted);
-  background: var(--surface);
-  padding: 2px 8px;
-  border-radius: 999px;
-  letter-spacing: 0.02em;
-}
-.product-v2__reviews-add-btn {
-  padding: 9px 16px;
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--text);
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
-  -webkit-tap-highlight-color: transparent;
-}
-.product-v2__reviews-add-btn:active {
-  transform: scale(0.97);
-}
-@media (hover: hover) {
-  .product-v2__reviews-add-btn:hover {
-    border-color: var(--text);
-  }
 }
 
 .product-v2__review-form {
@@ -561,31 +556,33 @@
 .product-v2__cta-price {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
-  padding-left: 4px;
-}
-.product-v2__cta-price-label {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--muted);
+  padding-left: 6px;
+  padding-right: 4px;
 }
 .product-v2__cta-price-value {
   font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--text);
-  letter-spacing: -0.01em;
-  line-height: 1.1;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
   white-space: nowrap;
 }
+.product-v2__cta-price-meta {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+  font-weight: 500;
+}
 
+/* CTA: pill-кнопка с «orb» — круглой иконкой в правом углу.
+   Современный split-look (airbnb reserve-button), но строгий. */
 .product-v2__cta-btn {
   flex: 1;
-  min-height: 54px;
-  padding: 14px 20px;
+  min-height: 56px;
+  padding: 6px 6px 6px 22px;
   background: var(--accent);
   border: none;
   border-radius: 999px;
@@ -593,29 +590,66 @@
   font-family: inherit;
   font-size: 14px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: 10px;
-  box-shadow: 0 10px 24px -8px rgba(165, 42, 42, 0.45), 0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 24px -8px rgba(165, 42, 42, 0.42), 0 1px 2px rgba(0, 0, 0, 0.08);
   transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease, opacity 0.2s ease;
+  position: relative;
+  overflow: hidden;
 }
 .product-v2__cta-btn:active {
   transform: scale(0.98);
 }
 .product-v2__cta-btn:disabled {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: not-allowed;
   box-shadow: none;
 }
+.product-v2__cta-btn-label {
+  flex: 1;
+  text-align: center;
+  padding-right: 6px;
+}
+/* Orb — круглая «капсула» внутри кнопки с акцентной заливкой.
+   Создаёт уникальный узнаваемый элемент. */
+.product-v2__cta-btn-orb {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.product-v2__cta-btn:not(:disabled):active .product-v2__cta-btn-orb {
+  transform: scale(0.92);
+}
+@media (hover: hover) {
+  .product-v2__cta-btn:not(:disabled):hover .product-v2__cta-btn-orb {
+    background: rgba(255, 255, 255, 0.26);
+  }
+}
+
 .product-v2__cta-btn--success {
   background: var(--text);
   color: var(--bg);
   box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.35);
   animation: ctaPulse 0.4s ease both;
+}
+.product-v2__cta-btn--success .product-v2__cta-btn-orb {
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--bg);
+}
+html[data-theme="dark"] .product-v2__cta-btn--success .product-v2__cta-btn-orb {
+  background: rgba(0, 0, 0, 0.22);
 }
 @keyframes ctaPulse {
   0% { transform: scale(0.96); }
@@ -627,8 +661,8 @@ html[data-theme="dark"] .product-v2__cta-btn {
 }
 
 .product-v2__cta-spinner {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   border: 2px solid rgba(255, 255, 255, 0.35);
   border-top-color: #fff;

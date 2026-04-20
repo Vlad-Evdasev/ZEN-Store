@@ -254,9 +254,12 @@ export function ProductPage({
         <div className="product-v2__divider" />
 
         <div className="product-v2__size-block">
-          <div className="product-v2__size-head">
-            <span className="product-v2__label">{t(lang, "size")}</span>
-            <button type="button" onClick={() => setShowSizeGuide(true)} className="product-v2__size-guide-btn">
+          <div className="product-v2__section-head">
+            <h3 className="product-v2__section-title">
+              {t(lang, "size")}
+              {size && <span className="product-v2__section-meta">· {size}</span>}
+            </h3>
+            <button type="button" onClick={() => setShowSizeGuide(true)} className="product-v2__pill-btn product-v2__pill-btn--ghost">
               {t(lang, "sizeGuide")}
             </button>
           </div>
@@ -267,8 +270,9 @@ export function ProductPage({
                 type="button"
                 onClick={() => setSize(s)}
                 className={`product-v2__size${size === s ? " is-active" : ""}`}
+                aria-pressed={size === s}
               >
-                {s}
+                <span className="product-v2__size-label">{s}</span>
               </button>
             ))}
           </div>
@@ -277,13 +281,13 @@ export function ProductPage({
         <div className="product-v2__divider" />
 
         <section className="product-v2__reviews">
-          <div className="product-v2__reviews-head">
-            <h3 className="product-v2__reviews-title">
+          <div className="product-v2__section-head">
+            <h3 className="product-v2__section-title">
               {t(lang, "reviewsOnProduct")}
-              {reviews.length > 0 && <span className="product-v2__reviews-count">{reviews.length}</span>}
+              {reviews.length > 0 && <span className="product-v2__section-meta">· {reviews.length}</span>}
             </h3>
             {!showReviewForm && (
-              <button onClick={() => setShowReviewForm(true)} type="button" className="product-v2__reviews-add-btn">
+              <button onClick={() => setShowReviewForm(true)} type="button" className="product-v2__pill-btn product-v2__pill-btn--ghost">
                 {t(lang, "leaveReview")}
               </button>
             )}
@@ -349,28 +353,35 @@ export function ProductPage({
 
       <div className="product-v2__cta-bar">
         <div className="product-v2__cta-price">
-          <span className="product-v2__cta-price-label">Цена</span>
           <span className="product-v2__cta-price-value">{formatPrice(product.price)}</span>
+          {size && <span className="product-v2__cta-price-meta">Размер {size}</span>}
         </div>
         {justAdded ? (
-          <button onClick={onCart} className="product-v2__cta-btn product-v2__cta-btn--success">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-            <span>{t(lang, "goToCart")}</span>
+          <button onClick={onCart} className="product-v2__cta-btn product-v2__cta-btn--success" aria-label={t(lang, "goToCart")}>
+            <span className="product-v2__cta-btn-label">{t(lang, "goToCart")}</span>
+            <span className="product-v2__cta-btn-orb" aria-hidden>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </span>
           </button>
         ) : (
-          <button onClick={handleAdd} disabled={adding || !size} className="product-v2__cta-btn">
-            {adding ? (
-              <span className="product-v2__cta-spinner" aria-hidden />
-            ) : (
-              <>
-                <span>{t(lang, "addToCart")}</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <button
+            onClick={handleAdd}
+            disabled={adding || !size}
+            className="product-v2__cta-btn"
+            aria-label={t(lang, "addToCart")}
+          >
+            <span className="product-v2__cta-btn-label">{adding ? "..." : t(lang, "addToCart")}</span>
+            <span className="product-v2__cta-btn-orb" aria-hidden>
+              {adding ? (
+                <span className="product-v2__cta-spinner" />
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12h14M13 5l7 7-7 7" />
                 </svg>
-              </>
-            )}
+              )}
+            </span>
           </button>
         )}
       </div>
