@@ -154,52 +154,6 @@
 .product-v2__header {
   margin-bottom: 14px;
 }
-/* Верхняя строка: eyebrow (бренд · категория) слева, рейтинг справа */
-.product-v2__eyebrow-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 14px;
-  margin-bottom: 12px;
-}
-.product-v2__eyebrow {
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  color: var(--muted);
-  line-height: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-/* Рейтинг inline, без подложки */
-.product-v2__rating-chip {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  line-height: 1;
-  letter-spacing: 0;
-  color: var(--muted);
-}
-.product-v2__rating-star {
-  color: var(--accent);
-  font-size: 11px;
-  line-height: 1;
-}
-.product-v2__rating-value {
-  color: var(--text);
-  font-weight: 600;
-  letter-spacing: 0;
-}
-.product-v2__rating-count {
-  color: var(--muted);
-  letter-spacing: 0;
-  font-weight: 400;
-}
 
 /* Название: крупно, лёгкий вес, плотный трекинг. Ничего больше. */
 .product-v2__title {

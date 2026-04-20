@@ -110,10 +110,6 @@ export function ProductPage({
     }
   };
 
-  const avgRating = reviews.length > 0
-    ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10) / 10
-    : null;
-
   const goPrevImage = () => setImageIndex((i) => (i === 0 ? imageUrls.length - 1 : i - 1));
   const goNextImage = () => setImageIndex((i) => (i === imageUrls.length - 1 ? 0 : i + 1));
 
@@ -224,30 +220,6 @@ export function ProductPage({
 
       <div className="product-v2__sheet">
         <header className="product-v2__header">
-          {(() => {
-            const eyebrowParts = [product.brand, product.category]
-              .map((s) => (s || "").trim())
-              .filter(Boolean);
-            const hasEyebrow = eyebrowParts.length > 0;
-            const hasRating = avgRating != null;
-            if (!hasEyebrow && !hasRating) return null;
-            return (
-              <div className="product-v2__eyebrow-row">
-                {hasEyebrow && (
-                  <span className="product-v2__eyebrow">
-                    {eyebrowParts.join(" · ")}
-                  </span>
-                )}
-                {hasRating && (
-                  <span className="product-v2__rating-chip" aria-label={`Рейтинг ${avgRating}`}>
-                    <span className="product-v2__rating-star">★</span>
-                    <span className="product-v2__rating-value">{avgRating}</span>
-                    <span className="product-v2__rating-count">· {reviews.length}</span>
-                  </span>
-                )}
-              </div>
-            );
-          })()}
           <h1 className="product-v2__title">{product.name}</h1>
         </header>
 
