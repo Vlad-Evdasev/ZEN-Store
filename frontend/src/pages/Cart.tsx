@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getCart, removeFromCart, type CartItem } from "../api";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
@@ -11,11 +11,23 @@ interface CartProps {
   onProductClick?: (productId: number) => void;
 }
 
-export function Cart({ userId, onCheckout, onCartChange, onProductClick }: CartProps) {
+function pluralize(lang: string, n: number, forms: { one: string; few: string; many: string }): string {
+  if (lang === "ru") {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return forms.one;
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return forms.few;
+    return forms.many;
+  }
+  return n === 1 ? forms.one : forms.many;
+}
+
+export function Cart({ userId, onBack, onCheckout, onCartChange, onProductClick }: CartProps) {
   const { formatPrice, settings } = useSettings();
   const lang = settings.lang;
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [removingId, setRemovingId] = useState<number | null>(null);
 
   const refresh = (silent = false) => {
     if (!silent) setLoading(true);
@@ -25,27 +37,52 @@ export function Cart({ userId, onCheckout, onCartChange, onProductClick }: CartP
         onCartChange?.();
       })
       .catch(console.error)
-      .finally(() => { if (!silent) setLoading(false); });
+      .finally(() => {
+        if (!silent) setLoading(false);
+      });
   };
 
   useEffect(() => {
     refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   const remove = async (id: number) => {
+    setRemovingId(id);
     const prev = items;
-    setItems((list) => list.filter((i) => i.id !== id));
+    setTimeout(() => {
+      setItems((list) => list.filter((i) => i.id !== id));
+      setRemovingId(null);
+    }, 180);
     try {
       await removeFromCart(userId, id);
       refresh(true);
     } catch (e) {
       console.error(e);
       setItems(prev);
+      setRemovingId(null);
       refresh();
     }
   };
 
-  const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const subtotal = useMemo(
+    () => items.reduce((sum, i) => sum + i.price * i.quantity, 0),
+    [items]
+  );
+  const totalQty = useMemo(
+    () => items.reduce((sum, i) => sum + i.quantity, 0),
+    [items]
+  );
+  const uniqueCount = items.length;
+
+  const countLabelKey = pluralize(lang, uniqueCount, {
+    one: "cartItemsCountOne",
+    few: "cartItemsCount",
+    many: "cartItemsCountMany",
+  });
+  const countLabel = t(lang, countLabelKey)
+    .replace("{n}", String(uniqueCount))
+    .replace("{n2}", String(totalQty));
 
   if (loading) {
     return (
@@ -57,119 +94,138 @@ export function Cart({ userId, onCheckout, onCartChange, onProductClick }: CartP
 
   if (items.length === 0) {
     return (
-      <div style={styles.wrap}>
-        <div className="zen-empty-state">
-          <strong>{t(lang, "cartEmpty")}</strong>
-          <span>{t(lang, "cartEmptyHint")}</span>
+      <div className="zen-bag-empty zen-page-enter">
+        <div className="zen-bag-empty-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <path d="M16 10a4 4 0 0 1-8 0" />
+          </svg>
         </div>
+        <h2 className="zen-bag-empty-title">{t(lang, "cartEmpty")}</h2>
+        <p className="zen-bag-empty-hint">{t(lang, "cartEmptyHint")}</p>
+        {onBack && (
+          <button type="button" className="zen-bag-empty-cta" onClick={onBack}>
+            {t(lang, "toCatalog")}
+          </button>
+        )}
       </div>
     );
   }
 
   return (
-    <div style={styles.wrap}>
-      <div style={styles.list}>
-        {items.map((item) => (
-          <div
-            key={item.id}
-            style={{ ...styles.item, ...(onProductClick ? styles.itemClickable : {}) }}
-            onClick={onProductClick ? () => onProductClick(item.product_id) : undefined}
-            role={onProductClick ? "button" : undefined}
-            tabIndex={onProductClick ? 0 : undefined}
-            onKeyDown={onProductClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onProductClick(item.product_id); } } : undefined}
-          >
-            <img
-              src={item.image_url || "https://via.placeholder.com/80"}
-              alt=""
-              style={styles.thumb}
-            />
-            <div style={styles.itemInfo}>
-              <p style={styles.itemName}>{item.name}</p>
-              <p style={styles.itemMeta}>
-                {item.size} × {item.quantity}
-              </p>
-              <p style={styles.itemPrice}>{formatPrice(item.price * item.quantity)}</p>
-            </div>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); remove(item.id); }}
-              style={styles.remove}
-              aria-label="Удалить"
-            >
-              ✕
-            </button>
-          </div>
-        ))}
-      </div>
+    <div className="zen-bag-wrap zen-page-enter">
+      <header className="zen-bag-header">
+        <div className="zen-bag-eyebrow">{t(lang, "cart")}</div>
+        <h1 className="zen-bag-title">{t(lang, "cartTitle")}</h1>
+        <div className="zen-bag-meta">{countLabel}</div>
+      </header>
 
-      <div style={styles.footer}>
-        <span style={styles.total}>{t(lang, "total")}: {formatPrice(total)}</span>
-        <button onClick={onCheckout} style={styles.checkout}>
+      <ul style={styles.list}>
+        {items.map((item) => {
+          const isRemoving = removingId === item.id;
+          const clickable = !!onProductClick;
+          return (
+            <li
+              key={item.id}
+              className={`zen-bag-item${clickable ? " zen-bag-item--clickable" : ""}`}
+              style={{
+                opacity: isRemoving ? 0 : 1,
+                transform: isRemoving ? "translateX(12px)" : "translateX(0)",
+              }}
+              onClick={clickable ? () => onProductClick!(item.product_id) : undefined}
+              role={clickable ? "button" : undefined}
+              tabIndex={clickable ? 0 : undefined}
+              onKeyDown={
+                clickable
+                  ? (e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onProductClick!(item.product_id);
+                      }
+                    }
+                  : undefined
+              }
+            >
+              <div className="zen-bag-thumb-wrap">
+                <img
+                  className="zen-bag-thumb"
+                  src={item.image_url || "https://via.placeholder.com/200x250"}
+                  alt=""
+                  loading="lazy"
+                />
+              </div>
+              <div className="zen-bag-item-body">
+                <div>
+                  <p className="zen-bag-item-name">{item.name}</p>
+                  <div className="zen-bag-item-meta">
+                    <span>
+                      {t(lang, "cartSize")} {item.size}
+                    </span>
+                    <span className="zen-bag-item-meta-dot" aria-hidden="true" />
+                    <span>
+                      {t(lang, "cartQty")} {item.quantity}
+                    </span>
+                  </div>
+                </div>
+                <div className="zen-bag-item-bottom">
+                  <span className="zen-bag-item-price">
+                    {formatPrice(item.price * item.quantity)}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="zen-bag-item-remove"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  remove(item.id);
+                }}
+                aria-label={t(lang, "cartRemove")}
+              >
+                <span className="zen-bag-item-remove-icon" aria-hidden="true" />
+                {t(lang, "cartRemove")}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="zen-bag-summary">
+        <div className="zen-bag-summary-rows">
+          <div className="zen-bag-summary-row">
+            <span>{t(lang, "cartSubtotal")}</span>
+            <span>{formatPrice(subtotal)}</span>
+          </div>
+          <div className="zen-bag-summary-row">
+            <span>{t(lang, "cartShipping")}</span>
+            <span>{t(lang, "cartShippingCalc")}</span>
+          </div>
+        </div>
+        <div className="zen-bag-summary-total">
+          <span className="zen-bag-summary-total-label">{t(lang, "total")}</span>
+          <span className="zen-bag-summary-total-value">{formatPrice(subtotal)}</span>
+        </div>
+        <button
+          type="button"
+          className="zen-bag-checkout-btn"
+          onClick={onCheckout}
+        >
           {t(lang, "checkout")}
         </button>
+        <p className="zen-bag-terms">{t(lang, "cartTerms")}</p>
       </div>
     </div>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  wrap: { maxWidth: 420, margin: "0 auto" },
-  list: { display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 },
-  item: {
+  list: {
+    listStyle: "none",
+    margin: 0,
+    padding: 0,
     display: "flex",
-    alignItems: "center",
-    gap: 12,
-    padding: 12,
-    background: "var(--surface)",
-    borderRadius: 12,
-    border: "1px solid var(--border)",
-  },
-  itemClickable: {
-    cursor: "pointer",
-  },
-  thumb: { width: 64, height: 64, objectFit: "cover", borderRadius: 8 },
-  itemInfo: { flex: 1 },
-  itemName: { fontSize: 14, fontWeight: 500, marginBottom: 4 },
-  itemMeta: { fontSize: 12, color: "var(--muted)", marginBottom: 4 },
-  itemPrice: { fontSize: 14, color: "var(--text)" },
-  remove: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    border: "1px solid var(--border)",
-    background: "var(--bg)",
-    color: "var(--muted)",
-    cursor: "pointer",
-    fontSize: 14,
-  },
-  footer: {
-    padding: 16,
-    background: "var(--surface)",
-    borderRadius: 12,
-    border: "1px solid var(--border)",
-  },
-  total: {
-    display: "block",
-    fontSize: 16,
-    fontWeight: 600,
-    marginBottom: 12,
-  },
-  checkout: {
-    width: "100%",
-    padding: 16,
-    background: "var(--accent)",
-    border: "none",
-    borderRadius: 10,
-    color: "#fff",
-    fontFamily: "inherit",
-    fontSize: 15,
-    fontWeight: 600,
-    cursor: "pointer",
-  },
-  empty: {
-    textAlign: "center",
-    padding: 48,
-    color: "var(--muted)",
+    flexDirection: "column",
   },
   loading: {
     textAlign: "center",

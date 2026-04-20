@@ -1743,6 +1743,479 @@ nav svg {
   stroke-width: 2 !important;
 }
 
+/* ──────────────────────────────────────────────────────────
+   Страница «Ваша сумка» (Cart) — премиум Ralph Lauren
+   Списочный вид без карточек, с тонкими разделителями.
+   Sticky footer со сводкой и CTA.
+   ────────────────────────────────────────────────────────── */
+.zen-app .zen-bag-wrap {
+  max-width: 520px;
+  margin: 0 auto;
+  padding-bottom: 120px;
+}
+.zen-app .zen-bag-header {
+  padding: 8px 4px 20px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+.zen-app .zen-bag-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.zen-app .zen-bag-title {
+  font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  line-height: 1.1;
+  margin: 0;
+}
+.zen-app .zen-bag-meta {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+/* Элемент списка — без бокса, разделители снизу */
+.zen-app .zen-bag-item {
+  display: grid;
+  grid-template-columns: 96px 1fr auto;
+  gap: 16px;
+  padding: 20px 4px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  align-items: stretch;
+  background: transparent;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.zen-app .zen-bag-item--clickable {
+  cursor: pointer;
+}
+.zen-app .zen-bag-item--clickable:hover .zen-bag-item-name {
+  color: var(--accent);
+}
+.zen-app .zen-bag-thumb-wrap {
+  width: 96px;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--surface-elevated);
+}
+.zen-app .zen-bag-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.zen-app .zen-bag-item-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+  padding: 2px 0;
+}
+.zen-app .zen-bag-item-name {
+  font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  transition: color 0.2s ease;
+}
+.zen-app .zen-bag-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 6px;
+  line-height: 1.3;
+}
+.zen-app .zen-bag-item-meta-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+.zen-app .zen-bag-item-bottom {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+}
+.zen-app .zen-bag-item-price {
+  font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+.zen-app .zen-bag-item-remove {
+  align-self: flex-start;
+  justify-self: end;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 4px 2px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.2s ease;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+.zen-app .zen-bag-item-remove:hover,
+.zen-app .zen-bag-item-remove:active {
+  color: var(--accent);
+}
+.zen-app .zen-bag-item-remove-icon {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  vertical-align: middle;
+  margin-right: 6px;
+  position: relative;
+}
+.zen-app .zen-bag-item-remove-icon::before,
+.zen-app .zen-bag-item-remove-icon::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: currentColor;
+}
+.zen-app .zen-bag-item-remove-icon::before {
+  transform: translateY(-50%) rotate(45deg);
+}
+.zen-app .zen-bag-item-remove-icon::after {
+  transform: translateY(-50%) rotate(-45deg);
+}
+
+/* Сводка — sticky внизу экрана */
+.zen-app .zen-bag-summary {
+  position: sticky;
+  bottom: 0;
+  margin: 32px -16px 0;
+  padding: 20px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  z-index: 5;
+  animation: pageContentEnter var(--transition-normal) ease forwards;
+}
+@media (min-width: 768px) {
+  .zen-app .zen-bag-summary {
+    margin-left: calc(-1 * var(--content-padding));
+    margin-right: calc(-1 * var(--content-padding));
+    padding-left: var(--content-padding);
+    padding-right: var(--content-padding);
+  }
+}
+.zen-app .zen-bag-summary-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.zen-app .zen-bag-summary-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.zen-app .zen-bag-summary-row span:first-child {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.zen-app .zen-bag-summary-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  margin-bottom: 14px;
+}
+.zen-app .zen-bag-summary-total-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.zen-app .zen-bag-summary-total-value {
+  font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.01em;
+}
+.zen-app .zen-bag-checkout-btn {
+  width: 100%;
+  min-height: 54px;
+  padding: 16px 24px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.25s ease, transform 0.12s ease, box-shadow 0.25s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.zen-app .zen-bag-checkout-btn:hover {
+  background: var(--accent-hover);
+  box-shadow: 0 8px 20px -8px rgba(165, 42, 42, 0.5);
+}
+.zen-app .zen-bag-checkout-btn:active {
+  transform: scale(0.985);
+}
+.zen-app .zen-bag-terms {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* Пустое состояние — премиум-дзен */
+.zen-app .zen-bag-empty,
+.zen-app .zen-wishlist-empty {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 64px 24px 48px;
+  text-align: center;
+  animation: pageContentEnter var(--transition-slow) ease forwards;
+}
+.zen-app .zen-bag-empty-icon,
+.zen-app .zen-wishlist-empty-icon {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 24px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
+.zen-app .zen-bag-empty-icon svg,
+.zen-app .zen-wishlist-empty-icon svg {
+  width: 28px;
+  height: 28px;
+  stroke-width: 1.5;
+}
+.zen-app .zen-bag-empty-title,
+.zen-app .zen-wishlist-empty-title {
+  font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+  margin: 0 0 10px;
+}
+.zen-app .zen-bag-empty-hint,
+.zen-app .zen-wishlist-empty-hint {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+  margin: 0 0 28px;
+  letter-spacing: 0.01em;
+}
+.zen-app .zen-bag-empty-cta,
+.zen-app .zen-wishlist-empty-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 28px;
+  background: var(--text);
+  color: var(--bg);
+  border: none;
+  border-radius: 4px;
+  font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.zen-app .zen-bag-empty-cta:hover,
+.zen-app .zen-wishlist-empty-cta:hover {
+  opacity: 0.88;
+}
+.zen-app .zen-bag-empty-cta:active,
+.zen-app .zen-wishlist-empty-cta:active {
+  transform: scale(0.98);
+}
+
+/* ──────────────────────────────────────────────────────────
+   Страница «Избранное» (Wishlist) — премиум-сетка
+   ────────────────────────────────────────────────────────── */
+.zen-app .zen-wishlist-wrap {
+  max-width: 560px;
+  margin: 0 auto;
+  padding-bottom: 48px;
+}
+@media (min-width: 1024px) {
+  .zen-app .zen-wishlist-wrap {
+    max-width: 1200px;
+  }
+}
+.zen-app .zen-wishlist-header {
+  padding: 8px 4px 20px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+.zen-app .zen-wishlist-header-left {
+  min-width: 0;
+}
+.zen-app .zen-wishlist-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.zen-app .zen-wishlist-title {
+  font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  line-height: 1.1;
+  margin: 0;
+}
+.zen-app .zen-wishlist-count {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  padding-bottom: 4px;
+}
+
+/* Карточки избранного: как в каталоге, но с «мини-булавкой» сердечком */
+.zen-app .zen-wishlist-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px 10px;
+}
+@media (min-width: 768px) {
+  .zen-app .zen-wishlist-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 22px;
+  }
+}
+@media (min-width: 1024px) {
+  .zen-app .zen-wishlist-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 32px;
+  }
+}
+
+.zen-app .zen-wishlist-card {
+  position: relative;
+  animation: pageContentEnter var(--transition-normal) ease both;
+}
+/* Круглый крестик-удалить поверх изображения */
+.zen-app .zen-wishlist-remove {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: none;
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+.zen-app .zen-wishlist-card:hover .zen-wishlist-remove,
+.zen-app .zen-wishlist-card:focus-within .zen-wishlist-remove {
+  opacity: 1;
+  transform: scale(1);
+}
+/* На мобильном — всегда видно */
+@media (hover: none) {
+  .zen-app .zen-wishlist-remove {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.zen-app .zen-wishlist-remove:hover {
+  background: var(--accent);
+  color: #fff;
+}
+.zen-app .zen-wishlist-remove:active {
+  transform: scale(0.92);
+}
+.zen-app .zen-wishlist-remove svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+html[data-theme="dark"] .zen-app .zen-wishlist-remove {
+  background: rgba(28, 27, 26, 0.85);
+  color: var(--text);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
 /* Ensure search row is properly positioned above products */
 @supports (position: fixed) {
   .zen-app .zen-catalog-search-row {

@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import type { Product } from "../api";
 import { ProductCard } from "../components/ProductCard";
 import { useSettings } from "../context/SettingsContext";
@@ -11,48 +12,96 @@ interface FavoritesProps {
   onBack?: () => void;
 }
 
+function pluralize(lang: string, n: number, forms: { one: string; few: string; many: string }): string {
+  if (lang === "ru") {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return forms.one;
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return forms.few;
+    return forms.many;
+  }
+  return n === 1 ? forms.one : forms.many;
+}
+
 export function Favorites({
   products,
   wishlistIds,
   onProductClick,
   onToggleWishlist,
+  onBack,
 }: FavoritesProps) {
   const { settings } = useSettings();
   const lang = settings.lang;
-  const favorites = products.filter((p) => wishlistIds.has(p.id));
+  const favorites = useMemo(
+    () => products.filter((p) => wishlistIds.has(p.id)),
+    [products, wishlistIds]
+  );
+
+  if (favorites.length === 0) {
+    return (
+      <div className="zen-wishlist-empty zen-page-enter">
+        <div className="zen-wishlist-empty-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+          </svg>
+        </div>
+        <h2 className="zen-wishlist-empty-title">{t(lang, "favoritesEmpty")}</h2>
+        <p className="zen-wishlist-empty-hint">{t(lang, "favoritesEmptyHint")}</p>
+        {onBack && (
+          <button type="button" className="zen-wishlist-empty-cta" onClick={onBack}>
+            {t(lang, "toCatalog")}
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  const countKey = pluralize(lang, favorites.length, {
+    one: "favoritesCountOne",
+    few: "favoritesCount",
+    many: "favoritesCountMany",
+  });
+  const countLabel = t(lang, countKey).replace("{n}", String(favorites.length));
 
   return (
-    <div style={styles.wrap}>
-      {favorites.length === 0 ? (
-        <div className="zen-empty-state">
-          <strong>{t(lang, "favoritesEmpty")}</strong>
-          <span>{t(lang, "favoritesEmptyHint")}</span>
+    <div className="zen-wishlist-wrap zen-page-enter">
+      <header className="zen-wishlist-header">
+        <div className="zen-wishlist-header-left">
+          <div className="zen-wishlist-eyebrow">{t(lang, "favorites")}</div>
+          <h1 className="zen-wishlist-title">{t(lang, "favoritesTitle")}</h1>
         </div>
-      ) : (
-        <div style={styles.grid}>
-          {favorites.map((p) => (
-            <ProductCard
-              key={p.id}
-              product={p}
-              onClick={() => onProductClick(p.id)}
-              inWishlist={true}
-              onWishlistClick={(e) => {
+        <div className="zen-wishlist-count">{countLabel}</div>
+      </header>
+
+      <div className="zen-wishlist-grid">
+        {favorites.map((p, idx) => (
+          <div
+            key={p.id}
+            className="zen-wishlist-card"
+            style={{ animationDelay: `${Math.min(idx * 40, 320)}ms` }}
+          >
+            <button
+              type="button"
+              className="zen-wishlist-remove"
+              onClick={(e) => {
                 e.stopPropagation();
                 onToggleWishlist(p.id);
               }}
+              aria-label={t(lang, "favoritesRemoveFromWishlist")}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <line x1="5" y1="5" x2="19" y2="19" />
+                <line x1="19" y1="5" x2="5" y2="19" />
+              </svg>
+            </button>
+            <ProductCard
+              product={p}
+              onClick={() => onProductClick(p.id)}
+              inWishlist={true}
             />
-          ))}
-        </div>
-      )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  wrap: { maxWidth: 420, margin: "0 auto", paddingBottom: 24 },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(2, 1fr)",
-    gap: 16,
-  },
-};
