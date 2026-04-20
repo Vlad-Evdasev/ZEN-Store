@@ -297,10 +297,9 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
               {(() => {
                 const THUMB = 52;
                 const OFFSET = 24;
-                const showMoreBadge = items.length > 3;
-                const previewItems = showMoreBadge ? items.slice(0, 2) : items.slice(0, 3);
-                const totalSlots = previewItems.length + (showMoreBadge ? 1 : 0);
-                const stackWidth = THUMB + (totalSlots - 1) * OFFSET;
+                const previewItems = items.slice(0, 3);
+                const hiddenCount = items.length - previewItems.length;
+                const stackWidth = THUMB + (previewItems.length - 1) * OFFSET;
                 return (
                   <div
                     style={{ ...styles.itemsStack, width: stackWidth, height: THUMB }}
@@ -311,7 +310,7 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
                         key={it.id}
                         style={{
                           ...styles.itemsStackThumb,
-                          zIndex: totalSlots - idx,
+                          zIndex: previewItems.length - idx,
                           left: idx * OFFSET,
                         }}
                       >
@@ -324,17 +323,10 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
                         )}
                       </div>
                     ))}
-                    {showMoreBadge && (
-                      <div
-                        style={{
-                          ...styles.itemsStackThumb,
-                          ...styles.itemsStackMore,
-                          zIndex: 1,
-                          left: previewItems.length * OFFSET,
-                        }}
-                      >
-                        +{items.length - previewItems.length}
-                      </div>
+                    {hiddenCount > 0 && (
+                      <span style={styles.itemsStackMoreBadge}>
+                        +{hiddenCount}
+                      </span>
                     )}
                   </div>
                 );
@@ -645,16 +637,25 @@ const styles: Record<string, React.CSSProperties> = {
     background: "var(--surface)",
     boxShadow: "0 0 0 2px var(--surface-elevated)",
   },
-  itemsStackMore: {
-    display: "flex",
+  itemsStackMoreBadge: {
+    position: "absolute",
+    right: -8,
+    bottom: -6,
+    zIndex: 10,
+    minWidth: 26,
+    height: 22,
+    padding: "0 7px",
+    display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
     background: "var(--accent)",
     color: "#fff",
     fontFamily: '"Proxima Nova", -apple-system, system-ui, sans-serif',
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: 700,
-    letterSpacing: "0.01em",
+    letterSpacing: "0.02em",
+    borderRadius: 999,
+    boxShadow: "0 0 0 2px var(--surface-elevated), 0 2px 6px rgba(165, 42, 42, 0.35)",
   },
   itemsSummaryText: {
     flex: 1,
