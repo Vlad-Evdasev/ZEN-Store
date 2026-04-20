@@ -72,23 +72,23 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
         {onWishlistClick && (
           <button
             type="button"
-            className="product-card-wishlist-btn"
+            className={`product-card-wishlist-btn${inWishlist ? " is-active" : ""}`}
             onClick={(e) => { e.stopPropagation(); onWishlistClick(e); }}
-            style={wishlistBtnStyle}
+            style={{ ...wishlistBtnStyle, color: inWishlist ? "var(--accent)" : "#1a1a1a" }}
             aria-label={inWishlist ? "Убрать из избранного" : "В избранное"}
           >
             <svg
               width={compact ? 16 : 18}
               height={compact ? 16 : 18}
               viewBox="0 0 24 24"
-              fill={inWishlist ? "var(--accent)" : "rgba(255,255,255,0.95)"}
-              stroke={inWishlist ? "var(--accent)" : "rgba(255,255,255,0.95)"}
-              strokeWidth={1.8}
+              fill={inWishlist ? "currentColor" : "none"}
+              stroke="currentColor"
+              strokeWidth={2}
               strokeLinecap="round"
               strokeLinejoin="round"
               aria-hidden="true"
               focusable="false"
-              style={{ display: "block", filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.35))" }}
+              style={{ display: "block" }}
             >
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
             </svg>
@@ -170,12 +170,13 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: "center",
     border: "none",
     borderRadius: "50%",
-    background: "rgba(0,0,0,0.22)",
-    backdropFilter: "blur(6px)",
-    WebkitBackdropFilter: "blur(6px)",
+    background: "rgba(255,255,255,0.85)",
+    backdropFilter: "blur(14px) saturate(1.2)",
+    WebkitBackdropFilter: "blur(14px) saturate(1.2)",
+    boxShadow: "0 4px 14px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08)",
     cursor: "pointer",
     lineHeight: 0,
-    transition: "transform var(--transition-fast), background var(--transition-fast)",
+    transition: "transform 0.18s ease, background 0.18s ease, color 0.18s ease",
   },
   wishlistBtnCompact: {
     top: 6,
