@@ -1878,6 +1878,11 @@ nav svg {
   pointer-events: none;
   animation: zenBagSummaryEnter 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+/* Модификатор: прикреплён к самому низу экрана, без offset под BottomNavBar
+   (используется на странице оформления заказа, где навбар не отображается). */
+.zen-app .zen-bag-summary--bottom {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+}
 .zen-app .zen-bag-summary-bar {
   pointer-events: auto;
   max-width: 460px;
@@ -2022,6 +2027,53 @@ nav svg {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
+
+/* Неактивное состояние (форма не заполнена / сабмит в процессе) */
+.zen-app .zen-bag-checkout-btn--disabled,
+.zen-app .zen-bag-checkout-btn:disabled {
+  background: var(--surface-elevated);
+  color: var(--muted);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.zen-app .zen-bag-checkout-btn--disabled::before,
+.zen-app .zen-bag-checkout-btn:disabled::before { opacity: 0; }
+.zen-app .zen-bag-checkout-btn--disabled .zen-bag-checkout-count,
+.zen-app .zen-bag-checkout-btn:disabled .zen-bag-checkout-count {
+  background: transparent;
+  color: var(--muted);
+  box-shadow: 0 0 0 1px var(--border) inset;
+}
+.zen-app .zen-bag-checkout-btn--disabled .zen-bag-checkout-arrow,
+.zen-app .zen-bag-checkout-btn:disabled .zen-bag-checkout-arrow {
+  background: transparent;
+  box-shadow: 0 0 0 1px var(--border) inset;
+}
+.zen-app .zen-bag-checkout-btn--disabled .zen-bag-checkout-arrow svg,
+.zen-app .zen-bag-checkout-btn:disabled .zen-bag-checkout-arrow svg {
+  stroke: var(--muted);
+}
+.zen-app .zen-bag-checkout-btn--disabled:hover {
+  background: var(--surface-elevated);
+  box-shadow: none;
+}
+.zen-app .zen-bag-checkout-btn--disabled:hover .zen-bag-checkout-arrow { background: transparent; }
+.zen-app .zen-bag-checkout-btn--disabled:hover .zen-bag-checkout-arrow svg { transform: none; }
+
+/* Индикатор загрузки внутри круглой "стрелки" */
+.zen-app .zen-bag-checkout-spinner {
+  animation: zenBagSpin 0.9s linear infinite;
+}
+.zen-app .zen-bag-checkout-spinner circle {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-dasharray: 46;
+  stroke-dashoffset: 28;
+  transform-origin: center;
+}
+@keyframes zenBagSpin { to { transform: rotate(360deg); } }
 
 @media (max-width: 380px) {
   .zen-app .zen-bag-summary-bar { padding-left: 14px; gap: 6px; }

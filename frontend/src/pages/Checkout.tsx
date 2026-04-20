@@ -162,7 +162,7 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, sel
         </section>
       )}
 
-      <form onSubmit={handleSubmit} style={styles.form}>
+      <form id="checkout-form" onSubmit={handleSubmit} style={styles.form}>
         <div style={styles.fieldGroup}>
           <div style={styles.pillField}>
             <span style={styles.pillLabel}>Username</span>
@@ -194,31 +194,65 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, sel
             />
           </div>
         </div>
-
-        <div style={styles.summary}>
-          <span style={styles.summaryLabel}>
-            {lang === "ru" ? "Итого к оплате" : "Total"}
-          </span>
-          <span style={styles.summaryValue}>{formatPrice(total)}</span>
-        </div>
-
-        <button
-          type="submit"
-          disabled={!canSubmit}
-          style={{
-            ...styles.submit,
-            ...(canSubmit ? null : styles.submitDisabled),
-          }}
-        >
-          {submitting
-            ? lang === "ru"
-              ? "Отправка..."
-              : "Sending..."
-            : lang === "ru"
-              ? "Подтвердить заказ"
-              : "Confirm order"}
-        </button>
       </form>
+
+      <div className="zen-bag-summary zen-bag-summary--bottom">
+        <div
+          className="zen-bag-summary-bar"
+          role="group"
+          aria-label={lang === "ru" ? "Итого к оплате" : "Total"}
+        >
+          <div className="zen-bag-summary-info">
+            <span className="zen-bag-summary-info-label">
+              {lang === "ru" ? "Итого" : "Total"}
+            </span>
+            <span className="zen-bag-summary-info-value">
+              {formatPrice(total)}
+            </span>
+          </div>
+          <button
+            type="submit"
+            form="checkout-form"
+            disabled={!canSubmit}
+            className={`zen-bag-checkout-btn${canSubmit ? "" : " zen-bag-checkout-btn--disabled"}`}
+            aria-label={
+              submitting
+                ? lang === "ru"
+                  ? "Отправка"
+                  : "Sending"
+                : lang === "ru"
+                  ? "Подтвердить заказ"
+                  : "Confirm order"
+            }
+          >
+            {itemsCount > 0 && (
+              <span className="zen-bag-checkout-count" aria-hidden="true">
+                {itemsCount}
+              </span>
+            )}
+            <span className="zen-bag-checkout-label">
+              {submitting
+                ? lang === "ru"
+                  ? "Отправка..."
+                  : "Sending..."
+                : lang === "ru"
+                  ? "Подтвердить"
+                  : "Confirm"}
+            </span>
+            <span className="zen-bag-checkout-arrow" aria-hidden="true">
+              {submitting ? (
+                <svg viewBox="0 0 24 24" className="zen-bag-checkout-spinner">
+                  <circle cx="12" cy="12" r="9" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24">
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
+              )}
+            </span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -227,7 +261,7 @@ const styles: Record<string, React.CSSProperties> = {
   wrap: {
     maxWidth: 460,
     margin: "0 auto",
-    paddingBottom: 16,
+    paddingBottom: 120,
     position: "relative",
   },
   loading: {
@@ -415,51 +449,6 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--text)",
     letterSpacing: "-0.01em",
     borderRadius: 0,
-    boxShadow: "none",
-  },
-
-  summary: {
-    display: "flex",
-    alignItems: "baseline",
-    justifyContent: "space-between",
-    gap: 12,
-    paddingTop: 4,
-    paddingLeft: 4,
-    paddingRight: 4,
-  },
-  summaryLabel: {
-    fontSize: 13,
-    color: "var(--muted)",
-    letterSpacing: "0.01em",
-  },
-  summaryValue: {
-    fontFamily: '"Proxima Nova", -apple-system, system-ui, sans-serif',
-    fontSize: 22,
-    fontWeight: 700,
-    letterSpacing: "-0.02em",
-    color: "var(--text)",
-  },
-
-  submit: {
-    width: "100%",
-    minHeight: 52,
-    padding: "14px 24px",
-    background: "var(--accent)",
-    border: "none",
-    borderRadius: 999,
-    color: "#fff",
-    fontFamily: '"Proxima Nova", -apple-system, system-ui, sans-serif',
-    fontSize: 15,
-    fontWeight: 700,
-    letterSpacing: "0.02em",
-    cursor: "pointer",
-    transition: "background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease",
-    boxShadow: "0 8px 20px -10px rgba(165, 42, 42, 0.55)",
-  },
-  submitDisabled: {
-    background: "var(--surface-elevated)",
-    color: "var(--muted)",
-    cursor: "not-allowed",
     boxShadow: "none",
   },
 
