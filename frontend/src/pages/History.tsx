@@ -375,18 +375,20 @@ function EmptyState({
   onOpenCatalog?: () => void;
 }) {
   return (
-    <div style={styles.emptyWrap}>
-      <div style={styles.emptyHero}>
-        <div style={styles.emptyIconCircle}>
-          <BagIcon />
+    <div style={styles.emptyBubbleRow}>
+      <div style={styles.emptyAvatar}>R</div>
+      <div style={styles.emptyBubble}>
+        <div style={styles.emptyBubbleTitle}>
+          {t(lang, "historyEmptyHeadline")}
         </div>
-        <h2 style={styles.emptyHeadline}>{t(lang, "historyEmptyHeadline")}</h2>
-        <p style={styles.emptySubline}>{t(lang, "historyEmptySubline")}</p>
+        <div style={styles.emptyBubbleSubtitle}>
+          {t(lang, "historyEmptySubline")}
+        </div>
         {onOpenCatalog && (
           <button
             type="button"
             onClick={onOpenCatalog}
-            style={styles.emptyCta}
+            style={styles.emptyBubbleCta}
             onMouseEnter={(e) => {
               (e.currentTarget as HTMLButtonElement).style.background =
                 "var(--accent-hover)";
@@ -420,31 +422,6 @@ function CheckIcon() {
         strokeWidth="1.8"
         strokeLinecap="round"
         strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function BagIcon() {
-  return (
-    <svg
-      width="34"
-      height="34"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden
-    >
-      <path
-        d="M5 8h14l-1.2 11.1a2 2 0 0 1-2 1.9H8.2a2 2 0 0 1-2-1.9L5 8z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M8.5 8V6.5a3.5 3.5 0 1 1 7 0V8"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
       />
     </svg>
   );
@@ -717,49 +694,59 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--muted)",
   },
 
-  emptyWrap: { display: "flex", flexDirection: "column", gap: 40 },
-  emptyHero: {
-    padding: "40px 24px 8px",
+  emptyBubbleRow: {
     display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    textAlign: "center",
+    alignItems: "flex-end",
+    gap: 8,
+    marginTop: 4,
   },
-  emptyIconCircle: {
-    width: 84,
-    height: 84,
+  emptyAvatar: {
+    width: 30,
+    height: 30,
     borderRadius: "50%",
-    background: "var(--surface-elevated)",
+    background: "var(--accent)",
+    color: "#fff",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "var(--accent)",
-    marginBottom: 20,
+    fontSize: 12,
+    fontWeight: 800,
+    letterSpacing: "0.06em",
+    flexShrink: 0,
   },
-  emptyHeadline: {
-    fontSize: 20,
-    fontWeight: 500,
-    margin: 0,
+  emptyBubble: {
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: "16px 16px 16px 4px",
+    padding: "12px 14px",
+    maxWidth: "86%",
+    boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+  },
+  emptyBubbleTitle: {
+    fontSize: 15,
+    fontWeight: 600,
+    lineHeight: 1.2,
+    letterSpacing: "-0.01em",
     color: "var(--text)",
-    letterSpacing: "0.01em",
-    lineHeight: 1.3,
   },
-  emptySubline: {
-    fontSize: 14,
+  emptyBubbleSubtitle: {
+    fontSize: 12.5,
     color: "var(--muted)",
-    margin: "8px 0 24px",
-    lineHeight: 1.5,
-    maxWidth: 280,
-    letterSpacing: "0.02em",
+    lineHeight: 1.4,
   },
-  emptyCta: {
-    minHeight: 48,
-    padding: "14px 28px",
+  emptyBubbleCta: {
+    alignSelf: "flex-start",
+    marginTop: 10,
+    minHeight: 40,
+    padding: "10px 20px",
     borderRadius: 999,
     background: "var(--accent)",
     color: "#fff",
     border: "none",
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 600,
     letterSpacing: "0.1em",
     textTransform: "uppercase",

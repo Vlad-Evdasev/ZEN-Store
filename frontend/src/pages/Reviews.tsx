@@ -118,8 +118,13 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
       </div>
 
       {reviews.length === 0 && (
-        <div style={styles.emptyWrap}>
-          <p style={styles.empty}>{t(lang, "reviewsEmptyFirst")}</p>
+        <div style={styles.emptyBubbleRow}>
+          <div style={styles.emptyAvatar}>R</div>
+          <div style={styles.emptyBubble}>
+            <div style={styles.emptyBubbleText}>
+              {t(lang, "reviewsEmptyFirst")}
+            </div>
+          </div>
         </div>
       )}
 
@@ -266,8 +271,40 @@ const styles: Record<string, React.CSSProperties> = {
   },
   ratingNumber: { fontSize: 24 },
   ratingStar: { fontSize: 18 },
-  emptyWrap: { padding: "48px 24px", textAlign: "center" },
-  empty: { color: "var(--muted)", fontSize: 14, margin: 0 },
+  emptyBubbleRow: {
+    display: "flex",
+    alignItems: "flex-end",
+    gap: 8,
+    marginTop: 4,
+  },
+  emptyAvatar: {
+    width: 30,
+    height: 30,
+    borderRadius: "50%",
+    background: "var(--accent)",
+    color: "#fff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 12,
+    fontWeight: 800,
+    letterSpacing: "0.06em",
+    flexShrink: 0,
+  },
+  emptyBubble: {
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: "16px 16px 16px 4px",
+    padding: "10px 13px",
+    maxWidth: "86%",
+    boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
+  },
+  emptyBubbleText: {
+    fontSize: 13.5,
+    color: "var(--text)",
+    lineHeight: 1.4,
+    letterSpacing: "-0.01em",
+  },
   list: { display: "flex", flexDirection: "column", gap: 12 },
   card: {
     background: "var(--surface)", border: "1px solid var(--border)",
