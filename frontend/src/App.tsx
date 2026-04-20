@@ -365,6 +365,7 @@ function App() {
             onBack={openCart}
             onDone={openCatalog}
             onOrderSuccess={refreshCartCount}
+            onCartChange={refreshCartCount}
             sellerLink={SELLER_LINK}
           />
         )}

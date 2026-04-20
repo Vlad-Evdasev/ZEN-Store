@@ -1,7 +1,16 @@
 import { useState, useEffect } from "react";
-import { getCart, createOrder, type CartItem } from "../api";
+import { getCart, createOrder, removeFromCart, type CartItem } from "../api";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
+
+function pluralize(n: number, forms: [string, string, string]) {
+  const abs = Math.abs(n) % 100;
+  const n1 = abs % 10;
+  if (abs > 10 && abs < 20) return forms[2];
+  if (n1 > 1 && n1 < 5) return forms[1];
+  if (n1 === 1) return forms[0];
+  return forms[2];
+}
 
 interface CheckoutProps {
   userId: string;
@@ -9,23 +18,21 @@ interface CheckoutProps {
   onBack: () => void;
   onDone: () => void;
   onOrderSuccess?: () => void;
+  onCartChange?: () => void;
   sellerLink?: string;
 }
 
-export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, sellerLink }: CheckoutProps) {
+export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onCartChange, sellerLink }: CheckoutProps) {
   const { formatPrice, settings } = useSettings();
   const lang = settings.lang;
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [username, setUsername] = useState(userName ?? "");
   const [city, setCity] = useState("");
   const [cityFocused, setCityFocused] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
-
-  useEffect(() => {
-    setUsername(userName ?? "");
-  }, [userName]);
+  const [itemsExpanded, setItemsExpanded] = useState(false);
+  const [removingId, setRemovingId] = useState<number | null>(null);
 
   useEffect(() => {
     getCart(userId).then(setItems).catch(console.error).finally(() => setLoading(false));
@@ -34,15 +41,39 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, sel
   const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const itemsCount = items.reduce((sum, i) => sum + i.quantity, 0);
   const firstItem = items[0];
+  const hasMultiple = items.length > 1;
+
+  const handleRemoveItem = async (id: number) => {
+    if (removingId !== null) return;
+    setRemovingId(id);
+    const prev = items;
+    setTimeout(() => {
+      setItems((list) => {
+        const next = list.filter((i) => i.id !== id);
+        if (next.length <= 1) setItemsExpanded(false);
+        return next;
+      });
+      setRemovingId(null);
+    }, 180);
+    try {
+      await removeFromCart(userId, id);
+      onCartChange?.();
+    } catch (e) {
+      console.error(e);
+      setItems(prev);
+      setRemovingId(null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!city.trim()) return;
+    if (items.length === 0) return;
     setSubmitting(true);
     try {
       await createOrder(userId, {
-        user_name: (userName || username || "").trim() || undefined,
-        user_username: username.trim() || undefined,
+        user_name: (userName || "").trim() || undefined,
+        user_username: (userName || "").trim() || undefined,
         user_address: city.trim(),
         items,
         total,
@@ -227,7 +258,7 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, sel
     );
   }
 
-  const canSubmit = city.trim().length > 0 && !submitting;
+  const canSubmit = city.trim().length > 0 && !submitting && items.length > 0;
 
   return (
     <div style={styles.wrap}>
@@ -254,48 +285,170 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, sel
       </header>
 
       {firstItem && (
-        <section style={styles.itemRow} aria-label="Состав заказа">
-          <div style={styles.itemThumbWrap}>
-            {firstItem.image_url ? (
-              <img
-                src={firstItem.image_url}
-                alt=""
-                style={styles.itemThumb}
-                loading="lazy"
-              />
-            ) : (
-              <div style={styles.itemThumbFallback}>
-                <span>{(firstItem.name || "?")[0]?.toUpperCase()}</span>
+        <section style={styles.itemsSection} aria-label={lang === "ru" ? "Состав заказа" : "Order items"}>
+          {hasMultiple ? (
+            <button
+              type="button"
+              onClick={() => setItemsExpanded((v) => !v)}
+              style={styles.itemsSummary}
+              aria-expanded={itemsExpanded}
+              aria-controls="checkout-items-list"
+            >
+              <div style={styles.itemsStack} aria-hidden="true">
+                {items.slice(0, 3).map((it, idx) => (
+                  <div
+                    key={it.id}
+                    style={{
+                      ...styles.itemsStackThumb,
+                      zIndex: 3 - idx,
+                      transform: `translateX(${idx * -10}px)`,
+                    }}
+                  >
+                    {it.image_url ? (
+                      <img src={it.image_url} alt="" style={styles.itemThumb} loading="lazy" />
+                    ) : (
+                      <div style={styles.itemThumbFallback}>
+                        <span>{(it.name || "?")[0]?.toUpperCase()}</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
-            )}
-            {itemsCount > 1 && (
-              <span style={styles.itemQty}>×{itemsCount}</span>
-            )}
-          </div>
-          <div style={styles.itemInfo}>
-            <p style={styles.itemName}>{firstItem.name}</p>
-            {firstItem.size && (
-              <p style={styles.itemMeta}>
-                <span style={styles.itemMetaLabel}>
-                  {lang === "ru" ? "Размер" : "Size"}
+              <div style={styles.itemsSummaryText}>
+                <span style={styles.itemsSummaryTitle}>
+                  {lang === "ru"
+                    ? `${items.length} ${pluralize(items.length, ["товар", "товара", "товаров"])}`
+                    : `${items.length} ${items.length === 1 ? "item" : "items"}`}
                 </span>
-                <span style={styles.itemMetaValue}>{firstItem.size}</span>
-              </p>
-            )}
-          </div>
+                <span style={styles.itemsSummaryHint}>
+                  {itemsExpanded
+                    ? lang === "ru"
+                      ? "Свернуть"
+                      : "Collapse"
+                    : lang === "ru"
+                      ? "Нажмите, чтобы раскрыть"
+                      : "Tap to expand"}
+                </span>
+              </div>
+              <span
+                style={{
+                  ...styles.itemsChevron,
+                  transform: itemsExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                }}
+                aria-hidden="true"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M6 9l6 6 6-6"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+            </button>
+          ) : (
+            <div style={styles.itemRow}>
+              <div style={styles.itemThumbWrap}>
+                {firstItem.image_url ? (
+                  <img
+                    src={firstItem.image_url}
+                    alt=""
+                    style={styles.itemThumb}
+                    loading="lazy"
+                  />
+                ) : (
+                  <div style={styles.itemThumbFallback}>
+                    <span>{(firstItem.name || "?")[0]?.toUpperCase()}</span>
+                  </div>
+                )}
+                {firstItem.quantity > 1 && (
+                  <span style={styles.itemQty}>×{firstItem.quantity}</span>
+                )}
+              </div>
+              <div style={styles.itemInfo}>
+                <p style={styles.itemName}>{firstItem.name}</p>
+                {firstItem.size && (
+                  <p style={styles.itemMeta}>
+                    <span style={styles.itemMetaLabel}>
+                      {lang === "ru" ? "Размер" : "Size"}
+                    </span>
+                    <span style={styles.itemMetaValue}>{firstItem.size}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {hasMultiple && (
+            <div
+              id="checkout-items-list"
+              style={{
+                ...styles.itemsList,
+                maxHeight: itemsExpanded ? items.length * 96 + 16 : 0,
+                opacity: itemsExpanded ? 1 : 0,
+                marginTop: itemsExpanded ? 8 : 0,
+                pointerEvents: itemsExpanded ? "auto" : "none",
+              }}
+              aria-hidden={!itemsExpanded}
+            >
+              {items.map((it) => {
+                const isRemoving = removingId === it.id;
+                return (
+                  <div
+                    key={it.id}
+                    style={{
+                      ...styles.itemListRow,
+                      opacity: isRemoving ? 0 : 1,
+                      transform: isRemoving ? "translateX(12px)" : "translateX(0)",
+                    }}
+                  >
+                    <div style={styles.itemListThumb}>
+                      {it.image_url ? (
+                        <img src={it.image_url} alt="" style={styles.itemThumb} loading="lazy" />
+                      ) : (
+                        <div style={styles.itemThumbFallback}>
+                          <span>{(it.name || "?")[0]?.toUpperCase()}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div style={styles.itemListBody}>
+                      <span style={styles.itemListName}>{it.name}</span>
+                      <span style={styles.itemListMeta}>
+                        {it.size ? `${it.size} · ` : ""}
+                        {it.quantity} {lang === "ru" ? "шт" : "pcs"}
+                      </span>
+                      <span style={styles.itemListPrice}>
+                        {formatPrice(it.price * it.quantity)}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveItem(it.id)}
+                      style={styles.itemListRemove}
+                      aria-label={t(lang, "cartRemove")}
+                      disabled={isRemoving}
+                    >
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true">
+                        <path
+                          d="M6 6l12 12M18 6L6 18"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </section>
       )}
 
       <form id="checkout-form" onSubmit={handleSubmit} style={styles.form}>
         <div style={styles.fieldGroup}>
-          <div style={styles.pillField}>
-            <span style={styles.pillLabel}>Username</span>
-            <div style={styles.pillRow}>
-              <span style={styles.pillValue}>{username || "—"}</span>
-              <span style={styles.pillHint}>Telegram</span>
-            </div>
-          </div>
-
           <div
             style={{
               ...styles.pillField,
@@ -418,22 +571,158 @@ const styles: Record<string, React.CSSProperties> = {
   },
   title: {
     fontFamily: '"Proxima Nova", -apple-system, system-ui, sans-serif',
-    fontSize: 24,
-    fontWeight: 700,
-    letterSpacing: "-0.02em",
+    fontSize: 22,
+    fontWeight: 400,
+    letterSpacing: "0.02em",
     lineHeight: 1.15,
     color: "var(--text)",
     margin: 0,
   },
 
+  itemsSection: {
+    marginBottom: 20,
+  },
   itemRow: {
     display: "flex",
     alignItems: "center",
     gap: 14,
-    marginBottom: 20,
     padding: 12,
     background: "var(--surface-elevated)",
     borderRadius: 18,
+  },
+  itemsSummary: {
+    width: "100%",
+    display: "flex",
+    alignItems: "center",
+    gap: 14,
+    padding: 12,
+    background: "var(--surface-elevated)",
+    border: "none",
+    borderRadius: 18,
+    cursor: "pointer",
+    fontFamily: "inherit",
+    textAlign: "left",
+    transition: "background 0.2s ease",
+    WebkitTapHighlightColor: "transparent",
+  },
+  itemsStack: {
+    position: "relative",
+    flex: "0 0 auto",
+    display: "flex",
+    alignItems: "center",
+    paddingLeft: 20,
+  },
+  itemsStackThumb: {
+    position: "relative",
+    width: 52,
+    height: 52,
+    borderRadius: 12,
+    overflow: "hidden",
+    background: "var(--surface)",
+    boxShadow: "0 0 0 2px var(--surface-elevated)",
+  },
+  itemsSummaryText: {
+    flex: 1,
+    minWidth: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: 2,
+  },
+  itemsSummaryTitle: {
+    fontFamily: '"Proxima Nova", -apple-system, system-ui, sans-serif',
+    fontSize: 15,
+    fontWeight: 600,
+    color: "var(--text)",
+    letterSpacing: "-0.01em",
+    lineHeight: 1.2,
+  },
+  itemsSummaryHint: {
+    fontSize: 12,
+    color: "var(--muted)",
+    lineHeight: 1.3,
+  },
+  itemsChevron: {
+    flex: "0 0 24px",
+    width: 24,
+    height: 24,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "var(--muted)",
+    transition: "transform 0.25s ease",
+  },
+  itemsList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 6,
+    overflow: "hidden",
+    transition: "max-height 0.3s ease, opacity 0.25s ease, margin-top 0.25s ease",
+  },
+  itemListRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    padding: "10px 12px",
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: 14,
+    transition: "opacity 0.18s ease, transform 0.18s ease",
+  },
+  itemListThumb: {
+    position: "relative",
+    flex: "0 0 52px",
+    width: 52,
+    height: 52,
+    borderRadius: 12,
+    overflow: "hidden",
+    background: "var(--surface-elevated)",
+  },
+  itemListBody: {
+    flex: 1,
+    minWidth: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: 2,
+  },
+  itemListName: {
+    fontFamily: '"Proxima Nova", -apple-system, system-ui, sans-serif',
+    fontSize: 14,
+    fontWeight: 600,
+    color: "var(--text)",
+    letterSpacing: "-0.01em",
+    lineHeight: 1.25,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  itemListMeta: {
+    fontSize: 12,
+    color: "var(--muted)",
+    lineHeight: 1.3,
+  },
+  itemListPrice: {
+    fontFamily: '"Proxima Nova", -apple-system, system-ui, sans-serif',
+    fontSize: 13.5,
+    fontWeight: 600,
+    color: "var(--text)",
+    letterSpacing: "-0.01em",
+    marginTop: 2,
+  },
+  itemListRemove: {
+    flex: "0 0 28px",
+    width: 28,
+    height: 28,
+    padding: 0,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "transparent",
+    border: "none",
+    borderRadius: 999,
+    color: "var(--muted)",
+    cursor: "pointer",
+    transition: "background 0.18s ease, color 0.18s ease",
+    WebkitTapHighlightColor: "transparent",
   },
   itemThumbWrap: {
     position: "relative",
