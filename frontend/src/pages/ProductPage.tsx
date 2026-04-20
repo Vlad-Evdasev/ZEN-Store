@@ -223,23 +223,16 @@ export function ProductPage({
       </div>
 
       <div className="product-v2__sheet">
-        <div className="product-v2__meta">
-          <span className="product-v2__eyebrow">Коллекция</span>
-          {avgRating != null && (
-            <>
-              <span className="product-v2__meta-dot" aria-hidden />
+        <header className="product-v2__header">
+          <div className="product-v2__titles">
+            <h1 className="product-v2__title">{product.name}</h1>
+            {avgRating != null && (
               <span className="product-v2__rating-inline">
                 <span className="product-v2__rating-star">★</span>
                 <span className="product-v2__rating-value">{avgRating}</span>
                 <span className="product-v2__rating-count">({reviews.length})</span>
               </span>
-            </>
-          )}
-        </div>
-
-        <header className="product-v2__header">
-          <div className="product-v2__titles">
-            <h1 className="product-v2__title">{product.name}</h1>
+            )}
           </div>
         </header>
 

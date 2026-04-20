@@ -24,7 +24,11 @@
   position: relative;
   width: 100%;
   aspect-ratio: 4 / 5;
-  max-height: 72vh;
+  /* На мобильном ограничиваем высоту так, чтобы под фото гарантированно
+     поместилось название товара без необходимости скроллить. Учитываем
+     хедер (~56px) и sticky CTA-бар (~82px + safe-area) — оставляем
+     минимум ~120px под заголовок. */
+  max-height: min(62vh, calc(100dvh - 260px));
   overflow: hidden;
   background: var(--surface);
   isolation: isolate;
@@ -149,7 +153,7 @@
 .product-v2__sheet {
   position: relative;
   margin-top: 0;
-  padding: 28px 20px 32px;
+  padding: 20px 20px 32px;
   padding-left: max(20px, env(safe-area-inset-left));
   padding-right: max(20px, env(safe-area-inset-right));
   background: var(--bg);
@@ -160,27 +164,6 @@
    но классы остаются в JSX и рендерят пустые div — скрываем их. */
 .product-v2__sheet-handle {
   display: none;
-}
-
-/* ─── META (служебные метки над заголовком) ─── */
-.product-v2__meta {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-.product-v2__eyebrow {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.product-v2__meta-dot {
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: var(--border);
 }
 
 /* ─── HEADER ─── */
