@@ -1780,7 +1780,7 @@ nav svg {
   gap: 14px;
   padding: 10px 0;
   position: relative;
-  align-items: start;
+  align-items: center;
   background: transparent;
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
@@ -1790,7 +1790,7 @@ nav svg {
   width: 88px;
   height: 104px;
   overflow: hidden;
-  border-radius: 10px;
+  border-radius: 14px;
   background: var(--surface-elevated);
 }
 .zen-app .zen-bag-thumb {
@@ -1802,16 +1802,18 @@ nav svg {
 .zen-app .zen-bag-item-body {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   min-width: 0;
+  align-self: center;
+  padding: 2px 0;
 }
 .zen-app .zen-bag-item-name {
   font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text);
   letter-spacing: -0.01em;
-  line-height: 1.3;
+  line-height: 1.25;
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1820,23 +1822,47 @@ nav svg {
   -webkit-box-orient: vertical;
 }
 .zen-app .zen-bag-item-meta {
-  font-size: 13px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  line-height: 1;
+}
+.zen-app .zen-bag-item-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 22px;
+  padding: 0 8px;
+  font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  background: var(--surface-elevated);
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+.zen-app .zen-bag-item-chip--qty {
   color: var(--muted);
-  letter-spacing: 0;
-  line-height: 1.3;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--border);
+  letter-spacing: 0.02em;
+  text-transform: none;
 }
 .zen-app .zen-bag-item-price {
   font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
   color: var(--text);
   letter-spacing: -0.01em;
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
 /* Тонкая круглая кнопка удаления, без подписи */
 .zen-app .zen-bag-item-remove {
-  align-self: flex-start;
+  align-self: center;
   width: 30px;
   height: 30px;
   padding: 0;

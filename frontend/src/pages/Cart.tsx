@@ -129,9 +129,18 @@ export function Cart({
               </div>
               <div className="zen-bag-item-body">
                 <p className="zen-bag-item-name">{item.name}</p>
-                <span className="zen-bag-item-meta">
-                  {item.size} · {item.quantity} {lang === "ru" ? "шт" : "pcs"}
-                </span>
+                {(item.size || item.quantity > 1) && (
+                  <div className="zen-bag-item-meta">
+                    {item.size && (
+                      <span className="zen-bag-item-chip">{item.size}</span>
+                    )}
+                    {item.quantity > 1 && (
+                      <span className="zen-bag-item-chip zen-bag-item-chip--qty">
+                        ×{item.quantity}
+                      </span>
+                    )}
+                  </div>
+                )}
                 <span className="zen-bag-item-price">
                   {formatPrice(item.price * item.quantity)}
                 </span>
