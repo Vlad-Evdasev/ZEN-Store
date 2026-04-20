@@ -509,7 +509,7 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
                 onChange={(e) => setCity(e.target.value)}
                 onFocus={() => setCityFocused(true)}
                 onBlur={() => setCityFocused(false)}
-                placeholder={lang === "ru" ? "Минск, Москва, Алматы…" : "Minsk, London, NYC…"}
+                placeholder={lang === "ru" ? "Минск, Гомель, Брест…" : "Minsk, Gomel, Brest…"}
                 style={styles.cityFieldInput}
                 autoComplete="address-level2"
                 required
