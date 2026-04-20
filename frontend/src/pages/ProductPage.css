@@ -54,8 +54,20 @@
   left: 0;
   right: 0;
   bottom: 0;
-  height: 40%;
-  background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.08) 50%, rgba(0,0,0,0.22) 100%);
+  height: 18%;
+  background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.05) 60%, rgba(0,0,0,0.14) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+/* Нижний fade: фото мягко растворяется в цвет фона страницы, убирая
+   жёсткую горизонтальную линию между фото и блоком описания. */
+.product-v2__hero-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 96px;
+  background: linear-gradient(to bottom, rgba(var(--bg-rgb), 0) 0%, rgba(var(--bg-rgb), 0.55) 55%, var(--bg) 100%);
   pointer-events: none;
   z-index: 1;
 }
@@ -131,60 +143,76 @@
   border-radius: 3px;
 }
 
-/* ─── INFO SHEET — поднимается над нижним краем hero ─── */
+/* ─── INFO SHEET — плоский editorial-блок без bottom-sheet ощущений.
+   Никакого скругления, тени, handle и overlap — только чистая типографика
+   и воздух. Фото сверху мягко растворяется в фон через .hero-fade. ─── */
 .product-v2__sheet {
   position: relative;
-  margin-top: -24px;
-  padding: 0 20px 24px;
+  margin-top: 0;
+  padding: 28px 20px 32px;
   padding-left: max(20px, env(safe-area-inset-left));
   padding-right: max(20px, env(safe-area-inset-right));
   background: var(--bg);
-  border-radius: 24px 24px 0 0;
   z-index: 2;
-  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.04);
-}
-html[data-theme="dark"] .product-v2__sheet {
-  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.3);
 }
 
+/* Handle и header-«обёртка» больше не используются как визуальные элементы,
+   но классы остаются в JSX и рендерят пустые div — скрываем их. */
 .product-v2__sheet-handle {
-  width: 44px;
-  height: 4px;
-  border-radius: 2px;
+  display: none;
+}
+
+/* ─── META (служебные метки над заголовком) ─── */
+.product-v2__meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.product-v2__eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.product-v2__meta-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
   background: var(--border);
-  margin: 12px auto 18px;
-  opacity: 0.9;
 }
 
 /* ─── HEADER ─── */
 .product-v2__header {
-  margin-bottom: 14px;
+  margin-bottom: 20px;
 }
 .product-v2__titles {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 .product-v2__title {
   font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
-  font-size: 26px;
+  font-size: 30px;
   font-weight: 600;
-  line-height: 1.15;
-  letter-spacing: -0.015em;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
   color: var(--text);
   margin: 0;
 }
 .product-v2__rating-inline {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 13px;
+  gap: 5px;
+  font-size: 12px;
   color: var(--muted);
   width: max-content;
+  letter-spacing: 0.02em;
 }
 .product-v2__rating-star {
   color: var(--accent);
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1;
 }
 .product-v2__rating-value {
@@ -202,8 +230,8 @@ html[data-theme="dark"] .product-v2__sheet {
   margin-bottom: 4px;
 }
 .product-v2__desc {
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 15px;
+  line-height: 1.65;
   color: var(--muted);
   margin: 0;
   letter-spacing: 0.005em;
@@ -215,25 +243,39 @@ html[data-theme="dark"] .product-v2__sheet {
   overflow: hidden;
 }
 .product-v2__desc-toggle {
-  margin-top: 6px;
+  margin-top: 10px;
   background: none;
   border: none;
   padding: 0;
-  color: var(--accent);
+  color: var(--text);
   font-family: inherit;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   cursor: pointer;
+  position: relative;
+  padding-bottom: 3px;
+}
+.product-v2__desc-toggle::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.45;
 }
 
-/* ─── DIVIDERS ─── */
+/* ─── DIVIDERS (hairline, edge-to-edge) ─── */
 .product-v2__divider {
   height: 1px;
   background: var(--border);
-  margin: 22px 0;
-  opacity: 0.6;
+  margin: 28px -20px;
+  margin-left: calc(-1 * max(20px, env(safe-area-inset-left)));
+  margin-right: calc(-1 * max(20px, env(safe-area-inset-right)));
+  opacity: 1;
 }
 
 /* ─── SIZES ─── */
