@@ -466,27 +466,70 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
 
       <form id="checkout-form" onSubmit={handleSubmit} style={styles.form}>
         <div style={styles.fieldGroup}>
-          <div
-            style={{
-              ...styles.pillField,
-              ...(cityFocused ? styles.pillFieldActive : null),
-            }}
-          >
-            <span style={styles.pillLabel}>
-              {lang === "ru" ? "Город" : "City"} *
-            </span>
-            <input
-              type="text"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              onFocus={() => setCityFocused(true)}
-              onBlur={() => setCityFocused(false)}
-              placeholder={lang === "ru" ? "Минск" : "Minsk"}
-              style={styles.pillInput}
-              autoComplete="address-level2"
-              required
-            />
-          </div>
+          {(() => {
+            const hasValue = city.length > 0;
+            const floated = cityFocused || hasValue;
+            return (
+              <label
+                style={{
+                  ...styles.lineField,
+                  ...(cityFocused ? styles.lineFieldActive : null),
+                }}
+              >
+                <span
+                  style={{
+                    ...styles.lineFieldIcon,
+                    color: floated ? "var(--accent)" : "var(--muted)",
+                  }}
+                  aria-hidden="true"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 22s7-7.58 7-13a7 7 0 1 0-14 0c0 5.42 7 13 7 13Z"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <circle cx="12" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.6" />
+                  </svg>
+                </span>
+
+                <span style={styles.lineFieldBody}>
+                  <span
+                    style={{
+                      ...styles.lineFieldLabel,
+                      ...(floated ? styles.lineFieldLabelFloated : null),
+                      color: cityFocused ? "var(--accent)" : "var(--muted)",
+                    }}
+                  >
+                    {lang === "ru" ? "Город" : "City"}
+                    <span style={styles.lineFieldRequired} aria-hidden="true">*</span>
+                  </span>
+
+                  <input
+                    type="text"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    onFocus={() => setCityFocused(true)}
+                    onBlur={() => setCityFocused(false)}
+                    placeholder={floated ? (lang === "ru" ? "Минск" : "Minsk") : ""}
+                    style={styles.lineFieldInput}
+                    autoComplete="address-level2"
+                    required
+                  />
+                </span>
+
+                <span
+                  style={{
+                    ...styles.lineFieldUnderline,
+                    ...(cityFocused ? styles.lineFieldUnderlineActive : null),
+                  }}
+                  aria-hidden="true"
+                />
+              </label>
+            );
+          })()}
         </div>
       </form>
 
@@ -844,51 +887,62 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: "column",
     gap: 12,
   },
-  pillField: {
+  lineField: {
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    padding: "18px 4px 10px",
+    cursor: "text",
+    transition: "background 0.2s ease",
+  },
+  lineFieldActive: {},
+  lineFieldIcon: {
+    flex: "0 0 20px",
+    width: 20,
+    height: 20,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    transition: "color 0.2s ease",
+    alignSelf: "flex-end",
+    marginBottom: 4,
+  },
+  lineFieldBody: {
+    position: "relative",
+    flex: 1,
+    minWidth: 0,
     display: "flex",
     flexDirection: "column",
-    gap: 4,
-    padding: "10px 18px 12px",
-    background: "var(--surface-elevated)",
-    borderRadius: 18,
-    border: "1px solid transparent",
-    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.03)",
-    transition: "border-color 0.2s ease, box-shadow 0.2s ease",
+    justifyContent: "flex-end",
   },
-  pillFieldActive: {
-    borderColor: "var(--accent)",
-    boxShadow: "0 2px 10px -4px rgba(165, 42, 42, 0.25)",
-  },
-  pillLabel: {
-    fontSize: 10,
-    fontWeight: 700,
-    letterSpacing: "0.16em",
-    textTransform: "uppercase",
-    color: "var(--muted)",
-  },
-  pillRow: {
-    display: "flex",
-    alignItems: "baseline",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  pillValue: {
+  lineFieldLabel: {
+    position: "absolute",
+    left: 0,
+    top: 10,
     fontFamily: '"Proxima Nova", -apple-system, system-ui, sans-serif',
     fontSize: 16,
-    color: "var(--text)",
-    letterSpacing: "-0.01em",
-    fontWeight: 600,
-  },
-  pillHint: {
-    fontSize: 10,
+    fontWeight: 500,
+    letterSpacing: "-0.005em",
     color: "var(--muted)",
-    letterSpacing: "0.12em",
-    textTransform: "uppercase",
-    fontWeight: 600,
+    pointerEvents: "none",
+    transformOrigin: "left center",
+    transition:
+      "transform 0.2s ease, color 0.2s ease, font-weight 0.2s ease, letter-spacing 0.2s ease",
   },
-  pillInput: {
+  lineFieldLabelFloated: {
+    transform: "translateY(-18px) scale(0.72)",
+    fontWeight: 700,
+    letterSpacing: "0.14em",
+    textTransform: "uppercase",
+  },
+  lineFieldRequired: {
+    marginLeft: 3,
+    color: "var(--accent)",
+  },
+  lineFieldInput: {
     width: "100%",
-    padding: 0,
+    padding: "10px 0 6px",
     background: "transparent",
     border: "none",
     outline: "none",
@@ -899,6 +953,19 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: "-0.01em",
     borderRadius: 0,
     boxShadow: "none",
+  },
+  lineFieldUnderline: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 1,
+    background: "var(--border)",
+    transition: "background 0.2s ease, height 0.2s ease",
+  },
+  lineFieldUnderlineActive: {
+    background: "var(--accent)",
+    height: 2,
   },
 
   successWrap: {
