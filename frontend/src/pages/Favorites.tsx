@@ -12,17 +12,6 @@ interface FavoritesProps {
   onBack?: () => void;
 }
 
-function pluralize(lang: string, n: number, forms: { one: string; few: string; many: string }): string {
-  if (lang === "ru") {
-    const mod10 = n % 10;
-    const mod100 = n % 100;
-    if (mod10 === 1 && mod100 !== 11) return forms.one;
-    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return forms.few;
-    return forms.many;
-  }
-  return n === 1 ? forms.one : forms.many;
-}
-
 export function Favorites({
   products,
   wishlistIds,
@@ -41,7 +30,7 @@ export function Favorites({
     return (
       <div className="zen-wishlist-empty zen-page-enter">
         <div className="zen-wishlist-empty-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
           </svg>
         </div>
@@ -56,21 +45,11 @@ export function Favorites({
     );
   }
 
-  const countKey = pluralize(lang, favorites.length, {
-    one: "favoritesCountOne",
-    few: "favoritesCount",
-    many: "favoritesCountMany",
-  });
-  const countLabel = t(lang, countKey).replace("{n}", String(favorites.length));
-
   return (
     <div className="zen-wishlist-wrap zen-page-enter">
       <header className="zen-wishlist-header">
-        <div className="zen-wishlist-header-left">
-          <div className="zen-wishlist-eyebrow">{t(lang, "favorites")}</div>
-          <h1 className="zen-wishlist-title">{t(lang, "favoritesTitle")}</h1>
-        </div>
-        <div className="zen-wishlist-count">{countLabel}</div>
+        <h1 className="zen-wishlist-title">{t(lang, "favoritesTitle")}</h1>
+        <span className="zen-wishlist-count">{favorites.length}</span>
       </header>
 
       <div className="zen-wishlist-grid">

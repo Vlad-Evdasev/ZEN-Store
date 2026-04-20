@@ -11,7 +11,11 @@ interface CartProps {
   onProductClick?: (productId: number) => void;
 }
 
-function pluralize(lang: string, n: number, forms: { one: string; few: string; many: string }): string {
+function pluralize(
+  lang: string,
+  n: number,
+  forms: { one: string; few: string; many: string }
+): string {
   if (lang === "ru") {
     const mod10 = n % 10;
     const mod100 = n % 100;
@@ -22,7 +26,13 @@ function pluralize(lang: string, n: number, forms: { one: string; few: string; m
   return n === 1 ? forms.one : forms.many;
 }
 
-export function Cart({ userId, onBack, onCheckout, onCartChange, onProductClick }: CartProps) {
+export function Cart({
+  userId,
+  onBack,
+  onCheckout,
+  onCartChange,
+  onProductClick,
+}: CartProps) {
   const { formatPrice, settings } = useSettings();
   const lang = settings.lang;
   const [items, setItems] = useState<CartItem[]>([]);
@@ -75,12 +85,12 @@ export function Cart({ userId, onBack, onCheckout, onCartChange, onProductClick 
   );
   const uniqueCount = items.length;
 
-  const countLabelKey = pluralize(lang, uniqueCount, {
+  const countKey = pluralize(lang, uniqueCount, {
     one: "cartItemsCountOne",
     few: "cartItemsCount",
     many: "cartItemsCountMany",
   });
-  const countLabel = t(lang, countLabelKey)
+  const countLabel = t(lang, countKey)
     .replace("{n}", String(uniqueCount))
     .replace("{n2}", String(totalQty));
 
@@ -96,7 +106,7 @@ export function Cart({ userId, onBack, onCheckout, onCartChange, onProductClick 
     return (
       <div className="zen-bag-empty zen-page-enter">
         <div className="zen-bag-empty-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
             <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
             <line x1="3" y1="6" x2="21" y2="6" />
             <path d="M16 10a4 4 0 0 1-8 0" />
@@ -116,7 +126,6 @@ export function Cart({ userId, onBack, onCheckout, onCartChange, onProductClick 
   return (
     <div className="zen-bag-wrap zen-page-enter">
       <header className="zen-bag-header">
-        <div className="zen-bag-eyebrow">{t(lang, "cart")}</div>
         <h1 className="zen-bag-title">{t(lang, "cartTitle")}</h1>
         <div className="zen-bag-meta">{countLabel}</div>
       </header>
@@ -156,23 +165,13 @@ export function Cart({ userId, onBack, onCheckout, onCartChange, onProductClick 
                 />
               </div>
               <div className="zen-bag-item-body">
-                <div>
-                  <p className="zen-bag-item-name">{item.name}</p>
-                  <div className="zen-bag-item-meta">
-                    <span>
-                      {t(lang, "cartSize")} {item.size}
-                    </span>
-                    <span className="zen-bag-item-meta-dot" aria-hidden="true" />
-                    <span>
-                      {t(lang, "cartQty")} {item.quantity}
-                    </span>
-                  </div>
-                </div>
-                <div className="zen-bag-item-bottom">
-                  <span className="zen-bag-item-price">
-                    {formatPrice(item.price * item.quantity)}
-                  </span>
-                </div>
+                <p className="zen-bag-item-name">{item.name}</p>
+                <span className="zen-bag-item-meta">
+                  {item.size} · {item.quantity} {lang === "ru" ? "шт" : "pcs"}
+                </span>
+                <span className="zen-bag-item-price">
+                  {formatPrice(item.price * item.quantity)}
+                </span>
               </div>
               <button
                 type="button"
@@ -183,8 +182,10 @@ export function Cart({ userId, onBack, onCheckout, onCartChange, onProductClick 
                 }}
                 aria-label={t(lang, "cartRemove")}
               >
-                <span className="zen-bag-item-remove-icon" aria-hidden="true" />
-                {t(lang, "cartRemove")}
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                </svg>
               </button>
             </li>
           );
@@ -192,16 +193,6 @@ export function Cart({ userId, onBack, onCheckout, onCartChange, onProductClick 
       </ul>
 
       <div className="zen-bag-summary">
-        <div className="zen-bag-summary-rows">
-          <div className="zen-bag-summary-row">
-            <span>{t(lang, "cartSubtotal")}</span>
-            <span>{formatPrice(subtotal)}</span>
-          </div>
-          <div className="zen-bag-summary-row">
-            <span>{t(lang, "cartShipping")}</span>
-            <span>{t(lang, "cartShippingCalc")}</span>
-          </div>
-        </div>
         <div className="zen-bag-summary-total">
           <span className="zen-bag-summary-total-label">{t(lang, "total")}</span>
           <span className="zen-bag-summary-total-value">{formatPrice(subtotal)}</span>
@@ -213,7 +204,6 @@ export function Cart({ userId, onBack, onCheckout, onCartChange, onProductClick 
         >
           {t(lang, "checkout")}
         </button>
-        <p className="zen-bag-terms">{t(lang, "cartTerms")}</p>
       </div>
     </div>
   );
@@ -226,6 +216,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 0,
     display: "flex",
     flexDirection: "column",
+    gap: 6,
   },
   loading: {
     textAlign: "center",
