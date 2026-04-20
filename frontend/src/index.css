@@ -1902,8 +1902,8 @@ nav svg {
   width: 100%;
   min-height: 52px;
   padding: 14px 24px;
-  background: var(--text);
-  color: var(--bg);
+  background: var(--accent);
+  color: #fff;
   border: none;
   border-radius: 999px;
   font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
@@ -1911,10 +1911,13 @@ nav svg {
   font-weight: 600;
   letter-spacing: 0;
   cursor: pointer;
-  transition: opacity 0.2s ease, transform 0.12s ease;
+  transition: background 0.2s ease, transform 0.12s ease, box-shadow 0.2s ease;
   -webkit-tap-highlight-color: transparent;
 }
-.zen-app .zen-bag-checkout-btn:hover { opacity: 0.9; }
+.zen-app .zen-bag-checkout-btn:hover {
+  background: var(--accent-hover);
+  box-shadow: 0 8px 20px -8px rgba(165, 42, 42, 0.45);
+}
 .zen-app .zen-bag-checkout-btn:active { transform: scale(0.985); }
 
 /* Пустые состояния — минимальный дзен */

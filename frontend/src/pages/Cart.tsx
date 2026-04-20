@@ -11,21 +11,6 @@ interface CartProps {
   onProductClick?: (productId: number) => void;
 }
 
-function pluralize(
-  lang: string,
-  n: number,
-  forms: { one: string; few: string; many: string }
-): string {
-  if (lang === "ru") {
-    const mod10 = n % 10;
-    const mod100 = n % 100;
-    if (mod10 === 1 && mod100 !== 11) return forms.one;
-    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return forms.few;
-    return forms.many;
-  }
-  return n === 1 ? forms.one : forms.many;
-}
-
 export function Cart({
   userId,
   onBack,
@@ -79,20 +64,6 @@ export function Cart({
     () => items.reduce((sum, i) => sum + i.price * i.quantity, 0),
     [items]
   );
-  const totalQty = useMemo(
-    () => items.reduce((sum, i) => sum + i.quantity, 0),
-    [items]
-  );
-  const uniqueCount = items.length;
-
-  const countKey = pluralize(lang, uniqueCount, {
-    one: "cartItemsCountOne",
-    few: "cartItemsCount",
-    many: "cartItemsCountMany",
-  });
-  const countLabel = t(lang, countKey)
-    .replace("{n}", String(uniqueCount))
-    .replace("{n2}", String(totalQty));
 
   if (loading) {
     return (
@@ -127,7 +98,6 @@ export function Cart({
     <div className="zen-bag-wrap zen-page-enter">
       <header className="zen-bag-header">
         <h1 className="zen-bag-title">{t(lang, "cartTitle")}</h1>
-        <div className="zen-bag-meta">{countLabel}</div>
       </header>
 
       <ul style={styles.list}>

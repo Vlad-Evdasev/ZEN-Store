@@ -49,7 +49,6 @@ export function Favorites({
     <div className="zen-wishlist-wrap zen-page-enter">
       <header className="zen-wishlist-header">
         <h1 className="zen-wishlist-title">{t(lang, "favoritesTitle")}</h1>
-        <span className="zen-wishlist-count">{favorites.length}</span>
       </header>
 
       <div className="zen-wishlist-grid">
