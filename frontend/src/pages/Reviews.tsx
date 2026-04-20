@@ -275,7 +275,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "flex-end",
     gap: 8,
-    marginTop: 4,
+    marginTop: 32,
   },
   emptyAvatar: {
     width: 30,
