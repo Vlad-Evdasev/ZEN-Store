@@ -1759,9 +1759,9 @@ nav svg {
 }
 .zen-app .zen-bag-title {
   font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
-  font-size: 26px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
   color: var(--text);
   line-height: 1.15;
   margin: 0;
@@ -2206,9 +2206,9 @@ html[data-theme="dark"] .zen-app .zen-bag-checkout-btn--success .zen-bag-checkou
 }
 .zen-app .zen-wishlist-title {
   font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
-  font-size: 26px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
   color: var(--text);
   line-height: 1.15;
   margin: 0;
