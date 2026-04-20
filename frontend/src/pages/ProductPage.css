@@ -150,89 +150,156 @@
   display: none;
 }
 
-/* ─── HEADER ─── */
+/* ─── HEADER (editorial) ─── */
 .product-v2__header {
-  margin-bottom: 20px;
+  margin-bottom: 22px;
 }
-.product-v2__titles {
+/* Верхняя строка: eyebrow (бренд · категория) слева, рейтинг-чип справа */
+.product-v2__eyebrow-row {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
+  min-height: 22px;
+  margin-bottom: 10px;
 }
-.product-v2__title {
-  font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
-  font-size: 30px;
-  font-weight: 600;
-  line-height: 1.1;
-  letter-spacing: -0.025em;
-  color: var(--text);
-  margin: 0;
+.product-v2__eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
-.product-v2__rating-inline {
+/* Мини-чип рейтинга в духе размеров-медальонов */
+.product-v2__rating-chip {
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
-  color: var(--muted);
-  width: max-content;
-  letter-spacing: 0.02em;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--surface-elevated);
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0;
 }
 .product-v2__rating-star {
   color: var(--accent);
-  font-size: 13px;
+  font-size: 11px;
   line-height: 1;
 }
 .product-v2__rating-value {
   color: var(--text);
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.01em;
 }
 .product-v2__rating-count {
   color: var(--muted);
   letter-spacing: 0.02em;
+  font-weight: 500;
 }
 
-/* ─── DESC ─── */
-.product-v2__desc-wrap {
+/* Название с лёгким акцентным штрихом-точкой в конце — фирменный штрих */
+.product-v2__title {
+  font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
+  font-size: 34px;
+  font-weight: 500;
+  line-height: 1.04;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  margin: 0;
+  display: inline;
+}
+.product-v2__title-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-left: 4px;
   margin-bottom: 4px;
+  vertical-align: baseline;
+  transform: translateY(-2px);
+}
+
+/* ─── DESC — pull-quote с тонкой акцентной линией слева ─── */
+.product-v2__desc-wrap {
+  position: relative;
+  margin-top: 18px;
+  margin-bottom: 4px;
+  padding: 2px 0 2px 16px;
+}
+.product-v2__desc-wrap::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+  opacity: 0.9;
 }
 .product-v2__desc {
   font-size: 15px;
-  line-height: 1.65;
-  color: var(--muted);
+  line-height: 1.55;
+  color: var(--text);
   margin: 0;
-  letter-spacing: 0.005em;
+  letter-spacing: -0.005em;
+  font-weight: 400;
+  /* Плавное раскрытие: вместо clamp через max-height, чтобы анимация была мягкой */
+  max-height: 4.8em;
+  overflow: hidden;
+  transition: max-height 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .product-v2__desc.is-clampable:not(.is-expanded) {
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
-  overflow: hidden;
+  max-height: 4.8em;
+}
+.product-v2__desc.is-expanded {
+  max-height: 1000px;
+  -webkit-line-clamp: unset;
+  display: block;
 }
 .product-v2__desc-toggle {
-  margin-top: 10px;
+  margin-top: 8px;
   background: none;
   border: none;
   padding: 0;
-  color: var(--text);
+  color: var(--muted);
   font-family: inherit;
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
+  font-weight: 700;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   cursor: pointer;
-  position: relative;
-  padding-bottom: 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
 }
-.product-v2__desc-toggle::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 1px;
-  background: currentColor;
-  opacity: 0.45;
+.product-v2__desc-toggle svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.product-v2__desc-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+@media (hover: hover) {
+  .product-v2__desc-toggle:hover { color: var(--text); }
 }
 
 /* ─── DIVIDERS (hairline, edge-to-edge) ─── */
