@@ -103,118 +103,94 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, sel
   }
 
   const canSubmit = city.trim().length > 0 && !submitting;
-  const itemWord =
-    lang === "ru"
-      ? itemsCount === 1
-        ? "товар"
-        : itemsCount < 5
-          ? "товара"
-          : "товаров"
-      : itemsCount === 1
-        ? "item"
-        : "items";
+  const firstItem = items[0];
 
   return (
     <div style={styles.wrap}>
       <button
         type="button"
         onClick={onBack}
-        style={styles.ghostBack}
+        style={styles.closeBtn}
         aria-label={t(lang, "back")}
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
           <path
-            d="M15 18l-6-6 6-6"
+            d="M6 6l12 12M18 6L6 18"
             stroke="currentColor"
-            strokeWidth="1.6"
+            strokeWidth="1.8"
             strokeLinecap="round"
-            strokeLinejoin="round"
           />
         </svg>
-        <span>{t(lang, "back")}</span>
       </button>
 
       <header style={styles.header}>
-        <h1 style={styles.title}>Оформление заказа</h1>
-        <p style={styles.subtitle}>
-          {itemsCount > 0 ? `${itemsCount} ${itemWord}` : "Корзина пуста"}
-          {itemsCount > 0 && <span style={styles.subtitleDot}>·</span>}
-          {itemsCount > 0 && (
-            <span style={styles.subtitleTotal}>{formatPrice(total)}</span>
-          )}
-        </p>
+        <h1 style={styles.title}>
+          {lang === "ru" ? "Оформление заказа" : "Checkout"}
+        </h1>
       </header>
 
-      {items.length > 0 && (
-        <section style={styles.itemsSection} aria-label="Состав заказа">
-          <div className="hide-scrollbar" style={styles.itemsScroller}>
-            {items.map((it) => (
-              <article key={it.id} style={styles.miniCard}>
-                <div style={styles.miniThumbWrap}>
-                  {it.image_url ? (
-                    <img
-                      src={it.image_url}
-                      alt=""
-                      style={styles.miniThumb}
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div style={styles.miniThumbFallback}>
-                      <span>{(it.name || "?")[0]?.toUpperCase()}</span>
-                    </div>
-                  )}
-                  {it.quantity > 1 && (
-                    <span style={styles.miniQty}>×{it.quantity}</span>
-                  )}
-                </div>
-                <p style={styles.miniName}>{it.name}</p>
-                <p style={styles.miniMeta}>
-                  {it.size ? (
-                    <>
-                      <span style={styles.miniMetaLabel}>
-                        {lang === "ru" ? "Размер" : "Size"}
-                      </span>
-                      <span style={styles.miniMetaValue}>{it.size}</span>
-                    </>
-                  ) : (
-                    <span style={styles.miniMetaValue}>—</span>
-                  )}
-                </p>
-              </article>
-            ))}
+      {firstItem && (
+        <section style={styles.itemRow} aria-label="Состав заказа">
+          <div style={styles.itemThumbWrap}>
+            {firstItem.image_url ? (
+              <img
+                src={firstItem.image_url}
+                alt=""
+                style={styles.itemThumb}
+                loading="lazy"
+              />
+            ) : (
+              <div style={styles.itemThumbFallback}>
+                <span>{(firstItem.name || "?")[0]?.toUpperCase()}</span>
+              </div>
+            )}
+            {itemsCount > 1 && (
+              <span style={styles.itemQty}>×{itemsCount}</span>
+            )}
+          </div>
+          <div style={styles.itemInfo}>
+            <p style={styles.itemName}>{firstItem.name}</p>
+            {firstItem.size && (
+              <p style={styles.itemMeta}>
+                <span style={styles.itemMetaLabel}>
+                  {lang === "ru" ? "Размер" : "Size"}
+                </span>
+                <span style={styles.itemMetaValue}>{firstItem.size}</span>
+              </p>
+            )}
           </div>
         </section>
       )}
 
       <form onSubmit={handleSubmit} style={styles.form}>
         <div style={styles.fieldGroup}>
-          <div style={styles.field}>
-            <span style={styles.fieldLabel}>Username</span>
-            <div style={styles.readonlyRow}>
-              <span style={styles.readonlyValue}>{username || "—"}</span>
-              <span style={styles.readonlyHint}>Telegram</span>
+          <div style={styles.pillField}>
+            <span style={styles.pillLabel}>Username</span>
+            <div style={styles.pillRow}>
+              <span style={styles.pillValue}>{username || "—"}</span>
+              <span style={styles.pillHint}>Telegram</span>
             </div>
-            <div style={styles.fieldLine} />
           </div>
 
-          <div style={styles.field}>
-            <span style={styles.fieldLabel}>{lang === "ru" ? "Город" : "City"} *</span>
+          <div
+            style={{
+              ...styles.pillField,
+              ...(cityFocused ? styles.pillFieldActive : null),
+            }}
+          >
+            <span style={styles.pillLabel}>
+              {lang === "ru" ? "Город" : "City"} *
+            </span>
             <input
               type="text"
               value={city}
               onChange={(e) => setCity(e.target.value)}
               onFocus={() => setCityFocused(true)}
               onBlur={() => setCityFocused(false)}
-              placeholder={lang === "ru" ? "Москва" : "Moscow"}
-              style={styles.cleanInput}
+              placeholder={lang === "ru" ? "Минск" : "Minsk"}
+              style={styles.pillInput}
               autoComplete="address-level2"
               required
-            />
-            <div
-              style={{
-                ...styles.fieldLine,
-                ...(cityFocused ? styles.fieldLineActive : null),
-              }}
             />
           </div>
         </div>
@@ -251,7 +227,8 @@ const styles: Record<string, React.CSSProperties> = {
   wrap: {
     maxWidth: 460,
     margin: "0 auto",
-    paddingBottom: 40,
+    paddingBottom: 16,
+    position: "relative",
   },
   loading: {
     textAlign: "center",
@@ -259,214 +236,186 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--muted)",
   },
 
-  ghostBack: {
+  closeBtn: {
+    position: "absolute",
+    top: -4,
+    right: 0,
+    width: 36,
+    height: 36,
     display: "inline-flex",
     alignItems: "center",
-    gap: 8,
-    marginTop: 4,
-    marginBottom: 20,
-    padding: "6px 4px",
-    background: "transparent",
+    justifyContent: "center",
+    background: "var(--surface-elevated)",
     border: "none",
-    color: "var(--muted)",
-    fontFamily: "inherit",
-    fontSize: 13,
-    fontWeight: 500,
-    letterSpacing: "0.02em",
+    borderRadius: 999,
+    color: "var(--text)",
     cursor: "pointer",
-    transition: "color 0.15s ease",
+    transition: "background 0.15s ease, transform 0.15s ease",
+    zIndex: 2,
   },
 
   header: {
-    marginBottom: 28,
+    marginBottom: 18,
+    paddingRight: 44,
   },
   title: {
     fontFamily: '"Proxima Nova", -apple-system, system-ui, sans-serif',
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 700,
     letterSpacing: "-0.02em",
-    lineHeight: 1.1,
+    lineHeight: 1.15,
     color: "var(--text)",
     margin: 0,
   },
-  subtitle: {
+
+  itemRow: {
     display: "flex",
     alignItems: "center",
-    gap: 8,
-    marginTop: 10,
-    marginBottom: 0,
-    fontSize: 14,
-    color: "var(--muted)",
-    letterSpacing: "0.01em",
+    gap: 14,
+    marginBottom: 20,
+    padding: 12,
+    background: "var(--surface-elevated)",
+    borderRadius: 18,
   },
-  subtitleDot: {
-    color: "var(--border)",
-  },
-  subtitleTotal: {
-    color: "var(--text)",
-    fontWeight: 600,
-  },
-
-  itemsSection: {
-    margin: "0 -16px 28px",
-  },
-  itemsScroller: {
-    display: "flex",
-    gap: 12,
-    padding: "4px 16px 8px",
-    overflowX: "auto",
-    scrollSnapType: "x mandatory",
-    scrollbarWidth: "none",
-    WebkitOverflowScrolling: "touch",
-  } as React.CSSProperties,
-  miniCard: {
-    flex: "0 0 132px",
-    width: 132,
-    display: "flex",
-    flexDirection: "column",
-    gap: 8,
-    scrollSnapAlign: "start",
-  },
-  miniThumbWrap: {
+  itemThumbWrap: {
     position: "relative",
-    width: "100%",
-    aspectRatio: "4 / 5",
+    flex: "0 0 64px",
+    width: 64,
+    height: 64,
     borderRadius: 14,
     overflow: "hidden",
-    background: "var(--surface-elevated)",
+    background: "var(--surface)",
   },
-  miniThumb: {
+  itemThumb: {
     width: "100%",
     height: "100%",
     objectFit: "cover",
     display: "block",
   },
-  miniThumbFallback: {
+  itemThumbFallback: {
     width: "100%",
     height: "100%",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontFamily: '"Proxima Nova", -apple-system, system-ui, sans-serif',
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: 600,
     color: "var(--muted)",
   },
-  miniQty: {
+  itemQty: {
     position: "absolute",
-    top: 8,
-    right: 8,
-    padding: "3px 8px",
+    top: 4,
+    right: 4,
+    padding: "2px 6px",
     background: "rgba(0, 0, 0, 0.72)",
     color: "#fff",
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 700,
-    letterSpacing: "0.04em",
     borderRadius: 999,
-    backdropFilter: "blur(8px)",
   },
-  miniName: {
+  itemInfo: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+    minWidth: 0,
+    flex: 1,
+  },
+  itemName: {
     margin: 0,
     fontFamily: '"Proxima Nova", -apple-system, system-ui, sans-serif',
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: 600,
     color: "var(--text)",
     letterSpacing: "-0.01em",
-    lineHeight: 1.3,
+    lineHeight: 1.2,
     overflow: "hidden",
     textOverflow: "ellipsis",
-    display: "-webkit-box",
-    WebkitLineClamp: 2,
-    WebkitBoxOrient: "vertical" as React.CSSProperties["WebkitBoxOrient"],
+    whiteSpace: "nowrap",
   },
-  miniMeta: {
+  itemMeta: {
     margin: 0,
     display: "flex",
     alignItems: "baseline",
     gap: 6,
     fontSize: 12,
-    color: "var(--muted)",
     lineHeight: 1.2,
   },
-  miniMetaLabel: {
+  itemMetaLabel: {
     fontSize: 10,
-    fontWeight: 600,
-    letterSpacing: "0.12em",
+    fontWeight: 700,
+    letterSpacing: "0.14em",
     textTransform: "uppercase",
     color: "var(--muted)",
   },
-  miniMetaValue: {
+  itemMetaValue: {
     color: "var(--text)",
     fontWeight: 600,
     fontSize: 12,
     letterSpacing: "0.02em",
   },
 
-  form: { display: "flex", flexDirection: "column", gap: 24 },
+  form: { display: "flex", flexDirection: "column", gap: 16 },
   fieldGroup: {
     display: "flex",
     flexDirection: "column",
-    gap: 20,
+    gap: 12,
   },
-  field: {
+  pillField: {
     display: "flex",
     flexDirection: "column",
-    gap: 8,
-    position: "relative",
+    gap: 4,
+    padding: "10px 18px 12px",
+    background: "var(--surface-elevated)",
+    borderRadius: 18,
+    border: "1px solid transparent",
+    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.03)",
+    transition: "border-color 0.2s ease, box-shadow 0.2s ease",
   },
-  fieldLabel: {
+  pillFieldActive: {
+    borderColor: "var(--accent)",
+    boxShadow: "0 2px 10px -4px rgba(165, 42, 42, 0.25)",
+  },
+  pillLabel: {
     fontSize: 10,
     fontWeight: 700,
     letterSpacing: "0.16em",
     textTransform: "uppercase",
     color: "var(--muted)",
   },
-  readonlyRow: {
+  pillRow: {
     display: "flex",
     alignItems: "baseline",
     justifyContent: "space-between",
     gap: 12,
-    paddingTop: 2,
-    paddingBottom: 10,
   },
-  readonlyValue: {
+  pillValue: {
     fontFamily: '"Proxima Nova", -apple-system, system-ui, sans-serif',
-    fontSize: 17,
+    fontSize: 16,
     color: "var(--text)",
     letterSpacing: "-0.01em",
     fontWeight: 600,
   },
-  readonlyHint: {
+  pillHint: {
     fontSize: 10,
     color: "var(--muted)",
     letterSpacing: "0.12em",
     textTransform: "uppercase",
     fontWeight: 600,
   },
-  cleanInput: {
+  pillInput: {
     width: "100%",
-    minHeight: 0,
-    padding: "6px 0 10px",
+    padding: 0,
     background: "transparent",
     border: "none",
     outline: "none",
     fontFamily: '"Proxima Nova", -apple-system, system-ui, sans-serif',
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: 600,
     color: "var(--text)",
     letterSpacing: "-0.01em",
     borderRadius: 0,
     boxShadow: "none",
-  },
-  fieldLine: {
-    height: 1,
-    width: "100%",
-    background: "var(--border)",
-    transition: "background 0.2s ease, height 0.2s ease",
-  },
-  fieldLineActive: {
-    background: "var(--accent)",
-    height: 2,
   },
 
   summary: {
@@ -474,7 +423,9 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "baseline",
     justifyContent: "space-between",
     gap: 12,
-    paddingTop: 8,
+    paddingTop: 4,
+    paddingLeft: 4,
+    paddingRight: 4,
   },
   summaryLabel: {
     fontSize: 13,
@@ -491,7 +442,7 @@ const styles: Record<string, React.CSSProperties> = {
 
   submit: {
     width: "100%",
-    minHeight: 54,
+    minHeight: 52,
     padding: "14px 24px",
     background: "var(--accent)",
     border: "none",
