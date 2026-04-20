@@ -368,15 +368,7 @@ function App() {
             sellerLink={SELLER_LINK}
           />
         )}
-        {page === "support" && (
-          <Support
-            userId={userId || ""}
-            userName={userName}
-            firstName={firstName}
-            supportUnreadCount={supportUnreadCount}
-            onUnreadCountChange={userId ? refreshSupportUnread : undefined}
-          />
-        )}
+        {page === "support" && <Support />}
         {page === "reviews" && (
           <Reviews
             userId={userId}
