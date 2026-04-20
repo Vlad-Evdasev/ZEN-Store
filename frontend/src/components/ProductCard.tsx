@@ -308,7 +308,7 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: "0.02em",
   },
   reviewsStar: {
-    color: "#c9a24c",
+    color: "var(--accent)",
     fontSize: "1em",
     lineHeight: 1,
     transform: "translateY(-0.5px)",
