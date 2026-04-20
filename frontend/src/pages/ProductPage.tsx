@@ -47,17 +47,8 @@ export function ProductPage({
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
   const [imageIndex, setImageIndex] = useState(0);
-  const [swipeDx, setSwipeDx] = useState(0);
-  const [swipeClosing, setSwipeClosing] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef(0);
-  const closeTouch = useRef<{
-    startX: number;
-    startY: number;
-    active: boolean;
-    decided: boolean;
-    closing: boolean;
-  } | null>(null);
 
   const sizes = product ? product.sizes.split(",").map((s) => s.trim()) : [];
   const imageUrls = product
@@ -134,77 +125,6 @@ export function ProductPage({
     else if (dx < -minSwipe) goNextImage();
   };
 
-  const handleCloseTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length !== 1) {
-      closeTouch.current = null;
-      return;
-    }
-    const target = e.target as HTMLElement | null;
-    if (target && imageUrls.length > 1 && target.closest(".product-v2__gallery")) {
-      closeTouch.current = null;
-      return;
-    }
-    if (target && target.closest("button, a, input, textarea, select, .zen-bag-summary, .product-v2__modal")) {
-      closeTouch.current = null;
-      return;
-    }
-    const t0 = e.touches[0];
-    closeTouch.current = {
-      startX: t0.clientX,
-      startY: t0.clientY,
-      active: true,
-      decided: false,
-      closing: false,
-    };
-  };
-
-  const handleCloseTouchMove = (e: React.TouchEvent) => {
-    const st = closeTouch.current;
-    if (!st || !st.active) return;
-    const t0 = e.touches[0];
-    const dx = t0.clientX - st.startX;
-    const dy = t0.clientY - st.startY;
-
-    if (!st.decided) {
-      const absDx = Math.abs(dx);
-      const absDy = Math.abs(dy);
-      if (absDx < 10 && absDy < 10) return;
-      if (absDy > absDx || dx < 0) {
-        st.active = false;
-        setSwipeDx(0);
-        return;
-      }
-      st.decided = true;
-      st.closing = true;
-    }
-
-    if (st.closing) {
-      setSwipeDx(Math.max(0, dx));
-    }
-  };
-
-  const handleCloseTouchEnd = (e: React.TouchEvent) => {
-    const st = closeTouch.current;
-    closeTouch.current = null;
-    if (!st || !st.closing) {
-      setSwipeDx(0);
-      return;
-    }
-    const endX = e.changedTouches[0].clientX;
-    const dx = endX - st.startX;
-    const width = window.innerWidth || 360;
-    const threshold = Math.min(120, width * 0.28);
-    if (dx > threshold) {
-      setSwipeClosing(true);
-      setSwipeDx(width);
-      window.setTimeout(() => {
-        onBack();
-      }, 220);
-    } else {
-      setSwipeDx(0);
-    }
-  };
-
   if (!product) {
     return (
       <div className="product-v2-loading">
@@ -230,25 +150,8 @@ export function ProductPage({
 
   const hasLongDesc = (product.description?.length ?? 0) > 140;
 
-  const rootStyle: React.CSSProperties = swipeDx > 0
-    ? {
-        transform: `translateX(${swipeDx}px)`,
-        transition: swipeClosing ? "transform 0.22s cubic-bezier(0.25, 0.1, 0.25, 1), opacity 0.22s ease" : "none",
-        opacity: swipeClosing ? 0 : Math.max(0.55, 1 - swipeDx / 600),
-        touchAction: "pan-y",
-      }
-      : {};
-
   return (
-    <div
-      ref={rootRef}
-      className="product-v2"
-      style={rootStyle}
-      onTouchStart={handleCloseTouchStart}
-      onTouchMove={handleCloseTouchMove}
-      onTouchEnd={handleCloseTouchEnd}
-      onTouchCancel={handleCloseTouchEnd}
-    >
+    <div ref={rootRef} className="product-v2">
       <div className="product-v2__hero">
         {imageUrls.length <= 1 ? (
           <img
@@ -277,6 +180,17 @@ export function ProductPage({
 
         <div className="product-v2__hero-gradient" aria-hidden />
         <div className="product-v2__hero-fade" aria-hidden />
+
+        <button
+          type="button"
+          onClick={onBack}
+          className="product-v2__floating-btn product-v2__floating-btn--back"
+          aria-label={t(lang, "back")}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </button>
 
         <button
           type="button"
