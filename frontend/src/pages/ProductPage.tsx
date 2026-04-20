@@ -329,7 +329,14 @@ export function ProductPage({
           )}
 
           {reviews.length === 0 && !showReviewForm && (
-            <p className="product-v2__no-reviews">{t(lang, "noReviewsYet")}</p>
+            <div className="product-v2__empty-bubble-row">
+              <div className="product-v2__empty-avatar" aria-hidden>R</div>
+              <div className="product-v2__empty-bubble">
+                <div className="product-v2__empty-bubble-text">
+                  {t(lang, "reviewsEmptyFirst")}
+                </div>
+              </div>
+            </div>
           )}
 
           <div className="product-v2__reviews-list">
