@@ -466,46 +466,75 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
 
       <form id="checkout-form" onSubmit={handleSubmit} style={styles.form}>
         <div style={styles.fieldGroup}>
-          <label
-            style={{
-              ...styles.cityField,
-              ...(cityFocused ? styles.cityFieldActive : null),
-            }}
-          >
-            <span
-              style={{
-                ...styles.cityFieldIcon,
-                color: cityFocused || city ? "var(--accent)" : "var(--muted)",
-              }}
-              aria-hidden="true"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M12 22s7-7.58 7-13a7 7 0 1 0-14 0c0 5.42 7 13 7 13Z"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <circle cx="12" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.6" />
-              </svg>
+          <div style={styles.cityFieldGroup}>
+            <span style={styles.cityFieldCaption}>
+              {lang === "ru" ? "Куда доставить" : "Deliver to"}
+              <span style={styles.cityFieldCaptionStar} aria-hidden="true">*</span>
             </span>
+            <label
+              htmlFor="checkout-city-input"
+              style={{
+                ...styles.cityField,
+                ...(cityFocused ? styles.cityFieldActive : null),
+              }}
+            >
+              <span
+                style={{
+                  ...styles.cityFieldIcon,
+                  background:
+                    cityFocused || city
+                      ? "var(--accent)"
+                      : "var(--surface)",
+                  color:
+                    cityFocused || city ? "#fff" : "var(--muted)",
+                }}
+                aria-hidden="true"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M12 22s7-7.58 7-13a7 7 0 1 0-14 0c0 5.42 7 13 7 13Z"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <circle cx="12" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.8" />
+                </svg>
+              </span>
 
-            <input
-              type="text"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              onFocus={() => setCityFocused(true)}
-              onBlur={() => setCityFocused(false)}
-              placeholder={lang === "ru" ? "Город доставки" : "Delivery city"}
-              style={styles.cityFieldInput}
-              autoComplete="address-level2"
-              required
-              aria-label={lang === "ru" ? "Город" : "City"}
-            />
+              <input
+                id="checkout-city-input"
+                type="text"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                onFocus={() => setCityFocused(true)}
+                onBlur={() => setCityFocused(false)}
+                placeholder={lang === "ru" ? "Минск, Москва, Алматы…" : "Minsk, London, NYC…"}
+                style={styles.cityFieldInput}
+                autoComplete="address-level2"
+                required
+                aria-label={lang === "ru" ? "Город доставки" : "Delivery city"}
+              />
 
-            <span style={styles.cityFieldRequired} aria-hidden="true">*</span>
-          </label>
+              {city.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setCity("")}
+                  style={styles.cityFieldClear}
+                  aria-label={lang === "ru" ? "Очистить" : "Clear"}
+                >
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M6 6l12 12M18 6L6 18"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </button>
+              )}
+            </label>
+          </div>
         </div>
       </form>
 
@@ -863,38 +892,61 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: "column",
     gap: 12,
   },
-  cityField: {
+  cityFieldGroup: {
     display: "flex",
+    flexDirection: "column",
+    gap: 8,
+  },
+  cityFieldCaption: {
+    display: "inline-flex",
     alignItems: "center",
-    gap: 10,
-    height: 52,
-    padding: "0 16px",
+    gap: 3,
+    padding: "0 4px",
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: "0.14em",
+    textTransform: "uppercase",
+    color: "var(--muted)",
+  },
+  cityFieldCaptionStar: {
+    color: "var(--accent)",
+    fontSize: 11,
+    fontWeight: 700,
+    lineHeight: 1,
+  },
+  cityField: {
+    display: "grid",
+    gridTemplateColumns: "36px 1fr auto",
+    alignItems: "center",
+    columnGap: 12,
+    height: 56,
+    padding: "0 10px 0 10px",
     background: "var(--surface-elevated)",
-    border: "1px solid transparent",
-    borderRadius: 14,
+    border: "1px solid var(--border)",
+    borderRadius: 16,
     cursor: "text",
     transition:
       "border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease",
   },
   cityFieldActive: {
     borderColor: "var(--accent)",
-    background: "var(--surface)",
-    boxShadow: "0 4px 14px -8px rgba(165, 42, 42, 0.35)",
+    boxShadow: "0 0 0 4px rgba(165, 42, 42, 0.12), 0 6px 18px -10px rgba(165, 42, 42, 0.5)",
   },
   cityFieldIcon: {
-    flex: "0 0 20px",
-    width: 20,
-    height: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    transition: "color 0.2s ease",
+    transition: "background 0.2s ease, color 0.2s ease",
   },
   cityFieldInput: {
-    flex: 1,
     minWidth: 0,
+    width: "100%",
     height: "100%",
-    padding: 0,
+    padding: "0 2px",
+    margin: 0,
     background: "transparent",
     border: "none",
     outline: "none",
@@ -904,14 +956,22 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--text)",
     letterSpacing: "-0.005em",
     boxShadow: "none",
+    lineHeight: 1.2,
   },
-  cityFieldRequired: {
-    flex: "0 0 auto",
-    color: "var(--accent)",
-    fontSize: 14,
-    fontWeight: 700,
-    lineHeight: 1,
-    marginLeft: 2,
+  cityFieldClear: {
+    width: 26,
+    height: 26,
+    padding: 0,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "var(--surface)",
+    border: "none",
+    borderRadius: 999,
+    color: "var(--muted)",
+    cursor: "pointer",
+    transition: "background 0.18s ease, color 0.18s ease",
+    WebkitTapHighlightColor: "transparent",
   },
 
   successWrap: {
