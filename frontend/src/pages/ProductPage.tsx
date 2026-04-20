@@ -358,39 +358,61 @@ export function ProductPage({
         </section>
       </div>
 
-      <div className="product-v2__cta-bar">
-        <div className="product-v2__cta-price">
-          <span className="product-v2__cta-price-value">{formatPrice(product.price)}</span>
-          {size && <span className="product-v2__cta-price-meta">Размер {size}</span>}
-        </div>
-        {justAdded ? (
-          <button onClick={onCart} className="product-v2__cta-btn product-v2__cta-btn--success" aria-label={t(lang, "goToCart")}>
-            <span className="product-v2__cta-btn-label">{t(lang, "goToCart")}</span>
-            <span className="product-v2__cta-btn-orb" aria-hidden>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
+      <div className="zen-bag-summary zen-bag-summary--bottom">
+        <div
+          className="zen-bag-summary-bar"
+          role="group"
+          aria-label={t(lang, "addToCart")}
+        >
+          <div className="zen-bag-summary-info">
+            <span className="zen-bag-summary-info-value">
+              {formatPrice(product.price)}
             </span>
-          </button>
-        ) : (
-          <button
-            onClick={handleAdd}
-            disabled={adding || !size}
-            className="product-v2__cta-btn"
-            aria-label={t(lang, "addToCart")}
-          >
-            <span className="product-v2__cta-btn-label">{adding ? "..." : t(lang, "addToCart")}</span>
-            <span className="product-v2__cta-btn-orb" aria-hidden>
-              {adding ? (
-                <span className="product-v2__cta-spinner" />
-              ) : (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M5 12h14M13 5l7 7-7 7" />
+            {size && (
+              <span className="zen-bag-summary-info-label zen-bag-summary-info-label--sub">
+                Размер {size}
+              </span>
+            )}
+          </div>
+          {justAdded ? (
+            <button
+              type="button"
+              onClick={onCart}
+              className="zen-bag-checkout-btn zen-bag-checkout-btn--success"
+              aria-label={t(lang, "goToCart")}
+            >
+              <span className="zen-bag-checkout-label">{t(lang, "goToCart")}</span>
+              <span className="zen-bag-checkout-arrow" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <polyline points="20 6 9 17 4 12" />
                 </svg>
-              )}
-            </span>
-          </button>
-        )}
+              </span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleAdd}
+              disabled={adding || !size}
+              className={`zen-bag-checkout-btn${adding || !size ? " zen-bag-checkout-btn--disabled" : ""}`}
+              aria-label={t(lang, "addToCart")}
+            >
+              <span className="zen-bag-checkout-label">
+                {adding ? (lang === "ru" ? "Добавляем..." : "Adding...") : t(lang, "addToCart")}
+              </span>
+              <span className="zen-bag-checkout-arrow" aria-hidden="true">
+                {adding ? (
+                  <svg viewBox="0 0 24 24" className="zen-bag-checkout-spinner">
+                    <circle cx="12" cy="12" r="9" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24">
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                )}
+              </span>
+            </button>
+          )}
+        </div>
       </div>
 
       {showSizeGuide && (

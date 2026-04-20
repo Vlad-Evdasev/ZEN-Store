@@ -1921,6 +1921,15 @@ nav svg {
   text-transform: uppercase;
   margin-bottom: 4px;
 }
+/* Sub-label: мелкая подпись, идущая ПОД значением (например, "Размер S"
+   в карточке товара). Без uppercase, без большого трекинга. */
+.zen-app .zen-bag-summary-info-label--sub {
+  margin-bottom: 0;
+  margin-top: 3px;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  font-weight: 500;
+}
 .zen-app .zen-bag-summary-info-value {
   font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
   font-size: 19px;
@@ -2059,6 +2068,38 @@ nav svg {
 }
 .zen-app .zen-bag-checkout-btn--disabled:hover .zen-bag-checkout-arrow { background: transparent; }
 .zen-app .zen-bag-checkout-btn--disabled:hover .zen-bag-checkout-arrow svg { transform: none; }
+
+/* Состояние "успех": после добавления товара в корзину на карточке товара
+   кнопка становится тёмной ("Перейти в корзину" с галочкой). */
+.zen-app .zen-bag-checkout-btn--success {
+  background: var(--text);
+  color: var(--bg);
+  box-shadow:
+    0 10px 24px -10px rgba(0, 0, 0, 0.45),
+    0 2px 6px -2px rgba(0, 0, 0, 0.25);
+  animation: zenBagCheckoutPulse 0.4s ease both;
+}
+.zen-app .zen-bag-checkout-btn--success::before {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0) 55%);
+}
+.zen-app .zen-bag-checkout-btn--success .zen-bag-checkout-arrow {
+  background: rgba(255, 255, 255, 0.14);
+}
+.zen-app .zen-bag-checkout-btn--success .zen-bag-checkout-arrow svg { stroke: var(--bg); }
+.zen-app .zen-bag-checkout-btn--success:hover {
+  background: var(--text);
+  box-shadow:
+    0 14px 28px -10px rgba(0, 0, 0, 0.5),
+    0 3px 8px -2px rgba(0, 0, 0, 0.28);
+}
+html[data-theme="dark"] .zen-app .zen-bag-checkout-btn--success .zen-bag-checkout-arrow {
+  background: rgba(0, 0, 0, 0.22);
+}
+@keyframes zenBagCheckoutPulse {
+  0% { transform: scale(0.96); }
+  60% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
 
 /* Индикатор загрузки внутри круглой "стрелки" */
 .zen-app .zen-bag-checkout-spinner {
