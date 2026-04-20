@@ -294,26 +294,51 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
               aria-expanded={itemsExpanded}
               aria-controls="checkout-items-list"
             >
-              <div style={styles.itemsStack} aria-hidden="true">
-                {items.slice(0, 3).map((it, idx) => (
+              {(() => {
+                const THUMB = 52;
+                const OFFSET = 24;
+                const showMoreBadge = items.length > 3;
+                const previewItems = showMoreBadge ? items.slice(0, 2) : items.slice(0, 3);
+                const totalSlots = previewItems.length + (showMoreBadge ? 1 : 0);
+                const stackWidth = THUMB + (totalSlots - 1) * OFFSET;
+                return (
                   <div
-                    key={it.id}
-                    style={{
-                      ...styles.itemsStackThumb,
-                      zIndex: 3 - idx,
-                      transform: `translateX(${idx * -10}px)`,
-                    }}
+                    style={{ ...styles.itemsStack, width: stackWidth, height: THUMB }}
+                    aria-hidden="true"
                   >
-                    {it.image_url ? (
-                      <img src={it.image_url} alt="" style={styles.itemThumb} loading="lazy" />
-                    ) : (
-                      <div style={styles.itemThumbFallback}>
-                        <span>{(it.name || "?")[0]?.toUpperCase()}</span>
+                    {previewItems.map((it, idx) => (
+                      <div
+                        key={it.id}
+                        style={{
+                          ...styles.itemsStackThumb,
+                          zIndex: totalSlots - idx,
+                          left: idx * OFFSET,
+                        }}
+                      >
+                        {it.image_url ? (
+                          <img src={it.image_url} alt="" style={styles.itemThumb} loading="lazy" />
+                        ) : (
+                          <div style={styles.itemThumbFallback}>
+                            <span>{(it.name || "?")[0]?.toUpperCase()}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {showMoreBadge && (
+                      <div
+                        style={{
+                          ...styles.itemsStackThumb,
+                          ...styles.itemsStackMore,
+                          zIndex: 1,
+                          left: previewItems.length * OFFSET,
+                        }}
+                      >
+                        +{items.length - previewItems.length}
                       </div>
                     )}
                   </div>
-                ))}
-              </div>
+                );
+              })()}
               <div style={styles.itemsSummaryText}>
                 <span style={styles.itemsSummaryTitle}>
                   {lang === "ru"
@@ -595,7 +620,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     gap: 14,
-    padding: 12,
+    padding: "12px 14px 12px 12px",
     background: "var(--surface-elevated)",
     border: "none",
     borderRadius: 18,
@@ -608,18 +633,28 @@ const styles: Record<string, React.CSSProperties> = {
   itemsStack: {
     position: "relative",
     flex: "0 0 auto",
-    display: "flex",
-    alignItems: "center",
-    paddingLeft: 20,
   },
   itemsStackThumb: {
-    position: "relative",
+    position: "absolute",
+    top: 0,
+    left: 0,
     width: 52,
     height: 52,
     borderRadius: 12,
     overflow: "hidden",
     background: "var(--surface)",
     boxShadow: "0 0 0 2px var(--surface-elevated)",
+  },
+  itemsStackMore: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "var(--accent)",
+    color: "#fff",
+    fontFamily: '"Proxima Nova", -apple-system, system-ui, sans-serif',
+    fontSize: 13,
+    fontWeight: 700,
+    letterSpacing: "0.01em",
   },
   itemsSummaryText: {
     flex: 1,
