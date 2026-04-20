@@ -84,132 +84,53 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, sel
 
   if (orderSuccess) {
     return (
-      <div style={styles.wrap}>
-        <div style={styles.successCard}>
-          <div style={styles.successIconWrap} aria-hidden="true">
-            <span style={styles.successIconPulse} />
-            <span style={styles.successIconPulseTwo} />
-            <span style={styles.successIconCircle}>
-              <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M5 12.5l4.2 4.2L19 7"
-                  stroke="currentColor"
-                  strokeWidth="2.4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </span>
-          </div>
+      <div style={styles.successWrap}>
+        <div style={styles.successInner}>
+          <span style={styles.successCheck} aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M5 12.5l4.2 4.2L19 7"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
 
-          <div style={styles.successTextWrap}>
-            <h2 style={styles.successTitle}>
-              {lang === "ru" ? "Заказ оформлен" : "Order placed"}
-            </h2>
-            <p style={styles.successSubtitle}>
-              {lang === "ru"
-                ? "Продавец уже получил уведомление и скоро свяжется с вами."
-                : "The seller has been notified and will contact you shortly."}
-            </p>
-          </div>
-
-          {firstItem && (
-            <div style={styles.successSummary} aria-label="Состав заказа">
-              <div style={styles.successSummaryThumbWrap}>
-                {firstItem.image_url ? (
-                  <img
-                    src={firstItem.image_url}
-                    alt=""
-                    style={styles.successSummaryThumb}
-                    loading="lazy"
-                  />
-                ) : (
-                  <div style={styles.itemThumbFallback}>
-                    <span>{(firstItem.name || "?")[0]?.toUpperCase()}</span>
-                  </div>
-                )}
-                {itemsCount > 1 && (
-                  <span style={styles.itemQty}>×{itemsCount}</span>
-                )}
-              </div>
-              <div style={styles.successSummaryInfo}>
-                <p style={styles.successSummaryName}>{firstItem.name}</p>
-                <p style={styles.successSummaryMeta}>
-                  {itemsCount}
-                  {" "}
-                  {lang === "ru"
-                    ? itemsCount === 1
-                      ? "товар"
-                      : itemsCount < 5
-                        ? "товара"
-                        : "товаров"
-                    : itemsCount === 1
-                      ? "item"
-                      : "items"}
-                </p>
-              </div>
-              <div style={styles.successSummaryTotal}>
-                <span style={styles.successSummaryTotalLabel}>
-                  {lang === "ru" ? "Итого" : "Total"}
-                </span>
-                <span style={styles.successSummaryTotalValue}>
-                  {formatPrice(total)}
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div style={styles.choice}>
-          <p style={styles.choiceLabel}>
-            {lang === "ru" ? "Как продолжить?" : "How would you like to proceed?"}
-          </p>
-          <button
-            onClick={handleWriteSeller}
-            style={styles.choiceBtn}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.background = "var(--accent-hover)")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.background = "var(--accent)")
-            }
-          >
-            <span style={styles.choiceBtnIcon} aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </span>
-            {lang === "ru" ? "Написать продавцу" : "Message the seller"}
-          </button>
-          <button onClick={handleSellerWillContact} style={styles.choiceBtnAlt}>
+          <h2 style={styles.successTitle}>
+            {lang === "ru" ? "Заказ оформлен" : "Order placed"}
+          </h2>
+          <p style={styles.successSubtitle}>
             {lang === "ru"
-              ? "Продавец свяжется со мной сам"
-              : "Let the seller contact me"}
-          </button>
+              ? "Продавец получил уведомление и свяжется с вами."
+              : "The seller has been notified and will contact you."}
+          </p>
+
+          <div style={styles.successActions}>
+            <button
+              type="button"
+              onClick={handleWriteSeller}
+              style={styles.successPrimary}
+            >
+              {lang === "ru" ? "Написать продавцу" : "Message the seller"}
+            </button>
+            <button
+              type="button"
+              onClick={handleSellerWillContact}
+              style={styles.successGhost}
+            >
+              {lang === "ru" ? "Продавец свяжется сам" : "Seller will reach out"}
+            </button>
+          </div>
         </div>
 
         <button
           type="button"
           onClick={onDone}
           style={styles.catalogLink}
-          aria-label={lang === "ru" ? "Вернуться в каталог" : "Back to catalog"}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path
-              d="M15 6l-6 6 6 6"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          {lang === "ru" ? "Вернуться в каталог" : "Back to catalog"}
+          {lang === "ru" ? "В каталог" : "Back to catalog"}
         </button>
       </div>
     );
@@ -564,65 +485,39 @@ const styles: Record<string, React.CSSProperties> = {
     boxShadow: "none",
   },
 
-  successCard: {
-    position: "relative",
+  successWrap: {
+    minHeight: "calc(100dvh - 120px)",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "stretch",
+    gap: 20,
+    paddingBottom: 16,
+    maxWidth: 420,
+    margin: "0 auto",
+  },
+  successInner: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: 18,
-    padding: "36px 20px 24px",
-    marginTop: 8,
-    marginBottom: 28,
-    background: "var(--surface-elevated)",
-    borderRadius: 24,
-    border: "1px solid var(--border)",
-    overflow: "hidden",
+    gap: 14,
+    textAlign: "center",
   },
-  successIconWrap: {
-    position: "relative",
-    width: 88,
-    height: 88,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  successIconPulse: {
-    position: "absolute",
-    inset: 0,
-    borderRadius: "50%",
-    background: "rgba(165, 42, 42, 0.12)",
-    animation: "zen-success-pulse 2.4s ease-out infinite",
-  },
-  successIconPulseTwo: {
-    position: "absolute",
-    inset: 10,
-    borderRadius: "50%",
-    background: "rgba(165, 42, 42, 0.18)",
-    animation: "zen-success-pulse 2.4s ease-out infinite 0.6s",
-  },
-  successIconCircle: {
-    position: "relative",
-    width: 64,
-    height: 64,
+  successCheck: {
+    width: 44,
+    height: 44,
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "var(--accent)",
-    color: "#fff",
+    border: "1.5px solid var(--accent)",
     borderRadius: "50%",
-    boxShadow: "0 10px 24px -10px rgba(165, 42, 42, 0.55)",
-    animation: "zen-success-pop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.3) both",
-  },
-  successTextWrap: {
-    textAlign: "center",
-    display: "flex",
-    flexDirection: "column",
-    gap: 6,
-    maxWidth: 340,
+    color: "var(--accent)",
+    marginBottom: 6,
+    animation: "zen-success-pop 0.35s ease-out both",
   },
   successTitle: {
     fontFamily: '"Proxima Nova", -apple-system, system-ui, sans-serif',
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 700,
     letterSpacing: "-0.02em",
     lineHeight: 1.15,
@@ -632,101 +527,19 @@ const styles: Record<string, React.CSSProperties> = {
   successSubtitle: {
     margin: 0,
     fontSize: 14,
-    lineHeight: 1.45,
+    lineHeight: 1.4,
     color: "var(--muted)",
+    maxWidth: 300,
   },
-  successSummary: {
+  successActions: {
     width: "100%",
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    padding: "12px 14px",
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: 16,
-  },
-  successSummaryThumbWrap: {
-    position: "relative",
-    flex: "0 0 52px",
-    width: 52,
-    height: 52,
-    borderRadius: 12,
-    overflow: "hidden",
-    background: "var(--surface-elevated)",
-  },
-  successSummaryThumb: {
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-    display: "block",
-  },
-  successSummaryInfo: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 2,
-    minWidth: 0,
-    flex: 1,
-  },
-  successSummaryName: {
-    margin: 0,
-    fontFamily: '"Proxima Nova", -apple-system, system-ui, sans-serif',
-    fontSize: 14,
-    fontWeight: 600,
-    color: "var(--text)",
-    letterSpacing: "-0.01em",
-    lineHeight: 1.25,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-  successSummaryMeta: {
-    margin: 0,
-    fontSize: 12,
-    color: "var(--muted)",
-    letterSpacing: "0.02em",
-  },
-  successSummaryTotal: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-end",
-    gap: 2,
-    paddingLeft: 8,
-  },
-  successSummaryTotalLabel: {
-    fontSize: 10,
-    fontWeight: 700,
-    letterSpacing: "0.14em",
-    textTransform: "uppercase",
-    color: "var(--muted)",
-  },
-  successSummaryTotalValue: {
-    fontFamily: '"Proxima Nova", -apple-system, system-ui, sans-serif',
-    fontSize: 15,
-    fontWeight: 700,
-    color: "var(--text)",
-    letterSpacing: "-0.01em",
-  },
-  choice: {
     display: "flex",
     flexDirection: "column",
     gap: 10,
-    marginBottom: 20,
+    marginTop: 14,
   },
-  choiceLabel: {
-    fontSize: 11,
-    fontWeight: 700,
-    letterSpacing: "0.16em",
-    textTransform: "uppercase",
-    color: "var(--muted)",
-    margin: "0 0 4px",
-    paddingLeft: 4,
-  },
-  choiceBtn: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    padding: "16px 20px",
+  successPrimary: {
+    padding: "15px 20px",
     background: "var(--accent)",
     border: "none",
     borderRadius: 999,
@@ -736,17 +549,11 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     letterSpacing: "0.01em",
     cursor: "pointer",
-    boxShadow: "0 8px 20px -10px rgba(165, 42, 42, 0.6)",
-    transition: "background 0.2s ease, transform 0.15s ease",
+    transition: "background 0.2s ease",
   },
-  choiceBtnIcon: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  choiceBtnAlt: {
-    padding: "16px 20px",
-    background: "var(--surface-elevated)",
+  successGhost: {
+    padding: "15px 20px",
+    background: "transparent",
     border: "1px solid var(--border)",
     borderRadius: 999,
     color: "var(--text)",
@@ -754,22 +561,18 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 15,
     fontWeight: 500,
     cursor: "pointer",
-    transition: "background 0.2s ease, border-color 0.2s ease",
+    transition: "border-color 0.2s ease, color 0.2s ease",
   },
   catalogLink: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    margin: "4px auto 0",
-    padding: "10px 14px",
+    alignSelf: "center",
+    padding: "8px 12px",
     background: "transparent",
     border: "none",
     color: "var(--muted)",
     fontFamily: "inherit",
     fontSize: 13,
     fontWeight: 500,
+    letterSpacing: "0.02em",
     cursor: "pointer",
-    alignSelf: "center",
   },
 };
