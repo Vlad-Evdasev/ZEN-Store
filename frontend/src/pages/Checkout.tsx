@@ -86,26 +86,32 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, sel
     return (
       <div style={styles.successWrap}>
         <div style={styles.successInner}>
-          <span style={styles.successCheck} aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M5 12.5l4.2 4.2L19 7"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </span>
-
-          <h2 style={styles.successTitle}>
-            {lang === "ru" ? "Заказ оформлен" : "Order placed"}
-          </h2>
-          <p style={styles.successSubtitle}>
-            {lang === "ru"
-              ? "Продавец получил уведомление и свяжется с вами."
-              : "The seller has been notified and will contact you."}
-          </p>
+          <div style={styles.bubbleRow}>
+            <div style={styles.avatar}>
+              <span style={styles.avatarLetter}>R</span>
+              <span style={styles.avatarCheck} aria-hidden="true">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M5 12.5l4.2 4.2L19 7"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+            </div>
+            <div style={styles.bubbleMain}>
+              <div style={styles.bubbleTitle}>
+                {lang === "ru" ? "Заказ оформлен" : "Order placed"}
+              </div>
+              <div style={styles.bubbleSubtitle}>
+                {lang === "ru"
+                  ? "Продавец получил уведомление и свяжется с вами."
+                  : "The seller has been notified and will contact you."}
+              </div>
+            </div>
+          </div>
 
           <div style={styles.successActions}>
             <button
@@ -113,7 +119,20 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, sel
               onClick={handleWriteSeller}
               style={styles.successPrimary}
             >
-              {lang === "ru" ? "Написать продавцу" : "Message the seller"}
+              <span style={styles.successPrimaryLabel}>
+                {lang === "ru" ? "Написать продавцу" : "Message the seller"}
+              </span>
+              <span style={styles.successPrimaryArrow} aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M5 12h14M13 6l6 6-6 6"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
             </button>
             <button
               type="button"
@@ -491,55 +510,92 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: "column",
     justifyContent: "center",
     alignItems: "stretch",
-    gap: 20,
+    gap: 24,
     paddingBottom: 16,
-    maxWidth: 420,
+    maxWidth: 460,
     margin: "0 auto",
   },
   successInner: {
     display: "flex",
     flexDirection: "column",
-    alignItems: "center",
-    gap: 14,
-    textAlign: "center",
+    alignItems: "stretch",
+    gap: 22,
   },
-  successCheck: {
-    width: 44,
-    height: 44,
+  bubbleRow: {
+    display: "flex",
+    alignItems: "flex-end",
+    gap: 10,
+    animation: "zen-success-pop 0.35s ease-out both",
+  },
+  avatar: {
+    position: "relative",
+    width: 38,
+    height: 38,
+    borderRadius: "50%",
+    background: "var(--accent)",
+    color: "#fff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    marginBottom: 0,
+  },
+  avatarLetter: {
+    fontSize: 14,
+    fontWeight: 800,
+    letterSpacing: "0.06em",
+    lineHeight: 1,
+  },
+  avatarCheck: {
+    position: "absolute",
+    right: -2,
+    bottom: -2,
+    width: 16,
+    height: 16,
+    borderRadius: "50%",
+    background: "#fff",
+    color: "var(--accent)",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    border: "1.5px solid var(--accent)",
-    borderRadius: "50%",
-    color: "var(--accent)",
-    marginBottom: 6,
-    animation: "zen-success-pop 0.35s ease-out both",
+    boxShadow: "0 1px 4px rgba(0,0,0,0.15)",
   },
-  successTitle: {
+  bubbleMain: {
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: "18px 18px 18px 4px",
+    padding: "12px 16px 14px",
+    maxWidth: "86%",
+    boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
+  },
+  bubbleTitle: {
     fontFamily: '"Proxima Nova", -apple-system, system-ui, sans-serif',
-    fontSize: 22,
+    fontSize: 16,
     fontWeight: 700,
-    letterSpacing: "-0.02em",
-    lineHeight: 1.15,
+    lineHeight: 1.2,
+    letterSpacing: "-0.01em",
     color: "var(--text)",
-    margin: 0,
   },
-  successSubtitle: {
-    margin: 0,
-    fontSize: 14,
-    lineHeight: 1.4,
+  bubbleSubtitle: {
+    fontSize: 13,
     color: "var(--muted)",
-    maxWidth: 300,
+    marginTop: 4,
+    lineHeight: 1.45,
   },
   successActions: {
     width: "100%",
     display: "flex",
     flexDirection: "column",
     gap: 10,
-    marginTop: 14,
+    padding: "0 4px",
   },
   successPrimary: {
-    padding: "15px 20px",
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    padding: "15px 22px",
     background: "var(--accent)",
     border: "none",
     borderRadius: 999,
@@ -549,19 +605,30 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     letterSpacing: "0.01em",
     cursor: "pointer",
-    transition: "background 0.2s ease",
+    boxShadow: "0 6px 18px -8px rgba(165, 42, 42, 0.55)",
+    transition: "transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease",
+  },
+  successPrimaryLabel: {
+    display: "inline-block",
+  },
+  successPrimaryArrow: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    opacity: 0.95,
   },
   successGhost: {
-    padding: "15px 20px",
-    background: "transparent",
+    padding: "14px 22px",
+    background: "var(--surface)",
     border: "1px solid var(--border)",
     borderRadius: 999,
     color: "var(--text)",
     fontFamily: "inherit",
-    fontSize: 15,
-    fontWeight: 500,
+    fontSize: 14.5,
+    fontWeight: 600,
+    letterSpacing: "0.01em",
     cursor: "pointer",
-    transition: "border-color 0.2s ease, color 0.2s ease",
+    transition: "border-color 0.2s ease, background 0.2s ease, color 0.2s ease",
   },
   catalogLink: {
     alignSelf: "center",
