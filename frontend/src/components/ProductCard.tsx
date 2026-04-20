@@ -81,7 +81,21 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
               style={{ ...wishlistBtnStyle, color: inWishlist ? "var(--accent)" : "var(--muted)" }}
               aria-label={inWishlist ? "Убрать из избранного" : "В избранное"}
             >
-              {inWishlist ? "♥" : "♡"}
+              <svg
+                width={compact ? 15 : 16}
+                height={compact ? 15 : 16}
+                viewBox="0 0 24 24"
+                fill={inWishlist ? "currentColor" : "none"}
+                stroke="currentColor"
+                strokeWidth={1.8}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                focusable="false"
+                style={{ display: "block" }}
+              >
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
             </button>
           )}
         </div>
@@ -92,7 +106,8 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
           <p className="product-card-price" style={priceStyle}>{formatPrice(product.price)}</p>
           {hasReviews && (
             <span style={{ ...(compact ? styles.reviewsCompact : styles.reviews), ...noShrink }}>
-              ★ {reviewAvg?.toFixed(1) ?? "—"}
+              <span aria-hidden="true" style={styles.reviewsStar}>★</span>
+              {reviewAvg?.toFixed(1) ?? "—"}
             </span>
           )}
         </div>
@@ -129,31 +144,36 @@ const styles: Record<string, React.CSSProperties> = {
   },
   nameRow: {
     display: "flex",
-    alignItems: "flex-start",
+    alignItems: "center",
     gap: 8,
     marginBottom: 0,
     minHeight: 0,
   },
   nameRowCompact: {
     display: "flex",
-    alignItems: "flex-start",
+    alignItems: "center",
     gap: 6,
     marginBottom: 0,
     minHeight: 0,
   },
   wishlistBtn: {
     flexShrink: 0,
-    padding: 2,
+    padding: 0,
     margin: 0,
+    width: 20,
+    height: 20,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
     border: "none",
     background: "none",
-    fontSize: 20,
     cursor: "pointer",
-    lineHeight: 1,
+    lineHeight: 0,
+    transition: "transform var(--transition-fast), color var(--transition-fast)",
   },
   wishlistBtnCompact: {
-    padding: 2,
-    fontSize: 18,
+    width: 18,
+    height: 18,
   },
   descWrap: {
     position: "relative",
@@ -182,52 +202,60 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 400,
     fontFamily: 'Georgia, "Times New Roman", serif',
     color: "var(--text)",
-    lineHeight: 1.35,
-    letterSpacing: "0.03em",
+    lineHeight: 1.3,
+    letterSpacing: "0.02em",
     wordBreak: "break-word",
     overflowWrap: "break-word",
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical",
+    overflow: "hidden",
   },
   brand: {
     padding: 0,
-    margin: "2px 0 0",
-    fontSize: 12,
-    fontWeight: 400,
+    margin: "3px 0 0",
+    fontSize: 10,
+    fontWeight: 500,
     fontFamily: 'Georgia, "Times New Roman", serif',
     color: "var(--muted)",
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     lineHeight: 1.3,
+    textTransform: "uppercase",
+    letterSpacing: "0.14em",
   },
   brandCompact: {
     padding: 0,
-    margin: "1px 0 0",
-    fontSize: 11,
-    fontWeight: 400,
+    margin: "2px 0 0",
+    fontSize: 9,
+    fontWeight: 500,
     fontFamily: 'Georgia, "Times New Roman", serif',
     color: "var(--muted)",
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     lineHeight: 1.25,
+    textTransform: "uppercase",
+    letterSpacing: "0.14em",
   },
   priceRow: {
     display: "flex",
     flexDirection: "row",
-    alignItems: "baseline",
+    alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
-    marginTop: 4,
+    marginTop: 6,
     padding: 0,
     minHeight: 0,
   },
   priceRowCompact: {
     display: "flex",
     flexDirection: "row",
-    alignItems: "baseline",
+    alignItems: "center",
     justifyContent: "space-between",
     gap: 6,
-    marginTop: 3,
+    marginTop: 5,
     padding: 0,
     minHeight: 0,
   },
@@ -238,26 +266,44 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 500,
     fontFamily: 'Georgia, "Times New Roman", serif',
     color: "var(--text)",
-    lineHeight: 1.3,
-    letterSpacing: "0.02em",
+    lineHeight: 1.2,
+    letterSpacing: "0.01em",
     flexShrink: 1,
     minWidth: 0,
+    fontVariantNumeric: "tabular-nums",
   },
   reviews: {
     padding: 0,
     margin: 0,
     flexShrink: 0,
-    fontSize: 12,
+    fontSize: 11,
     color: "var(--muted)",
-    lineHeight: 1.25,
+    lineHeight: 1.2,
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 3,
+    fontVariantNumeric: "tabular-nums",
+    letterSpacing: "0.02em",
   },
   reviewsCompact: {
     padding: 0,
     margin: 0,
     flexShrink: 0,
-    fontSize: 11,
+    fontSize: 10,
     color: "var(--muted)",
-    lineHeight: 1.25,
+    lineHeight: 1.2,
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 3,
+    fontVariantNumeric: "tabular-nums",
+    letterSpacing: "0.02em",
+  },
+  reviewsStar: {
+    color: "#c9a24c",
+    fontSize: "1em",
+    lineHeight: 1,
+    transform: "translateY(-0.5px)",
+    display: "inline-block",
   },
   cardCompact: { borderRadius: 0 },
   cardFillHeight: { flex: 1, minHeight: 0, height: "100%" },
