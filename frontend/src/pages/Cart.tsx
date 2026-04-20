@@ -156,17 +156,30 @@ export function Cart({
       </ul>
 
       <div className="zen-bag-summary">
-        <div className="zen-bag-summary-total">
-          <span className="zen-bag-summary-total-label">{t(lang, "total")}</span>
-          <span className="zen-bag-summary-total-value">{formatPrice(subtotal)}</span>
+        <div className="zen-bag-summary-bar" role="group" aria-label={t(lang, "total")}>
+          <div className="zen-bag-summary-info">
+            <span className="zen-bag-summary-info-label">{t(lang, "total")}</span>
+            <span className="zen-bag-summary-info-value">
+              {formatPrice(subtotal)}
+            </span>
+          </div>
+          <button
+            type="button"
+            className="zen-bag-checkout-btn"
+            onClick={onCheckout}
+            aria-label={t(lang, "checkout")}
+          >
+            <span className="zen-bag-checkout-count" aria-hidden="true">
+              {items.reduce((n, i) => n + i.quantity, 0)}
+            </span>
+            <span className="zen-bag-checkout-label">{t(lang, "checkout")}</span>
+            <span className="zen-bag-checkout-arrow" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </span>
+          </button>
         </div>
-        <button
-          type="button"
-          className="zen-bag-checkout-btn"
-          onClick={onCheckout}
-        >
-          {t(lang, "checkout")}
-        </button>
       </div>
     </div>
   );

@@ -1863,55 +1863,79 @@ nav svg {
   fill: none;
 }
 
-/* Фиксированная сводка снизу: всегда видна над нижней навигацией (64px).
-   Ширина повторяет контейнер приложения (.zen-app max-width: 480px),
-   поэтому центрируем внутренний wrapper. */
+/* Плавающая "капсула" с итогом и CTA.
+   Фиксируется над нижней навигацией (64px), с учётом safe-area.
+   Состоит из двух частей в одном округлённом контейнере:
+   - слева компактный блок "Итого / сумма"
+   - справа капсульная кнопка с бейджем количества и стрелкой */
 .zen-app .zen-bag-summary {
   position: fixed;
   left: 0;
   right: 0;
-  /* 64px — высота BottomNavBar (fixed), плюс safe-area внизу */
-  bottom: calc(64px + env(safe-area-inset-bottom, 0px));
-  margin: 0;
-  padding: 12px 16px 14px;
-  background: var(--bg);
-  border-top: 1px solid var(--border);
+  bottom: calc(64px + env(safe-area-inset-bottom, 0px) + 10px);
+  padding: 0 14px;
   z-index: 15;
-  animation: pageContentEnter var(--transition-normal) ease forwards;
+  pointer-events: none;
+  animation: zenBagSummaryEnter 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-.zen-app .zen-bag-summary > * {
-  max-width: 480px;
-  margin-left: auto;
-  margin-right: auto;
+.zen-app .zen-bag-summary-bar {
+  pointer-events: auto;
+  max-width: 460px;
+  margin: 0 auto;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  padding: 8px 8px 8px 18px;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: saturate(160%) blur(18px);
+  -webkit-backdrop-filter: saturate(160%) blur(18px);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 18px 40px -20px rgba(0, 0, 0, 0.35),
+    0 6px 16px -10px rgba(0, 0, 0, 0.25);
 }
 @media (min-width: 768px) {
-  .zen-app .zen-bag-summary {
-    padding-left: var(--content-padding);
-    padding-right: var(--content-padding);
-  }
+  .zen-app .zen-bag-summary { padding-left: var(--content-padding); padding-right: var(--content-padding); }
 }
-.zen-app .zen-bag-summary-total {
+
+.zen-app .zen-bag-summary-info {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: 12px;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  flex: 1 1 auto;
+  padding: 2px 4px 2px 0;
 }
-.zen-app .zen-bag-summary-total-label {
-  font-size: 14px;
+.zen-app .zen-bag-summary-info-label {
+  font-size: 11px;
+  line-height: 1;
   color: var(--muted);
-  letter-spacing: 0;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
 }
-.zen-app .zen-bag-summary-total-value {
+.zen-app .zen-bag-summary-info-value {
   font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
-  font-size: 20px;
-  font-weight: 600;
+  font-size: 19px;
+  font-weight: 700;
   color: var(--text);
   letter-spacing: -0.02em;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+
 .zen-app .zen-bag-checkout-btn {
-  width: 100%;
-  min-height: 52px;
-  padding: 14px 24px;
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 10px 0 14px;
   background: var(--accent);
   color: #fff;
   border: none;
@@ -1921,14 +1945,102 @@ nav svg {
   font-weight: 600;
   letter-spacing: 0;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.12s ease, box-shadow 0.2s ease;
+  overflow: hidden;
+  isolation: isolate;
+  transition: background 0.2s ease, transform 0.12s ease, box-shadow 0.25s ease, padding 0.25s ease;
+  box-shadow:
+    0 10px 22px -10px rgba(165, 42, 42, 0.55),
+    0 2px 6px -2px rgba(0, 0, 0, 0.25);
   -webkit-tap-highlight-color: transparent;
+}
+.zen-app .zen-bag-checkout-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0) 55%);
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 0;
+}
+.zen-app .zen-bag-checkout-count {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  backdrop-filter: blur(2px);
+}
+.zen-app .zen-bag-checkout-label {
+  position: relative;
+  z-index: 1;
+  white-space: nowrap;
+}
+.zen-app .zen-bag-checkout-arrow {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), background 0.2s ease;
+}
+.zen-app .zen-bag-checkout-arrow svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .zen-app .zen-bag-checkout-btn:hover {
   background: var(--accent-hover);
-  box-shadow: 0 8px 20px -8px rgba(165, 42, 42, 0.45);
+  box-shadow:
+    0 14px 28px -10px rgba(165, 42, 42, 0.65),
+    0 3px 8px -2px rgba(0, 0, 0, 0.3);
 }
+.zen-app .zen-bag-checkout-btn:hover .zen-bag-checkout-arrow {
+  background: rgba(255, 255, 255, 0.28);
+}
+.zen-app .zen-bag-checkout-btn:hover .zen-bag-checkout-arrow svg { transform: translateX(2px); }
 .zen-app .zen-bag-checkout-btn:active { transform: scale(0.985); }
+.zen-app .zen-bag-checkout-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+@media (max-width: 380px) {
+  .zen-app .zen-bag-summary-bar { padding-left: 14px; gap: 6px; }
+  .zen-app .zen-bag-summary-info-value { font-size: 17px; }
+  .zen-app .zen-bag-checkout-label { display: none; }
+  .zen-app .zen-bag-checkout-btn { padding: 0 6px 0 10px; }
+}
+
+@keyframes zenBagSummaryEnter {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zen-app .zen-bag-summary { animation: none; }
+  .zen-app .zen-bag-checkout-btn,
+  .zen-app .zen-bag-checkout-arrow,
+  .zen-app .zen-bag-checkout-arrow svg { transition: none; }
+}
 
 /* Пустые состояния — минимальный дзен */
 .zen-app .zen-bag-empty,
