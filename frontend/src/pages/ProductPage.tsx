@@ -248,10 +248,7 @@ export function ProductPage({
               </div>
             );
           })()}
-          <h1 className="product-v2__title">
-            {product.name}
-            <span className="product-v2__title-dot" aria-hidden="true" />
-          </h1>
+          <h1 className="product-v2__title">{product.name}</h1>
         </header>
 
         {product.description && (

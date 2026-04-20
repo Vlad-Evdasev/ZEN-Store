@@ -150,24 +150,23 @@
   display: none;
 }
 
-/* ─── HEADER (editorial) ─── */
+/* ─── HEADER — чистая типографика, без подложек и декоративных элементов ─── */
 .product-v2__header {
-  margin-bottom: 22px;
+  margin-bottom: 14px;
 }
-/* Верхняя строка: eyebrow (бренд · категория) слева, рейтинг-чип справа */
+/* Верхняя строка: eyebrow (бренд · категория) слева, рейтинг справа */
 .product-v2__eyebrow-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 22px;
-  margin-bottom: 10px;
+  min-height: 14px;
+  margin-bottom: 12px;
 }
 .product-v2__eyebrow {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
   color: var(--muted);
   line-height: 1;
   overflow: hidden;
@@ -175,19 +174,16 @@
   white-space: nowrap;
   min-width: 0;
 }
-/* Мини-чип рейтинга в духе размеров-медальонов */
+/* Рейтинг inline, без подложки */
 .product-v2__rating-chip {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  height: 22px;
-  padding: 0 10px;
-  border-radius: 999px;
-  background: var(--surface-elevated);
-  font-size: 11px;
+  gap: 4px;
+  font-size: 12px;
   line-height: 1;
   letter-spacing: 0;
+  color: var(--muted);
 }
 .product-v2__rating-star {
   color: var(--accent);
@@ -196,95 +192,62 @@
 }
 .product-v2__rating-value {
   color: var(--text);
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 .product-v2__rating-count {
   color: var(--muted);
-  letter-spacing: 0.02em;
-  font-weight: 500;
+  letter-spacing: 0;
+  font-weight: 400;
 }
 
-/* Название с лёгким акцентным штрихом-точкой в конце — фирменный штрих */
+/* Название: крупно, лёгкий вес, плотный трекинг. Ничего больше. */
 .product-v2__title {
   font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
-  font-size: 34px;
-  font-weight: 500;
-  line-height: 1.04;
-  letter-spacing: -0.03em;
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.028em;
   color: var(--text);
   margin: 0;
-  display: inline;
-}
-.product-v2__title-dot {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--accent);
-  margin-left: 4px;
-  margin-bottom: 4px;
-  vertical-align: baseline;
-  transform: translateY(-2px);
 }
 
-/* ─── DESC — pull-quote с тонкой акцентной линией слева ─── */
+/* ─── DESC — просто второй тип-сайз. Никаких подложек и линий. ─── */
 .product-v2__desc-wrap {
-  position: relative;
-  margin-top: 18px;
+  margin-top: 10px;
   margin-bottom: 4px;
-  padding: 2px 0 2px 16px;
-}
-.product-v2__desc-wrap::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 4px;
-  bottom: 4px;
-  width: 2px;
-  border-radius: 2px;
-  background: var(--accent);
-  opacity: 0.9;
 }
 .product-v2__desc {
   font-size: 15px;
   line-height: 1.55;
-  color: var(--text);
+  color: var(--muted);
   margin: 0;
-  letter-spacing: -0.005em;
+  letter-spacing: 0;
   font-weight: 400;
-  /* Плавное раскрытие: вместо clamp через max-height, чтобы анимация была мягкой */
-  max-height: 4.8em;
-  overflow: hidden;
-  transition: max-height 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .product-v2__desc.is-clampable:not(.is-expanded) {
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
-  max-height: 4.8em;
-}
-.product-v2__desc.is-expanded {
-  max-height: 1000px;
-  -webkit-line-clamp: unset;
-  display: block;
+  overflow: hidden;
 }
 .product-v2__desc-toggle {
-  margin-top: 8px;
+  margin-top: 6px;
   background: none;
   border: none;
   padding: 0;
-  color: var(--muted);
+  color: var(--text);
   font-family: inherit;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  transition: color 0.2s ease;
+  gap: 4px;
+  transition: opacity 0.2s ease;
+  opacity: 0.65;
   -webkit-tap-highlight-color: transparent;
 }
 .product-v2__desc-toggle svg {
@@ -292,14 +255,14 @@
   height: 12px;
   fill: none;
   stroke: currentColor;
-  stroke-width: 2.2;
+  stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
   transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .product-v2__desc-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
 @media (hover: hover) {
-  .product-v2__desc-toggle:hover { color: var(--text); }
+  .product-v2__desc-toggle:hover { opacity: 1; }
 }
 
 /* ─── DIVIDERS (hairline, edge-to-edge) ─── */
