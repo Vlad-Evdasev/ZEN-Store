@@ -114,32 +114,95 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, sel
           </div>
 
           <div style={styles.successActions}>
+            <p style={styles.actionsLabel}>
+              {lang === "ru" ? "Что дальше?" : "What's next?"}
+            </p>
+
             <button
               type="button"
               onClick={handleWriteSeller}
-              style={styles.successPrimary}
+              style={styles.actionPrimary}
             >
-              <span style={styles.successPrimaryLabel}>
-                {lang === "ru" ? "Написать продавцу" : "Message the seller"}
-              </span>
-              <span style={styles.successPrimaryArrow} aria-hidden="true">
+              <span style={styles.actionIconPrimary} aria-hidden="true">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                   <path
-                    d="M5 12h14M13 6l6 6-6 6"
+                    d="M21 12a9 9 0 1 1-3.6-7.2L21 3l-1.2 4.2A9 9 0 0 1 21 12Z"
                     stroke="currentColor"
                     strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M8 12h.01M12 12h.01M16 12h.01"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </span>
+              <span style={styles.actionText}>
+                <span style={styles.actionTitle}>
+                  {lang === "ru" ? "Написать продавцу" : "Message the seller"}
+                </span>
+                <span style={styles.actionHintPrimary}>
+                  {lang === "ru" ? "Открыть чат в Telegram" : "Open chat in Telegram"}
+                </span>
+              </span>
+              <span style={styles.actionArrowPrimary} aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M9 6l6 6-6 6"
+                    stroke="currentColor"
+                    strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
                 </svg>
               </span>
             </button>
+
             <button
               type="button"
               onClick={handleSellerWillContact}
-              style={styles.successGhost}
+              style={styles.actionSecondary}
             >
-              {lang === "ru" ? "Продавец свяжется сам" : "Seller will reach out"}
+              <span style={styles.actionIconSecondary} aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="9"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                  />
+                  <path
+                    d="M12 7v5l3 2"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+              <span style={styles.actionText}>
+                <span style={styles.actionTitle}>
+                  {lang === "ru" ? "Продавец свяжется сам" : "Seller will reach out"}
+                </span>
+                <span style={styles.actionHintSecondary}>
+                  {lang === "ru" ? "Подождать уведомления" : "Wait for a notification"}
+                </span>
+              </span>
+              <span style={styles.actionArrowSecondary} aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M9 6l6 6-6 6"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
             </button>
           </div>
         </div>
@@ -149,7 +212,16 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, sel
           onClick={onDone}
           style={styles.catalogLink}
         >
-          {lang === "ru" ? "В каталог" : "Back to catalog"}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M15 6l-6 6 6 6"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span>{lang === "ru" ? "В каталог" : "Back to catalog"}</span>
         </button>
       </div>
     );
@@ -586,60 +658,127 @@ const styles: Record<string, React.CSSProperties> = {
     width: "100%",
     display: "flex",
     flexDirection: "column",
-    gap: 10,
-    padding: "0 4px",
+    gap: 8,
+    padding: "14px 10px 10px",
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: 20,
+    boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
   },
-  successPrimary: {
-    position: "relative",
+  actionsLabel: {
+    margin: 0,
+    padding: "0 8px 4px",
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: "0.16em",
+    textTransform: "uppercase",
+    color: "var(--muted)",
+  },
+  actionPrimary: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    padding: "15px 22px",
+    gap: 12,
+    padding: "12px 14px",
     background: "var(--accent)",
     border: "none",
-    borderRadius: 999,
+    borderRadius: 14,
     color: "#fff",
     fontFamily: "inherit",
-    fontSize: 15,
-    fontWeight: 600,
-    letterSpacing: "0.01em",
+    textAlign: "left",
     cursor: "pointer",
-    boxShadow: "0 6px 18px -8px rgba(165, 42, 42, 0.55)",
+    boxShadow: "0 8px 20px -10px rgba(165, 42, 42, 0.55)",
     transition: "transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease",
+    WebkitTapHighlightColor: "transparent",
   },
-  successPrimaryLabel: {
-    display: "inline-block",
+  actionSecondary: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    padding: "12px 14px",
+    background: "var(--surface-elevated)",
+    border: "1px solid var(--border)",
+    borderRadius: 14,
+    color: "var(--text)",
+    fontFamily: "inherit",
+    textAlign: "left",
+    cursor: "pointer",
+    transition: "background 0.2s ease, border-color 0.2s ease, transform 0.15s ease",
+    WebkitTapHighlightColor: "transparent",
   },
-  successPrimaryArrow: {
+  actionIconPrimary: {
+    flex: "0 0 36px",
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    background: "rgba(255, 255, 255, 0.16)",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    opacity: 0.95,
+    color: "#fff",
   },
-  successGhost: {
-    padding: "14px 22px",
+  actionIconSecondary: {
+    flex: "0 0 36px",
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     background: "var(--surface)",
     border: "1px solid var(--border)",
-    borderRadius: 999,
-    color: "var(--text)",
-    fontFamily: "inherit",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "var(--accent)",
+  },
+  actionText: {
+    flex: 1,
+    minWidth: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: 2,
+  },
+  actionTitle: {
     fontSize: 14.5,
     fontWeight: 600,
-    letterSpacing: "0.01em",
-    cursor: "pointer",
-    transition: "border-color 0.2s ease, background 0.2s ease, color 0.2s ease",
+    letterSpacing: "-0.01em",
+    lineHeight: 1.2,
+  },
+  actionHintPrimary: {
+    fontSize: 11.5,
+    lineHeight: 1.3,
+    color: "rgba(255, 255, 255, 0.78)",
+  },
+  actionHintSecondary: {
+    fontSize: 11.5,
+    lineHeight: 1.3,
+    color: "var(--muted)",
+  },
+  actionArrowPrimary: {
+    flex: "0 0 auto",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "rgba(255, 255, 255, 0.85)",
+  },
+  actionArrowSecondary: {
+    flex: "0 0 auto",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "var(--muted)",
   },
   catalogLink: {
     alignSelf: "center",
-    padding: "8px 12px",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "10px 16px",
     background: "transparent",
     border: "none",
     color: "var(--muted)",
     fontFamily: "inherit",
     fontSize: 13,
-    fontWeight: 500,
-    letterSpacing: "0.02em",
+    fontWeight: 600,
+    letterSpacing: "0.01em",
     cursor: "pointer",
+    transition: "color 0.2s ease",
   },
 };
