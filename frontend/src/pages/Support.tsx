@@ -1,4 +1,4 @@
-import { useState, useEffect, useId, useRef, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 
@@ -9,9 +9,6 @@ export function Support() {
   const { settings } = useSettings();
   const lang = settings.lang;
 
-  const [deliveryOpen, setDeliveryOpen] = useState(false);
-  const [contactsOpen, setContactsOpen] = useState(false);
-
   return (
     <div className="zen-support" style={styles.wrap}>
       <header style={styles.header}>
@@ -20,166 +17,50 @@ export function Support() {
         </h2>
       </header>
 
-      <AccordionCard
-        icon={<IconClipboard />}
-        title={t(lang, "deliveryTermsTitle")}
-        open={deliveryOpen}
-        onToggle={() => setDeliveryOpen((v) => !v)}
-      >
-        <p style={styles.p}>{t(lang, "deliveryTermsP1")}</p>
-        <p style={styles.p}>{t(lang, "deliveryTermsP2")}</p>
-        <p style={{ ...styles.p, marginBottom: 0 }}>{t(lang, "deliveryTermsP3")}</p>
-      </AccordionCard>
+      <div style={styles.thread}>
+        <QuestionBubble text={t(lang, "deliveryTermsTitle")} />
+        <AnswerBubble>
+          <p style={styles.p}>{t(lang, "deliveryTermsP1")}</p>
+          <p style={styles.p}>{t(lang, "deliveryTermsP2")}</p>
+          <p style={{ ...styles.p, marginBottom: 0 }}>
+            {t(lang, "deliveryTermsP3")}
+          </p>
+        </AnswerBubble>
 
-      <AccordionCard
-        icon={<IconContacts />}
-        title={t(lang, "supportContactsTitle")}
-        open={contactsOpen}
-        onToggle={() => setContactsOpen((v) => !v)}
-      >
-        <a
-          href={ADMIN_TG_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={styles.contactRow}
-        >
-          <span style={styles.contactRole}>
-            {t(lang, "supportContactAdmin")}
-          </span>
-          <span style={styles.contactHandle}>{ADMIN_TG_HANDLE}</span>
-          <IconExternal />
-        </a>
-      </AccordionCard>
-    </div>
-  );
-}
-
-interface AccordionCardProps {
-  icon: ReactNode;
-  title: string;
-  open: boolean;
-  onToggle: () => void;
-  children: ReactNode;
-}
-
-function AccordionCard({
-  icon,
-  title,
-  open,
-  onToggle,
-  children,
-}: AccordionCardProps) {
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [maxH, setMaxH] = useState<number | "none">(0);
-  const bodyId = useId();
-
-  // Two-phase animation so we can animate `max-height` without hardcoding a limit:
-  // expand: 0 → scrollHeight px → "none" (so inner scrollables work)
-  // collapse: "none" → scrollHeight px (next frame) → 0
-  useEffect(() => {
-    const el = contentRef.current;
-    if (!el) return;
-    if (open) {
-      setMaxH(el.scrollHeight);
-      const id = window.setTimeout(() => setMaxH("none"), 320);
-      return () => window.clearTimeout(id);
-    } else {
-      if (maxH === "none") {
-        setMaxH(el.scrollHeight);
-        requestAnimationFrame(() => requestAnimationFrame(() => setMaxH(0)));
-      } else {
-        setMaxH(0);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
-  return (
-    <div style={styles.card}>
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={open}
-        aria-controls={bodyId}
-        style={styles.cardHeader}
-      >
-        <span style={styles.cardIcon}>{icon}</span>
-        <span style={styles.cardTitle}>{title}</span>
-        <span
-          style={{
-            ...styles.cardChevron,
-            transform: open ? "rotate(180deg)" : "rotate(0deg)",
-          }}
-          aria-hidden
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+        <QuestionBubble text={t(lang, "supportContactsTitle")} />
+        <AnswerBubble>
+          <a
+            href={ADMIN_TG_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={styles.contactRow}
           >
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </span>
-      </button>
-      <div
-        id={bodyId}
-        ref={contentRef}
-        role="region"
-        style={{
-          ...styles.cardBody,
-          maxHeight: maxH === "none" ? "none" : `${maxH}px`,
-          overflow: maxH === "none" ? "visible" : "hidden",
-        }}
-      >
-        <div style={styles.cardBodyInner}>{children}</div>
+            <span style={styles.contactRole}>
+              {t(lang, "supportContactAdmin")}
+            </span>
+            <span style={styles.contactHandle}>{ADMIN_TG_HANDLE}</span>
+            <IconExternal />
+          </a>
+        </AnswerBubble>
       </div>
     </div>
   );
 }
 
-function IconClipboard() {
+function QuestionBubble({ text }: { text: string }) {
   return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <rect x="7" y="4" width="10" height="4" rx="1" />
-      <path d="M7 6H5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-2" />
-      <line x1="8" y1="12" x2="16" y2="12" />
-      <line x1="8" y1="16" x2="13" y2="16" />
-    </svg>
+    <div style={styles.questionRow}>
+      <div style={styles.questionBubble}>{text}</div>
+    </div>
   );
 }
 
-function IconContacts() {
+function AnswerBubble({ children }: { children: ReactNode }) {
   return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M4 4h16v16H4z" />
-      <circle cx="12" cy="10" r="3" />
-      <path d="M7 18a5 5 0 0 1 10 0" />
-    </svg>
+    <div style={styles.answerRow}>
+      <div style={styles.avatar}>R</div>
+      <div style={styles.answerBubble}>{children}</div>
+    </div>
   );
 }
 
@@ -210,67 +91,70 @@ const styles: Record<string, React.CSSProperties> = {
   header: { marginBottom: 16 },
   title: { margin: 0 },
 
-  card: {
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: 16,
-    overflow: "hidden",
-    marginBottom: 12,
-    boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+  thread: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 12,
   },
-  cardHeader: {
+
+  questionRow: {
+    display: "flex",
+    justifyContent: "flex-end",
+  },
+  questionBubble: {
+    background: "color-mix(in srgb, var(--accent) 10%, var(--surface))",
+    color: "var(--text)",
+    border: "1px solid color-mix(in srgb, var(--accent) 20%, var(--border))",
+    borderRadius: "16px 16px 4px 16px",
+    padding: "10px 14px",
+    maxWidth: "86%",
+    fontSize: 14.5,
+    fontWeight: 600,
+    lineHeight: 1.3,
+    letterSpacing: "-0.01em",
+    boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
+  },
+
+  answerRow: {
+    display: "flex",
+    alignItems: "flex-end",
+    gap: 8,
+  },
+  avatar: {
+    width: 30,
+    height: 30,
+    borderRadius: "50%",
+    background: "var(--accent)",
+    color: "#fff",
     display: "flex",
     alignItems: "center",
-    gap: 12,
-    width: "100%",
-    padding: 16,
-    background: "transparent",
-    border: "none",
-    cursor: "pointer",
-    fontFamily: "inherit",
-    textAlign: "left",
-    color: "var(--text)",
-  },
-  cardIcon: {
-    display: "inline-flex",
-    alignItems: "center",
     justifyContent: "center",
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    background: "color-mix(in srgb, var(--accent) 8%, transparent)",
-    color: "var(--accent)",
+    fontSize: 12,
+    fontWeight: 800,
+    letterSpacing: "0.06em",
     flexShrink: 0,
   },
-  cardTitle: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: 600,
-  },
-  cardChevron: {
-    color: "var(--muted)",
-    display: "inline-flex",
-    transition: "transform 300ms ease",
-  },
-  cardBody: {
-    transition: "max-height 300ms ease",
-  },
-  cardBodyInner: {
-    padding: "0 16px 16px",
+  answerBubble: {
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: "16px 16px 16px 4px",
+    padding: "12px 14px",
+    maxWidth: "86%",
+    boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
   },
 
   p: {
     fontSize: 14,
-    lineHeight: 1.6,
+    lineHeight: 1.55,
     color: "var(--text)",
-    margin: "0 0 12px",
+    margin: "0 0 10px",
   },
 
   contactRow: {
     display: "flex",
     alignItems: "center",
     gap: 12,
-    padding: "12px 14px",
+    padding: "10px 12px",
     background: "var(--bg)",
     border: "1px solid var(--border)",
     borderRadius: 12,
