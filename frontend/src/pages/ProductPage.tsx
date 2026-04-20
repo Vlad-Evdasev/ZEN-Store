@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { addToCart, getProductReviews, addProductReview, type Product, type ProductReview } from "../api";
-import { BackButton } from "../components/BackButton";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
+import "./ProductPage.css";
 
 interface ProductPageProps {
   product: Product | undefined;
@@ -45,6 +45,7 @@ export function ProductPage({
   const [submittingReview, setSubmittingReview] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
+  const [descExpanded, setDescExpanded] = useState(false);
   const [imageIndex, setImageIndex] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef(0);
@@ -71,10 +72,10 @@ export function ProductPage({
     const raf = requestAnimationFrame(() => {
       requestAnimationFrame(scrollToTop);
     });
-    const t = setTimeout(scrollToTop, 100);
+    const tm = setTimeout(scrollToTop, 100);
     return () => {
       cancelAnimationFrame(raf);
-      clearTimeout(t);
+      clearTimeout(tm);
     };
   }, [product?.id]);
 
@@ -130,7 +131,7 @@ export function ProductPage({
 
   if (!product) {
     return (
-      <div style={styles.loading}>
+      <div className="product-v2-loading">
         <p>Загрузка...</p>
       </div>
     );
@@ -151,206 +152,242 @@ export function ProductPage({
     }
   };
 
-  return (
-    <div ref={rootRef} style={styles.wrap}>
-      <div style={styles.topBar}>
-        <BackButton onClick={onBack} label={t(lang, "back")} />
-      </div>
+  const hasLongDesc = (product.description?.length ?? 0) > 140;
 
-      <div style={styles.imageWrap}>
+  return (
+    <div ref={rootRef} className="product-v2">
+      <div className="product-v2__hero">
         {imageUrls.length <= 1 ? (
           <img
             key={`${product.id}-img`}
             src={currentImage}
             alt={product.name}
-            style={styles.image}
+            className="product-v2__hero-img"
           />
         ) : (
-          <>
-            <div
-              style={styles.galleryFrame}
-              onTouchStart={handleGalleryTouchStart}
-              onTouchEnd={handleGalleryTouchEnd}
-            >
-              {imageUrls.map((url, i) => (
-                <div
-                  key={`${product.id}-${i}`}
-                  style={{
-                    ...styles.galleryLayer,
-                    opacity: i === imageIndex ? 1 : 0,
-                    pointerEvents: i === imageIndex ? "auto" : "none",
-                  }}
-                >
-                  <img src={url} alt={`${product.name} — ${i + 1}`} style={styles.image} />
-                </div>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); goPrevImage(); }}
-              style={styles.galleryPrev}
-              aria-label="Предыдущее фото"
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="15 18 9 12 15 6" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); goNextImage(); }}
-              style={styles.galleryNext}
-              aria-label="Следующее фото"
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            </button>
-            <div style={styles.gallerySegments}>
-              {imageUrls.map((_, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); setImageIndex(i); }}
-                  style={{ ...styles.gallerySegment, ...(i === imageIndex ? styles.gallerySegmentActive : {}) }}
-                  aria-label={`Фото ${i + 1}`}
-                />
-              ))}
-            </div>
-          </>
+          <div
+            className="product-v2__gallery"
+            onTouchStart={handleGalleryTouchStart}
+            onTouchEnd={handleGalleryTouchEnd}
+          >
+            {imageUrls.map((url, i) => (
+              <div
+                key={`${product.id}-${i}`}
+                className="product-v2__gallery-layer"
+                style={{ opacity: i === imageIndex ? 1 : 0, pointerEvents: i === imageIndex ? "auto" : "none" }}
+              >
+                <img src={url} alt={`${product.name} — ${i + 1}`} className="product-v2__hero-img" />
+              </div>
+            ))}
+          </div>
         )}
-      </div>
 
-      <div style={styles.titleRow}>
-        <div style={styles.titleBlock}>
-          <h1 style={styles.title}>{product.name}</h1>
-          <p style={styles.desc}>{product.description}</p>
-        </div>
+        <div className="product-v2__hero-gradient" aria-hidden />
+
+        <button
+          type="button"
+          onClick={onBack}
+          className="product-v2__floating-btn product-v2__floating-btn--back"
+          aria-label={t(lang, "back")}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </button>
+
         <button
           type="button"
           onClick={onToggleWishlist}
-          style={{ ...styles.wishlistBtn, color: inWishlist ? "var(--accent)" : "var(--muted)" }}
+          className={`product-v2__floating-btn product-v2__floating-btn--heart${inWishlist ? " is-active" : ""}`}
           aria-label={inWishlist ? "Убрать из избранного" : "В избранное"}
         >
-          {inWishlist ? "♥" : "♡"}
+          <svg width="20" height="20" viewBox="0 0 24 24" fill={inWishlist ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+          </svg>
         </button>
-      </div>
 
-      <div style={styles.sizeSection}>
-        <div style={styles.sizeSectionHeader}>
-          <p style={styles.sizeSectionLabel}>{t(lang, "size")}</p>
-          <button type="button" onClick={() => setShowSizeGuide(true)} style={styles.sizeGuideBtn}>
-            {t(lang, "sizeGuide")}
-          </button>
-        </div>
-        <div style={styles.sizes}>
-          {sizes.map((s) => (
-            <button
-              key={s}
-              type="button"
-              className="product-size-btn"
-              onClick={() => setSize(s)}
-              style={{
-                ...styles.sizeBtn,
-                ...(size === s ? styles.sizeBtnActive : {}),
-              }}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div style={styles.footer}>
-        <span style={styles.price}>{formatPrice(product.price)}</span>
-        {justAdded ? (
-          <button onClick={onCart} style={styles.addBtn}>
-            {t(lang, "goToCart")}
-          </button>
-        ) : (
-          <button onClick={handleAdd} disabled={adding} style={styles.addBtn}>
-            {adding ? "..." : t(lang, "addToCart")}
-          </button>
+        {imageUrls.length > 1 && (
+          <div className="product-v2__gallery-dots">
+            {imageUrls.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setImageIndex(i); }}
+                className={`product-v2__gallery-dot${i === imageIndex ? " is-active" : ""}`}
+                aria-label={`Фото ${i + 1}`}
+              />
+            ))}
+          </div>
         )}
       </div>
 
-      <div style={styles.reviewsSection}>
-        <div style={styles.reviewsHeader}>
-          <h3 style={styles.reviewsTitle}>
-            {t(lang, "reviewsOnProduct")} {reviews.length > 0 && `(${reviews.length})`}
-            {avgRating != null && <span style={styles.avgRating}> ★ {avgRating}</span>}
-          </h3>
-          {!showReviewForm && (
-            <button onClick={() => setShowReviewForm(true)} type="button" style={styles.addReviewBtn}>
-              {t(lang, "leaveReview")}
+      <div className="product-v2__sheet">
+        <div className="product-v2__sheet-handle" aria-hidden />
+
+        <header className="product-v2__header">
+          <div className="product-v2__titles">
+            <h1 className="product-v2__title">{product.name}</h1>
+            {avgRating != null && (
+              <div className="product-v2__rating-inline">
+                <span className="product-v2__rating-star">★</span>
+                <span className="product-v2__rating-value">{avgRating}</span>
+                <span className="product-v2__rating-count">({reviews.length})</span>
+              </div>
+            )}
+          </div>
+        </header>
+
+        <div className="product-v2__desc-wrap">
+          <p className={`product-v2__desc${descExpanded ? " is-expanded" : ""}${hasLongDesc ? " is-clampable" : ""}`}>
+            {product.description}
+          </p>
+          {hasLongDesc && (
+            <button
+              type="button"
+              onClick={() => setDescExpanded((v) => !v)}
+              className="product-v2__desc-toggle"
+            >
+              {descExpanded ? t(lang, "back") : "Подробнее"}
             </button>
           )}
         </div>
 
-        {showReviewForm && (
-          <div style={styles.reviewForm}>
-            <div style={styles.ratingRow}>
-              <span style={styles.ratingLabel}>Оценка:</span>
-              {[1, 2, 3, 4, 5].map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => setReviewRating(r)}
-                  style={{ ...styles.starBtn, color: r <= reviewRating ? "var(--accent)" : "var(--muted)" }}
-                >
-                  ★
-                </button>
-              ))}
-            </div>
-            <textarea
-              className="zen-textarea"
-              value={reviewText}
-              onChange={(e) => setReviewText(e.target.value)}
-              placeholder="Напишите отзыв о товаре..."
-              rows={3}
-              style={styles.reviewTextarea}
-            />
-            <div style={styles.reviewFormActions}>
-              <button type="button" onClick={handleAddReview} disabled={submittingReview} style={styles.submitReviewBtn}>
-                {submittingReview ? "..." : "Отправить"}
-              </button>
-              <button type="button" onClick={() => { setShowReviewForm(false); setReviewText(""); }} style={styles.cancelReviewBtn}>
-                Отмена
-              </button>
-            </div>
+        <div className="product-v2__divider" />
+
+        <div className="product-v2__size-block">
+          <div className="product-v2__size-head">
+            <span className="product-v2__label">{t(lang, "size")}</span>
+            <button type="button" onClick={() => setShowSizeGuide(true)} className="product-v2__size-guide-btn">
+              {t(lang, "sizeGuide")}
+            </button>
           </div>
-        )}
-
-        {reviews.length === 0 && !showReviewForm && (
-          <p style={styles.noReviews}>{t(lang, "noReviewsYet")}</p>
-        )}
-
-        <div style={styles.reviewsList}>
-          {reviews.map((r) => (
-            <div key={r.id} style={styles.reviewItem}>
-              <div style={styles.reviewItemHead}>
-                <span style={styles.reviewAuthor}>{r.user_name || "Гость"}</span>
-                <span style={styles.reviewDate}>{formatDate(r.created_at)}</span>
-              </div>
-              <div style={styles.reviewStars}>
-                {[1, 2, 3, 4, 5].map((s) => (
-                  <span key={s} style={{ color: s <= r.rating ? "var(--accent)" : "var(--muted)", fontSize: 12 }}>★</span>
-                ))}
-              </div>
-              <p style={styles.reviewItemText}>{r.text}</p>
-            </div>
-          ))}
+          <div className="product-v2__sizes">
+            {sizes.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setSize(s)}
+                className={`product-v2__size${size === s ? " is-active" : ""}`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
         </div>
+
+        <div className="product-v2__divider" />
+
+        <section className="product-v2__reviews">
+          <div className="product-v2__reviews-head">
+            <h3 className="product-v2__reviews-title">
+              {t(lang, "reviewsOnProduct")}
+              {reviews.length > 0 && <span className="product-v2__reviews-count">{reviews.length}</span>}
+            </h3>
+            {!showReviewForm && (
+              <button onClick={() => setShowReviewForm(true)} type="button" className="product-v2__reviews-add-btn">
+                {t(lang, "leaveReview")}
+              </button>
+            )}
+          </div>
+
+          {showReviewForm && (
+            <div className="product-v2__review-form">
+              <div className="product-v2__rating-row">
+                <span className="product-v2__rating-label">Оценка</span>
+                <div className="product-v2__stars">
+                  {[1, 2, 3, 4, 5].map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setReviewRating(r)}
+                      className={`product-v2__star-btn${r <= reviewRating ? " is-filled" : ""}`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <textarea
+                className="zen-textarea product-v2__review-textarea"
+                value={reviewText}
+                onChange={(e) => setReviewText(e.target.value)}
+                placeholder="Напишите отзыв о товаре..."
+                rows={3}
+              />
+              <div className="product-v2__review-actions">
+                <button type="button" onClick={handleAddReview} disabled={submittingReview} className="product-v2__review-submit">
+                  {submittingReview ? "..." : "Отправить"}
+                </button>
+                <button type="button" onClick={() => { setShowReviewForm(false); setReviewText(""); }} className="product-v2__review-cancel">
+                  Отмена
+                </button>
+              </div>
+            </div>
+          )}
+
+          {reviews.length === 0 && !showReviewForm && (
+            <p className="product-v2__no-reviews">{t(lang, "noReviewsYet")}</p>
+          )}
+
+          <div className="product-v2__reviews-list">
+            {reviews.map((r, idx) => (
+              <div key={r.id} className={`product-v2__review${idx === 0 ? " is-first" : ""}`}>
+                <div className="product-v2__review-head">
+                  <span className="product-v2__review-author">{r.user_name || "Гость"}</span>
+                  <span className="product-v2__review-date">{formatDate(r.created_at)}</span>
+                </div>
+                <div className="product-v2__review-stars">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <span key={s} className={`product-v2__review-star${s <= r.rating ? " is-filled" : ""}`}>★</span>
+                  ))}
+                </div>
+                <p className="product-v2__review-text">{r.text}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      <div className="product-v2__cta-bar">
+        <div className="product-v2__cta-price">
+          <span className="product-v2__cta-price-label">Цена</span>
+          <span className="product-v2__cta-price-value">{formatPrice(product.price)}</span>
+        </div>
+        {justAdded ? (
+          <button onClick={onCart} className="product-v2__cta-btn product-v2__cta-btn--success">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            <span>{t(lang, "goToCart")}</span>
+          </button>
+        ) : (
+          <button onClick={handleAdd} disabled={adding || !size} className="product-v2__cta-btn">
+            {adding ? (
+              <span className="product-v2__cta-spinner" aria-hidden />
+            ) : (
+              <>
+                <span>{t(lang, "addToCart")}</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M5 12h14M13 5l7 7-7 7" />
+                </svg>
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       {showSizeGuide && (
-        <div style={styles.sizeGuideOverlay} onClick={() => setShowSizeGuide(false)} aria-hidden>
-          <div style={styles.sizeGuideModal} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.sizeGuideHeader}>
-                <h3 style={styles.sizeGuideTitle}>{t(lang, "sizeGuide")}</h3>
-              <button type="button" onClick={() => setShowSizeGuide(false)} style={styles.sizeGuideClose}>×</button>
+        <div className="product-v2__modal-overlay" onClick={() => setShowSizeGuide(false)} aria-hidden>
+          <div className="product-v2__modal" onClick={(e) => e.stopPropagation()}>
+            <div className="product-v2__modal-head">
+              <h3 className="product-v2__modal-title">{t(lang, "sizeGuide")}</h3>
+              <button type="button" onClick={() => setShowSizeGuide(false)} className="product-v2__modal-close" aria-label="Закрыть">×</button>
             </div>
-            <div style={styles.sizeGuideContent}>
-              <p style={styles.sizeGuideText}>Таблица размеров зависит от категории товара (футболки, худи, штаны и т.д.). Рекомендуем ориентироваться на размерную сетку в описании товара или уточнить у продавца.</p>
+            <div className="product-v2__modal-body">
+              <p className="product-v2__modal-text">
+                Таблица размеров зависит от категории товара (футболки, худи, штаны и т.д.).
+                Рекомендуем ориентироваться на размерную сетку в описании товара или уточнить у продавца.
+              </p>
             </div>
           </div>
         </div>
@@ -358,375 +395,3 @@ export function ProductPage({
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  wrap: { maxWidth: 420, margin: "0 auto", paddingBottom: 24 },
-  topBar: {
-    display: "flex",
-    alignItems: "center",
-    marginBottom: 0,
-  },
-  titleRow: {
-    display: "flex",
-    alignItems: "flex-start",
-    gap: 12,
-    marginBottom: 24,
-  },
-  titleBlock: {
-    flex: 1,
-    minWidth: 0,
-  },
-  wishlistBtn: {
-    flexShrink: 0,
-    background: "none",
-    border: "none",
-    fontSize: 24,
-    cursor: "pointer",
-    padding: 4,
-  },
-  imageWrap: {
-    position: "relative",
-    borderRadius: 12,
-    overflow: "hidden",
-    background: "var(--surface)",
-    aspectRatio: "1",
-    marginBottom: 24,
-  },
-  image: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
-  galleryFrame: {
-    position: "absolute",
-    inset: 0,
-    overflow: "hidden",
-  },
-  galleryLayer: {
-    position: "absolute",
-    inset: 0,
-    width: "100%",
-    height: "100%",
-    transition: "opacity 0.5s cubic-bezier(0.25, 0.1, 0.25, 1)",
-  },
-  galleryPrev: {
-    position: "absolute",
-    left: 12,
-    top: "50%",
-    transform: "translateY(-50%)",
-    width: 44,
-    height: 44,
-    borderRadius: "50%",
-    border: "none",
-    background: "rgba(255,255,255,0.18)",
-    backdropFilter: "blur(10px)",
-    WebkitBackdropFilter: "blur(10px)",
-    color: "#fff",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 3,
-    boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
-  },
-  galleryNext: {
-    position: "absolute",
-    right: 12,
-    top: "50%",
-    transform: "translateY(-50%)",
-    width: 44,
-    height: 44,
-    borderRadius: "50%",
-    border: "none",
-    background: "rgba(255,255,255,0.18)",
-    backdropFilter: "blur(10px)",
-    WebkitBackdropFilter: "blur(10px)",
-    color: "#fff",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 3,
-    boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
-  },
-  gallerySegments: {
-    position: "absolute",
-    bottom: 12,
-    left: "50%",
-    transform: "translateX(-50%)",
-    display: "flex",
-    gap: 6,
-    zIndex: 2,
-  },
-  gallerySegment: {
-    width: 24,
-    height: 3,
-    borderRadius: 2,
-    border: "none",
-    background: "rgba(255,255,255,0.35)",
-    cursor: "pointer",
-    padding: 0,
-    transition: "background 0.2s ease",
-  },
-  gallerySegmentActive: {
-    background: "#fff",
-  },
-  title: {
-    fontFamily: "Unbounded, sans-serif",
-    fontSize: 22,
-    fontWeight: 600,
-    marginBottom: 8,
-    letterSpacing: "-0.02em",
-  },
-  desc: {
-    color: "var(--muted)",
-    fontSize: 14,
-    lineHeight: 1.6,
-    marginBottom: 0,
-  },
-  sizeSection: { marginBottom: 24 },
-  sizeSectionHeader: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 10,
-  },
-  sizeGuideBtn: {
-    background: "none",
-    border: "none",
-    color: "var(--accent)",
-    fontSize: 12,
-    fontFamily: "inherit",
-    cursor: "pointer",
-    textDecoration: "underline",
-    padding: 0,
-  },
-  label: {
-    fontSize: 12,
-    color: "var(--muted)",
-    marginBottom: 10,
-    textTransform: "uppercase",
-    letterSpacing: "0.05em",
-  },
-  sizeSectionLabel: {
-    fontSize: 12,
-    color: "var(--muted)",
-    marginBottom: 0,
-    textTransform: "uppercase",
-    letterSpacing: "0.05em",
-  },
-  sizes: {
-    display: "flex",
-    gap: 8,
-    flexWrap: "wrap",
-  },
-  sizeBtn: {
-    padding: "12px 18px",
-    background: "var(--surface)",
-    border: "1px solid var(--surface)",
-    borderRadius: "var(--radius-md)",
-    color: "var(--text)",
-    fontFamily: "inherit",
-    fontSize: 14,
-    fontWeight: 500,
-    cursor: "pointer",
-    outline: "none",
-    boxShadow: "none",
-  },
-  sizeBtnActive: {
-    border: "1px solid var(--accent)",
-    color: "var(--accent)",
-    background: "rgba(196, 30, 58, 0.1)",
-    outline: "none",
-    boxShadow: "none",
-  },
-  footer: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 16,
-  },
-  price: {
-    fontSize: 22,
-    fontWeight: 700,
-    color: "var(--text)",
-  },
-  addBtn: {
-    flex: 1,
-    padding: 16,
-    background: "var(--accent)",
-    border: "none",
-    borderRadius: "var(--radius-md)",
-    color: "#ffffff",
-    fontFamily: "inherit",
-    fontSize: 15,
-    fontWeight: 600,
-    cursor: "pointer",
-  },
-  loading: {
-    textAlign: "center",
-    padding: 48,
-    color: "var(--muted)",
-  },
-  reviewsSection: {
-    marginTop: 32,
-    paddingTop: 24,
-    borderTop: "1px solid var(--border)",
-  },
-  reviewsHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  reviewsTitle: {
-    fontSize: 16,
-    fontWeight: 600,
-  },
-  avgRating: {
-    color: "var(--accent)",
-    fontWeight: 500,
-  },
-  addReviewBtn: {
-    padding: "8px 14px",
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: "var(--radius-md)",
-    color: "var(--text)",
-    fontSize: 13,
-    cursor: "pointer",
-  },
-  reviewForm: {
-    marginBottom: 20,
-    padding: 16,
-    background: "var(--surface)",
-    borderRadius: "var(--radius-lg)",
-    border: "1px solid var(--border)",
-  },
-  ratingRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 12,
-  },
-  ratingLabel: {
-    fontSize: 13,
-    color: "var(--muted)",
-  },
-  starBtn: {
-    background: "none",
-    border: "none",
-    fontSize: 18,
-    cursor: "pointer",
-  },
-  reviewTextarea: { marginBottom: 12 },
-  reviewFormActions: {
-    display: "flex",
-    gap: 8,
-  },
-  submitReviewBtn: {
-    padding: "10px 16px",
-    background: "var(--accent)",
-    border: "none",
-    borderRadius: "var(--radius-md)",
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: 600,
-    cursor: "pointer",
-  },
-  cancelReviewBtn: {
-    padding: "10px 16px",
-    background: "none",
-    border: "1px solid var(--border)",
-    borderRadius: "var(--radius-md)",
-    color: "var(--muted)",
-    fontSize: 13,
-    cursor: "pointer",
-  },
-  noReviews: {
-    textAlign: "center",
-    color: "var(--muted)",
-    fontSize: 14,
-    padding: 24,
-  },
-  reviewsList: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 12,
-  },
-  reviewItem: {
-    padding: 14,
-    background: "var(--surface)",
-    borderRadius: "var(--radius-md)",
-    border: "1px solid var(--border)",
-  },
-  reviewItemHead: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  reviewAuthor: {
-    fontWeight: 600,
-    fontSize: 13,
-  },
-  reviewDate: {
-    fontSize: 11,
-    color: "var(--muted)",
-  },
-  reviewStars: {
-    marginBottom: 6,
-  },
-  reviewItemText: {
-    fontSize: 13,
-    lineHeight: 1.5,
-    color: "var(--text)",
-  },
-  sizeGuideOverlay: {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(0,0,0,0.6)",
-    zIndex: 100,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-  },
-  sizeGuideModal: {
-    background: "var(--surface)",
-    borderRadius: "var(--radius-lg)",
-    border: "1px solid var(--border)",
-    maxWidth: 360,
-    width: "100%",
-    maxHeight: "80vh",
-    overflow: "auto",
-  },
-  sizeGuideHeader: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "16px 20px",
-    borderBottom: "1px solid var(--border)",
-  },
-  sizeGuideTitle: {
-    fontSize: 18,
-    fontWeight: 600,
-    margin: 0,
-  },
-  sizeGuideClose: {
-    background: "none",
-    border: "none",
-    fontSize: 24,
-    color: "var(--muted)",
-    cursor: "pointer",
-    padding: 0,
-    lineHeight: 1,
-  },
-  sizeGuideContent: {
-    padding: 20,
-  },
-  sizeGuideText: {
-    margin: 0,
-    fontSize: 14,
-    lineHeight: 1.6,
-    color: "var(--text)",
-  },
-};
