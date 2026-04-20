@@ -1860,32 +1860,47 @@ nav svg {
   margin-top: 4px;
 }
 
-/* Тонкая круглая кнопка удаления, без подписи */
+/* Компактная кнопка удаления — мягкий "чип" в тон карточки */
 .zen-app .zen-bag-item-remove {
   align-self: center;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   padding: 0;
-  background: transparent;
+  background: var(--surface-elevated);
   border: none;
   color: var(--muted);
-  border-radius: 50%;
+  border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
   -webkit-tap-highlight-color: transparent;
+  opacity: 0.9;
 }
 .zen-app .zen-bag-item-remove:hover {
-  background: var(--surface-elevated);
-  color: var(--text);
+  background: var(--accent);
+  color: #fff;
+  opacity: 1;
+  box-shadow: 0 4px 12px -6px rgba(165, 42, 42, 0.55);
+}
+.zen-app .zen-bag-item-remove:active {
+  transform: scale(0.92);
+}
+.zen-app .zen-bag-item-remove:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 .zen-app .zen-bag-item-remove svg {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   stroke: currentColor;
-  stroke-width: 1.75;
+  stroke-width: 2;
+  stroke-linecap: round;
   fill: none;
 }
 
