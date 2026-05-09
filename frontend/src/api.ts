@@ -419,6 +419,7 @@ export interface MyCustomOrder {
   id: number;
   description: string;
   size: string;
+  image_data: string | null;
   status: string;
   created_at: string;
 }

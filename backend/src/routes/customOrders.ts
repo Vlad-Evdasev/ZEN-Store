@@ -97,7 +97,7 @@ customOrdersRouter.get("/:userId", (req, res) => {
   // Заявки в статусе 'review' (ожидают подтверждения админа) пользователю не
   // показываем — иначе он увидит их в истории до того, как мы их оформим.
   const rows = db.prepare(
-    "SELECT id, description, size, COALESCE(status, 'pending') as status, created_at FROM custom_orders " +
+    "SELECT id, description, size, image_data, COALESCE(status, 'pending') as status, created_at FROM custom_orders " +
     "WHERE user_id = ? AND COALESCE(status, 'pending') != 'review' " +
     "ORDER BY created_at DESC"
   ).all(userId);

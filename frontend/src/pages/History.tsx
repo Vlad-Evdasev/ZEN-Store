@@ -313,17 +313,26 @@ function CustomOrderCard({
         </div>
       </div>
 
-      <div style={styles.customBody}>
-        {description ? (
-          <p style={styles.customDescription}>{description}</p>
-        ) : (
-          <p style={{ ...styles.customDescription, color: "var(--muted)", fontStyle: "italic" }}>
-            {t(lang, "historyCustomNoDesc")}
-          </p>
-        )}
-        {size && (
-          <span style={styles.customSize}>{t(lang, "historyCustomSize")}: <strong>{size}</strong></span>
-        )}
+      <div style={styles.activePreview}>
+        <div style={styles.thumbStack}>
+          <div style={styles.thumb}>
+            {order.image_data ? (
+              <img src={order.image_data} alt="" style={styles.thumbImg} />
+            ) : (
+              <div style={styles.thumbPlaceholder} />
+            )}
+          </div>
+        </div>
+        <div style={styles.activeItemsMeta}>
+          <span style={styles.activeItemsTitle}>
+            {description || t(lang, "historyCustomNoDesc")}
+          </span>
+          {size && (
+            <span style={styles.activeItemsCount}>
+              {t(lang, "historyCustomSize")}: {size}
+            </span>
+          )}
+        </div>
       </div>
 
       <div style={styles.timelineWrap} aria-label="custom order progress">
