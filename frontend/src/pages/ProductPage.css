@@ -11,12 +11,6 @@
   margin-left: calc(-1 * max(16px, env(safe-area-inset-left)));
   margin-right: calc(-1 * max(16px, env(safe-area-inset-right)));
   padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
-  animation: productV2Enter 0.45s cubic-bezier(0.25, 0.1, 0.25, 1) both;
-}
-
-@keyframes productV2Enter {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 
 /* ─── HERO ─── */
