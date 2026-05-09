@@ -46,7 +46,7 @@ export function Favorites({
         <h1 className="zen-wishlist-title">{t(lang, "favoritesTitle")}</h1>
       </header>
 
-      <div className="zen-wishlist-grid">
+      <div className="catalog-grid catalog-grid--tight zen-wishlist-grid">
         {favorites.map((p, idx) => (
           <div
             key={p.id}

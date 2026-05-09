@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { addToCart, getProductReviews, addProductReview, type Product, type ProductReview, type CartItem } from "../api";
+import { addToCart, type Product, type CartItem } from "../api";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 import "./ProductPage.css";
@@ -11,18 +11,8 @@ interface ProductPageProps {
   onCart: () => void;
   onAddedToCart?: () => void;
   userId: string;
-  userName?: string;
   inWishlist: boolean;
   onToggleWishlist: () => void;
-}
-
-function formatDate(s: string) {
-  try {
-    const d = new Date(s);
-    return d.toLocaleDateString("ru-RU", { day: "numeric", month: "short", year: "numeric" });
-  } catch {
-    return s;
-  }
 }
 
 export function ProductPage({
@@ -32,7 +22,6 @@ export function ProductPage({
   onCart,
   onAddedToCart,
   userId,
-  userName,
   inWishlist,
   onToggleWishlist,
 }: ProductPageProps) {
@@ -44,11 +33,6 @@ export function ProductPage({
   // Локально записываем размер сразу после успешного add, чтобы кнопка тут же
   // переключилась в success-состояние, не дожидаясь refresh из App.
   const [optimisticSizes, setOptimisticSizes] = useState<Set<string>>(new Set());
-  const [reviews, setReviews] = useState<ProductReview[]>([]);
-  const [reviewText, setReviewText] = useState("");
-  const [reviewRating, setReviewRating] = useState(5);
-  const [submittingReview, setSubmittingReview] = useState(false);
-  const [showReviewForm, setShowReviewForm] = useState(false);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
   const [imageIndex, setImageIndex] = useState(0);
@@ -99,12 +83,6 @@ export function ProductPage({
     };
   }, [product?.id]);
 
-  useEffect(() => {
-    if (product) {
-      getProductReviews(product.id).then(setReviews).catch(console.error);
-    }
-  }, [product?.id]);
-
   // Какие размеры этого товара уже в корзине. Берём из cartItems (lifted-state
   // в App), чтобы значение было синхронно доступно с первого рендера —
   // без useEffect-задержки, которая давала «моргание» кнопки В корзину →
@@ -119,27 +97,6 @@ export function ProductPage({
     optimisticSizes.forEach((x) => s.add(x));
     return s;
   }, [cartItems, product?.id, optimisticSizes]);
-
-  const handleAddReview = async () => {
-    if (!product || !reviewText.trim()) return;
-    setSubmittingReview(true);
-    try {
-      await addProductReview(product.id, userId, {
-        user_name: userName || "Гость",
-        rating: reviewRating,
-        text: reviewText.trim(),
-      });
-      setReviewText("");
-      setReviewRating(5);
-      setShowReviewForm(false);
-      const updated = await getProductReviews(product.id);
-      setReviews(updated);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setSubmittingReview(false);
-    }
-  };
 
   const goPrevImage = () => setImageIndex((i) => (i === 0 ? imageUrls.length - 1 : i - 1));
   const goNextImage = () => setImageIndex((i) => (i === imageUrls.length - 1 ? 0 : i + 1));
@@ -309,84 +266,6 @@ export function ProductPage({
           </div>
         </div>
 
-        <div className="product-v2__divider" />
-
-        <section className="product-v2__reviews">
-          <div className="product-v2__section-head">
-            <h3 className="product-v2__section-title">
-              {t(lang, "reviewsOnProduct")}
-              {reviews.length > 0 && <span className="product-v2__section-meta">· {reviews.length}</span>}
-            </h3>
-            {!showReviewForm && (
-              <button onClick={() => setShowReviewForm(true)} type="button" className="product-v2__pill-btn product-v2__pill-btn--ghost">
-                {t(lang, "leaveReview")}
-              </button>
-            )}
-          </div>
-
-          {showReviewForm && (
-            <div className="product-v2__review-form">
-              <div className="product-v2__rating-row">
-                <span className="product-v2__rating-label">Оценка</span>
-                <div className="product-v2__stars">
-                  {[1, 2, 3, 4, 5].map((r) => (
-                    <button
-                      key={r}
-                      type="button"
-                      onClick={() => setReviewRating(r)}
-                      className={`product-v2__star-btn${r <= reviewRating ? " is-filled" : ""}`}
-                    >
-                      ★
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <textarea
-                className="zen-textarea product-v2__review-textarea"
-                value={reviewText}
-                onChange={(e) => setReviewText(e.target.value)}
-                placeholder="Напишите отзыв о товаре..."
-                rows={3}
-              />
-              <div className="product-v2__review-actions">
-                <button type="button" onClick={handleAddReview} disabled={submittingReview} className="product-v2__review-submit">
-                  {submittingReview ? "..." : "Отправить"}
-                </button>
-                <button type="button" onClick={() => { setShowReviewForm(false); setReviewText(""); }} className="product-v2__review-cancel">
-                  Отмена
-                </button>
-              </div>
-            </div>
-          )}
-
-          {reviews.length === 0 && !showReviewForm && (
-            <div className="product-v2__empty-bubble-row">
-              <div className="product-v2__empty-avatar" aria-hidden>R</div>
-              <div className="product-v2__empty-bubble">
-                <div className="product-v2__empty-bubble-text">
-                  {t(lang, "reviewsEmptyFirst")}
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="product-v2__reviews-list">
-            {reviews.map((r, idx) => (
-              <div key={r.id} className={`product-v2__review${idx === 0 ? " is-first" : ""}`}>
-                <div className="product-v2__review-head">
-                  <span className="product-v2__review-author">{r.user_name || "Гость"}</span>
-                  <span className="product-v2__review-date">{formatDate(r.created_at)}</span>
-                </div>
-                <div className="product-v2__review-stars">
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <span key={s} className={`product-v2__review-star${s <= r.rating ? " is-filled" : ""}`}>★</span>
-                  ))}
-                </div>
-                <p className="product-v2__review-text">{r.text}</p>
-              </div>
-            ))}
-          </div>
-        </section>
       </div>
 
       <div className="zen-bag-summary zen-bag-summary--bottom">
