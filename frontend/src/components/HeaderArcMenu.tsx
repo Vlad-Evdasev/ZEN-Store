@@ -69,7 +69,7 @@ function IconHistory() {
   );
 }
 
-/* Отзывы — звезда с акцентной искрой */
+/* Отзывы — звезда с акцентной искрой (центрировано в viewBox) */
 function IconReviews() {
   return (
     <svg
@@ -82,12 +82,14 @@ function IconReviews() {
       style={iconStyle}
       aria-hidden
     >
-      <polygon points="10 3 12 8 17 9 13 12.5 14 17.5 10 15 6 17.5 7 12.5 3 9 8 8 10 3" />
-      <path
-        d="M18 13l0.7 1.6 1.6 0.7-1.6 0.7-0.7 1.6-0.7-1.6-1.6-0.7 1.6-0.7z"
-        fill="currentColor"
-        stroke="none"
-      />
+      <g transform="translate(0.7 1.7)">
+        <polygon points="10 3 12 8 17 9 13 12.5 14 17.5 10 15 6 17.5 7 12.5 3 9 8 8 10 3" />
+        <path
+          d="M18 13l0.7 1.6 1.6 0.7-1.6 0.7-0.7 1.6-0.7-1.6-1.6-0.7 1.6-0.7z"
+          fill="currentColor"
+          stroke="none"
+        />
+      </g>
     </svg>
   );
 }

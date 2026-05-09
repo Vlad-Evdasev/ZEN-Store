@@ -1,13 +1,29 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
-
-const ADMIN_TG_HANDLE = "@krot_eno";
-const ADMIN_TG_URL = "https://t.me/krot_eno";
+import { getSupportEntries, type SupportEntry } from "../api";
 
 export function Support() {
   const { settings } = useSettings();
   const lang = settings.lang;
+
+  const [entries, setEntries] = useState<SupportEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    getSupportEntries()
+      .then((rows) => {
+        if (!cancelled) setEntries(rows);
+      })
+      .catch(console.error)
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="zen-support" style={styles.wrap}>
@@ -18,32 +34,73 @@ export function Support() {
       </header>
 
       <div style={styles.thread}>
-        <QuestionBubble text={t(lang, "deliveryTermsTitle")} />
-        <AnswerBubble>
-          <p style={styles.p}>{t(lang, "deliveryTermsP1")}</p>
-          <p style={{ ...styles.p, marginBottom: 0 }}>
-            {t(lang, "deliveryTermsP2")}
-          </p>
-        </AnswerBubble>
-
-        <QuestionBubble text={t(lang, "supportContactsTitle")} />
-        <AnswerBubble>
-          <p style={{ ...styles.p, marginBottom: 0 }}>
-            {t(lang, "supportContactAdmin")}{" "}
-            <a
-              href={ADMIN_TG_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={styles.contactLink}
-            >
-              {ADMIN_TG_HANDLE}
-              <IconExternal />
-            </a>
-          </p>
-        </AnswerBubble>
+        {loading && entries.length === 0 ? (
+          <p style={styles.loading}>{t(lang, "loading")}</p>
+        ) : entries.length === 0 ? (
+          <p style={styles.loading}>—</p>
+        ) : (
+          entries.map((e) => (
+            <SupportPair key={e.id} question={e.question} answer={e.answer} />
+          ))
+        )}
       </div>
     </div>
   );
+}
+
+function SupportPair({ question, answer }: { question: string; answer: string }) {
+  const paragraphs = answer.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+  return (
+    <>
+      <QuestionBubble text={question} />
+      <AnswerBubble>
+        {paragraphs.map((p, idx) => (
+          <p
+            key={idx}
+            style={{
+              ...styles.p,
+              marginBottom: idx === paragraphs.length - 1 ? 0 : 10,
+            }}
+          >
+            {renderInlineMarkdown(p)}
+          </p>
+        ))}
+      </AnswerBubble>
+    </>
+  );
+}
+
+/* Простой парсер inline-разметки: только [текст](url) → ссылка.
+   Всё остальное оставляем как есть.                                  */
+function renderInlineMarkdown(text: string): ReactNode {
+  const re = /\[([^\]]+)\]\((https?:\/\/[^\s)]+|@[A-Za-z0-9_]+|tg:\/\/[^\s)]+)\)/g;
+  const out: ReactNode[] = [];
+  let last = 0;
+  let m: RegExpExecArray | null;
+  let key = 0;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    const label = m[1];
+    const target = m[2];
+    const href = target.startsWith("@")
+      ? `https://t.me/${target.slice(1)}`
+      : target;
+    out.push(
+      <a
+        key={`l-${key++}`}
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={styles.contactLink}
+      >
+        {label}
+        <IconExternal />
+      </a>
+    );
+    last = re.lastIndex;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out;
 }
 
 function QuestionBubble({ text }: { text: string }) {
@@ -94,6 +151,13 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: 12,
+  },
+
+  loading: {
+    color: "var(--muted)",
+    fontSize: 13,
+    textAlign: "center",
+    padding: "32px 0",
   },
 
   questionRow: {

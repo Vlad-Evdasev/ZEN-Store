@@ -11,6 +11,7 @@ import { reviewsRouter } from "./routes/reviews.js";
 import { adminRouter, usersHeartbeatRouter } from "./routes/admin.js";
 import { categoriesRouter } from "./routes/categories.js";
 import { postsRouter } from "./routes/posts.js";
+import { supportRouter } from "./routes/support.js";
 import { db } from "./db/schema.js";
 
 const app = express();
@@ -31,6 +32,7 @@ app.use("/api/admin", adminRouter);
 app.use("/api/users", usersHeartbeatRouter);
 app.use("/api/categories", categoriesRouter);
 app.use("/api/posts", postsRouter);
+app.use("/api/support", supportRouter);
 
 app.get("/api/health", (_req, res) => {
   try {

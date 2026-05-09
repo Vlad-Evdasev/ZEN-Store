@@ -104,6 +104,64 @@ export async function deleteCategory(code: string, adminSecret: string): Promise
   }
 }
 
+export interface SupportEntry {
+  id: number;
+  question: string;
+  answer: string;
+  sort_order: number;
+  created_at: string;
+}
+
+export async function getSupportEntries(): Promise<SupportEntry[]> {
+  const res = await fetchWithRetry(`${API_URL}/api/support`);
+  if (!res.ok) throw new Error("Failed to fetch support entries");
+  return res.json();
+}
+
+export async function createSupportEntry(
+  data: { question: string; answer: string; sort_order?: number },
+  adminSecret: string
+): Promise<SupportEntry> {
+  const res = await fetch(`${API_URL}/api/support`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+  return res.json();
+}
+
+export async function updateSupportEntry(
+  id: number,
+  data: { question?: string; answer?: string; sort_order?: number },
+  adminSecret: string
+): Promise<SupportEntry> {
+  const res = await fetch(`${API_URL}/api/support/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+  return res.json();
+}
+
+export async function deleteSupportEntry(id: number, adminSecret: string): Promise<void> {
+  const res = await fetch(`${API_URL}/api/support/${id}`, {
+    method: "DELETE",
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+}
+
 export async function getStores(): Promise<Store[]> {
   const res = await fetchWithRetry(`${API_URL}/api/stores`);
   if (!res.ok) throw new Error("Failed to fetch stores");

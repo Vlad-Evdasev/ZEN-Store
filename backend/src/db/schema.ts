@@ -261,6 +261,39 @@ if (categoryCount.count === 0) {
   for (const c of defaultCategories) insertCat.run(...c);
 }
 
+// Контент страницы «Поддержка»: пары вопрос-ответ, редактируется в админке.
+// answer поддерживает абзацы (\n\n) и markdown-ссылки [текст](url).
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS support_entries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      question TEXT NOT NULL,
+      answer TEXT NOT NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+} catch {}
+
+// Seed поддержки тем же контентом, что был зашит в Support.tsx
+const supportCount = db.prepare("SELECT COUNT(*) as count FROM support_entries").get() as { count: number };
+if (supportCount.count === 0) {
+  const insertSup = db.prepare("INSERT INTO support_entries (question, answer, sort_order) VALUES (?, ?, ?)");
+  const defaults: [string, string, number][] = [
+    [
+      "Условия доставки",
+      "Доставка осуществляется по всей Беларуси. Сроки и стоимость зависят от выбранного способа и населённого пункта.\n\nПосле оформления заказа с вами свяжется менеджер для уточнения вариантов доставки.",
+      1,
+    ],
+    [
+      "Контакты",
+      "Админ [@krot_eno](https://t.me/krot_eno)",
+      2,
+    ],
+  ];
+  for (const r of defaults) insertSup.run(...r);
+}
+
 // Posts, likes, comments tables
 try {
   db.exec(`

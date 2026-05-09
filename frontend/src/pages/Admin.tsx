@@ -34,6 +34,10 @@ import {
   createPost,
   updatePost,
   deletePost,
+  getSupportEntries,
+  createSupportEntry,
+  updateSupportEntry,
+  deleteSupportEntry,
   type Product,
   type Category,
   type Order,
@@ -42,6 +46,7 @@ import {
   type BroadcastPost,
   type BotConversation,
   type BotMessage,
+  type SupportEntry,
 } from "../api";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
@@ -71,7 +76,7 @@ function StatusPill({ status }: { status: string }) {
   return <span className={`admin-status admin-status--${c.variant}`}>{c.label}</span>;
 }
 
-function NavIcon({ tab }: { tab: "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" }) {
+function NavIcon({ tab }: { tab: "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" }) {
   switch (tab) {
     case "products":
       return (<svg viewBox="0 0 24 24" aria-hidden><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>);
@@ -89,6 +94,8 @@ function NavIcon({ tab }: { tab: "products" | "categories" | "orders" | "customO
       return (<svg viewBox="0 0 24 24" aria-hidden><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg>);
     case "chats":
       return (<svg viewBox="0 0 24 24" aria-hidden><path d="M21 11.5a8.4 8.4 0 01-1.2 4.4 8.5 8.5 0 01-7.4 4.1 8.4 8.4 0 01-4.4-1.2L3 20l1.2-4.9A8.4 8.4 0 013 10.5a8.5 8.5 0 014.2-7.4A8.4 8.4 0 0111.5 2h.5a8.5 8.5 0 018 8z"/></svg>);
+    case "support":
+      return (<svg viewBox="0 0 24 24" aria-hidden><circle cx="12" cy="12" r="9"/><path d="M9.1 9.5a3 3 0 015.8 1c0 1.5-1.5 2-2.4 2.5-.4.2-.5.5-.5.9V14"/><circle cx="12" cy="17" r="0.5" fill="currentColor"/></svg>);
   }
 }
 
@@ -102,7 +109,7 @@ function telegramChatLink(username?: string | null, userId?: string): string {
   return "#";
 }
 
-type Tab = "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats";
+type Tab = "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support";
 
 export function Admin() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -240,6 +247,9 @@ export function Admin() {
               </span>
             )}
           </button>
+          <button type="button" onClick={() => setTabAndReset("support")} className={`admin-nav-btn ${tab === "support" ? "active" : ""}`}>
+            <NavIcon tab="support" /> Поддержка
+          </button>
           <div style={{ flex: 1 }} />
           <div style={styles.sidebarFooter}>
             <button
@@ -329,6 +339,10 @@ export function Admin() {
 
       {tab === "chats" && (
         <ChatsTab adminSecret={adminSecret} onUnreadChanged={refreshChatsUnread} />
+      )}
+
+      {tab === "support" && (
+        <SupportTab adminSecret={adminSecret} />
       )}
 
           </div>
@@ -2394,6 +2408,242 @@ function PostsTab({ adminSecret }: { adminSecret: string }) {
           })
         )}
       </div>
+    </>
+  );
+}
+
+function SupportTab({ adminSecret }: { adminSecret: string }) {
+  const [entries, setEntries] = useState<SupportEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+  const [busyId, setBusyId] = useState<number | "new" | null>(null);
+
+  // Локальные черновики на каждую запись (вопрос/ответ/порядок)
+  const [drafts, setDrafts] = useState<Record<number, { question: string; answer: string; sort_order: number }>>({});
+
+  // Форма «новая запись»
+  const [newQuestion, setNewQuestion] = useState("");
+  const [newAnswer, setNewAnswer] = useState("");
+
+  const load = () => {
+    setLoading(true);
+    getSupportEntries()
+      .then((rows) => {
+        setEntries(rows);
+        const d: Record<number, { question: string; answer: string; sort_order: number }> = {};
+        for (const r of rows) {
+          d[r.id] = { question: r.question, answer: r.answer, sort_order: r.sort_order };
+        }
+        setDrafts(d);
+      })
+      .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const updateDraft = (id: number, patch: Partial<{ question: string; answer: string; sort_order: number }>) => {
+    setDrafts((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+  };
+
+  const handleSave = async (id: number) => {
+    const draft = drafts[id];
+    if (!draft) return;
+    if (!draft.question.trim() || !draft.answer.trim()) {
+      setMessage("Вопрос и ответ не могут быть пустыми");
+      return;
+    }
+    setBusyId(id);
+    setMessage("");
+    try {
+      await updateSupportEntry(id, draft, adminSecret);
+      setMessage("Сохранено");
+      load();
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Удалить эту запись?")) return;
+    setBusyId(id);
+    setMessage("");
+    try {
+      await deleteSupportEntry(id, adminSecret);
+      setMessage("Удалено");
+      load();
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newQuestion.trim() || !newAnswer.trim()) {
+      setMessage("Заполните вопрос и ответ");
+      return;
+    }
+    setBusyId("new");
+    setMessage("");
+    try {
+      const maxOrder = entries.reduce((m, e) => Math.max(m, e.sort_order), 0);
+      await createSupportEntry(
+        { question: newQuestion.trim(), answer: newAnswer, sort_order: maxOrder + 1 },
+        adminSecret
+      );
+      setMessage("Добавлено");
+      setNewQuestion("");
+      setNewAnswer("");
+      load();
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  if (loading) return <p style={styles.hint}>Загрузка...</p>;
+
+  return (
+    <>
+      <div className="admin-page-head">
+        <div className="admin-page-head-text">
+          <h2>Поддержка</h2>
+          <p className="admin-page-head-sub">
+            Контент страницы «Поддержка» в WebApp. Каждая запись — пара вопрос-ответ.
+            Ответ поддерживает абзацы (пустая строка = новый абзац) и ссылки в формате <code>[текст](https://example.com)</code> или <code>[@юзер](@юзер)</code>.
+          </p>
+        </div>
+      </div>
+      {message && <p style={styles.message}>{message}</p>}
+
+      <section className="admin-card">
+        <div className="admin-card-head"><h3>Новая запись</h3></div>
+        <form onSubmit={handleCreate} className="admin-card-body" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <label className="admin-field">
+            <span className="admin-field-label">Вопрос *</span>
+            <input
+              type="text"
+              value={newQuestion}
+              onChange={(e) => setNewQuestion(e.target.value)}
+              placeholder="например, Как оплатить заказ?"
+              style={styles.input}
+            />
+          </label>
+          <label className="admin-field">
+            <span className="admin-field-label">Ответ *</span>
+            <textarea
+              value={newAnswer}
+              onChange={(e) => setNewAnswer(e.target.value)}
+              rows={4}
+              placeholder={"Принимаем оплату на карту и наличными при доставке.\n\nДля онлайн-оплаты ссылка приходит в [@krot_eno](@krot_eno)."}
+              style={{ ...styles.input, height: "auto", minHeight: 96, padding: "10px 12px" }}
+            />
+            <span className="admin-field-hint">
+              Пустая строка между абзацами = новый абзац. Ссылки: <code>[текст](url)</code> или <code>[@user](@user)</code>.
+            </span>
+          </label>
+          <div style={styles.formActions}>
+            <button type="submit" disabled={busyId === "new"} style={styles.submit}>
+              {busyId === "new" ? "Добавляю…" : "Добавить запись"}
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section className="admin-card">
+        <div className="admin-card-head">
+          <h3>Записи</h3>
+          <span className="admin-card-head-meta">{entries.length}</span>
+        </div>
+        <div className="admin-card-body" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {entries.length === 0 ? (
+            <div className="admin-empty" style={{ borderRadius: 0, border: "none", padding: "32px 0" }}>
+              <p className="admin-empty-title">Записей пока нет</p>
+              <p className="admin-empty-sub">Добавь первую через форму выше</p>
+            </div>
+          ) : (
+            entries.map((row) => {
+              const draft = drafts[row.id] ?? { question: row.question, answer: row.answer, sort_order: row.sort_order };
+              const dirty =
+                draft.question !== row.question ||
+                draft.answer !== row.answer ||
+                draft.sort_order !== row.sort_order;
+              const isBusy = busyId === row.id;
+              return (
+                <div
+                  key={row.id}
+                  style={{
+                    border: "1px solid var(--border)",
+                    borderRadius: "var(--radius-sm)",
+                    padding: 14,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10,
+                    background: dirty ? "var(--surface-2)" : "var(--surface)",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 11.5, color: "var(--muted)", fontWeight: 600, letterSpacing: "0.04em" }}>
+                      #{row.id}
+                    </span>
+                    <span style={{ flex: 1 }} />
+                    <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "var(--muted)" }}>
+                      Порядок
+                      <input
+                        type="number"
+                        value={draft.sort_order}
+                        onChange={(e) => updateDraft(row.id, { sort_order: Number(e.target.value) })}
+                        style={{ ...styles.input, width: 64, height: 30, padding: "0 8px" }}
+                      />
+                    </label>
+                  </div>
+                  <input
+                    type="text"
+                    value={draft.question}
+                    onChange={(e) => updateDraft(row.id, { question: e.target.value })}
+                    placeholder="Вопрос"
+                    style={{ ...styles.input, fontWeight: 600 }}
+                  />
+                  <textarea
+                    value={draft.answer}
+                    onChange={(e) => updateDraft(row.id, { answer: e.target.value })}
+                    rows={4}
+                    placeholder="Ответ (пустая строка = новый абзац, ссылки: [текст](url))"
+                    style={{ ...styles.input, height: "auto", minHeight: 96, padding: "10px 12px" }}
+                  />
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <button
+                      type="button"
+                      onClick={() => handleSave(row.id)}
+                      disabled={isBusy || !dirty}
+                      style={{ ...styles.submit, opacity: isBusy || !dirty ? 0.55 : 1 }}
+                    >
+                      {isBusy ? "Сохраняю…" : "Сохранить"}
+                    </button>
+                    <span style={{ flex: 1 }} />
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(row.id)}
+                      disabled={isBusy}
+                      style={styles.deleteBtn}
+                    >
+                      Удалить
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </section>
     </>
   );
 }
