@@ -37,16 +37,17 @@ function CatalogIcon({ active }: IconProps) {
         transform="rotate(10 13.5 9.75)"
         opacity="0.55"
       />
-      {/* передняя карточка */}
+      {/* передняя карточка — только обводка; в активе цвет берётся
+         из currentColor (accent), толщина чуть больше для веса.     */}
       <rect
         x="3.5"
         y="6.8"
         width="13.5"
         height="14"
         rx="2.5"
-        fill={active ? "currentColor" : "none"}
+        fill="none"
         stroke="currentColor"
-        strokeWidth={active ? 0 : 1.7}
+        strokeWidth={active ? 2 : 1.7}
         strokeLinejoin="round"
       />
     </svg>
