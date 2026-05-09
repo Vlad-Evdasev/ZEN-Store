@@ -122,9 +122,26 @@ productsRouter.delete("/:id", (req, res) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
   const id = parseInt(req.params.id, 10);
-  const result = db.prepare("DELETE FROM products WHERE id = ?").run(id);
-  if (result.changes === 0) return res.status(404).json({ error: "Product not found" });
-  return res.json({ ok: true });
+  // Перед удалением товара чистим все связанные записи, иначе SQLite роняет
+  // FK-проверку у юзеров, которые когда-то добавляли товар в корзину/избранное
+  // или оставляли по нему отзыв. Делаем атомарно в транзакции.
+  const cascadeDelete = db.transaction((productId: number) => {
+    db.prepare("DELETE FROM cart_items WHERE product_id = ?").run(productId);
+    db.prepare("DELETE FROM wishlist WHERE product_id = ?").run(productId);
+    db.prepare("DELETE FROM product_reviews WHERE product_id = ?").run(productId);
+    // posts.product_id хранит привязку к товару, без FK — разрываем ссылку,
+    // чтобы старые посты остались, но больше не указывали на удалённый товар.
+    db.prepare("UPDATE posts SET product_id = NULL WHERE product_id = ?").run(productId);
+    return db.prepare("DELETE FROM products WHERE id = ?").run(productId);
+  });
+  try {
+    const result = cascadeDelete(id);
+    if (result.changes === 0) return res.status(404).json({ error: "Product not found" });
+    return res.json({ ok: true });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Database error";
+    return res.status(500).json({ error: `Ошибка БД: ${msg}` });
+  }
 });
 
 productsRouter.get("/:id/reviews", (req, res) => {
