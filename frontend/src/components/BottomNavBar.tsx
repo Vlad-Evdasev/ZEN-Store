@@ -11,8 +11,8 @@ interface IconProps {
   active: boolean;
 }
 
-/* Каталог — 2×2 сетка скруглённых плиток
-   (метафора витрины: четыре карточки товаров в раскладке).        */
+/* Каталог — вешалка: классическая clothing-метафора, прямая ассоциация
+   с гардеробом / магазином одежды.                                  */
 function CatalogIcon({ active }: IconProps) {
   return (
     <svg
@@ -23,25 +23,25 @@ function CatalogIcon({ active }: IconProps) {
       aria-hidden="true"
       style={{ transition: "transform 0.25s ease" }}
     >
-      {[
-        { x: 3.5, y: 3.5 },
-        { x: 13, y: 3.5 },
-        { x: 3.5, y: 13 },
-        { x: 13, y: 13 },
-      ].map((r, i) => (
-        <rect
-          key={i}
-          x={r.x}
-          y={r.y}
-          width="7.5"
-          height="7.5"
-          rx="2"
-          ry="2"
-          fill={active ? "currentColor" : "none"}
-          stroke="currentColor"
-          strokeWidth={active ? 0 : 1.7}
-        />
-      ))}
+      {/* крючок */}
+      <path
+        d="M12 6 V 4.4 A 1.4 1.4 0 1 0 10.6 3"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      {/* корпус вешалки — равнобедренный треугольник
+         (низ = поперечная штанга, на которой висит вещь)             */}
+      <path
+        d="M3.5 13.5 L 12 6 L 20.5 13.5 Z"
+        fill={active ? "currentColor" : "none"}
+        stroke="currentColor"
+        strokeWidth={active ? 1.4 : 1.7}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
