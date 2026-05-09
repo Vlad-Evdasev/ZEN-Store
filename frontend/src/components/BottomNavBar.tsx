@@ -11,65 +11,110 @@ interface IconProps {
   active: boolean;
 }
 
+/* Каталог — 2×2 сетка скруглённых плиток
+   (метафора витрины: четыре карточки товаров в раскладке).        */
 function CatalogIcon({ active }: IconProps) {
-  const stroke = active ? 1.9 : 1.6;
   return (
     <svg
       width="26"
       height="26"
       viewBox="0 0 24 24"
       fill="none"
-      stroke="currentColor"
-      strokeWidth={stroke}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={{ transition: "stroke-width 0.25s ease" }}
+      aria-hidden="true"
+      style={{ transition: "transform 0.25s ease" }}
     >
-      <path d="M4 7.5l8-4 8 4-8 4-8-4z" />
-      <path d="M4 12l8 4 8-4" />
-      <path d="M4 16.5l8 4 8-4" />
+      {[
+        { x: 3.5, y: 3.5 },
+        { x: 13, y: 3.5 },
+        { x: 3.5, y: 13 },
+        { x: 13, y: 13 },
+      ].map((r, i) => (
+        <rect
+          key={i}
+          x={r.x}
+          y={r.y}
+          width="7.5"
+          height="7.5"
+          rx="2"
+          ry="2"
+          fill={active ? "currentColor" : "none"}
+          stroke="currentColor"
+          strokeWidth={active ? 0 : 1.7}
+        />
+      ))}
     </svg>
   );
 }
 
+/* Custom Order — «волшебная палочка» с искрой:
+   просьба создать что-то на заказ, отличается от поиска и каталога. */
 function CustomOrderIcon({ active }: IconProps) {
-  const stroke = active ? 1.9 : 1.6;
   return (
     <svg
       width="26"
       height="26"
       viewBox="0 0 24 24"
       fill="none"
-      stroke="currentColor"
-      strokeWidth={stroke}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={{ transition: "stroke-width 0.25s ease" }}
+      aria-hidden="true"
+      style={{ transition: "transform 0.25s ease" }}
     >
-      <circle cx="11" cy="11" r="6.5" />
-      <line x1="20.5" y1="20.5" x2="16.1" y2="16.1" />
-      <line x1="11" y1="8" x2="11" y2="14" />
-      <line x1="8" y1="11" x2="14" y2="11" />
+      {/* стержень палочки */}
+      <path
+        d="M5 19L15 9"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+      />
+      {/* кончик-наконечник палочки */}
+      <path
+        d="M14.2 7.8L16.2 5.8L18.2 7.8L16.2 9.8L14.2 7.8Z"
+        fill={active ? "currentColor" : "none"}
+        stroke="currentColor"
+        strokeWidth={active ? 0 : 1.7}
+        strokeLinejoin="round"
+      />
+      {/* большая искра справа сверху */}
+      <path
+        d="M19 12.5L19.6 14.4L21.5 15L19.6 15.6L19 17.5L18.4 15.6L16.5 15L18.4 14.4L19 12.5Z"
+        fill={active ? "currentColor" : "none"}
+        stroke="currentColor"
+        strokeWidth={active ? 0 : 1.5}
+        strokeLinejoin="round"
+      />
+      {/* маленькая искра */}
+      <circle cx="9.5" cy="4.5" r="1" fill="currentColor" />
     </svg>
   );
 }
 
+/* Новинки — 4-конечная «спарк-звезда» с акцентной малой искрой
+   (метафора «just dropped», как в Apple Intelligence).             */
 function ArrivalsIcon({ active }: IconProps) {
-  const stroke = active ? 1.9 : 1.6;
   return (
     <svg
       width="26"
       height="26"
       viewBox="0 0 24 24"
       fill="none"
-      stroke="currentColor"
-      strokeWidth={stroke}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={{ transition: "stroke-width 0.25s ease" }}
+      aria-hidden="true"
+      style={{ transition: "transform 0.25s ease" }}
     >
-      <path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3z" />
-      <path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z" />
+      {/* большая искра с вогнутыми сторонами */}
+      <path
+        d="M11 3 C11.4 7.7 13.3 9.6 18 10 C13.3 10.4 11.4 12.3 11 17 C10.6 12.3 8.7 10.4 4 10 C8.7 9.6 10.6 7.7 11 3 Z"
+        fill={active ? "currentColor" : "none"}
+        stroke="currentColor"
+        strokeWidth={active ? 0 : 1.7}
+        strokeLinejoin="round"
+      />
+      {/* малая акцентная искра */}
+      <path
+        d="M18 16 C18.2 18.1 19 18.9 21 19 C19 19.1 18.2 19.9 18 22 C17.8 19.9 17 19.1 15 19 C17 18.9 17.8 18.1 18 16 Z"
+        fill={active ? "currentColor" : "none"}
+        stroke="currentColor"
+        strokeWidth={active ? 0 : 1.5}
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -79,41 +124,45 @@ export function BottomNavBar({ activeTab, onCatalog, onCustomOrder, onArrivals }
   const isCustom = activeTab === "custom";
   const isArrivals = activeTab === "arrivals";
 
+  const renderItem = (
+    onClick: () => void,
+    isActive: boolean,
+    label: string,
+    Icon: React.ComponentType<IconProps>
+  ) => (
+    <button
+      type="button"
+      onClick={onClick}
+      style={styles.btn}
+      aria-label={label}
+      aria-current={isActive ? "page" : undefined}
+    >
+      <span
+        style={{
+          ...styles.iconWrap,
+          color: isActive ? "var(--accent)" : "var(--text)",
+          transform: isActive ? "translateY(-1px) scale(1.04)" : "translateY(0) scale(1)",
+          opacity: isActive ? 1 : 0.78,
+        }}
+      >
+        <Icon active={isActive} />
+      </span>
+      <span
+        aria-hidden
+        style={{
+          ...styles.dot,
+          background: isActive ? "var(--accent)" : "transparent",
+          transform: isActive ? "scale(1)" : "scale(0)",
+        }}
+      />
+    </button>
+  );
+
   return (
     <nav style={styles.nav}>
-      <button
-        type="button"
-        onClick={onCatalog}
-        style={{ ...styles.btn, ...(isCatalog ? styles.btnActive : {}) }}
-        aria-label="Каталог"
-        aria-current={isCatalog ? "page" : undefined}
-      >
-        <span style={styles.iconWrap}>
-          <CatalogIcon active={isCatalog} />
-        </span>
-      </button>
-      <button
-        type="button"
-        onClick={onCustomOrder}
-        style={{ ...styles.btn, ...(isCustom ? styles.btnActive : {}) }}
-        aria-label="Заказать не из каталога"
-        aria-current={isCustom ? "page" : undefined}
-      >
-        <span style={styles.iconWrap}>
-          <CustomOrderIcon active={isCustom} />
-        </span>
-      </button>
-      <button
-        type="button"
-        onClick={onArrivals}
-        style={{ ...styles.btn, ...(isArrivals ? styles.btnActive : {}) }}
-        aria-label="Товары которые мы привезли"
-        aria-current={isArrivals ? "page" : undefined}
-      >
-        <span style={styles.iconWrap}>
-          <ArrivalsIcon active={isArrivals} />
-        </span>
-      </button>
+      {renderItem(onCatalog, isCatalog, "Каталог", CatalogIcon)}
+      {renderItem(onCustomOrder, isCustom, "Заказать не из каталога", CustomOrderIcon)}
+      {renderItem(onArrivals, isArrivals, "Товары которые мы привезли", ArrivalsIcon)}
     </nav>
   );
 }
@@ -134,7 +183,9 @@ const styles: Record<string, React.CSSProperties> = {
     zIndex: 20,
   },
   btn: {
+    position: "relative",
     display: "flex",
+    flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
     width: 56,
@@ -142,16 +193,21 @@ const styles: Record<string, React.CSSProperties> = {
     background: "transparent",
     border: "none",
     padding: 0,
-    color: "var(--text)",
     cursor: "pointer",
-    transition: "color 0.25s ease",
-  },
-  btnActive: {
-    color: "var(--accent)",
+    WebkitTapHighlightColor: "transparent",
   },
   iconWrap: {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
+    transition: "color 0.22s ease, transform 0.22s ease, opacity 0.22s ease",
+  },
+  dot: {
+    position: "absolute",
+    bottom: 9,
+    width: 4,
+    height: 4,
+    borderRadius: "50%",
+    transition: "transform 0.22s ease, background 0.22s ease",
   },
 };
