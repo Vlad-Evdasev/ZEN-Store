@@ -186,6 +186,7 @@ try {
   `);
 } catch {}
 try { db.exec("CREATE INDEX IF NOT EXISTS idx_bot_messages_user ON bot_messages(user_id, id)"); } catch {}
+try { db.exec("ALTER TABLE bot_messages ADD COLUMN image_url TEXT"); } catch {}
 
 // История рассылок от бота к подписчикам (и опциональным каналам).
 // recipients = JSON [{ user_id, message_ids, error? }]; image_urls = JSON

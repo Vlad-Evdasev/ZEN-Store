@@ -218,34 +218,67 @@ function fullName(first?: string | null, last?: string | null): string | undefin
   return out || undefined;
 }
 
-function saveIncomingMessage(userId: string | number, tgMessageId: number, text: string): void {
+function saveIncomingMessage(userId: string | number, tgMessageId: number, text: string, imageUrl?: string | null): void {
   try {
     db.prepare(
-      "INSERT INTO bot_messages (user_id, direction, text, tg_message_id, read_by_admin) VALUES (?, 'in', ?, ?, 0)"
-    ).run(String(userId), text, tgMessageId);
+      "INSERT INTO bot_messages (user_id, direction, text, tg_message_id, read_by_admin, image_url) VALUES (?, 'in', ?, ?, 0, ?)"
+    ).run(String(userId), text || null, tgMessageId, imageUrl ?? null);
   } catch {
     // ignore
   }
 }
 
-function saveOutgoingMessage(userId: string | number, tgMessageId: number, text: string): void {
+function saveOutgoingMessage(userId: string | number, tgMessageId: number, text: string, imageUrl?: string | null): void {
   try {
     db.prepare(
-      "INSERT INTO bot_messages (user_id, direction, text, tg_message_id, read_by_admin) VALUES (?, 'out', ?, ?, 1)"
-    ).run(String(userId), text, tgMessageId);
+      "INSERT INTO bot_messages (user_id, direction, text, tg_message_id, read_by_admin, image_url) VALUES (?, 'out', ?, ?, 1, ?)"
+    ).run(String(userId), text || null, tgMessageId, imageUrl ?? null);
   } catch {
     // ignore
   }
 }
 
-// Отправка сообщения пользователю от имени бота — для ответа из админ-чата.
-export async function replyAsBot(userId: string | number, text: string): Promise<{ ok: true; messageId: number } | { ok: false; error: string }> {
+// Скачиваем фото из Telegram и кодируем в data:base64, чтобы сохранить целиком в
+// БД и отдать в админку без проксирования через бэкенд (URL Telegram содержит
+// токен бота — экспонировать его наружу нельзя).
+async function downloadTelegramPhotoAsDataUrl(fileId: string): Promise<string | null> {
+  try {
+    const file = await bot.api.getFile(fileId);
+    if (!file.file_path) return null;
+    const url = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const buffer = Buffer.from(await res.arrayBuffer());
+    const ext = file.file_path.split(".").pop()?.toLowerCase() || "jpg";
+    const mime = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
+    return `data:${mime};base64,${buffer.toString("base64")}`;
+  } catch {
+    return null;
+  }
+}
+
+// Отправка сообщения пользователю от имени бота. Поддерживает либо текст, либо
+// текст+фото — для photo-only ответа достаточно imageUrl.
+export async function replyAsBot(
+  userId: string | number,
+  text: string,
+  imageUrl?: string | null
+): Promise<{ ok: true; messageId: number; imageUrl: string | null } | { ok: false; error: string }> {
   const trimmed = (text || "").trim();
-  if (!trimmed) return { ok: false, error: "Пустой текст" };
+  const photo = imageUrl?.trim() || null;
+  if (!trimmed && !photo) return { ok: false, error: "Пустой ответ" };
   try {
+    if (photo) {
+      const msg = await bot.api.sendPhoto(userId, toPhotoSource(photo), {
+        caption: trimmed || undefined,
+        parse_mode: "HTML",
+      });
+      saveOutgoingMessage(userId, msg.message_id, trimmed, photo);
+      return { ok: true, messageId: msg.message_id, imageUrl: photo };
+    }
     const msg = await bot.api.sendMessage(userId, trimmed, { parse_mode: "HTML" });
-    saveOutgoingMessage(userId, msg.message_id, trimmed);
-    return { ok: true, messageId: msg.message_id };
+    saveOutgoingMessage(userId, msg.message_id, trimmed, null);
+    return { ok: true, messageId: msg.message_id, imageUrl: null };
   } catch (e) {
     const err = e instanceof Error ? e.message : String(e);
     if (isUserBlocked(err)) markBotUserBlocked(userId);
@@ -292,6 +325,18 @@ bot.on("message:text", async (ctx) => {
   const text = ctx.message.text;
   if (!text || text.startsWith("/")) return;
   if (ctx.from?.id) saveIncomingMessage(ctx.from.id, ctx.message.message_id, text);
+});
+
+// Фото от пользователя — скачиваем самое большое и сохраняем как data:URL.
+// Caption (если был) идёт текстом сообщения.
+bot.on("message:photo", async (ctx) => {
+  if (!ctx.from?.id) return;
+  const photos = ctx.message.photo;
+  const largest = photos[photos.length - 1];
+  if (!largest) return;
+  const imageUrl = await downloadTelegramPhotoAsDataUrl(largest.file_id);
+  const caption = ctx.message.caption ?? "";
+  saveIncomingMessage(ctx.from.id, ctx.message.message_id, caption, imageUrl);
 });
 
 export function startBot() {

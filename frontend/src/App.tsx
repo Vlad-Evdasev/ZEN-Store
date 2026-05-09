@@ -302,8 +302,6 @@ function App() {
         {page === "newArrivals" && (
           <NewArrivalsPage
             userId={userId || ""}
-            userName={userName}
-            firstName={firstName}
             onBack={openCatalog}
             onProductClick={(id) => openProduct(id, "newArrivals")}
           />

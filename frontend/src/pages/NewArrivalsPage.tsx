@@ -1,19 +1,14 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   getPosts,
   togglePostLike,
-  getPostComments,
-  addPostComment,
   type Post,
-  type PostComment,
 } from "../api";
 import { useSettings, type Lang } from "../context/SettingsContext";
 import { t } from "../i18n";
 
 interface NewArrivalsPageProps {
   userId: string;
-  userName: string | null;
-  firstName: string;
   onBack: () => void;
   onProductClick: (id: number) => void;
 }
@@ -33,29 +28,12 @@ function HeartIcon({ filled }: { filled: boolean }) {
   );
 }
 
-function CommentBubbleIcon() {
-  return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-    </svg>
-  );
-}
-
 function ShopBagIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="rgba(255,255,255,0.9)" stroke="rgba(255,255,255,0.9)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
       <line x1="3" y1="6" x2="21" y2="6" />
       <path d="M16 10a4 4 0 0 1-8 0" />
-    </svg>
-  );
-}
-
-function SendIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="22" y1="2" x2="11" y2="13" />
-      <polygon points="22 2 15 22 11 13 2 9 22 2" />
     </svg>
   );
 }
@@ -74,32 +52,18 @@ function formatPostDate(dateStr: string, lang: Lang): string {
 interface PostCardProps {
   post: Post;
   userId: string;
-  userName: string | null;
-  firstName: string;
   lang: Lang;
   onProductClick: (id: number) => void;
   onLikeToggle: (postId: number, newLiked: boolean, newCount: number) => void;
-  onCommentsCountChange: (postId: number, newCount: number) => void;
 }
 
 function PostCard({
   post,
   userId,
-  userName,
-  firstName,
   lang,
   onProductClick,
   onLikeToggle,
-  onCommentsCountChange,
 }: PostCardProps) {
-  const [commentsOpen, setCommentsOpen] = useState(false);
-  const [comments, setComments] = useState<PostComment[]>([]);
-  const [commentsLoaded, setCommentsLoaded] = useState(false);
-  const [loadingComments, setLoadingComments] = useState(false);
-  const [commentText, setCommentText] = useState("");
-  const [sendingComment, setSendingComment] = useState(false);
-  const commentInputRef = useRef<HTMLInputElement>(null);
-
   const imageSrc = post.image_data || post.image_url;
   const isTappable = post.product_id != null || post.product_url != null;
 
@@ -120,42 +84,6 @@ function PostCard({
       onLikeToggle(post.id, result.liked, result.likes_count);
     } catch {
       onLikeToggle(post.id, wasLiked, prevCount);
-    }
-  };
-
-  const handleToggleComments = async () => {
-    const opening = !commentsOpen;
-    setCommentsOpen(opening);
-    if (opening && !commentsLoaded) {
-      setLoadingComments(true);
-      try {
-        const data = await getPostComments(post.id);
-        setComments(data);
-        setCommentsLoaded(true);
-      } catch {
-        /* silently fail */
-      } finally {
-        setLoadingComments(false);
-      }
-    }
-    if (opening) {
-      setTimeout(() => commentInputRef.current?.focus(), 100);
-    }
-  };
-
-  const handleSendComment = async () => {
-    const text = commentText.trim();
-    if (!text || sendingComment) return;
-    setSendingComment(true);
-    try {
-      const newComment = await addPostComment(post.id, userId, userName || firstName, text);
-      setComments((prev) => [...prev, newComment]);
-      setCommentText("");
-      onCommentsCountChange(post.id, comments.length + 1);
-    } catch {
-      /* silently fail */
-    } finally {
-      setSendingComment(false);
     }
   };
 
@@ -193,67 +121,11 @@ function PostCard({
                 <span style={cardStyles.actionCount}>{post.likes_count}</span>
               )}
             </button>
-            <button
-              type="button"
-              onClick={handleToggleComments}
-              style={cardStyles.actionBtn}
-              aria-label={t(lang, "postShowComments")}
-            >
-              <CommentBubbleIcon />
-              {post.comments_count > 0 && (
-                <span style={cardStyles.actionCount}>{post.comments_count}</span>
-              )}
-            </button>
           </div>
           <span style={cardStyles.date}>{formatPostDate(post.created_at, lang)}</span>
         </div>
 
         {post.caption && <p style={cardStyles.caption}>{post.caption}</p>}
-
-        {commentsOpen && (
-          <div style={cardStyles.commentsSection}>
-            {loadingComments && (
-              <div style={cardStyles.commentsLoading}>...</div>
-            )}
-            {!loadingComments && comments.length > 0 && (
-              <div style={cardStyles.commentsList}>
-                {comments.map((c) => (
-                  <div key={c.id} style={cardStyles.commentItem}>
-                    <div>
-                      <span style={cardStyles.commentAuthor}>{c.user_name || "—"}</span>{" "}
-                      <span style={cardStyles.commentText}>{c.text}</span>
-                    </div>
-                    <span style={cardStyles.commentDate}>{formatPostDate(c.created_at, lang)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div style={cardStyles.commentInputRow}>
-              <input
-                ref={commentInputRef}
-                type="text"
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleSendComment(); }}
-                placeholder={t(lang, "postCommentPlaceholder")}
-                style={cardStyles.commentInput}
-                disabled={sendingComment}
-              />
-              <button
-                type="button"
-                onClick={handleSendComment}
-                disabled={sendingComment || !commentText.trim()}
-                style={{
-                  ...cardStyles.commentSendBtn,
-                  opacity: sendingComment || !commentText.trim() ? 0.4 : 1,
-                }}
-                aria-label={t(lang, "postCommentSend")}
-              >
-                <SendIcon />
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -278,8 +150,6 @@ function SkeletonCard({ index = 0 }: { index?: number }) {
 
 export function NewArrivalsPage({
   userId,
-  userName,
-  firstName,
   onProductClick,
 }: Omit<NewArrivalsPageProps, "onBack"> & { onBack?: NewArrivalsPageProps["onBack"] }) {
   const { settings } = useSettings();
@@ -312,17 +182,6 @@ export function NewArrivalsPage({
           p.id === postId
             ? { ...p, user_liked: newLiked, likes_count: newCount }
             : p
-        )
-      );
-    },
-    []
-  );
-
-  const handleCommentsCountChange = useCallback(
-    (postId: number, newCount: number) => {
-      setPosts((prev) =>
-        prev.map((p) =>
-          p.id === postId ? { ...p, comments_count: newCount } : p
         )
       );
     },
@@ -366,12 +225,9 @@ export function NewArrivalsPage({
               <PostCard
                 post={post}
                 userId={userId}
-                userName={userName}
-                firstName={firstName}
                 lang={lang}
                 onProductClick={onProductClick}
                 onLikeToggle={handleLikeToggle}
-                onCommentsCountChange={handleCommentsCountChange}
               />
             </div>
           ))}

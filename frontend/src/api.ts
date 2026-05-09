@@ -696,6 +696,7 @@ export interface BotConversation {
   username: string | null;
   last_text: string | null;
   last_direction: "in" | "out" | null;
+  last_has_image: boolean;
   last_at: string | null;
   unread_count: number;
 }
@@ -705,6 +706,7 @@ export interface BotMessage {
   user_id: string;
   direction: "in" | "out";
   text: string;
+  image_url: string | null;
   tg_message_id: number | null;
   created_at: string;
 }
@@ -746,11 +748,15 @@ export async function markConversationRead(userId: string, adminSecret: string):
   });
 }
 
-export async function replyToConversation(userId: string, text: string, adminSecret: string): Promise<{ ok: true; message_id: number }> {
+export async function replyToConversation(
+  userId: string,
+  data: { text?: string; image_url?: string | null },
+  adminSecret: string
+): Promise<{ ok: true; message_id: number; image_url: string | null }> {
   const res = await fetch(`${API_URL}/api/admin/conversations/${encodeURIComponent(userId)}/reply`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify(data),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

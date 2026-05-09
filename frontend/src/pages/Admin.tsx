@@ -57,6 +57,27 @@ function TrashIcon() {
   );
 }
 
+function NavIcon({ tab }: { tab: "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" }) {
+  switch (tab) {
+    case "products":
+      return (<svg viewBox="0 0 24 24" aria-hidden><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>);
+    case "categories":
+      return (<svg viewBox="0 0 24 24" aria-hidden><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>);
+    case "orders":
+      return (<svg viewBox="0 0 24 24" aria-hidden><path d="M9 3h6l1 4H8z"/><rect x="4" y="7" width="16" height="14" rx="2"/></svg>);
+    case "customOrders":
+      return (<svg viewBox="0 0 24 24" aria-hidden><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M9 14l2 2 4-4"/></svg>);
+    case "currencyRate":
+      return (<svg viewBox="0 0 24 24" aria-hidden><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 9h5a2 2 0 010 4H9.5a2 2 0 000 4H15"/></svg>);
+    case "posts":
+      return (<svg viewBox="0 0 24 24" aria-hidden><rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="9" cy="9" r="1.6"/><path d="M21 15l-5-5L5 21"/></svg>);
+    case "channel":
+      return (<svg viewBox="0 0 24 24" aria-hidden><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg>);
+    case "chats":
+      return (<svg viewBox="0 0 24 24" aria-hidden><path d="M21 11.5a8.4 8.4 0 01-1.2 4.4 8.5 8.5 0 01-7.4 4.1 8.4 8.4 0 01-4.4-1.2L3 20l1.2-4.9A8.4 8.4 0 013 10.5a8.5 8.5 0 014.2-7.4A8.4 8.4 0 0111.5 2h.5a8.5 8.5 0 018 8z"/></svg>);
+  }
+}
+
 /** Ссылка для открытия диалога с пользователем в Telegram */
 function telegramChatLink(username?: string | null, userId?: string): string {
   if (username && String(username).trim()) {
@@ -167,30 +188,31 @@ export function Admin() {
         <aside className="admin-sidebar">
           <div className="admin-sidebar-title">RAW Admin</div>
           <button type="button" onClick={() => setTabAndReset("products")} className={`admin-nav-btn ${tab === "products" ? "active" : ""}`}>
-            Товары
+            <NavIcon tab="products" /> Товары
           </button>
           <button type="button" onClick={() => setTabAndReset("categories")} className={`admin-nav-btn ${tab === "categories" ? "active" : ""}`}>
-            Категории
+            <NavIcon tab="categories" /> Категории
           </button>
           <button type="button" onClick={() => setTabAndReset("orders")} className={`admin-nav-btn ${tab === "orders" ? "active" : ""}`}>
-            Заказы
+            <NavIcon tab="orders" /> Заказы
           </button>
           <button type="button" onClick={() => setTabAndReset("customOrders")} className={`admin-nav-btn ${tab === "customOrders" ? "active" : ""}`}>
-            Заявки не из каталога
+            <NavIcon tab="customOrders" /> Заявки не из каталога
           </button>
           <button type="button" onClick={() => setTabAndReset("currencyRate")} className={`admin-nav-btn ${tab === "currencyRate" ? "active" : ""}`}>
-            Курс валюты
+            <NavIcon tab="currencyRate" /> Курс валюты
           </button>
           <button type="button" onClick={() => setTabAndReset("posts")} className={`admin-nav-btn ${tab === "posts" ? "active" : ""}`}>
-            Посты
+            <NavIcon tab="posts" /> Посты
           </button>
           <button type="button" onClick={() => setTabAndReset("channel")} className={`admin-nav-btn ${tab === "channel" ? "active" : ""}`}>
-            Рассылка
+            <NavIcon tab="channel" /> Рассылка
           </button>
-          <button type="button" onClick={() => setTabAndReset("chats")} className={`admin-nav-btn ${tab === "chats" ? "active" : ""}`} style={{ position: "relative" }}>
-            Чаты
+          <button type="button" onClick={() => setTabAndReset("chats")} className={`admin-nav-btn ${tab === "chats" ? "active" : ""}`}>
+            <NavIcon tab="chats" />
+            <span style={{ flex: 1 }}>Чаты</span>
             {chatsUnread > 0 && (
-              <span style={{ position: "absolute", top: 8, right: 12, background: "var(--accent)", color: "#fff", borderRadius: 999, fontSize: 11, fontWeight: 700, minWidth: 18, height: 18, display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 6px" }}>
+              <span style={{ background: "var(--accent)", color: "#fff", borderRadius: 999, fontSize: 11, fontWeight: 700, minWidth: 18, height: 18, display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 6px" }}>
                 {chatsUnread > 99 ? "99+" : chatsUnread}
               </span>
             )}
@@ -1028,8 +1050,11 @@ function ChatsTab({ adminSecret, onUnreadChanged }: { adminSecret: string; onUnr
   const [messages, setMessages] = useState<BotMessage[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [reply, setReply] = useState("");
+  const [replyImage, setReplyImage] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const replyFileRef = useRef<HTMLInputElement | null>(null);
 
   const refreshConversations = () => {
     setLoading(true);
@@ -1077,11 +1102,13 @@ function ChatsTab({ adminSecret, onUnreadChanged }: { adminSecret: string; onUnr
 
   const handleReply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUserId || !reply.trim()) return;
+    if (!selectedUserId) return;
+    if (!reply.trim() && !replyImage) return;
     setSending(true);
     try {
-      await replyToConversation(selectedUserId, reply.trim(), adminSecret);
+      await replyToConversation(selectedUserId, { text: reply.trim(), image_url: replyImage }, adminSecret);
       setReply("");
+      setReplyImage(null);
       loadMessages(selectedUserId);
       refreshConversations();
     } catch (err) {
@@ -1089,6 +1116,18 @@ function ChatsTab({ adminSecret, onUnreadChanged }: { adminSecret: string; onUnr
     } finally {
       setSending(false);
     }
+  };
+
+  const onReplyFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      if (typeof dataUrl === "string") setReplyImage(dataUrl);
+    };
+    reader.readAsDataURL(file);
   };
 
   const selected = conversations.find((c) => c.user_id === selectedUserId) ?? null;
@@ -1136,7 +1175,8 @@ function ChatsTab({ adminSecret, onUnreadChanged }: { adminSecret: string; onUnr
                         {c.last_at && <span style={{ fontSize: 10, color: "var(--muted)", whiteSpace: "nowrap" }}>{relTime(c.last_at)}</span>}
                       </div>
                       <div style={{ fontSize: 12, color: "var(--muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: 2 }}>
-                        {c.last_direction === "out" ? "Ты: " : ""}{c.last_text || "—"}
+                        {c.last_direction === "out" ? "Ты: " : ""}
+                        {c.last_text?.trim() || (c.last_has_image ? "📷 Фото" : "—")}
                       </div>
                     </div>
                     {c.unread_count > 0 && (
@@ -1180,6 +1220,8 @@ function ChatsTab({ adminSecret, onUnreadChanged }: { adminSecret: string; onUnr
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {messages.map((m) => {
                       const isOut = m.direction === "out";
+                      const hasText = !!m.text?.trim();
+                      const hasImage = !!m.image_url;
                       return (
                         <div key={m.id} style={{ alignSelf: isOut ? "flex-end" : "flex-start", maxWidth: "78%" }}>
                           <div style={{
@@ -1187,13 +1229,26 @@ function ChatsTab({ adminSecret, onUnreadChanged }: { adminSecret: string; onUnr
                             color: isOut ? "#fff" : "var(--text)",
                             border: isOut ? "none" : "1px solid var(--border)",
                             borderRadius: 14,
-                            padding: "8px 12px",
+                            padding: hasImage ? 4 : "8px 12px",
                             fontSize: 14,
                             lineHeight: 1.4,
                             whiteSpace: "pre-wrap",
                             wordBreak: "break-word",
+                            overflow: "hidden",
                           }}>
-                            {m.text}
+                            {hasImage && m.image_url && (
+                              <img
+                                src={m.image_url}
+                                alt=""
+                                onClick={() => setPreviewImage(m.image_url)}
+                                style={{ display: "block", maxWidth: 320, maxHeight: 320, borderRadius: 11, objectFit: "cover", cursor: "zoom-in" }}
+                              />
+                            )}
+                            {hasText && (
+                              <div style={{ padding: hasImage ? "8px 8px 4px" : 0 }}>
+                                {m.text}
+                              </div>
+                            )}
                           </div>
                           <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 3, textAlign: isOut ? "right" : "left" }}>
                             {relTime(m.created_at)}
@@ -1206,23 +1261,54 @@ function ChatsTab({ adminSecret, onUnreadChanged }: { adminSecret: string; onUnr
                 )}
               </div>
 
-              <form onSubmit={handleReply} style={{ display: "flex", gap: 8, padding: 12, borderTop: "1px solid var(--border)" }}>
-                <input
-                  type="text"
-                  value={reply}
-                  onChange={(e) => setReply(e.target.value)}
-                  placeholder="Ответить от имени бота…"
-                  style={{ ...styles.input, flex: 1, marginBottom: 0 }}
-                  disabled={sending}
-                />
-                <button type="submit" style={styles.submit} disabled={sending || !reply.trim()}>
-                  {sending ? "Отправка…" : "Отправить"}
-                </button>
+              <form onSubmit={handleReply} style={{ display: "flex", flexDirection: "column", gap: 8, padding: 12, borderTop: "1px solid var(--border)" }}>
+                {replyImage && (
+                  <div style={{ position: "relative", alignSelf: "flex-start", borderRadius: 10, overflow: "hidden", border: "1px solid var(--border)" }}>
+                    <img src={replyImage} alt="" style={{ display: "block", maxHeight: 140, maxWidth: 200, objectFit: "cover" }} />
+                    <button
+                      type="button"
+                      onClick={() => setReplyImage(null)}
+                      title="Убрать"
+                      style={{ position: "absolute", top: 6, right: 6, width: 24, height: 24, borderRadius: "50%", border: "none", background: "rgba(0,0,0,0.7)", color: "#fff", cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0 }}
+                    >×</button>
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => replyFileRef.current?.click()}
+                    style={{ ...styles.smallBtn, padding: "10px 12px" }}
+                    title="Прикрепить фото"
+                    disabled={sending}
+                  >
+                    📎
+                  </button>
+                  <input
+                    ref={replyFileRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={onReplyFileChange}
+                  />
+                  <input
+                    type="text"
+                    value={reply}
+                    onChange={(e) => setReply(e.target.value)}
+                    placeholder={replyImage ? "Подпись (необязательно)…" : "Ответить от имени бота…"}
+                    style={{ ...styles.input, flex: 1, marginBottom: 0 }}
+                    disabled={sending}
+                  />
+                  <button type="submit" style={styles.submit} disabled={sending || (!reply.trim() && !replyImage)}>
+                    {sending ? "Отправка…" : "Отправить"}
+                  </button>
+                </div>
               </form>
             </>
           )}
         </div>
       </div>
+
+      {previewImage && <ImagePreviewModal src={previewImage} onClose={() => setPreviewImage(null)} />}
     </>
   );
 }
@@ -2088,34 +2174,34 @@ function PostsTab({ products, adminSecret }: { products: Product[]; adminSecret:
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  authWrap: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 },
-  authCard: { width: "100%", maxWidth: 380, padding: 32, background: "var(--surface)", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)" },
+  authWrap: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: "var(--bg)" },
+  authCard: { width: "100%", maxWidth: 380, padding: 32, background: "var(--surface)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-lg)", border: "1px solid var(--border)" },
   authForm: { display: "flex", flexDirection: "column", gap: 16 },
-  authError: { color: "#c62828", fontSize: 14 },
-  title: { fontFamily: "Unbounded, sans-serif", fontSize: 22, fontWeight: 600, marginBottom: 24 },
-  label: { fontSize: 14, color: "var(--muted)", display: "flex", flexDirection: "column", gap: 6 },
-  input: { padding: 12, background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text)", fontSize: 15, fontFamily: "inherit" },
-  submit: { padding: 14, background: "var(--accent)", border: "none", borderRadius: 8, color: "#fff", fontSize: 15, fontWeight: 600, cursor: "pointer" },
-  sidebarFooter: { paddingTop: 16, borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 8 },
-  logoutBtn: { padding: "10px 14px", background: "none", border: "1px solid var(--border)", borderRadius: 8, color: "var(--muted)", fontSize: 13, cursor: "pointer", marginTop: 8 },
-  checkBtn: { padding: "8px 12px", background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 6, color: "var(--text)", fontSize: 12, cursor: "pointer" },
-  apiHint: { marginTop: 2, fontSize: 11, color: "var(--muted)" },
-  pageTitle: { fontSize: 22, fontWeight: 600, marginBottom: 20 },
-  emptyBlock: { padding: 48, textAlign: "center", background: "var(--surface)", borderRadius: 12, border: "1px solid var(--border)" },
-  tableWrap: { background: "var(--surface)", borderRadius: 12, border: "1px solid var(--border)", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" },
-  hint: { color: "var(--muted)", fontSize: 14, marginBottom: 12 },
-  form: { display: "flex", flexDirection: "column", gap: 12, marginBottom: 24, padding: 24, background: "var(--surface)", borderRadius: 12, border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" },
-  message: { color: "var(--accent)", fontSize: 14, marginBottom: 12 },
-  formActions: { display: "flex", gap: 12, alignItems: "center" },
-  cancelBtn: { padding: 12, background: "none", border: "1px solid var(--border)", borderRadius: 8, color: "var(--muted)", fontSize: 14, cursor: "pointer" },
-  list: { padding: 24, background: "var(--surface)", borderRadius: 12, border: "1px solid var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" },
-  subtitle: { fontSize: 18, fontWeight: 600, marginBottom: 20 },
+  authError: { color: "var(--accent)", fontSize: 14 },
+  title: { fontFamily: "inherit", fontSize: 22, fontWeight: 600, letterSpacing: "-0.02em", marginBottom: 24 },
+  label: { fontSize: 13, fontWeight: 500, color: "var(--muted)", display: "flex", flexDirection: "column", gap: 6 },
+  input: { padding: "10px 14px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", color: "var(--text)", fontSize: 14, fontFamily: "inherit", lineHeight: 1.4 },
+  submit: { padding: "11px 22px", background: "var(--accent)", border: "none", borderRadius: "var(--radius-sm)", color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer", letterSpacing: "-0.005em", boxShadow: "0 1px 2px rgba(198, 40, 40, 0.18), inset 0 1px 0 rgba(255,255,255,0.12)" },
+  sidebarFooter: { paddingTop: 14, borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 6, marginTop: 14 },
+  logoutBtn: { padding: "9px 12px", background: "transparent", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", color: "var(--muted)", fontSize: 13, fontWeight: 500, cursor: "pointer", marginTop: 4 },
+  checkBtn: { padding: "8px 12px", background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", color: "var(--text)", fontSize: 12, fontWeight: 500, cursor: "pointer" },
+  apiHint: { marginTop: 2, fontSize: 11, color: "var(--muted-soft)", letterSpacing: "0.01em", lineHeight: 1.45 },
+  pageTitle: { fontSize: 24, fontWeight: 600, letterSpacing: "-0.025em", marginBottom: 6, marginTop: 0 },
+  emptyBlock: { padding: 48, textAlign: "center", background: "var(--surface)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border)" },
+  tableWrap: { background: "var(--surface)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border)", overflow: "hidden", boxShadow: "var(--shadow-xs)" },
+  hint: { color: "var(--muted)", fontSize: 13, lineHeight: 1.5, marginBottom: 12 },
+  form: { display: "flex", flexDirection: "column", gap: 12, marginBottom: 24, padding: 24, background: "var(--surface)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border)", boxShadow: "var(--shadow-xs)" },
+  message: { color: "var(--accent)", fontSize: 13, fontWeight: 500, marginBottom: 4 },
+  formActions: { display: "flex", gap: 10, alignItems: "center", marginTop: 4 },
+  cancelBtn: { padding: "11px 18px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", color: "var(--text-secondary)", fontSize: 14, fontWeight: 500, cursor: "pointer" },
+  list: { padding: 24, background: "var(--surface)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border)", boxShadow: "var(--shadow-xs)" },
+  subtitle: { fontSize: 17, fontWeight: 600, letterSpacing: "-0.018em", marginBottom: 16 },
   productRow: { display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: "1px solid var(--border)" },
   productInfo: { flex: 1, minWidth: 0 },
   productActions: { display: "flex", gap: 8 },
-  smallBtn: { padding: "8px 14px", background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 6, color: "var(--text)", fontSize: 13, cursor: "pointer" },
-  deleteBtn: { padding: "8px 14px", background: "rgba(196, 30, 58, 0.1)", border: "1px solid var(--accent)", borderRadius: 6, color: "var(--accent)", fontSize: 13, cursor: "pointer" },
-  thumb: { width: 48, height: 48, objectFit: "cover", borderRadius: 8 },
+  smallBtn: { padding: "8px 12px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", color: "var(--text-secondary)", fontSize: 13, fontWeight: 500, cursor: "pointer" },
+  deleteBtn: { padding: "8px 12px", background: "var(--accent-soft)", border: "1px solid transparent", borderRadius: "var(--radius-sm)", color: "var(--accent)", fontSize: 13, fontWeight: 500, cursor: "pointer" },
+  thumb: { width: 52, height: 52, objectFit: "cover", borderRadius: "var(--radius-sm)", flexShrink: 0 },
   productName: { fontWeight: 600 },
   productPrice: { fontSize: 14, color: "var(--muted)" },
   storeDetail: { marginBottom: 24 },
