@@ -1148,14 +1148,19 @@ html[data-theme="light"] .zen-app .product-card-price {
   }
 }
 
-/* Карточка без блока: hover без тени, только лёгкий подъём */
+/* Hover для карточек товара. У --text-below (каталог + избранное) lift
+   не используем — он визуально обрезается за фиксированной поисковой
+   пилюлей, когда карточка проскрол-лена к её нижнему краю. Вместо
+   подъёма — лёгкий fade/scale картинки. */
 @media (hover: hover) {
-  .zen-app .product-card--text-below:hover {
-    transform: translateY(-2px);
-    box-shadow: none;
-  }
   .zen-app .product-card--text-below {
     transition: transform 0.25s ease;
+  }
+  .zen-app .product-card--text-below:hover .product-card__image-wrap img {
+    transform: scale(1.025);
+  }
+  .zen-app .product-card--text-below .product-card__image-wrap img {
+    transition: transform 0.35s ease;
   }
   .zen-app .product-card:not(.product-card--text-below):hover {
     transform: translateY(-2px);
