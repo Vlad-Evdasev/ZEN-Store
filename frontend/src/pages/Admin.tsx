@@ -153,7 +153,15 @@ export function Admin() {
     return (
       <div className="zen-admin" style={styles.authWrap}>
         <div style={styles.authCard}>
-          <h1 style={styles.title}>Админ-панель</h1>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+            <span style={{
+              width: 28, height: 28, borderRadius: 8,
+              background: "linear-gradient(135deg, var(--accent), var(--accent-hover))",
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.18), 0 4px 10px -4px var(--accent-glow)",
+            }} aria-hidden />
+            <h1 style={{ ...styles.title, marginBottom: 0 }}>RAW Admin</h1>
+          </div>
+          <p style={{ ...styles.hint, marginBottom: 22 }}>Введи пароль администратора, чтобы продолжить.</p>
           <form onSubmit={handleLogin} style={styles.authForm}>
             <label style={styles.label}>
               Пароль
@@ -161,14 +169,15 @@ export function Admin() {
                 type="password"
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
-                placeholder="Введите пароль"
+                placeholder="••••••••"
                 style={styles.input}
                 autoComplete="current-password"
+                autoFocus
               />
             </label>
             {authError && <p style={styles.authError}>{authError}</p>}
-            <button type="submit" style={styles.submit}>
-              Войти
+            <button type="submit" style={{ ...styles.submit, width: "100%" }}>
+              Войти →
             </button>
           </form>
         </div>
@@ -218,15 +227,23 @@ export function Admin() {
           </button>
           <div style={{ flex: 1 }} />
           <div style={styles.sidebarFooter}>
-            <button type="button" onClick={() => checkApiHealth().then(setApiStatus)} style={styles.checkBtn}>
-              Проверить API
+            <button
+              type="button"
+              onClick={() => checkApiHealth().then(setApiStatus)}
+              style={styles.checkBtn}
+              title="Пинг бэкенда"
+            >
+              <span style={{
+                display: "inline-block", width: 7, height: 7, borderRadius: "50%", marginRight: 7,
+                background: apiStatus == null ? "var(--muted-soft)" : apiStatus.ok ? "var(--green)" : "var(--accent)",
+                boxShadow: apiStatus?.ok ? "0 0 0 3px var(--green-soft)" : undefined,
+              }} />
+              {apiStatus == null ? "Проверить API" : apiStatus.ok ? "API онлайн" : "API недоступен"}
             </button>
-            {apiStatus && (
-              <p style={{ ...styles.apiHint, color: apiStatus.ok ? "var(--accent)" : "#c62828" }}>
-                {apiStatus.ok ? "✓ API ок" : `✗ ${apiStatus.error}`}
-              </p>
+            {apiStatus && !apiStatus.ok && (
+              <p style={{ ...styles.apiHint, color: "var(--accent)" }}>{apiStatus.error}</p>
             )}
-            <p style={styles.apiHint}>API: {API_URL}</p>
+            <p style={{ ...styles.apiHint, wordBreak: "break-all" }}>{API_URL.replace(/^https?:\/\//, "")}</p>
             <button
               type="button"
               onClick={() => {
@@ -671,7 +688,7 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
                 {c.user_address && <p style={styles.orderField}>📍 {c.user_address}</p>}
 
                 {isEditing ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8, padding: 12, background: "var(--surface-elevated)", borderRadius: 10 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8, padding: 12, background: "var(--surface-2)", borderRadius: 10 }}>
                     <label style={styles.label}>Описание / название</label>
                     <textarea
                       value={editDesc}
@@ -2220,76 +2237,81 @@ const styles: Record<string, React.CSSProperties> = {
   authForm: { display: "flex", flexDirection: "column", gap: 16 },
   authError: { color: "var(--accent)", fontSize: 14 },
   title: { fontFamily: "inherit", fontSize: 22, fontWeight: 600, letterSpacing: "-0.02em", marginBottom: 24 },
-  label: { fontSize: 13, fontWeight: 500, color: "var(--muted)", display: "flex", flexDirection: "column", gap: 6 },
-  input: { padding: "10px 14px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", color: "var(--text)", fontSize: 14, fontFamily: "inherit", lineHeight: 1.4 },
-  submit: { padding: "11px 22px", background: "var(--accent)", border: "none", borderRadius: "var(--radius-sm)", color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer", letterSpacing: "-0.005em", boxShadow: "0 1px 2px rgba(198, 40, 40, 0.18), inset 0 1px 0 rgba(255,255,255,0.12)" },
-  sidebarFooter: { paddingTop: 14, borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 6, marginTop: 14 },
-  logoutBtn: { padding: "9px 12px", background: "transparent", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", color: "var(--muted)", fontSize: 13, fontWeight: 500, cursor: "pointer", marginTop: 4 },
-  checkBtn: { padding: "8px 12px", background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", color: "var(--text)", fontSize: 12, fontWeight: 500, cursor: "pointer" },
-  apiHint: { marginTop: 2, fontSize: 11, color: "var(--muted-soft)", letterSpacing: "0.01em", lineHeight: 1.45 },
-  pageTitle: { fontSize: 24, fontWeight: 600, letterSpacing: "-0.025em", marginBottom: 6, marginTop: 0 },
-  emptyBlock: { padding: 48, textAlign: "center", background: "var(--surface)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border)" },
-  tableWrap: { background: "var(--surface)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border)", overflow: "hidden", boxShadow: "var(--shadow-xs)" },
-  hint: { color: "var(--muted)", fontSize: 13, lineHeight: 1.5, marginBottom: 12 },
-  form: { display: "flex", flexDirection: "column", gap: 12, marginBottom: 24, padding: 24, background: "var(--surface)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border)", boxShadow: "var(--shadow-xs)" },
-  message: { color: "var(--accent)", fontSize: 13, fontWeight: 500, marginBottom: 4 },
-  formActions: { display: "flex", gap: 10, alignItems: "center", marginTop: 4 },
-  cancelBtn: { padding: "11px 18px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", color: "var(--text-secondary)", fontSize: 14, fontWeight: 500, cursor: "pointer" },
-  list: { padding: 24, background: "var(--surface)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border)", boxShadow: "var(--shadow-xs)" },
-  subtitle: { fontSize: 17, fontWeight: 600, letterSpacing: "-0.018em", marginBottom: 16 },
+  label: { fontSize: 12.5, fontWeight: 500, color: "var(--muted)", display: "flex", flexDirection: "column", gap: 6, letterSpacing: 0 },
+  input: { padding: "9px 12px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", color: "var(--text)", fontSize: 14, fontFamily: "inherit", lineHeight: 1.4, height: 36, boxSizing: "border-box" },
+  submit: { padding: "0 18px", height: 36, background: "var(--text)", border: "1px solid var(--text)", borderRadius: "var(--radius-sm)", color: "#fff", fontSize: 13.5, fontWeight: 500, cursor: "pointer", letterSpacing: "-0.005em", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 },
+  sidebarFooter: { paddingTop: 12, borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 6, marginTop: 14 },
+  logoutBtn: { padding: "0 12px", height: 32, background: "transparent", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", color: "var(--muted)", fontSize: 12.5, fontWeight: 500, cursor: "pointer", marginTop: 4 },
+  checkBtn: { padding: "0 10px", height: 28, background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", color: "var(--text-2)", fontSize: 12, fontWeight: 500, cursor: "pointer" },
+  apiHint: { marginTop: 2, fontSize: 10.5, color: "var(--muted-soft)", letterSpacing: "0.01em", lineHeight: 1.45 },
+  pageTitle: { fontSize: 22, fontWeight: 600, letterSpacing: "-0.022em", marginBottom: 4, marginTop: 0, color: "var(--text)" },
+  emptyBlock: { padding: 56, textAlign: "center", background: "var(--surface)", borderRadius: "var(--radius-lg)", border: "1px dashed var(--border)" },
+  tableWrap: { background: "var(--surface)", borderRadius: "var(--radius-md)", border: "1px solid var(--border)", overflow: "hidden" },
+  hint: { color: "var(--muted)", fontSize: 13, lineHeight: 1.55, marginBottom: 16 },
+  form: { display: "flex", flexDirection: "column", gap: 11, marginBottom: 22, padding: 20, background: "var(--surface)", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" },
+  message: { color: "var(--accent)", fontSize: 12.5, fontWeight: 500, marginBottom: 4 },
+  formActions: { display: "flex", gap: 8, alignItems: "center", marginTop: 4 },
+  cancelBtn: { padding: "0 14px", height: 36, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", color: "var(--text-2)", fontSize: 13.5, fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center" },
+  list: { padding: 20, background: "var(--surface)", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" },
+  subtitle: { fontSize: 14, fontWeight: 600, letterSpacing: "-0.012em", marginBottom: 14, color: "var(--text)", textTransform: "none" },
   productRow: { display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: "1px solid var(--border)" },
   productInfo: { flex: 1, minWidth: 0 },
-  productActions: { display: "flex", gap: 8 },
-  smallBtn: { padding: "8px 12px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", color: "var(--text-secondary)", fontSize: 13, fontWeight: 500, cursor: "pointer" },
-  deleteBtn: { padding: "8px 12px", background: "var(--accent-soft)", border: "1px solid transparent", borderRadius: "var(--radius-sm)", color: "var(--accent)", fontSize: 13, fontWeight: 500, cursor: "pointer" },
-  thumb: { width: 52, height: 52, objectFit: "cover", borderRadius: "var(--radius-sm)", flexShrink: 0 },
-  productName: { fontWeight: 600 },
-  productPrice: { fontSize: 14, color: "var(--muted)" },
+  productActions: { display: "flex", gap: 6 },
+  smallBtn: { padding: "0 10px", height: 30, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", color: "var(--text-2)", fontSize: 12.5, fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 },
+  deleteBtn: { padding: "0 10px", height: 30, background: "var(--accent-soft)", border: "1px solid transparent", borderRadius: "var(--radius-sm)", color: "var(--accent)", fontSize: 12.5, fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center" },
+  thumb: { width: 44, height: 44, objectFit: "cover", borderRadius: "var(--radius-sm)", flexShrink: 0, border: "1px solid var(--border)" },
+  productName: { fontWeight: 600, fontSize: 13.5, letterSpacing: "-0.005em" },
+  productPrice: { fontSize: 12.5, color: "var(--muted)" },
   storeDetail: { marginBottom: 24 },
-  backBtn: { background: "none", border: "none", color: "var(--muted)", fontSize: 14, cursor: "pointer", marginBottom: 16 },
-  sectionTitle: { fontSize: 14, marginTop: 20, marginBottom: 8, fontWeight: 600 },
-  productActionsRow: { display: "flex", gap: 8, marginBottom: 12 },
-  modalList: { marginTop: 12, padding: 12, background: "var(--bg)", borderRadius: 8, maxHeight: 280, overflowY: "auto" },
-  modalOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 },
-  modal: { background: "var(--surface)", borderRadius: 12, padding: 24, maxWidth: 480, width: "100%", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 8px 32px rgba(0,0,0,0.12)" },
-  orderCard: { padding: 16, marginBottom: 12, background: "var(--surface)", borderRadius: 12, border: "1px solid var(--border)" },
-  orderHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
-  orderId: { fontWeight: 700, fontSize: 16 },
-  orderStatus: { fontSize: 13 },
-  orderThumb: { maxWidth: 64, maxHeight: 64, objectFit: "cover", borderRadius: 8, display: "block" },
-  orderField: { fontSize: 14, marginBottom: 4, color: "var(--text)" },
-  orderDate: { fontSize: 12, color: "var(--muted)", marginTop: 8, marginBottom: 12 },
-  orderActions: { display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" },
-  contactLink: { color: "var(--accent)", fontSize: 13, textDecoration: "none" },
+  backBtn: { background: "none", border: "none", color: "var(--muted)", fontSize: 13, cursor: "pointer", marginBottom: 16 },
+  sectionTitle: { fontSize: 13, marginTop: 20, marginBottom: 8, fontWeight: 600 },
+  productActionsRow: { display: "flex", gap: 6, marginBottom: 12 },
+  modalList: { marginTop: 12, padding: 12, background: "var(--bg)", borderRadius: "var(--radius-sm)", maxHeight: 280, overflowY: "auto" },
+  modalOverlay: { position: "fixed", inset: 0, background: "rgba(9,9,11,0.55)", backdropFilter: "blur(4px)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 },
+  modal: { background: "var(--surface)", borderRadius: "var(--radius-lg)", padding: 24, maxWidth: 480, width: "100%", maxHeight: "90vh", overflowY: "auto", boxShadow: "var(--shadow-lg)", border: "1px solid var(--border)" },
+  orderCard: { padding: 16, marginBottom: 10, background: "var(--surface)", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" },
+  orderHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
+  orderId: { fontWeight: 600, fontSize: 13.5, letterSpacing: "-0.005em", fontVariantNumeric: "tabular-nums" },
+  orderStatus: { fontSize: 12.5 },
+  orderThumb: { maxWidth: 64, maxHeight: 64, objectFit: "cover", borderRadius: "var(--radius-sm)", display: "block", border: "1px solid var(--border)" },
+  orderField: { fontSize: 13, marginBottom: 4, color: "var(--text)" },
+  orderDate: { fontSize: 11.5, color: "var(--muted)", marginTop: 6, marginBottom: 10, letterSpacing: 0, fontVariantNumeric: "tabular-nums" },
+  orderActions: { display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" },
+  contactLink: { color: "var(--accent)", fontSize: 12.5, textDecoration: "none", fontWeight: 500 },
   statusSelect: {
-    padding: "8px 12px",
+    padding: "0 10px",
+    height: 30,
     background: "var(--surface)",
     border: "1px solid var(--border)",
-    borderRadius: 6,
-    fontSize: 13,
+    borderRadius: "var(--radius-sm)",
+    fontSize: 12.5,
     fontFamily: "inherit",
     cursor: "pointer",
+    color: "var(--text-2)",
   },
   deleteOrderBtn: {
-    padding: "6px 10px",
-    background: "rgba(196, 30, 58, 0.1)",
-    border: "1px solid var(--accent)",
-    borderRadius: 6,
+    padding: "0 10px",
+    height: 28,
+    background: "var(--accent-soft)",
+    border: "1px solid transparent",
+    borderRadius: "var(--radius-sm)",
     color: "var(--accent)",
     fontSize: 12,
     fontFamily: "inherit",
     cursor: "pointer",
   },
   deleteOrderIconBtn: {
-    padding: 6,
-    border: "none",
-    background: "none",
-    color: "var(--accent)",
+    width: 30,
+    height: 30,
+    padding: 0,
+    border: "1px solid var(--border)",
+    background: "var(--surface)",
+    color: "var(--muted)",
     cursor: "pointer",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 6,
+    borderRadius: "var(--radius-sm)",
   },
   supportListPanel: {
     background: "var(--surface)",
