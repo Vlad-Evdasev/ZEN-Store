@@ -10,7 +10,7 @@
   margin: -16px -16px 0;
   margin-left: calc(-1 * max(16px, env(safe-area-inset-left)));
   margin-right: calc(-1 * max(16px, env(safe-area-inset-right)));
-  padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: 0;
 }
 
 /* ─── HERO ─── */
@@ -150,7 +150,7 @@
 .product-v2__sheet {
   position: relative;
   margin-top: 0;
-  padding: 20px 20px calc(120px + env(safe-area-inset-bottom, 0px));
+  padding: 20px 20px calc(96px + env(safe-area-inset-bottom, 0px));
   padding-left: max(20px, env(safe-area-inset-left));
   padding-right: max(20px, env(safe-area-inset-right));
   background: var(--bg);
