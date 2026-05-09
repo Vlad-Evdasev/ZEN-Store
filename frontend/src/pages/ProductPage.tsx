@@ -38,6 +38,8 @@ export function ProductPage({
   const [imageIndex, setImageIndex] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const wheelLockedRef = useRef(false);
 
   const sizes = product ? product.sizes.split(",").map((s) => s.trim()) : [];
 
@@ -103,14 +105,37 @@ export function ProductPage({
 
   const handleGalleryTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
   };
   const handleGalleryTouchEnd = (e: React.TouchEvent) => {
     if (imageUrls.length <= 1) return;
     const endX = e.changedTouches[0].clientX;
+    const endY = e.changedTouches[0].clientY;
     const dx = endX - touchStartX.current;
+    const dy = endY - touchStartY.current;
+    // Игнорируем жест, если он более вертикальный, чем горизонтальный —
+    // пользователь скроллил страницу, а не листал галерею.
+    if (Math.abs(dx) <= Math.abs(dy)) return;
     const minSwipe = 50;
     if (dx > minSwipe) goPrevImage();
     else if (dx < -minSwipe) goNextImage();
+  };
+
+  // Скролл-колесо/тачпад: горизонтальный wheel-event на ноутбуке
+  // (Mac trackpad two-finger swipe) переключает фото. Throttle,
+  // чтобы один жест не пролистал сразу всю галерею.
+  const handleGalleryWheel = (e: React.WheelEvent) => {
+    if (imageUrls.length <= 1) return;
+    if (wheelLockedRef.current) return;
+    const ax = Math.abs(e.deltaX);
+    const ay = Math.abs(e.deltaY);
+    if (ax <= ay || ax < 18) return; // не достаточно горизонтально
+    if (e.deltaX > 0) goNextImage();
+    else goPrevImage();
+    wheelLockedRef.current = true;
+    window.setTimeout(() => {
+      wheelLockedRef.current = false;
+    }, 400);
   };
 
   if (!product) {
@@ -158,6 +183,7 @@ export function ProductPage({
             className="product-v2__gallery"
             onTouchStart={handleGalleryTouchStart}
             onTouchEnd={handleGalleryTouchEnd}
+            onWheel={handleGalleryWheel}
           >
             {imageUrls.map((url, i) => (
               <div

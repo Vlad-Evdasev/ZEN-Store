@@ -40,6 +40,11 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
+  /* pan-y: вертикальный скролл страницы пробрасывается браузеру.
+     Горизонтальные жесты ловит наш onTouchStart/End/onWheel. Это
+     избавляет от рывков, когда пользователь хотел проскроллить
+     страницу, а палец чуть-чуть сместился по X. */
+  touch-action: pan-y;
 }
 .product-v2__gallery-layer {
   position: absolute;
