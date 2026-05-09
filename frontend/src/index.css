@@ -2408,6 +2408,18 @@ nav svg {
 .zen-app .zen-bag-summary--bottom {
   bottom: 12px;
 }
+/* На телефонах CTA-зона превращается в footer-подвал: верхний
+   разделитель + сплошной фон до нижней кромки. Это полностью
+   маскирует фрагменты контента (типа верхушек size-кружков), которые
+   иначе просвечивали бы через 12-px зазор и зону home-indicator. */
+@media (max-width: 600px) {
+  .zen-app .zen-bag-summary--bottom {
+    bottom: 0;
+    padding: 14px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+  }
+}
 .zen-app .zen-bag-summary-bar {
   pointer-events: auto;
   max-width: 460px;
