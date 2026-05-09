@@ -897,6 +897,13 @@ html[data-theme="light"] .zen-app .product-card-price {
   padding-bottom: 80px !important;
 }
 
+/* Прочие страницы (избранное), которым нужны такие же 6px по бокам,
+   но обычный верхний отступ — без 72px под фиксированный поиск каталога */
+.zen-app main.zen-main--edge {
+  padding-left: max(6px, env(safe-area-inset-left)) !important;
+  padding-right: max(6px, env(safe-area-inset-right)) !important;
+}
+
 /* Кнопка «Отмена» в модалках — явный цвет текста (на iOS иначе синий) */
 .zen-app .zen-modal-cancel {
   color: var(--text) !important;
