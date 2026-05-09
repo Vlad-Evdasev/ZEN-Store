@@ -11,8 +11,9 @@ interface IconProps {
   active: boolean;
 }
 
-/* Каталог — вешалка: классическая clothing-метафора, прямая ассоциация
-   с гардеробом / магазином одежды.                                  */
+/* Каталог — стопка карточек (deck): современная bento-метафора
+   коллекции. Задняя карточка повёрнута и приглушена, передняя
+   заливается в активе.                                              */
 function CatalogIcon({ active }: IconProps) {
   return (
     <svg
@@ -23,24 +24,30 @@ function CatalogIcon({ active }: IconProps) {
       aria-hidden="true"
       style={{ transition: "transform 0.25s ease" }}
     >
-      {/* крючок */}
-      <path
-        d="M12 6 V 4.4 A 1.4 1.4 0 1 0 10.6 3"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+      {/* задняя карточка — повёрнута на 10°, тонкая обводка */}
+      <rect
+        x="7"
+        y="3"
+        width="13"
+        height="13.5"
+        rx="2.4"
         fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        transform="rotate(10 13.5 9.75)"
+        opacity="0.55"
       />
-      {/* корпус вешалки — равнобедренный треугольник
-         (низ = поперечная штанга, на которой висит вещь)             */}
-      <path
-        d="M3.5 13.5 L 12 6 L 20.5 13.5 Z"
+      {/* передняя карточка */}
+      <rect
+        x="3.5"
+        y="6.8"
+        width="13.5"
+        height="14"
+        rx="2.5"
         fill={active ? "currentColor" : "none"}
         stroke="currentColor"
-        strokeWidth={active ? 1.4 : 1.7}
+        strokeWidth={active ? 0 : 1.7}
         strokeLinejoin="round"
-        strokeLinecap="round"
       />
     </svg>
   );
