@@ -15,6 +15,7 @@ import {
   updateOrderStatus,
   deleteOrderAdmin,
   updateCustomOrderStatusAdmin,
+  updateCustomOrderContentAdmin,
   deleteCustomOrderAdmin,
   getCurrencyRateAdmin,
   updateCurrencyRateAdmin,
@@ -332,7 +333,7 @@ function ImagePreviewModal({ src, onClose }: { src: string; onClose: () => void 
   );
 }
 
-type StatusFilter = "all" | "pending" | "in_transit" | "delivered" | "completed";
+type StatusFilter = "all" | "review" | "pending" | "in_transit" | "delivered" | "completed";
 
 function OrdersTab({ adminSecret }: { adminSecret: string }) {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -509,6 +510,13 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
+  // Inline-редактирование одной заявки
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editDesc, setEditDesc] = useState("");
+  const [editSize, setEditSize] = useState("");
+  const [editImage, setEditImage] = useState<string | null>(null);
+  const editFileRef = useRef<HTMLInputElement | null>(null);
+
   const load = () => {
     setLoading(true);
     getCustomOrdersAdmin(adminSecret)
@@ -521,7 +529,7 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
     if (adminSecret) load();
   }, [adminSecret]);
 
-  const handleStatus = async (id: number, status: "pending" | "in_transit" | "delivered" | "completed") => {
+  const handleStatus = async (id: number, status: "review" | "pending" | "in_transit" | "delivered" | "completed") => {
     setUpdatingId(id);
     setMessage("");
     try {
@@ -547,7 +555,53 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
     }
   };
 
+  const startEdit = (c: CustomOrderAdmin) => {
+    setEditingId(c.id);
+    setEditDesc(c.description ?? "");
+    setEditSize(c.size ?? "");
+    setEditImage(c.image_data ?? null);
+    setMessage("");
+  };
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditDesc("");
+    setEditSize("");
+    setEditImage(null);
+  };
+  const onEditFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !file.type.startsWith("image/")) return;
+    if (file.size > 5 * 1024 * 1024) { setMessage("Макс размер фото 5 МБ"); return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const v = reader.result;
+      if (typeof v === "string") setEditImage(v);
+    };
+    reader.readAsDataURL(file);
+  };
+  const saveEdit = async () => {
+    if (editingId == null) return;
+    setUpdatingId(editingId);
+    setMessage("");
+    try {
+      await updateCustomOrderContentAdmin(editingId, {
+        description: editDesc,
+        size: editSize,
+        image_data: editImage,
+      }, adminSecret);
+      setMessage("Заявка обновлена");
+      cancelEdit();
+      load();
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   const filteredList = statusFilter === "all" ? list : list.filter((c) => (c.status || "pending") === statusFilter);
+  const reviewCount = list.filter((c) => (c.status || "pending") === "review").length;
 
   if (loading) return <p style={styles.hint}>Загрузка заявок...</p>;
 
@@ -555,6 +609,11 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
     <>
       {message && <p style={styles.message}>{message}</p>}
       <h2 style={styles.pageTitle}>Заявки не из каталога</h2>
+      {reviewCount > 0 && (
+        <p style={{ ...styles.hint, color: "var(--accent)", fontWeight: 500 }}>
+          📥 На модерации: {reviewCount} — пока их статус «На модерации», в истории у пользователя они не появятся. Отредактируй и нажми «Одобрить».
+        </p>
+      )}
       <p style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
         <label style={{ fontSize: 14 }}>Статус:</label>
         <select
@@ -563,6 +622,7 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
           style={styles.statusSelect}
         >
           <option value="all">Все</option>
+          <option value="review">На модерации</option>
           <option value="pending">Ожидает</option>
           <option value="in_transit">В пути</option>
           <option value="delivered">Доставлено</option>
@@ -576,51 +636,123 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
         ) : filteredList.length === 0 ? (
           <p style={styles.hint}>Нет заявок с выбранным статусом</p>
         ) : (
-          filteredList.map((c) => (
-            <div key={c.id} style={styles.orderCard}>
-              <div style={styles.orderHeader}>
-                <span style={styles.orderId}>#{c.id}</span>
-                <button type="button" onClick={() => handleDelete(c.id)} style={styles.deleteOrderIconBtn} aria-label="Удалить заявку" title="Удалить">
-                  <TrashIcon />
-                </button>
-              </div>
-              <p style={styles.orderField}>👤 {c.user_name || "—"}</p>
-              <p style={styles.orderField}>📱 {c.user_username || "—"}</p>
-              {c.user_address && <p style={styles.orderField}>📍 {c.user_address}</p>}
-              <p style={styles.orderField}>📝 {c.description || "—"}</p>
-              {c.size && <p style={styles.orderField}>📐 Размер: {c.size}</p>}
-              {c.image_data && (
-                <p style={styles.orderField}>
-                  <button
-                    type="button"
-                    onClick={() => setPreviewImage(c.image_data!)}
-                    style={{ padding: 0, border: "none", background: "none", cursor: "pointer" }}
-                    title="Открыть фото в полном размере"
-                  >
-                    <img src={c.image_data} alt="Фото товара" style={{ maxWidth: 120, maxHeight: 120, objectFit: "cover", borderRadius: 8 }} />
+          filteredList.map((c) => {
+            const status = c.status || "pending";
+            const isReview = status === "review";
+            const isEditing = editingId === c.id;
+            return (
+              <div key={c.id} style={{ ...styles.orderCard, borderColor: isReview ? "var(--accent)" : undefined }}>
+                <div style={styles.orderHeader}>
+                  <span style={styles.orderId}>
+                    #{c.id}
+                    {isReview && <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 600, padding: "2px 8px", background: "var(--accent-soft, rgba(198,40,40,0.12))", color: "var(--accent)", borderRadius: 999, letterSpacing: "0.1em", textTransform: "uppercase" }}>На модерации</span>}
+                  </span>
+                  <button type="button" onClick={() => handleDelete(c.id)} style={styles.deleteOrderIconBtn} aria-label="Удалить заявку" title="Удалить">
+                    <TrashIcon />
                   </button>
-                </p>
-              )}
-              <p style={styles.orderDate}>{new Date(c.created_at).toLocaleString("ru")}</p>
-              <p style={styles.orderField}>
-                <label style={{ marginRight: 8 }}>Статус:</label>
-                <select
-                  value={c.status || "pending"}
-                  onChange={(e) => handleStatus(c.id, e.target.value as "pending" | "in_transit" | "delivered" | "completed")}
-                  disabled={updatingId === c.id}
-                  style={styles.statusSelect}
-                >
-                  <option value="pending">Ожидает</option>
-                  <option value="in_transit">В пути</option>
-                  <option value="delivered">Доставлено</option>
-                  <option value="completed">Выполнен</option>
-                </select>
-              </p>
-              <a href={telegramChatLink(c.user_username ?? null, c.user_id)} target="_blank" rel="noopener noreferrer" style={styles.contactLink}>
-                Написать в Telegram
-              </a>
-            </div>
-          ))
+                </div>
+                <p style={styles.orderField}>👤 {c.user_name || "—"}</p>
+                <p style={styles.orderField}>📱 {c.user_username || "—"}</p>
+                {c.user_address && <p style={styles.orderField}>📍 {c.user_address}</p>}
+
+                {isEditing ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8, padding: 12, background: "var(--surface-elevated)", borderRadius: 10 }}>
+                    <label style={styles.label}>Описание / название</label>
+                    <textarea
+                      value={editDesc}
+                      onChange={(e) => setEditDesc(e.target.value)}
+                      rows={3}
+                      style={{ ...styles.input, minHeight: 72 }}
+                      placeholder="Что заказывает клиент"
+                    />
+                    <label style={styles.label}>Размер</label>
+                    <input
+                      type="text"
+                      value={editSize}
+                      onChange={(e) => setEditSize(e.target.value)}
+                      style={styles.input}
+                      placeholder="например, M или 42"
+                    />
+                    <label style={styles.label}>Фото</label>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                      <button type="button" onClick={() => editFileRef.current?.click()} style={styles.smallBtn}>
+                        {editImage ? "Заменить фото" : "Загрузить фото"}
+                      </button>
+                      <input ref={editFileRef} type="file" accept="image/*" onChange={onEditFile} style={{ display: "none" }} />
+                      {editImage && (
+                        <button type="button" onClick={() => setEditImage(null)} style={{ ...styles.smallBtn, color: "var(--accent)" }}>
+                          Удалить фото
+                        </button>
+                      )}
+                    </div>
+                    {editImage && (
+                      <img src={editImage} alt="Превью" style={{ maxWidth: 160, maxHeight: 160, objectFit: "cover", borderRadius: 8 }} />
+                    )}
+                    <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                      <button type="button" onClick={saveEdit} disabled={updatingId === c.id} style={styles.submit}>
+                        {updatingId === c.id ? "Сохраняю…" : "Сохранить"}
+                      </button>
+                      <button type="button" onClick={cancelEdit} style={styles.cancelBtn}>Отмена</button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p style={styles.orderField}>📝 {c.description || <span style={{ color: "var(--muted)", fontStyle: "italic" }}>— нет описания —</span>}</p>
+                    {c.size && <p style={styles.orderField}>📐 Размер: {c.size}</p>}
+                    {c.image_data && (
+                      <p style={styles.orderField}>
+                        <button
+                          type="button"
+                          onClick={() => setPreviewImage(c.image_data!)}
+                          style={{ padding: 0, border: "none", background: "none", cursor: "pointer" }}
+                          title="Открыть фото в полном размере"
+                        >
+                          <img src={c.image_data} alt="Фото товара" style={{ maxWidth: 120, maxHeight: 120, objectFit: "cover", borderRadius: 8 }} />
+                        </button>
+                      </p>
+                    )}
+                  </>
+                )}
+
+                <p style={styles.orderDate}>{new Date(c.created_at).toLocaleString("ru")}</p>
+
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 4 }}>
+                  {!isEditing && (
+                    <button type="button" onClick={() => startEdit(c)} style={styles.smallBtn}>
+                      Редактировать
+                    </button>
+                  )}
+                  {isReview && !isEditing && (
+                    <button
+                      type="button"
+                      onClick={() => handleStatus(c.id, "pending")}
+                      disabled={updatingId === c.id}
+                      style={styles.submit}
+                    >
+                      ✓ Одобрить
+                    </button>
+                  )}
+                  <label style={{ marginLeft: 4 }}>Статус:</label>
+                  <select
+                    value={status}
+                    onChange={(e) => handleStatus(c.id, e.target.value as "review" | "pending" | "in_transit" | "delivered" | "completed")}
+                    disabled={updatingId === c.id}
+                    style={styles.statusSelect}
+                  >
+                    <option value="review">На модерации</option>
+                    <option value="pending">Ожидает</option>
+                    <option value="in_transit">В пути</option>
+                    <option value="delivered">Доставлено</option>
+                    <option value="completed">Выполнен</option>
+                  </select>
+                </div>
+
+                <a href={telegramChatLink(c.user_username ?? null, c.user_id)} target="_blank" rel="noopener noreferrer" style={{ ...styles.contactLink, marginTop: 8, display: "inline-block" }}>
+                  Написать в Telegram
+                </a>
+              </div>
+            );
+          })
         )}
       </div>
       {previewImage && <ImagePreviewModal src={previewImage} onClose={() => setPreviewImage(null)} />}

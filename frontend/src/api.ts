@@ -364,7 +364,7 @@ export async function getCustomOrdersAdmin(adminSecret: string): Promise<CustomO
 
 export async function updateCustomOrderStatusAdmin(
   id: number,
-  status: "pending" | "in_transit" | "delivered" | "completed",
+  status: "review" | "pending" | "in_transit" | "delivered" | "completed",
   adminSecret: string
 ) {
   const res = await fetch(`${API_URL}/api/custom-orders/admin/order/${id}/status`, {
@@ -373,6 +373,23 @@ export async function updateCustomOrderStatusAdmin(
     body: JSON.stringify({ status }),
   });
   if (!res.ok) throw new Error("Failed to update custom order status");
+  return res.json();
+}
+
+export async function updateCustomOrderContentAdmin(
+  id: number,
+  data: { description?: string; size?: string; image_data?: string | null },
+  adminSecret: string
+) {
+  const res = await fetch(`${API_URL}/api/custom-orders/admin/order/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
   return res.json();
 }
 
