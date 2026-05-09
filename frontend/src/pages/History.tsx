@@ -71,7 +71,10 @@ export function History({
   }, [userId]);
 
   const activeEntries = useMemo<HistoryEntry[]>(() => {
-    const isActive = (status: string) => status !== "delivered" && status !== "completed";
+    // Скрываем только окончательно завершённые заказы (status='completed')
+    // и удалённые. 'delivered' оставляем — пользователю важно видеть «Доставлено»
+    // в истории, пока ты не закроешь заказ окончательно.
+    const isActive = (status: string) => status !== "completed";
     const list: HistoryEntry[] = [];
     for (const o of orders) {
       if (!isActive(o.status)) continue;
