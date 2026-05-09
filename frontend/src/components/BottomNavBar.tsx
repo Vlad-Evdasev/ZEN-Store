@@ -54,10 +54,10 @@ function CatalogIcon({ active }: IconProps) {
   );
 }
 
-/* Custom Order — слот-плейсхолдер `[ • ]`: две скобки и точка по центру.
-   Концептуальная метафора заявки: пустой слот, который заполняется
-   твоим запросом. Чистая letterform-геометрия — ничего общего со
-   стопкой карточек и спарком.                                       */
+/* Custom Order — концентрический круг + офсетная точка. Абстрактная
+   модерн-метафора: одна конкретная точка интереса в общем поле
+   возможностей — указать вещь, которой нет в каталоге. Никаких
+   литеральных скобок/самолётов/палочек.                              */
 function CustomOrderIcon({ active }: IconProps) {
   return (
     <svg
@@ -68,26 +68,17 @@ function CustomOrderIcon({ active }: IconProps) {
       aria-hidden="true"
       style={{ transition: "transform 0.25s ease" }}
     >
-      {/* левая скобка [ */}
-      <path
-        d="M9 4.5 H 5 V 19.5 H 9"
+      {/* внешний круг — поле возможностей */}
+      <circle
+        cx="11.5"
+        cy="12.5"
+        r="8.5"
         fill="none"
         stroke="currentColor"
-        strokeWidth={active ? 2.1 : 1.8}
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        strokeWidth={active ? 2 : 1.7}
       />
-      {/* правая скобка ] */}
-      <path
-        d="M15 4.5 H 19 V 19.5 H 15"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={active ? 2.1 : 1.8}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      {/* точка-запрос внутри слота */}
-      <circle cx="12" cy="12" r="1.7" fill="currentColor" />
+      {/* офсетная точка — конкретный запрос пользователя */}
+      <circle cx="16" cy="8.5" r="2.2" fill="currentColor" />
     </svg>
   );
 }
