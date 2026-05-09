@@ -1,4 +1,5 @@
 import { Bot, InputFile } from "grammy";
+import { db } from "./db/schema.js";
 
 type ChannelMediaPhoto = {
   type: "photo";
@@ -14,14 +15,30 @@ export const bot = new Bot(token);
 
 const WEB_APP_URL = process.env.WEB_APP_URL || "https://your-mini-app-url.vercel.app";
 
-// Канал для рассылки постов из админки. ID может быть числовым (-100…) или
-// @username публичного канала; бот должен быть админом канала.
-const CHANNEL_CHAT_ID = process.env.CHANNEL_CHAT_ID || process.env.ADMIN_CHAT_ID || "";
+// Канал для рассылки постов. Сначала смотрим в app_settings (чтобы админ мог
+// сменить канал из UI без редеплоя), потом env CHANNEL_CHAT_ID, потом
+// исторический ADMIN_CHAT_ID (раньше использовался для уведомлений о заказах).
+const ENV_CHANNEL = process.env.CHANNEL_CHAT_ID || process.env.ADMIN_CHAT_ID || "";
 
 const MAX_IMAGES = 10;
 
+export function getChannelTargetRaw(): string {
+  try {
+    const row = db.prepare("SELECT value FROM app_settings WHERE key = 'channel_chat_id'").get() as { value: string } | undefined;
+    if (row && row.value && row.value.trim()) return row.value.trim();
+  } catch {
+    // app_settings table may not exist on first boot
+  }
+  return ENV_CHANNEL;
+}
+
+export function setChannelTargetRaw(value: string): void {
+  const v = (value || "").trim();
+  db.prepare("INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("channel_chat_id", v);
+}
+
 function resolveChannelTarget(): string | number | null {
-  const raw = String(CHANNEL_CHAT_ID).trim();
+  const raw = getChannelTargetRaw();
   if (!raw) return null;
   if (raw.startsWith("@")) return raw;
   const num = Number(raw);
@@ -123,6 +140,17 @@ export async function deleteChannelPost(messageIds: number[]): Promise<{ ok: tru
   }
   if (errors.length) return { ok: false, error: errors.join("; ") };
   return { ok: true };
+}
+
+// Полный «republish»: удаляем старые сообщения и отправляем заново. Используется,
+// когда меняется состав/количество фото — Telegram Bot API не разрешает добавлять
+// сообщения в существующий media group, проще пересоздать пост целиком.
+// message_ids меняются — сохраним новые в БД на стороне роута.
+export async function republishChannelPost(oldMessageIds: number[], text: string, images: string[]): Promise<ChannelPostResult> {
+  if (oldMessageIds.length > 0) {
+    await deleteChannelPost(oldMessageIds);
+  }
+  return broadcastChannelPost(text, images);
 }
 
 bot.command("start", async (ctx) => {

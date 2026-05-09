@@ -22,6 +22,8 @@ import {
   getChannelPosts,
   editChannelPost,
   deleteChannelPost,
+  getChannelSettings,
+  updateChannelSettings,
   getPosts,
   createPost,
   updatePost,
@@ -959,17 +961,26 @@ function ChannelPreview({ text, images }: { text: string; images: string[] }) {
 function ChannelTab({ adminSecret, products }: { adminSecret: string; products: Product[] }) {
   const [text, setText] = useState("");
   const [images, setImages] = useState<string[]>([]);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [missingImages, setMissingImages] = useState(0); // фото из data:base64, которые нельзя восстановить при редактировании
+
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [urlInput, setUrlInput] = useState("");
   const [templateProductId, setTemplateProductId] = useState<string>("");
 
+  const [channelTarget, setChannelTarget] = useState("");
+  const [channelEnvDefault, setChannelEnvDefault] = useState("");
+  const [channelTargetDraft, setChannelTargetDraft] = useState("");
+  const [channelSaving, setChannelSaving] = useState(false);
+  const [channelSavedAt, setChannelSavedAt] = useState(0);
+
   const [history, setHistory] = useState<ChannelPost[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editingText, setEditingText] = useState("");
   const [historyBusy, setHistoryBusy] = useState(false);
+
+  const composerRef = useRef<HTMLFormElement | null>(null);
 
   const loadHistory = () => {
     setHistoryLoading(true);
@@ -979,6 +990,28 @@ function ChannelTab({ adminSecret, products }: { adminSecret: string; products: 
       .finally(() => setHistoryLoading(false));
   };
   useEffect(loadHistory, [adminSecret]);
+  useEffect(() => {
+    getChannelSettings(adminSecret)
+      .then((s) => {
+        setChannelTarget(s.channel_chat_id || "");
+        setChannelTargetDraft(s.channel_chat_id || "");
+        setChannelEnvDefault(s.env_default || "");
+      })
+      .catch(() => {});
+  }, [adminSecret]);
+
+  const saveChannelTarget = async () => {
+    setChannelSaving(true);
+    try {
+      const r = await updateChannelSettings(channelTargetDraft.trim(), adminSecret);
+      setChannelTarget(r.channel_chat_id);
+      setChannelSavedAt(Date.now());
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Ошибка сохранения настроек");
+    } finally {
+      setChannelSaving(false);
+    }
+  };
 
   const addImage = (src: string) => {
     setImages((prev) => (prev.length >= MAX_CHANNEL_IMAGES ? prev : [...prev, src]));
@@ -1017,21 +1050,41 @@ function ChannelTab({ adminSecret, products }: { adminSecret: string; products: 
     setUrlInput("");
   };
 
-  const applyProductTemplate = () => {
+  const applyProductTemplate = (mode: "replace" | "append") => {
     const id = parseInt(templateProductId, 10);
     const p = products.find((x) => x.id === id);
     if (!p) return;
     const t = buildProductTemplate(p);
-    setText(t.text);
-    setImages(t.images);
+    if (mode === "replace") {
+      setText(t.text);
+      setImages(t.images.slice(0, MAX_CHANNEL_IMAGES));
+    } else {
+      setText((prev) => (prev.trim() ? `${prev}\n\n———\n\n${t.text}` : t.text));
+      setImages((prev) => [...prev, ...t.images].slice(0, MAX_CHANNEL_IMAGES));
+    }
+    setTemplateProductId("");
     setMessage(null);
   };
-  const resetForm = () => {
+  const resetComposer = () => {
     setText("");
     setImages([]);
     setUrlInput("");
     setTemplateProductId("");
+    setEditingId(null);
+    setMissingImages(0);
     setMessage(null);
+  };
+
+  const startEdit = (p: ChannelPost) => {
+    const restored = (p.image_urls ?? []).filter((u) => u && u.length > 0);
+    setText(p.text || "");
+    setImages(restored);
+    setEditingId(p.id);
+    setMissingImages(Math.max(0, p.images_count - restored.length));
+    setMessage(null);
+    setTemplateProductId("");
+    setUrlInput("");
+    composerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1043,12 +1096,16 @@ function ChannelTab({ adminSecret, products }: { adminSecret: string; products: 
     setSending(true);
     setMessage(null);
     try {
-      await publishChannelPost({ text, image_urls: images }, adminSecret);
-      setMessage({ kind: "ok", text: "Опубликовано в канал" });
-      setText("");
-      setImages([]);
-      setTemplateProductId("");
-      loadHistory();
+      if (editingId != null) {
+        const updated = await editChannelPost(editingId, { text, image_urls: images }, adminSecret);
+        setHistory((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+        setMessage({ kind: "ok", text: "Пост обновлён" });
+      } else {
+        await publishChannelPost({ text, image_urls: images }, adminSecret);
+        setMessage({ kind: "ok", text: "Опубликовано в канал" });
+        loadHistory();
+      }
+      resetComposer();
     } catch (err) {
       setMessage({ kind: "err", text: err instanceof Error ? err.message : "Ошибка публикации" });
     } finally {
@@ -1056,34 +1113,13 @@ function ChannelTab({ adminSecret, products }: { adminSecret: string; products: 
     }
   };
 
-  const startEdit = (p: ChannelPost) => {
-    setEditingId(p.id);
-    setEditingText(p.text);
-  };
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditingText("");
-  };
-  const saveEdit = async () => {
-    if (editingId == null) return;
-    setHistoryBusy(true);
-    try {
-      const updated = await editChannelPost(editingId, editingText, adminSecret);
-      setHistory((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
-      cancelEdit();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Ошибка редактирования");
-    } finally {
-      setHistoryBusy(false);
-    }
-  };
   const handleDeletePost = async (id: number) => {
     if (!confirm("Удалить этот пост из канала? Сообщение(я) будут стёрты у всех подписчиков.")) return;
     setHistoryBusy(true);
     try {
       await deleteChannelPost(id, adminSecret);
       setHistory((prev) => prev.filter((p) => p.id !== id));
-      if (editingId === id) cancelEdit();
+      if (editingId === id) resetComposer();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Ошибка удаления");
     } finally {
@@ -1091,36 +1127,80 @@ function ChannelTab({ adminSecret, products }: { adminSecret: string; products: 
     }
   };
 
+  const isEditing = editingId != null;
+  const channelDirty = channelTargetDraft.trim() !== channelTarget.trim();
+
   return (
     <>
       <h2 style={styles.pageTitle}>Канал</h2>
       <p style={{ ...styles.hint, marginBottom: 16 }}>
-        Пост уходит в Telegram-канал из <code>CHANNEL_CHAT_ID</code> (или <code>ADMIN_CHAT_ID</code>). Бот должен быть админом канала. HTML: <code>&lt;b&gt;</code>, <code>&lt;i&gt;</code>, <code>&lt;a href=&quot;…&quot;&gt;</code>. До {MAX_CHANNEL_IMAGES} фото — уйдут альбомом.
+        Пост уходит в Telegram-канал. Бот должен быть админом канала. HTML: <code>&lt;b&gt;</code>, <code>&lt;i&gt;</code>, <code>&lt;a href=&quot;…&quot;&gt;</code>. До {MAX_CHANNEL_IMAGES} фото — уйдут альбомом.
       </p>
 
+      <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "14px 16px", marginBottom: 22, background: "#fafafa" }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+          <strong style={{ fontSize: 13, letterSpacing: 0.2 }}>Куда отправлять</strong>
+          {channelTarget ? (
+            <span style={{ fontSize: 12, color: "var(--muted)" }}>сейчас: <code>{channelTarget}</code></span>
+          ) : (
+            <span style={{ fontSize: 12, color: "#c62828" }}>не настроено — посты уйдут в личку (видно только тебе)</span>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <input
+            type="text"
+            value={channelTargetDraft}
+            onChange={(e) => setChannelTargetDraft(e.target.value)}
+            placeholder={channelEnvDefault ? `${channelEnvDefault} (из env)` : "@my_channel или -1001234567890"}
+            style={{ ...styles.input, flex: 1, minWidth: 220, marginBottom: 0 }}
+          />
+          <button type="button" onClick={saveChannelTarget} disabled={!channelDirty || channelSaving} style={styles.smallBtn}>
+            {channelSaving ? "Сохраняю…" : "Сохранить"}
+          </button>
+          {channelSavedAt > 0 && Date.now() - channelSavedAt < 4000 && (
+            <span style={{ fontSize: 12, color: "var(--accent)" }}>Сохранено</span>
+          )}
+        </div>
+        <p style={{ ...styles.hint, marginTop: 8, marginBottom: 0 }}>
+          Создай Telegram-канал, добавь бота админом с правом постить. ID канала: <code>@username</code> для публичного, или числовой <code>-100…</code> для приватного (узнать можно через <code>@getidsbot</code>). Если оставить пусто — будет браться значение из env.
+        </p>
+      </div>
+
       <div className="channel-grid" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(280px, 380px)", gap: 22, alignItems: "start" }}>
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <label style={styles.label}>Шаблон</label>
+        <form ref={composerRef} onSubmit={handleSubmit} style={styles.form}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10 }}>
+            <strong style={{ fontSize: 14 }}>{isEditing ? `Редактирование поста #${editingId}` : "Новый пост"}</strong>
+            {isEditing && (
+              <button type="button" onClick={resetComposer} style={{ ...styles.smallBtn, padding: "6px 10px" }}>
+                Создать новый
+              </button>
+            )}
+          </div>
+
+          <label style={styles.label}>Шаблоны из товаров</label>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
             <select
               value={templateProductId}
               onChange={(e) => setTemplateProductId(e.target.value)}
               style={{ ...styles.input, flex: 1, minWidth: 200, marginBottom: 0 }}
             >
-              <option value="">— выбрать товар для автотекста —</option>
+              <option value="">— выбрать товар —</option>
               {products.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}{p.brand?.trim() ? ` · ${p.brand.trim()}` : ""} · {p.price} $
                 </option>
               ))}
             </select>
-            <button type="button" onClick={applyProductTemplate} disabled={!templateProductId} style={styles.smallBtn}>
-              Применить
+            <button type="button" onClick={() => applyProductTemplate("replace")} disabled={!templateProductId} style={styles.smallBtn} title="Заменить текущий пост">
+              Заменить
             </button>
-            <button type="button" onClick={resetForm} style={styles.smallBtn}>
-              Очистить
+            <button type="button" onClick={() => applyProductTemplate("append")} disabled={!templateProductId} style={styles.smallBtn} title="Добавить ещё один товар к посту">
+              + Добавить
             </button>
           </div>
+          <p style={{ ...styles.hint, marginTop: -6, marginBottom: 12 }}>
+            «+ Добавить» подмешивает товар к текущему тексту и фото (для подборок из нескольких товаров).
+          </p>
 
           <label style={styles.label}>Текст поста</label>
           <textarea
@@ -1150,6 +1230,12 @@ function ChannelTab({ adminSecret, products }: { adminSecret: string; products: 
             </button>
           </div>
 
+          {missingImages > 0 && (
+            <p style={{ ...styles.hint, color: "#c62828", marginBottom: 10 }}>
+              ⚠ В этом посте {missingImages} фото были загружены файлами и не сохранились — их нельзя восстановить. Загрузи заново или сохрани без них.
+            </p>
+          )}
+
           {images.length > 0 && (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10, marginBottom: 12 }}>
               {images.map((src, i) => (
@@ -1175,8 +1261,15 @@ function ChannelTab({ adminSecret, products }: { adminSecret: string; products: 
           )}
           <div style={styles.formActions}>
             <button type="submit" style={styles.submit} disabled={sending}>
-              {sending ? "Публикую…" : "Опубликовать в канал"}
+              {sending
+                ? (isEditing ? "Сохраняю…" : "Публикую…")
+                : (isEditing ? "Сохранить изменения" : "Опубликовать в канал")}
             </button>
+            {isEditing && (
+              <button type="button" onClick={resetComposer} style={styles.cancelBtn}>
+                Отмена
+              </button>
+            )}
           </div>
         </form>
 
@@ -1196,7 +1289,18 @@ function ChannelTab({ adminSecret, products }: { adminSecret: string; products: 
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {history.map((p) => (
-            <div key={p.id} style={{ display: "flex", gap: 12, padding: 12, border: "1px solid var(--border)", borderRadius: 10, alignItems: "flex-start" }}>
+            <div
+              key={p.id}
+              style={{
+                display: "flex",
+                gap: 12,
+                padding: 12,
+                border: editingId === p.id ? "2px solid var(--accent)" : "1px solid var(--border)",
+                borderRadius: 10,
+                alignItems: "flex-start",
+                background: editingId === p.id ? "rgba(198,40,40,0.04)" : undefined,
+              }}
+            >
               <div style={{ width: 56, height: 56, flex: "0 0 auto", borderRadius: 8, overflow: "hidden", background: "#f3f3f3", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: 11 }}>
                 {p.first_image_url ? (
                   <img src={p.first_image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
@@ -1207,38 +1311,21 @@ function ChannelTab({ adminSecret, products }: { adminSecret: string; products: 
                 )}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                {editingId === p.id ? (
-                  <>
-                    <textarea
-                      value={editingText}
-                      onChange={(e) => setEditingText(e.target.value)}
-                      rows={4}
-                      style={{ ...styles.input, minHeight: 100, fontFamily: "inherit", marginBottom: 6 }}
-                    />
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button type="button" onClick={saveEdit} disabled={historyBusy} style={styles.smallBtn}>Сохранить</button>
-                      <button type="button" onClick={cancelEdit} disabled={historyBusy} style={styles.smallBtn}>Отмена</button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div style={{ fontSize: 13, lineHeight: 1.5, color: "var(--text)", whiteSpace: "pre-wrap", wordBreak: "break-word", maxHeight: 80, overflow: "hidden" }}>
-                      {p.text || <span style={{ color: "var(--muted)", fontStyle: "italic" }}>(без текста — только фото)</span>}
-                    </div>
-                    <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                      <span>{relTime(p.created_at)}</span>
-                      {p.images_count > 0 && <span>📷 {p.images_count} фото</span>}
-                      <span>msg #{p.message_ids[0] ?? "?"}</span>
-                    </div>
-                  </>
-                )}
-              </div>
-              {editingId !== p.id && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  <button type="button" onClick={() => startEdit(p)} disabled={historyBusy} style={styles.smallBtn}>Редактировать</button>
-                  <button type="button" onClick={() => handleDeletePost(p.id)} disabled={historyBusy} style={{ ...styles.smallBtn, color: "#c62828" }}>Удалить</button>
+                <div style={{ fontSize: 13, lineHeight: 1.5, color: "var(--text)", whiteSpace: "pre-wrap", wordBreak: "break-word", maxHeight: 80, overflow: "hidden" }}>
+                  {p.text || <span style={{ color: "var(--muted)", fontStyle: "italic" }}>(без текста — только фото)</span>}
                 </div>
-              )}
+                <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <span>{relTime(p.created_at)}</span>
+                  {p.images_count > 0 && <span>📷 {p.images_count} фото</span>}
+                  <span>msg #{p.message_ids[0] ?? "?"}</span>
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <button type="button" onClick={() => startEdit(p)} disabled={historyBusy} style={styles.smallBtn}>
+                  {editingId === p.id ? "Редактируется" : "Редактировать"}
+                </button>
+                <button type="button" onClick={() => handleDeletePost(p.id)} disabled={historyBusy} style={{ ...styles.smallBtn, color: "#c62828" }}>Удалить</button>
+              </div>
             </div>
           ))}
         </div>

@@ -154,8 +154,8 @@ try {
 } catch {}
 
 // История постов в Telegram-канал. Храним массив message_id (альбом — это
-// несколько message_id), текст и количество фото для отображения в админке.
-// data:base64-картинки в БД не сохраняем (тяжело); только http(s) превью первой.
+// несколько message_id), текст и оригинальные источники фото в JSON, чтобы при
+// редактировании можно было подставить их обратно или сделать «delete+resend».
 try {
   db.exec(`
     CREATE TABLE IF NOT EXISTS channel_posts (
@@ -169,6 +169,11 @@ try {
     )
   `);
 } catch {}
+try {
+  db.exec("ALTER TABLE channel_posts ADD COLUMN image_urls TEXT");
+} catch {
+  // column already exists
+}
 
 // Add store_id to products if missing (migration)
 try {
