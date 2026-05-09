@@ -73,6 +73,28 @@ customOrdersRouter.delete("/admin/order/:id", (req, res) => {
   res.json({ ok: true });
 });
 
+// Сделать ещё одну заявку на основе существующей: те же данные пользователя,
+// пустые description/size/image, статус 'review' — админ заполняет каждую
+// независимо. Используется, когда пользователь в одной заявке перечислил
+// несколько товаров и нужно развести их на отдельные карточки.
+customOrdersRouter.post("/admin/order/:id/duplicate", (req, res) => {
+  const ADMIN_SECRET = process.env.ADMIN_SECRET || "";
+  const secret = req.headers["x-admin-secret"] as string | undefined;
+  if (ADMIN_SECRET && secret !== ADMIN_SECRET) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  const id = parseInt(req.params.id, 10);
+  const src = db.prepare(
+    "SELECT user_id, user_name, user_username, user_address FROM custom_orders WHERE id = ?"
+  ).get(id) as { user_id: string; user_name: string | null; user_username: string | null; user_address: string | null } | undefined;
+  if (!src) return res.status(404).json({ error: "Custom order not found" });
+  const result = db.prepare(
+    "INSERT INTO custom_orders (user_id, user_name, user_username, user_address, description, size, image_data, status) " +
+    "VALUES (?, ?, ?, ?, '', '', NULL, 'review')"
+  ).run(src.user_id, src.user_name, src.user_username, src.user_address);
+  res.status(201).json({ ok: true, id: Number(result.lastInsertRowid) });
+});
+
 customOrdersRouter.post("/", (req, res) => {
   const { user_id, user_name, user_username, user_address, description, size, image_data } = req.body;
   if (!user_id) return res.status(400).json({ error: "user_id required" });

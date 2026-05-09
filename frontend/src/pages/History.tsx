@@ -32,6 +32,7 @@ type OrderItem = {
   name?: string;
   price?: number;
   quantity?: number;
+  size?: string;
 };
 
 type StepKey = "placed" | "processing" | "in_transit" | "delivered";
@@ -44,7 +45,7 @@ function getStepIndex(status: string): number {
 }
 
 type HistoryEntry =
-  | { kind: "catalog"; key: string; createdAt: string; order: Order }
+  | { kind: "catalog-item"; key: string; createdAt: string; order: Order; item: OrderItem }
   | { kind: "custom"; key: string; createdAt: string; order: MyCustomOrder };
 
 export function History({
@@ -74,7 +75,20 @@ export function History({
     const list: HistoryEntry[] = [];
     for (const o of orders) {
       if (!isActive(o.status)) continue;
-      list.push({ kind: "catalog", key: `c-${o.id}`, createdAt: o.created_at, order: o });
+      // Каждый item каталог-заказа становится отдельной карточкой — у каждой
+      // позиции свой размер/название/фото, а статус-таймлайн разделяется на
+      // уровне родительского заказа (status один на все позиции).
+      const items = parseItems(o.items);
+      if (items.length === 0) continue;
+      items.forEach((item, idx) => {
+        list.push({
+          kind: "catalog-item",
+          key: `c-${o.id}-${idx}`,
+          createdAt: o.created_at,
+          order: o,
+          item,
+        });
+      });
     }
     for (const o of customOrders) {
       if (!isActive(o.status)) continue;
@@ -107,10 +121,11 @@ export function History({
       ) : (
         <section style={styles.section}>
           <div style={styles.activeList}>
-            {activeEntries.map((entry) => entry.kind === "catalog" ? (
-              <ActiveOrderCard
+            {activeEntries.map((entry) => entry.kind === "catalog-item" ? (
+              <CatalogItemCard
                 key={entry.key}
                 order={entry.order}
+                item={entry.item}
                 formatPrice={formatPrice}
                 lang={lang}
               />
@@ -137,19 +152,17 @@ function parseItems(raw: string): OrderItem[] {
   }
 }
 
-function ActiveOrderCard({
+function CatalogItemCard({
   order,
+  item,
   formatPrice,
   lang,
 }: {
   order: Order;
+  item: OrderItem;
   formatPrice: (n: number) => string;
   lang: Lang;
 }) {
-  const items = parseItems(order.items);
-  const totalCount = items.reduce((s, i) => s + (i.quantity || 1), 0);
-  const previews = items.slice(0, 3);
-  const extra = Math.max(items.length - previews.length, 0);
   const stepIndex = getStepIndex(order.status);
 
   const steps: { key: StepKey; labelKey: string }[] = [
@@ -159,6 +172,8 @@ function ActiveOrderCard({
     { key: "delivered", labelKey: "historyStepDelivered" },
   ];
 
+  const price = typeof item.price === "number" ? item.price : 0;
+
   return (
     <article style={styles.activeCard}>
       <div style={styles.activeCardHeader}>
@@ -167,41 +182,26 @@ function ActiveOrderCard({
             {formatDate(order.created_at, lang)}
           </span>
         </div>
-        <span style={styles.activeTotal}>{formatPrice(order.total)}</span>
+        <span style={styles.activeTotal}>{formatPrice(price)}</span>
       </div>
 
       <div style={styles.activePreview}>
         <div style={styles.thumbStack}>
-          {previews.map((it, idx) => (
-            <div
-              key={`${it.product_id ?? "i"}-${idx}`}
-              style={{
-                ...styles.thumb,
-                ...(idx > 0 ? { marginLeft: -14 } : {}),
-                zIndex: previews.length - idx,
-              }}
-            >
-              {it.image_url ? (
-                <img src={it.image_url} alt="" style={styles.thumbImg} />
-              ) : (
-                <div style={styles.thumbPlaceholder} />
-              )}
-            </div>
-          ))}
-          {extra > 0 && (
-            <div style={{ ...styles.thumb, ...styles.thumbMore, marginLeft: -14 }}>
-              +{extra}
-            </div>
-          )}
+          <div style={styles.thumb}>
+            {item.image_url ? (
+              <img src={item.image_url} alt="" style={styles.thumbImg} />
+            ) : (
+              <div style={styles.thumbPlaceholder} />
+            )}
+          </div>
         </div>
         <div style={styles.activeItemsMeta}>
-          <span style={styles.activeItemsTitle}>
-            {items[0]?.name || "—"}
-            {items.length > 1 && items[1]?.name ? `, ${items[1].name}` : ""}
-          </span>
-          <span style={styles.activeItemsCount}>
-            {t(lang, "historyItemsCount").replace("{n}", String(totalCount))}
-          </span>
+          <span style={styles.activeItemsTitle}>{item.name || "—"}</span>
+          {item.size && (
+            <span style={styles.activeItemsCount}>
+              {t(lang, "historyCustomSize")}: {item.size}
+            </span>
+          )}
         </div>
       </div>
 

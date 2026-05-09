@@ -17,6 +17,7 @@ import {
   updateCustomOrderStatusAdmin,
   updateCustomOrderContentAdmin,
   deleteCustomOrderAdmin,
+  duplicateCustomOrderAdmin,
   getCurrencyRateAdmin,
   updateCurrencyRateAdmin,
   sendBroadcast,
@@ -555,6 +556,20 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
     }
   };
 
+  const handleDuplicate = async (id: number) => {
+    setUpdatingId(id);
+    setMessage("");
+    try {
+      await duplicateCustomOrderAdmin(id, adminSecret);
+      setMessage("Создана пустая заявка-дубликат — заполни её и одобри");
+      load();
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   const startEdit = (c: CustomOrderAdmin) => {
     setEditingId(c.id);
     setEditDesc(c.description ?? "");
@@ -720,6 +735,17 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
                   {!isEditing && (
                     <button type="button" onClick={() => startEdit(c)} style={styles.smallBtn}>
                       Редактировать
+                    </button>
+                  )}
+                  {!isEditing && (
+                    <button
+                      type="button"
+                      onClick={() => handleDuplicate(c.id)}
+                      disabled={updatingId === c.id}
+                      style={styles.smallBtn}
+                      title="Создать дубликат: пользователь увидит ещё одну отдельную карточку"
+                    >
+                      + Дубликат
                     </button>
                   )}
                   {isReview && !isEditing && (

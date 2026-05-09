@@ -402,6 +402,18 @@ export async function deleteCustomOrderAdmin(id: number, adminSecret: string) {
   return res.json();
 }
 
+export async function duplicateCustomOrderAdmin(id: number, adminSecret: string): Promise<{ ok: true; id: number }> {
+  const res = await fetch(`${API_URL}/api/custom-orders/admin/order/${id}/duplicate`, {
+    method: "POST",
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+  return res.json();
+}
+
 export async function submitCustomOrder(
   userId: string,
   data: { user_name?: string; user_username?: string; user_address?: string; description: string; size: string; image_data?: string | null }
