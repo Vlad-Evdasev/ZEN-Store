@@ -56,6 +56,21 @@ function TrashIcon() {
   );
 }
 
+// Семантический pill статуса заказа/заявки. Цвет → этап в воронке:
+// review (warn), pending (info), in_transit (info), delivered (success),
+// completed (neutral). Используется и в каталог-заказах, и в кастом-заявках.
+function StatusPill({ status }: { status: string }) {
+  const cfg: Record<string, { label: string; variant: "neutral" | "info" | "warn" | "success" | "danger" }> = {
+    review: { label: "На модерации", variant: "warn" },
+    pending: { label: "Оформлен", variant: "info" },
+    in_transit: { label: "В пути", variant: "info" },
+    delivered: { label: "Доставлено", variant: "success" },
+    completed: { label: "Завершён", variant: "neutral" },
+  };
+  const c = cfg[status] ?? { label: status, variant: "neutral" };
+  return <span className={`admin-status admin-status--${c.variant}`}>{c.label}</span>;
+}
+
 function NavIcon({ tab }: { tab: "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" }) {
   switch (tab) {
     case "products":
@@ -405,29 +420,40 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
 
   return (
     <>
+      <div className="admin-page-head">
+        <div className="admin-page-head-text">
+          <h2>Заказы</h2>
+          <p className="admin-page-head-sub">
+            {orders.length === 0
+              ? "Здесь появятся заказы, оформленные через каталог"
+              : `Всего: ${orders.length}${statusFilter !== "all" ? ` · показано ${filteredOrders.length}` : ""}`}
+          </p>
+        </div>
+      </div>
       {message && <p style={styles.message}>{message}</p>}
-      <h2 style={styles.pageTitle}>Заказы</h2>
-      <p style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-        <label style={{ fontSize: 14 }}>Статус:</label>
+      <div className="admin-toolbar">
+        <span className="admin-toolbar-label">Статус</span>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
           style={styles.statusSelect}
         >
           <option value="all">Все</option>
-          <option value="pending">Ожидает</option>
+          <option value="pending">Оформлен</option>
           <option value="in_transit">В пути</option>
           <option value="delivered">Доставлено</option>
-          <option value="completed">Выполнен</option>
+          <option value="completed">Завершён</option>
         </select>
-      </p>
+      </div>
       {orders.length === 0 ? (
-        <div style={styles.emptyBlock}>
-          <p style={styles.hint}>Нет заказов</p>
+        <div className="admin-empty">
+          <p className="admin-empty-title">Заказов пока нет</p>
+          <p className="admin-empty-sub">Когда клиент оформит заказ из каталога — он появится здесь</p>
         </div>
       ) : filteredOrders.length === 0 ? (
-        <div style={styles.emptyBlock}>
-          <p style={styles.hint}>Нет заказов с выбранным статусом</p>
+        <div className="admin-empty">
+          <p className="admin-empty-title">Ничего не найдено</p>
+          <p className="admin-empty-sub">Нет заказов с выбранным статусом</p>
         </div>
       ) : (
         <div style={styles.tableWrap}>
@@ -440,7 +466,7 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
                 <th>Товары</th>
                 <th>Сумма</th>
                 <th>Статус</th>
-                <th>Действия</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -454,10 +480,10 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
                   : String(o.items);
                 return (
                   <tr key={o.id}>
-                    <td style={{ fontWeight: 600 }}>#{o.id}</td>
-                    <td style={{ fontSize: 13, color: "var(--muted)" }}>{new Date(o.created_at).toLocaleString("ru")}</td>
-                    <td>{o.user_name || "—"}</td>
-                    <td style={{ maxWidth: 280, fontSize: 13 }}>
+                    <td style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>#{o.id}</td>
+                    <td style={{ fontSize: 12.5, color: "var(--muted)", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{new Date(o.created_at).toLocaleString("ru")}</td>
+                    <td>{o.user_name || <span style={{ color: "var(--muted-soft)" }}>—</span>}</td>
+                    <td style={{ maxWidth: 320, fontSize: 13 }}>
                       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                         {Array.isArray(orderItems) ? (
                           orderItems.map((i, idx) => (
@@ -472,11 +498,14 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
                                   <img
                                     src={i.image_url}
                                     alt=""
-                                    style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 6 }}
+                                    style={{ width: 36, height: 36, objectFit: "cover", borderRadius: 6, border: "1px solid var(--border)" }}
                                   />
                                 </button>
                               )}
-                              <span>{`${i.name || "Товар"} × ${i.quantity || 1} (${i.size || "—"})`}</span>
+                              <span style={{ minWidth: 0 }}>
+                                <span style={{ fontWeight: 500 }}>{i.name || "Товар"}</span>
+                                <span style={{ color: "var(--muted)", marginLeft: 6 }}>× {i.quantity || 1} · {i.size || "—"}</span>
+                              </span>
                             </div>
                           ))
                         ) : (
@@ -484,22 +513,27 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
                         )}
                       </div>
                     </td>
-                    <td style={{ fontWeight: 600 }}>{o.total} $</td>
+                    <td style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{o.total} $</td>
                     <td>
-                      <select
-                        value={o.status}
-                        onChange={(e) => handleStatus(o.id, e.target.value as "pending" | "in_transit" | "delivered" | "completed")}
-                        disabled={updatingId === o.id}
-                        style={styles.statusSelect}
-                      >
-                        <option value="pending">Ожидает</option>
-                        <option value="in_transit">В пути</option>
-                        <option value="delivered">Доставлено</option>
-                        <option value="completed">Выполнен</option>
-                      </select>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <StatusPill status={o.status} />
+                        <select
+                          aria-label="Изменить статус"
+                          value={o.status}
+                          onChange={(e) => handleStatus(o.id, e.target.value as "pending" | "in_transit" | "delivered" | "completed")}
+                          disabled={updatingId === o.id}
+                          style={{ ...styles.statusSelect, height: 26, fontSize: 11.5, padding: "0 6px" }}
+                          title="Изменить статус"
+                        >
+                          <option value="pending">Оформлен</option>
+                          <option value="in_transit">В пути</option>
+                          <option value="delivered">Доставлено</option>
+                          <option value="completed">Завершён</option>
+                        </select>
+                      </div>
                     </td>
                     <td>
-                      <span style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "flex-end" }}>
                         <a href={telegramChatLink(o.user_username ?? null, o.user_id)} target="_blank" rel="noopener noreferrer" style={styles.contactLink}>
                           Telegram
                         </a>
@@ -639,15 +673,23 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
 
   return (
     <>
+      <div className="admin-page-head">
+        <div className="admin-page-head-text">
+          <h2>Заявки не из каталога</h2>
+          <p className="admin-page-head-sub">
+            Кастомные заказы клиентов — те, что вне основного ассортимента. Заполняй карточку и одобряй, чтобы клиент увидел заявку у себя в истории.
+          </p>
+        </div>
+      </div>
       {message && <p style={styles.message}>{message}</p>}
-      <h2 style={styles.pageTitle}>Заявки не из каталога</h2>
       {reviewCount > 0 && (
-        <p style={{ ...styles.hint, color: "var(--accent)", fontWeight: 500 }}>
-          📥 На модерации: {reviewCount} — пока их статус «На модерации», в истории у пользователя они не появятся. Отредактируй и нажми «Одобрить».
-        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", marginBottom: 14, background: "var(--amber-soft)", border: "1px solid transparent", borderRadius: "var(--radius-sm)", fontSize: 12.5, color: "var(--amber)", fontWeight: 500 }}>
+          <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "var(--amber)" }} />
+          На модерации: {reviewCount} — пока статус «На модерации», в истории у клиента карточка не появится
+        </div>
       )}
-      <p style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-        <label style={{ fontSize: 14 }}>Статус:</label>
+      <div className="admin-toolbar">
+        <span className="admin-toolbar-label">Статус</span>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
@@ -655,115 +697,152 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
         >
           <option value="all">Все</option>
           <option value="review">На модерации</option>
-          <option value="pending">Ожидает</option>
+          <option value="pending">Оформлен</option>
           <option value="in_transit">В пути</option>
           <option value="delivered">Доставлено</option>
-          <option value="completed">Выполнен</option>
+          <option value="completed">Завершён</option>
         </select>
-      </p>
-      <div style={styles.list}>
-        <h3 style={styles.subtitle}>Список ({filteredList.length}{statusFilter !== "all" ? ` из ${list.length}` : ""})</h3>
-        {list.length === 0 ? (
-          <p style={styles.hint}>Нет заявок</p>
-        ) : filteredList.length === 0 ? (
-          <p style={styles.hint}>Нет заявок с выбранным статусом</p>
-        ) : (
-          filteredList.map((c) => {
+        <span className="admin-toolbar-spacer" />
+        <span className="admin-toolbar-count">
+          {list.length === 0 ? "Нет заявок" : `${filteredList.length}${statusFilter !== "all" ? ` из ${list.length}` : ""}`}
+        </span>
+      </div>
+      {list.length === 0 ? (
+        <div className="admin-empty">
+          <p className="admin-empty-title">Заявок пока нет</p>
+          <p className="admin-empty-sub">Сюда попадут все запросы клиентов на товары вне каталога</p>
+        </div>
+      ) : filteredList.length === 0 ? (
+        <div className="admin-empty">
+          <p className="admin-empty-title">Ничего не найдено</p>
+          <p className="admin-empty-sub">Нет заявок с выбранным статусом</p>
+        </div>
+      ) : (
+        <div>
+          {filteredList.map((c) => {
             const status = c.status || "pending";
             const isReview = status === "review";
             const isEditing = editingId === c.id;
+            const hasThumb = !!c.image_data && !isEditing;
             return (
-              <div key={c.id} style={{ ...styles.orderCard, borderColor: isReview ? "var(--accent)" : undefined }}>
-                <div style={styles.orderHeader}>
-                  <span style={styles.orderId}>
-                    #{c.id}
-                    {isReview && <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 600, padding: "2px 8px", background: "var(--accent-soft, rgba(198,40,40,0.12))", color: "var(--accent)", borderRadius: 999, letterSpacing: "0.1em", textTransform: "uppercase" }}>На модерации</span>}
-                  </span>
+              <div key={c.id} className={`admin-case${isReview ? " admin-case--review" : ""}`}>
+                <div className="admin-case-head">
+                  <span className="admin-case-id">#{c.id}</span>
+                  <span className="admin-case-date">{new Date(c.created_at).toLocaleString("ru")}</span>
+                  <span className="admin-case-head-spacer" />
+                  <StatusPill status={status} />
                   <button type="button" onClick={() => handleDelete(c.id)} style={styles.deleteOrderIconBtn} aria-label="Удалить заявку" title="Удалить">
                     <TrashIcon />
                   </button>
                 </div>
-                <p style={styles.orderField}>👤 {c.user_name || "—"}</p>
-                <p style={styles.orderField}>📱 {c.user_username || "—"}</p>
-                {c.user_address && <p style={styles.orderField}>📍 {c.user_address}</p>}
-
-                {isEditing ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8, padding: 12, background: "var(--surface-2)", borderRadius: 10 }}>
-                    <label style={styles.label}>Описание / название</label>
-                    <textarea
-                      value={editDesc}
-                      onChange={(e) => setEditDesc(e.target.value)}
-                      rows={3}
-                      style={{ ...styles.input, minHeight: 72 }}
-                      placeholder="Что заказывает клиент"
-                    />
-                    <label style={styles.label}>Размер</label>
-                    <input
-                      type="text"
-                      value={editSize}
-                      onChange={(e) => setEditSize(e.target.value)}
-                      style={styles.input}
-                      placeholder="например, M или 42"
-                    />
-                    <label style={styles.label}>Фото</label>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                      <button type="button" onClick={() => editFileRef.current?.click()} style={styles.smallBtn}>
-                        {editImage ? "Заменить фото" : "Загрузить фото"}
-                      </button>
-                      <input ref={editFileRef} type="file" accept="image/*" onChange={onEditFile} style={{ display: "none" }} />
-                      {editImage && (
-                        <button type="button" onClick={() => setEditImage(null)} style={{ ...styles.smallBtn, color: "var(--accent)" }}>
-                          Удалить фото
-                        </button>
-                      )}
-                    </div>
-                    {editImage && (
-                      <img src={editImage} alt="Превью" style={{ maxWidth: 160, maxHeight: 160, objectFit: "cover", borderRadius: 8 }} />
-                    )}
-                    <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-                      <button type="button" onClick={saveEdit} disabled={updatingId === c.id} style={styles.submit}>
-                        {updatingId === c.id ? "Сохраняю…" : "Сохранить"}
-                      </button>
-                      <button type="button" onClick={cancelEdit} style={styles.cancelBtn}>Отмена</button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <p style={styles.orderField}>📝 {c.description || <span style={{ color: "var(--muted)", fontStyle: "italic" }}>— нет описания —</span>}</p>
-                    {c.size && <p style={styles.orderField}>📐 Размер: {c.size}</p>}
-                    {c.image_data && (
-                      <p style={styles.orderField}>
-                        <button
-                          type="button"
-                          onClick={() => setPreviewImage(c.image_data!)}
-                          style={{ padding: 0, border: "none", background: "none", cursor: "pointer" }}
-                          title="Открыть фото в полном размере"
-                        >
-                          <img src={c.image_data} alt="Фото товара" style={{ maxWidth: 120, maxHeight: 120, objectFit: "cover", borderRadius: 8 }} />
-                        </button>
-                      </p>
-                    )}
-                  </>
-                )}
-
-                <p style={styles.orderDate}>{new Date(c.created_at).toLocaleString("ru")}</p>
-
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 4 }}>
-                  {!isEditing && (
-                    <button type="button" onClick={() => startEdit(c)} style={styles.smallBtn}>
-                      Редактировать
-                    </button>
-                  )}
-                  {!isEditing && (
+                <div className={`admin-case-body${hasThumb ? "" : " admin-case-body--no-thumb"}`}>
+                  {hasThumb && (
                     <button
                       type="button"
-                      onClick={() => handleDuplicate(c.id)}
-                      disabled={updatingId === c.id}
-                      style={styles.smallBtn}
-                      title="Создать дубликат: пользователь увидит ещё одну отдельную карточку"
+                      onClick={() => setPreviewImage(c.image_data!)}
+                      style={{ padding: 0, border: "none", background: "none" }}
+                      title="Открыть фото в полном размере"
                     >
-                      + Дубликат
+                      <img src={c.image_data!} alt="Фото товара" className="admin-case-thumb" />
                     </button>
+                  )}
+                  <div className="admin-case-content">
+                    <div className="admin-case-row">
+                      <span className="admin-case-row-key">Клиент</span>
+                      <span className="admin-case-row-val">{c.user_name || <span className="admin-case-row-val--muted">—</span>}</span>
+                    </div>
+                    <div className="admin-case-row">
+                      <span className="admin-case-row-key">Telegram</span>
+                      <span className="admin-case-row-val">
+                        {c.user_username ? `@${c.user_username.replace(/^@/, "")}` : <span className="admin-case-row-val--muted">—</span>}
+                      </span>
+                    </div>
+                    {c.user_address && (
+                      <div className="admin-case-row">
+                        <span className="admin-case-row-key">Адрес</span>
+                        <span className="admin-case-row-val">{c.user_address}</span>
+                      </div>
+                    )}
+                    {isEditing ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12, padding: 12, background: "var(--surface-2)", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)" }}>
+                        <label className="admin-field">
+                          <span className="admin-field-label">Описание / название</span>
+                          <textarea
+                            value={editDesc}
+                            onChange={(e) => setEditDesc(e.target.value)}
+                            rows={3}
+                            style={{ ...styles.input, minHeight: 72, height: "auto" }}
+                            placeholder="Что заказывает клиент"
+                          />
+                        </label>
+                        <label className="admin-field">
+                          <span className="admin-field-label">Размер</span>
+                          <input
+                            type="text"
+                            value={editSize}
+                            onChange={(e) => setEditSize(e.target.value)}
+                            style={styles.input}
+                            placeholder="например, M или 42"
+                          />
+                        </label>
+                        <div className="admin-field">
+                          <span className="admin-field-label">Фото</span>
+                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                            <button type="button" onClick={() => editFileRef.current?.click()} style={styles.smallBtn}>
+                              {editImage ? "Заменить фото" : "Загрузить фото"}
+                            </button>
+                            <input ref={editFileRef} type="file" accept="image/*" onChange={onEditFile} style={{ display: "none" }} />
+                            {editImage && (
+                              <button type="button" onClick={() => setEditImage(null)} style={{ ...styles.smallBtn, color: "var(--accent)" }}>
+                                Удалить фото
+                              </button>
+                            )}
+                          </div>
+                          {editImage && (
+                            <img src={editImage} alt="Превью" style={{ maxWidth: 160, maxHeight: 160, objectFit: "cover", borderRadius: 8, marginTop: 8, border: "1px solid var(--border)" }} />
+                          )}
+                        </div>
+                        <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                          <button type="button" onClick={saveEdit} disabled={updatingId === c.id} style={styles.submit}>
+                            {updatingId === c.id ? "Сохраняю…" : "Сохранить"}
+                          </button>
+                          <button type="button" onClick={cancelEdit} style={styles.cancelBtn}>Отмена</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="admin-case-row">
+                          <span className="admin-case-row-key">Описание</span>
+                          <span className={`admin-case-row-val${c.description ? "" : " admin-case-row-val--muted"}`}>
+                            {c.description || "— нет описания —"}
+                          </span>
+                        </div>
+                        {c.size && (
+                          <div className="admin-case-row">
+                            <span className="admin-case-row-key">Размер</span>
+                            <span className="admin-case-row-val">{c.size}</span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="admin-case-foot">
+                  {!isEditing && (
+                    <>
+                      <button type="button" onClick={() => startEdit(c)} style={styles.smallBtn}>
+                        Редактировать
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDuplicate(c.id)}
+                        disabled={updatingId === c.id}
+                        style={styles.smallBtn}
+                        title="Создать дубликат: пользователь увидит ещё одну отдельную карточку"
+                      >
+                        + Дубликат
+                      </button>
+                    </>
                   )}
                   {isReview && !isEditing && (
                     <button
@@ -772,32 +851,32 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
                       disabled={updatingId === c.id}
                       style={styles.submit}
                     >
-                      ✓ Одобрить
+                      Одобрить
                     </button>
                   )}
-                  <label style={{ marginLeft: 4 }}>Статус:</label>
+                  <span style={{ flex: 1 }} />
                   <select
+                    aria-label="Изменить статус"
                     value={status}
                     onChange={(e) => handleStatus(c.id, e.target.value as "review" | "pending" | "in_transit" | "delivered" | "completed")}
                     disabled={updatingId === c.id}
                     style={styles.statusSelect}
                   >
                     <option value="review">На модерации</option>
-                    <option value="pending">Ожидает</option>
+                    <option value="pending">Оформлен</option>
                     <option value="in_transit">В пути</option>
                     <option value="delivered">Доставлено</option>
-                    <option value="completed">Выполнен</option>
+                    <option value="completed">Завершён</option>
                   </select>
+                  <a href={telegramChatLink(c.user_username ?? null, c.user_id)} target="_blank" rel="noopener noreferrer" style={styles.contactLink}>
+                    Написать в Telegram
+                  </a>
                 </div>
-
-                <a href={telegramChatLink(c.user_username ?? null, c.user_id)} target="_blank" rel="noopener noreferrer" style={{ ...styles.contactLink, marginTop: 8, display: "inline-block" }}>
-                  Написать в Telegram
-                </a>
               </div>
             );
-          })
-        )}
-      </div>
+          })}
+        </div>
+      )}
       {previewImage && <ImagePreviewModal src={previewImage} onClose={() => setPreviewImage(null)} />}
     </>
   );
@@ -883,51 +962,64 @@ function CategoriesTab({
 
   return (
     <>
+      <div className="admin-page-head">
+        <div className="admin-page-head-text">
+          <h2>Категории</h2>
+          <p className="admin-page-head-sub">Имя категории видно в каталоге, код (латиница) используется в карточках товаров.</p>
+        </div>
+      </div>
       {message && <p style={styles.message}>{message}</p>}
-      <h2 style={styles.pageTitle}>Категории товаров</h2>
-      <p style={styles.hint}>Названия категорий отображаются в каталоге. Код (code) используется в товарах.</p>
-      <form onSubmit={handleCreate} style={styles.form}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end" }}>
-          <label style={styles.label}>
-            Код (латиница)
+
+      <section className="admin-card">
+        <div className="admin-card-head"><h3>Новая категория</h3></div>
+        <form onSubmit={handleCreate} className="admin-card-body" style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end" }}>
+          <label className="admin-field">
+            <span className="admin-field-label">Код (латиница)</span>
             <input
               type="text"
               value={newCode}
               onChange={(e) => setNewCode(e.target.value)}
               placeholder="hoodie"
-              style={{ ...styles.input, width: 120 }}
+              style={{ ...styles.input, width: 140 }}
             />
           </label>
-          <label style={styles.label}>
-            Название
+          <label className="admin-field">
+            <span className="admin-field-label">Название</span>
             <input
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="Худи"
-              style={{ ...styles.input, width: 160 }}
+              style={{ ...styles.input, width: 200 }}
             />
           </label>
-          <label style={styles.label}>
-            Порядок
+          <label className="admin-field">
+            <span className="admin-field-label">Порядок</span>
             <input
               type="number"
               value={newSortOrder}
               onChange={(e) => setNewSortOrder(Number(e.target.value))}
-              style={{ ...styles.input, width: 72 }}
+              style={{ ...styles.input, width: 96 }}
             />
           </label>
           <button type="submit" disabled={submitting} style={styles.submit}>
-            Добавить категорию
+            Добавить
           </button>
+        </form>
+      </section>
+
+      <section className="admin-card">
+        <div className="admin-card-head">
+          <h3>Список категорий</h3>
+          <span className="admin-card-head-meta">{categories.length}</span>
         </div>
-      </form>
-      <div style={styles.list}>
-        <h3 style={styles.subtitle}>Список ({categories.length})</h3>
         {categories.length === 0 ? (
-          <p style={styles.hint}>Нет категорий. Добавьте первую.</p>
+          <div className="admin-empty" style={{ borderRadius: 0, border: "none" }}>
+            <p className="admin-empty-title">Категорий нет</p>
+            <p className="admin-empty-sub">Добавь первую через форму выше</p>
+          </div>
         ) : (
-          <table className="admin-table">
+          <table className="admin-table" style={{ borderRadius: 0, border: "none" }}>
             <thead>
               <tr>
                 <th>Код</th>
@@ -990,7 +1082,7 @@ function CategoriesTab({
             </tbody>
           </table>
         )}
-      </div>
+      </section>
     </>
   );
 }
@@ -1040,27 +1132,39 @@ function CurrencyRateTab({ adminSecret }: { adminSecret: string }) {
 
   return (
     <>
-      {message && <p style={styles.message}>{message}</p>}
-      <h2 style={styles.pageTitle}>Курс валюты</h2>
-      <p style={{ ...styles.hint, marginBottom: 16 }}>Курс белорусского рубля (BYN) к 1 USD. Используется для отображения цен в приложении.</p>
-      <form onSubmit={handleSave} style={styles.form}>
-        <label style={styles.label}>
-          Курс BYN за 1 $
-          <input
-            type="text"
-            inputMode="decimal"
-            value={rate}
-            onChange={(e) => setRate(e.target.value)}
-            placeholder="3.2"
-            style={styles.input}
-          />
-        </label>
-        <div style={styles.formActions}>
-          <button type="submit" style={styles.submit} disabled={saving}>
-            {saving ? "Сохранение…" : "Сохранить"}
-          </button>
+      <div className="admin-page-head">
+        <div className="admin-page-head-text">
+          <h2>Курс валюты</h2>
+          <p className="admin-page-head-sub">Курс белорусского рубля (BYN) к 1 USD. Используется для отображения цен в приложении.</p>
         </div>
-      </form>
+      </div>
+      {message && <p style={styles.message}>{message}</p>}
+
+      <section className="admin-card" style={{ maxWidth: 480 }}>
+        <div className="admin-card-head"><h3>Текущий курс</h3></div>
+        <form onSubmit={handleSave} className="admin-card-body" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <label className="admin-field">
+            <span className="admin-field-label">Курс BYN за 1 $</span>
+            <div style={{ position: "relative" }}>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={rate}
+                onChange={(e) => setRate(e.target.value)}
+                placeholder="3.2"
+                style={{ ...styles.input, paddingRight: 52, fontVariantNumeric: "tabular-nums" }}
+              />
+              <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: "var(--muted)", letterSpacing: 0.04, pointerEvents: "none" }}>BYN</span>
+            </div>
+            <span className="admin-field-hint">Например: 3.2 — значит 1$ = 3.2 BYN</span>
+          </label>
+          <div style={styles.formActions}>
+            <button type="submit" style={styles.submit} disabled={saving}>
+              {saving ? "Сохраняю…" : "Сохранить"}
+            </button>
+          </div>
+        </form>
+      </section>
     </>
   );
 }
@@ -1303,10 +1407,14 @@ function ChatsTab({ adminSecret, onUnreadChanged }: { adminSecret: string; onUnr
 
   return (
     <>
-      <h2 style={styles.pageTitle}>Чаты</h2>
-      <p style={{ ...styles.hint, marginBottom: 16 }}>
-        Каждое сообщение, которое пользователь пишет боту (кроме команд) — приходит сюда. Отвечаешь от имени бота.
-      </p>
+      <div className="admin-page-head">
+        <div className="admin-page-head-text">
+          <h2>Чаты</h2>
+          <p className="admin-page-head-sub">
+            Каждое сообщение, которое пользователь пишет боту (кроме команд) — приходит сюда. Ты отвечаешь от имени бота.
+          </p>
+        </div>
+      </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(260px, 320px) 1fr", gap: 14, alignItems: "stretch", minHeight: 480 }}>
         <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden", background: "#fff" }}>
@@ -1638,24 +1746,32 @@ function ChannelTab({ adminSecret, products }: { adminSecret: string; products: 
 
   return (
     <>
-      <h2 style={styles.pageTitle}>Рассылка</h2>
-      <p style={{ ...styles.hint, marginBottom: 16 }}>
-        Бот пишет каждому подписчику в личку. HTML: <code>&lt;b&gt;</code>, <code>&lt;i&gt;</code>, <code>&lt;a href=&quot;…&quot;&gt;</code>. До {MAX_CHANNEL_IMAGES} фото — уйдут одним альбомом. Throttle ~25 сообщ/сек, чтобы не словить лимиты Telegram.
-      </p>
-
-      <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "14px 16px", marginBottom: 22, background: "#fafafa", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-        <div style={{ flex: 1, minWidth: 200 }}>
-          <strong style={{ fontSize: 13, letterSpacing: 0.2 }}>Подписчики бота</strong>
-          <div style={{ fontSize: 22, fontWeight: 700, marginTop: 2 }}>
-            {usersCount == null ? "—" : usersCount}
-          </div>
-          <p style={{ ...styles.hint, marginTop: 4, marginBottom: 0 }}>
-            Учитываются все, кто хоть раз тапнул <code>/start</code> у бота, оформлял заказ, добавлял в корзину или избранное. Заблокировавшие бота автоматически исключаются.
+      <div className="admin-page-head">
+        <div className="admin-page-head-text">
+          <h2>Рассылка</h2>
+          <p className="admin-page-head-sub">
+            Бот пишет каждому подписчику в личку. HTML: <code>&lt;b&gt;</code>, <code>&lt;i&gt;</code>, <code>&lt;a href=&quot;…&quot;&gt;</code>. До {MAX_CHANNEL_IMAGES} фото — уйдут одним альбомом. Throttle ~25 сообщ/сек.
           </p>
         </div>
-        <button type="button" onClick={refreshUsersCount} style={styles.smallBtn}>
-          Обновить
-        </button>
+      </div>
+
+      <div style={{ display: "flex", alignItems: "stretch", gap: 0, marginBottom: 22, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
+        <div style={{ flex: 1, padding: "14px 18px", display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
+          <span style={{ fontSize: 11.5, fontWeight: 600, letterSpacing: "0.04em", color: "var(--muted)", textTransform: "uppercase" }}>
+            Подписчики бота
+          </span>
+          <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>
+            {usersCount == null ? "—" : usersCount}
+          </div>
+          <p style={{ ...styles.hint, marginTop: 2, marginBottom: 0, fontSize: 12 }}>
+            Все, кто хоть раз тапнул <code>/start</code>, оформлял заказ, добавлял в корзину или избранное. Заблокировавшие бота исключаются автоматически.
+          </p>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", padding: "14px 18px", borderLeft: "1px solid var(--border)" }}>
+          <button type="button" onClick={refreshUsersCount} style={styles.smallBtn}>
+            Обновить
+          </button>
+        </div>
       </div>
 
       <div className="channel-grid" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(280px, 380px)", gap: 22, alignItems: "start" }}>
@@ -1940,65 +2056,111 @@ function ProductsTab({
     }
   };
 
+  const categoryName = (code: string) => categories.find((c) => c.code === code)?.name || code;
+
   return (
     <>
-      <h2 style={styles.pageTitle}>Товары</h2>
-      <p style={styles.hint}>Добавить или редактировать товар</p>
-      <form onSubmit={handleSubmit} style={styles.form}>
-        <label style={styles.label}>Название *</label>
-        <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Essential Tee" style={styles.input} required />
-        <label style={styles.label}>Описание</label>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} style={styles.input} />
-        <label style={styles.label}>Цена ($) *</label>
-        <input type="text" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="33" style={styles.input} required />
-        <label style={styles.label}>Картинки (до 5 URL)</label>
-        {[0, 1, 2, 3, 4].map((i) => (
-          <input
-            key={i}
-            type="text"
-            value={imageUrls[i] ?? ""}
-            onChange={(e) => setImageUrls((prev) => { const n = [...prev]; n[i] = e.target.value; return n; })}
-            placeholder={i === 0 ? "https://... (обязательно первая)" : `Картинка ${i + 1} (необязательно)`}
-            style={styles.input}
-          />
-        ))}
-        <label style={styles.label}>Категория</label>
-        <select value={category} onChange={(e) => setCategory(e.target.value)} style={styles.input}>
-          {categories.length === 0 ? (
-            <option value="tee">Футболки (загрузка…)</option>
-          ) : (
-            categories.map((c) => (
-              <option key={c.code} value={c.code}>{c.name}</option>
-            ))
-          )}
-        </select>
-        <label style={styles.label}>Размеры</label>
-        <input type="text" value={sizes} onChange={(e) => setSizes(e.target.value)} placeholder="S,M,L,XL" style={styles.input} />
-        {message && <p style={styles.message}>{message}</p>}
-        <div style={styles.formActions}>
-          <button type="submit" disabled={submitting} style={styles.submit}>
-            {editingId ? "Сохранить" : "Добавить товар"}
-          </button>
-          {editingId && <button type="button" onClick={cancelEdit} style={styles.cancelBtn}>Отмена</button>}
+      <div className="admin-page-head">
+        <div className="admin-page-head-text">
+          <h2>Товары</h2>
+          <p className="admin-page-head-sub">Добавляй и редактируй карточки товаров. Первая картинка — основная и обязательная.</p>
         </div>
-      </form>
+      </div>
+      {message && <p style={styles.message}>{message}</p>}
 
-      <div style={styles.list}>
-        <h3 style={styles.subtitle}>Товары в каталоге ({products.length})</h3>
-        {products.map((p) => (
-          <div key={p.id} style={styles.productRow}>
-            <img src={(p.image_urls && p.image_urls[0]) || p.image_url || "https://via.placeholder.com/48"} alt="" style={styles.thumb} />
-            <div style={styles.productInfo}>
-              <p style={styles.productName}>{p.name}</p>
-              <p style={styles.productPrice}>{p.price} $</p>
-            </div>
-            <div style={styles.productActions}>
-              <button type="button" onClick={() => startEdit(p)} style={styles.smallBtn}>Изменить</button>
-              <button type="button" onClick={() => handleDelete(p.id)} style={styles.deleteBtn}>Удалить</button>
+      <section className="admin-card">
+        <div className="admin-card-head">
+          <h3>{editingId ? `Редактирование товара #${editingId}` : "Новый товар"}</h3>
+          {editingId && <span className="admin-card-head-meta">Сохрани изменения, чтобы они применились</span>}
+        </div>
+        <form onSubmit={handleSubmit} className="admin-card-body" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div className="admin-form-grid">
+            <label className="admin-field admin-field--full">
+              <span className="admin-field-label">Название *</span>
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Essential Tee" style={styles.input} required />
+            </label>
+            <label className="admin-field admin-field--full">
+              <span className="admin-field-label">Описание</span>
+              <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} style={{ ...styles.input, minHeight: 64, height: "auto" }} placeholder="Краткое описание для карточки" />
+            </label>
+            <label className="admin-field">
+              <span className="admin-field-label">Цена, $ *</span>
+              <input type="text" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="33" style={styles.input} required />
+            </label>
+            <label className="admin-field">
+              <span className="admin-field-label">Категория</span>
+              <select value={category} onChange={(e) => setCategory(e.target.value)} style={styles.input}>
+                {categories.length === 0 ? (
+                  <option value="tee">Футболки (загрузка…)</option>
+                ) : (
+                  categories.map((c) => (
+                    <option key={c.code} value={c.code}>{c.name}</option>
+                  ))
+                )}
+              </select>
+            </label>
+            <label className="admin-field admin-field--full">
+              <span className="admin-field-label">Размеры (через запятую)</span>
+              <input type="text" value={sizes} onChange={(e) => setSizes(e.target.value)} placeholder="S,M,L,XL" style={styles.input} />
+            </label>
+            <div className="admin-field admin-field--full">
+              <span className="admin-field-label">Картинки (до 5 URL)</span>
+              <span className="admin-field-hint">Первая картинка станет главной — она показывается в каталоге и постах</span>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 4 }}>
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <input
+                    key={i}
+                    type="text"
+                    value={imageUrls[i] ?? ""}
+                    onChange={(e) => setImageUrls((prev) => { const n = [...prev]; n[i] = e.target.value; return n; })}
+                    placeholder={i === 0 ? "https://... (обязательно)" : `Картинка ${i + 1} (необязательно)`}
+                    style={styles.input}
+                  />
+                ))}
+              </div>
             </div>
           </div>
-        ))}
-      </div>
+          <div style={styles.formActions}>
+            <button type="submit" disabled={submitting} style={styles.submit}>
+              {submitting ? "Сохраняю…" : editingId ? "Сохранить" : "Добавить товар"}
+            </button>
+            {editingId && <button type="button" onClick={cancelEdit} style={styles.cancelBtn}>Отмена</button>}
+          </div>
+        </form>
+      </section>
+
+      <section className="admin-card">
+        <div className="admin-card-head">
+          <h3>Каталог</h3>
+          <span className="admin-card-head-meta">{products.length} {products.length === 1 ? "товар" : products.length > 4 || products.length === 0 ? "товаров" : "товара"}</span>
+        </div>
+        <div className="admin-card-body admin-card-body--flush">
+          {products.length === 0 ? (
+            <div className="admin-empty" style={{ borderRadius: 0, border: "none" }}>
+              <p className="admin-empty-title">Каталог пуст</p>
+              <p className="admin-empty-sub">Добавь первый товар через форму выше</p>
+            </div>
+          ) : (
+            products.map((p) => (
+              <div key={p.id} className="admin-list-row">
+                <img src={(p.image_urls && p.image_urls[0]) || p.image_url || "https://via.placeholder.com/56"} alt="" className="admin-list-row-thumb" />
+                <div style={{ minWidth: 0 }}>
+                  <p className="admin-list-row-name">{p.name}</p>
+                  <p className="admin-list-row-meta">
+                    {categoryName(p.category)}
+                    {p.sizes && <> · {p.sizes}</>}
+                  </p>
+                </div>
+                <span className="admin-list-row-price">{p.price} $</span>
+                <span className="admin-list-row-actions">
+                  <button type="button" onClick={() => startEdit(p)} style={styles.smallBtn}>Изменить</button>
+                  <button type="button" onClick={() => handleDelete(p.id)} style={styles.deleteBtn}>Удалить</button>
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
     </>
   );
 }
@@ -2108,15 +2270,20 @@ function PostsTab({ adminSecret }: { adminSecret: string }) {
 
   return (
     <>
-      {message && <p style={styles.message}>{message}</p>}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <h2 style={{ ...styles.pageTitle, marginBottom: 0 }}>Посты</h2>
-        {!showForm && (
-          <button type="button" onClick={openCreate} style={styles.submit}>
-            Создать пост
-          </button>
-        )}
+      <div className="admin-page-head">
+        <div className="admin-page-head-text">
+          <h2>Посты</h2>
+          <p className="admin-page-head-sub">Лента вкладки «Вдохновиться» в WebApp. Здесь публикуешь карточки с картинкой и подписью.</p>
+        </div>
+        <div className="admin-page-head-actions">
+          {!showForm && (
+            <button type="button" onClick={openCreate} style={styles.submit}>
+              Создать пост
+            </button>
+          )}
+        </div>
       </div>
+      {message && <p style={styles.message}>{message}</p>}
 
       {showForm && (
         <div style={styles.form}>

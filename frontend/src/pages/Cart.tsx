@@ -132,7 +132,9 @@ export function Cart({
                 {(item.size || item.quantity > 1) && (
                   <div className="zen-bag-item-meta">
                     {item.size && (
-                      <span className="zen-bag-item-chip">{item.size}</span>
+                      <span className="zen-bag-item-size">
+                        {t(lang, "historyCustomSize")}: <strong>{item.size}</strong>
+                      </span>
                     )}
                     {item.quantity > 1 && (
                       <span className="zen-bag-item-chip zen-bag-item-chip--qty">
