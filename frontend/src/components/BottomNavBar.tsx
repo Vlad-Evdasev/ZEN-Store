@@ -54,8 +54,9 @@ function CatalogIcon({ active }: IconProps) {
   );
 }
 
-/* Custom Order — «волшебная палочка» с искрой:
-   просьба создать что-то на заказ, отличается от поиска и каталога. */
+/* Custom Order — бумажный самолётик: отправить запрос на товар,
+   которого нет в каталоге. Геометричный дартс с хорошо читаемым
+   изгибом «фальцовки».                                              */
 function CustomOrderIcon({ active }: IconProps) {
   return (
     <svg
@@ -66,31 +67,24 @@ function CustomOrderIcon({ active }: IconProps) {
       aria-hidden="true"
       style={{ transition: "transform 0.25s ease" }}
     >
-      {/* стержень палочки */}
+      {/* силуэт самолётика: длинная сторона — фюзеляж, V-образный
+         вырез снизу обозначает крылья и хвост                      */}
       <path
-        d="M5 19L15 9"
+        d="M3.2 11.4 L 20.5 3.5 L 14.2 20.4 L 11.2 13.5 Z"
+        fill="none"
         stroke="currentColor"
-        strokeWidth="1.9"
+        strokeWidth={active ? 2 : 1.7}
+        strokeLinejoin="round"
         strokeLinecap="round"
       />
-      {/* кончик-наконечник палочки */}
+      {/* линия фальцовки — от носа к V-вырезу */}
       <path
-        d="M14.2 7.8L16.2 5.8L18.2 7.8L16.2 9.8L14.2 7.8Z"
-        fill={active ? "currentColor" : "none"}
+        d="M20.5 3.5 L 11.2 13.5"
         stroke="currentColor"
-        strokeWidth={active ? 0 : 1.7}
-        strokeLinejoin="round"
+        strokeWidth={active ? 2 : 1.7}
+        strokeLinecap="round"
+        fill="none"
       />
-      {/* большая искра справа сверху */}
-      <path
-        d="M19 12.5L19.6 14.4L21.5 15L19.6 15.6L19 17.5L18.4 15.6L16.5 15L18.4 14.4L19 12.5Z"
-        fill={active ? "currentColor" : "none"}
-        stroke="currentColor"
-        strokeWidth={active ? 0 : 1.5}
-        strokeLinejoin="round"
-      />
-      {/* маленькая искра */}
-      <circle cx="9.5" cy="4.5" r="1" fill="currentColor" />
     </svg>
   );
 }
