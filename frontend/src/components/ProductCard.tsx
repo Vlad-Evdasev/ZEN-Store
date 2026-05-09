@@ -102,6 +102,18 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
         {product.brand?.trim() && (
           <span style={compact ? styles.brandCompact : styles.brand}>{product.brand.trim()}</span>
         )}
+        {product.sizes?.trim() && (
+          <span className="zen-bag-item-size product-card-size">
+            Размер:{" "}
+            <strong>
+              {product.sizes
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean)
+                .join(", ")}
+            </strong>
+          </span>
+        )}
         <div style={compact ? styles.priceRowCompact : styles.priceRow}>
           <p className="product-card-price" style={priceStyle}>{formatPrice(product.price)}</p>
           {hasReviews && (
@@ -331,5 +343,5 @@ const styles: Record<string, React.CSSProperties> = {
   imageWrapFillHeight: { flex: "1 1 0%", minHeight: 120, aspectRatio: "unset" as const },
   descWrapFillHeight: { flex: "0 0 auto", minHeight: 52, flexShrink: 0 },
   nameCompact: { padding: 0, margin: "0 0 3px", fontSize: 16, lineHeight: 1.25, letterSpacing: "-0.01em" },
-  priceCompact: { padding: 0, margin: 0, fontSize: 13, fontWeight: 500, color: "var(--text)", lineHeight: 1.25 },
+  priceCompact: { padding: 0, margin: 0, fontSize: 16, fontWeight: 700, color: "var(--text)", lineHeight: 1.25, letterSpacing: "-0.01em" },
 };

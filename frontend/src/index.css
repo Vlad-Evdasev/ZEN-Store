@@ -823,7 +823,7 @@ button:active {
 .product-card-price,
 .zen-app .product-card-price {
   font-family: "Proxima Nova", -apple-system, system-ui, sans-serif !important;
-  font-weight: 500 !important;
+  font-weight: 700 !important;
 }
 [data-theme="dark"] .product-card-price,
 [data-theme="dark"] .zen-app .product-card-price {
@@ -831,7 +831,13 @@ button:active {
 }
 html[data-theme="light"] .product-card-price,
 html[data-theme="light"] .zen-app .product-card-price {
-  color: var(--muted);
+  color: var(--text);
+}
+/* Размер под названием в карточке: тот же стиль что и в корзине */
+.zen-app .product-card-size {
+  margin: 2px 0 0;
+  display: block;
+  line-height: 1.3;
 }
 .product-card-desc,
 .zen-app .product-card-desc {
