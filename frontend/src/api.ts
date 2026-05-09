@@ -678,7 +678,7 @@ export async function deletePostComment(postId: number, commentId: number, admin
 }
 
 export async function publishChannelPost(
-  data: { text: string; image_url?: string | null },
+  data: { text: string; image_urls?: string[] },
   adminSecret: string
 ): Promise<{ ok: true; message_id: number }> {
   const res = await fetch(`${API_URL}/api/admin/telegram/post`, {

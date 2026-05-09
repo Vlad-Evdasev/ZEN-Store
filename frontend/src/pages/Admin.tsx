@@ -836,25 +836,66 @@ function CurrencyRateTab({ adminSecret }: { adminSecret: string }) {
   );
 }
 
+const MAX_CHANNEL_IMAGES = 10;
+
 function ChannelTab({ adminSecret }: { adminSecret: string }) {
   const [text, setText] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
+  const [images, setImages] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const addImage = (src: string) => {
+    setImages((prev) => (prev.length >= MAX_CHANNEL_IMAGES ? prev : [...prev, src]));
+  };
+  const removeImage = (i: number) => setImages((prev) => prev.filter((_, idx) => idx !== i));
+  const moveImage = (i: number, dir: -1 | 1) => {
+    setImages((prev) => {
+      const j = i + dir;
+      if (j < 0 || j >= prev.length) return prev;
+      const next = [...prev];
+      [next[i], next[j]] = [next[j], next[i]];
+      return next;
+    });
+  };
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (!files.length) return;
+    const remaining = MAX_CHANNEL_IMAGES - images.length;
+    files.slice(0, remaining).forEach((file) => {
+      if (!file.type.startsWith("image/")) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result;
+        if (typeof dataUrl === "string") addImage(dataUrl);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const [urlInput, setUrlInput] = useState("");
+  const addUrl = () => {
+    const u = urlInput.trim();
+    if (!u) return;
+    addImage(u);
+    setUrlInput("");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!text.trim() && !imageUrl.trim()) {
-      setMessage({ kind: "err", text: "Заполни текст или укажи картинку" });
+    if (!text.trim() && images.length === 0) {
+      setMessage({ kind: "err", text: "Заполни текст или добавь хотя бы одну картинку" });
       return;
     }
     setSending(true);
     setMessage(null);
     try {
-      const r = await publishChannelPost({ text, image_url: imageUrl.trim() || null }, adminSecret);
+      const r = await publishChannelPost({ text, image_urls: images }, adminSecret);
       setMessage({ kind: "ok", text: `Опубликовано в канал (message_id ${r.message_id})` });
       setText("");
-      setImageUrl("");
+      setImages([]);
     } catch (err) {
       setMessage({ kind: "err", text: err instanceof Error ? err.message : "Ошибка публикации" });
     } finally {
@@ -866,7 +907,7 @@ function ChannelTab({ adminSecret }: { adminSecret: string }) {
     <>
       <h2 style={styles.pageTitle}>Канал</h2>
       <p style={{ ...styles.hint, marginBottom: 16 }}>
-        Сообщение уходит в Telegram-канал, ID которого задан в <code>CHANNEL_CHAT_ID</code> (или <code>ADMIN_CHAT_ID</code>) на бэкенде. Бот должен быть админом канала. Поддерживается базовый HTML: <code>&lt;b&gt;</code>, <code>&lt;i&gt;</code>, <code>&lt;a href=&quot;…&quot;&gt;</code>.
+        Сообщение уходит в Telegram-канал, ID которого задан в <code>CHANNEL_CHAT_ID</code> (или <code>ADMIN_CHAT_ID</code>) на бэкенде. Бот должен быть админом канала. Поддерживается базовый HTML: <code>&lt;b&gt;</code>, <code>&lt;i&gt;</code>, <code>&lt;a href=&quot;…&quot;&gt;</code>. До {MAX_CHANNEL_IMAGES} фото — отправятся альбомом.
       </p>
       <form onSubmit={handleSubmit} style={styles.form}>
         <label style={styles.label}>Текст поста</label>
@@ -877,22 +918,88 @@ function ChannelTab({ adminSecret }: { adminSecret: string }) {
           placeholder="Что-то тёплое для подписчиков…"
           style={{ ...styles.input, minHeight: 140, fontFamily: "inherit" }}
         />
-        <label style={styles.label}>Картинка (URL)</label>
-        <input
-          type="url"
-          value={imageUrl}
-          onChange={(e) => setImageUrl(e.target.value)}
-          placeholder="https://… (опционально)"
-          style={styles.input}
-        />
-        {imageUrl.trim() && (
-          <img
-            src={imageUrl}
-            alt="Превью"
-            style={{ maxWidth: "100%", maxHeight: 240, borderRadius: 8, objectFit: "cover", marginTop: 4 }}
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+
+        <label style={styles.label}>
+          Фото ({images.length} / {MAX_CHANNEL_IMAGES})
+        </label>
+        <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            style={styles.smallBtn}
+            disabled={images.length >= MAX_CHANNEL_IMAGES}
+          >
+            Загрузить с устройства
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            style={{ display: "none" }}
+            onChange={onFileChange}
           />
+          <input
+            type="url"
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            placeholder="…или вставь URL"
+            style={{ ...styles.input, flex: 1, minWidth: 200, marginBottom: 0 }}
+            disabled={images.length >= MAX_CHANNEL_IMAGES}
+          />
+          <button
+            type="button"
+            onClick={addUrl}
+            style={styles.smallBtn}
+            disabled={!urlInput.trim() || images.length >= MAX_CHANNEL_IMAGES}
+          >
+            Добавить URL
+          </button>
+        </div>
+
+        {images.length > 0 && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10, marginBottom: 12 }}>
+            {images.map((src, i) => (
+              <div
+                key={`${i}-${src.slice(0, 32)}`}
+                style={{ position: "relative", borderRadius: 10, overflow: "hidden", aspectRatio: "1 / 1", background: "#f3f3f3" }}
+              >
+                <img
+                  src={src}
+                  alt={`Фото ${i + 1}`}
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                  onError={(e) => { (e.target as HTMLImageElement).style.opacity = "0.3"; }}
+                />
+                <div style={{ position: "absolute", top: 6, left: 6, background: "rgba(0,0,0,0.55)", color: "#fff", borderRadius: 999, fontSize: 11, padding: "2px 8px", letterSpacing: 0.5 }}>
+                  {i + 1}
+                </div>
+                <div style={{ position: "absolute", top: 6, right: 6, display: "flex", gap: 4 }}>
+                  <button
+                    type="button"
+                    onClick={() => moveImage(i, -1)}
+                    disabled={i === 0}
+                    title="Выше в порядке"
+                    style={{ width: 26, height: 26, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.92)", cursor: "pointer", fontSize: 13, lineHeight: 1, padding: 0 }}
+                  >↑</button>
+                  <button
+                    type="button"
+                    onClick={() => moveImage(i, 1)}
+                    disabled={i === images.length - 1}
+                    title="Ниже в порядке"
+                    style={{ width: 26, height: 26, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.92)", cursor: "pointer", fontSize: 13, lineHeight: 1, padding: 0 }}
+                  >↓</button>
+                  <button
+                    type="button"
+                    onClick={() => removeImage(i)}
+                    title="Удалить"
+                    style={{ width: 26, height: 26, borderRadius: "50%", border: "none", background: "#c62828", color: "#fff", cursor: "pointer", fontSize: 13, lineHeight: 1, padding: 0 }}
+                  >×</button>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
+
         {message && (
           <p style={{ ...styles.message, color: message.kind === "ok" ? "var(--accent)" : "#c62828" }}>
             {message.text}

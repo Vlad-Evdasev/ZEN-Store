@@ -49,13 +49,17 @@ adminRouter.patch("/currency-rate", requireAdmin, (req, res) => {
 
 // Публикация поста в Telegram-канал. Бот должен быть админом канала; ID канала
 // берётся из CHANNEL_CHAT_ID (или ADMIN_CHAT_ID для обратной совместимости).
+// Принимает image_urls (массив до 10) или одиночный image_url для обратной совместимости.
 adminRouter.post("/telegram/post", requireAdmin, async (req, res) => {
   const text = typeof req.body?.text === "string" ? req.body.text : "";
-  const imageUrl = typeof req.body?.image_url === "string" && req.body.image_url.trim() ? req.body.image_url.trim() : null;
-  if (!text.trim() && !imageUrl) {
-    return res.status(400).json({ error: "Укажи текст или картинку (или то и другое)" });
+  const rawImages: unknown = req.body?.image_urls ?? (req.body?.image_url ? [req.body.image_url] : []);
+  const images: string[] = Array.isArray(rawImages)
+    ? rawImages.filter((x): x is string => typeof x === "string" && x.trim().length > 0).map((x) => x.trim())
+    : [];
+  if (!text.trim() && images.length === 0) {
+    return res.status(400).json({ error: "Укажи текст или хотя бы одну картинку" });
   }
-  const result = await broadcastChannelPost(text, imageUrl);
+  const result = await broadcastChannelPost(text, images);
   if (!result.ok) return res.status(500).json({ error: result.error });
   return res.json({ ok: true, message_id: result.messageId });
 });
