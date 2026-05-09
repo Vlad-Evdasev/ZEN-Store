@@ -13,22 +13,6 @@
   padding-bottom: 0;
 }
 
-/* Сплошной плашка под CTA-баром — чтобы под закруглёнными краями
-   пилюли «В корзину» (а особенно в Telegram WebApp на iOS, где
-   home-indicator зона видна) не просвечивал контент страницы.
-   Высота = от низа экрана до верха пилюли (12px gap + ~74px пилюля). */
-.product-v2::after {
-  content: "";
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: calc(12px + env(safe-area-inset-bottom, 0px));
-  background: var(--bg);
-  pointer-events: none;
-  z-index: 19;
-}
-
 /* ─── HERO ─── */
 .product-v2__hero {
   position: relative;

@@ -2419,10 +2419,24 @@ nav svg {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 999px;
+  /* Многослойная «floating»-тень: глубокая мягкая тень снизу визуально
+     приподнимает пилюлю и создаёт fade-эффект под ней — контент,
+     просвечивающий через 12-px зазор у нижнего края (особенно в
+     Telegram WebApp на iOS), уходит в темноту и читается как тень. */
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.04) inset,
-    0 18px 40px -20px rgba(0, 0, 0, 0.35),
-    0 6px 16px -10px rgba(0, 0, 0, 0.25);
+    0 1px 0 rgba(255, 255, 255, 0.05) inset,
+    0 2px 4px rgba(0, 0, 0, 0.06),
+    0 8px 18px -4px rgba(0, 0, 0, 0.14),
+    0 28px 48px -10px rgba(0, 0, 0, 0.32),
+    0 60px 80px -20px rgba(0, 0, 0, 0.28);
+}
+html[data-theme="dark"] .zen-app .zen-bag-summary-bar {
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.05) inset,
+    0 2px 4px rgba(0, 0, 0, 0.30),
+    0 10px 22px -4px rgba(0, 0, 0, 0.45),
+    0 32px 56px -10px rgba(0, 0, 0, 0.65),
+    0 64px 90px -20px rgba(0, 0, 0, 0.55);
 }
 @media (min-width: 768px) {
   .zen-app .zen-bag-summary { padding-left: var(--content-padding); padding-right: var(--content-padding); }
