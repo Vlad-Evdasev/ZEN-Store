@@ -360,7 +360,6 @@ function App() {
           <History
             userId={userId}
             onBack={openCatalog}
-            onProductClick={(id) => openProduct(id, "history")}
             products={products}
             wishlistIds={wishlistIds}
             onToggleWishlist={toggleWishlist}

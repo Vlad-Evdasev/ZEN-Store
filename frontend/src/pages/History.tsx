@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { getOrders, type Order, type Product } from "../api";
+import { getOrders, getMyCustomOrders, type Order, type MyCustomOrder, type Product } from "../api";
 import { useSettings } from "../context/SettingsContext";
 import type { Lang } from "../context/SettingsContext";
 import { t } from "../i18n";
@@ -7,7 +7,6 @@ import { t } from "../i18n";
 interface HistoryProps {
   userId: string;
   onBack: () => void;
-  onProductClick?: (productId: number) => void;
   products?: Product[];
   wishlistIds?: Set<number>;
   onToggleWishlist?: (productId: number) => void;
@@ -44,32 +43,46 @@ function getStepIndex(status: string): number {
   return 0;
 }
 
+type HistoryEntry =
+  | { kind: "catalog"; key: string; createdAt: string; order: Order }
+  | { kind: "custom"; key: string; createdAt: string; order: MyCustomOrder };
+
 export function History({
   userId,
-  onProductClick,
   onOpenCatalog,
 }: HistoryProps) {
   const { formatPrice, settings } = useSettings();
   const lang = settings.lang;
   const [orders, setOrders] = useState<Order[]>([]);
+  const [customOrders, setCustomOrders] = useState<MyCustomOrder[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getOrders(userId)
-      .then(setOrders)
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    let cancelled = false;
+    Promise.allSettled([getOrders(userId), getMyCustomOrders(userId)])
+      .then(([catalog, custom]) => {
+        if (cancelled) return;
+        if (catalog.status === "fulfilled") setOrders(catalog.value);
+        if (custom.status === "fulfilled") setCustomOrders(custom.value);
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [userId]);
 
-  const activeOrders = useMemo(() => {
-    const active: Order[] = [];
+  const activeEntries = useMemo<HistoryEntry[]>(() => {
+    const isActive = (status: string) => status !== "delivered" && status !== "completed";
+    const list: HistoryEntry[] = [];
     for (const o of orders) {
-      if (o.status === "delivered" || o.status === "completed") continue;
-      active.push(o);
+      if (!isActive(o.status)) continue;
+      list.push({ kind: "catalog", key: `c-${o.id}`, createdAt: o.created_at, order: o });
     }
-    active.sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
-    return active;
-  }, [orders]);
+    for (const o of customOrders) {
+      if (!isActive(o.status)) continue;
+      list.push({ kind: "custom", key: `x-${o.id}`, createdAt: o.created_at, order: o });
+    }
+    list.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+    return list;
+  }, [orders, customOrders]);
 
   if (loading) {
     return (
@@ -79,7 +92,7 @@ export function History({
     );
   }
 
-  const isEmpty = activeOrders.length === 0;
+  const isEmpty = activeEntries.length === 0;
 
   return (
     <div style={styles.wrap} className="zen-page-enter">
@@ -94,13 +107,18 @@ export function History({
       ) : (
         <section style={styles.section}>
           <div style={styles.activeList}>
-            {activeOrders.map((o) => (
+            {activeEntries.map((entry) => entry.kind === "catalog" ? (
               <ActiveOrderCard
-                key={o.id}
-                order={o}
+                key={entry.key}
+                order={entry.order}
                 formatPrice={formatPrice}
                 lang={lang}
-                onProductClick={onProductClick}
+              />
+            ) : (
+              <CustomOrderCard
+                key={entry.key}
+                order={entry.order}
+                lang={lang}
               />
             ))}
           </div>
@@ -123,12 +141,10 @@ function ActiveOrderCard({
   order,
   formatPrice,
   lang,
-  onProductClick,
 }: {
   order: Order;
   formatPrice: (n: number) => string;
   lang: Lang;
-  onProductClick?: (productId: number) => void;
 }) {
   const items = parseItems(order.items);
   const totalCount = items.reduce((s, i) => s + (i.quantity || 1), 0);
@@ -143,9 +159,6 @@ function ActiveOrderCard({
     { key: "delivered", labelKey: "historyStepDelivered" },
   ];
 
-  const firstProductId = items[0]?.product_id;
-  const isClickable = onProductClick && firstProductId != null;
-
   return (
     <article style={styles.activeCard}>
       <div style={styles.activeCardHeader}>
@@ -157,27 +170,7 @@ function ActiveOrderCard({
         <span style={styles.activeTotal}>{formatPrice(order.total)}</span>
       </div>
 
-      <div
-        style={{
-          ...styles.activePreview,
-          ...(isClickable ? styles.activePreviewClickable : {}),
-        }}
-        onClick={
-          isClickable ? () => onProductClick!(firstProductId!) : undefined
-        }
-        role={isClickable ? "button" : undefined}
-        tabIndex={isClickable ? 0 : undefined}
-        onKeyDown={
-          isClickable
-            ? (e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onProductClick!(firstProductId!);
-                }
-              }
-            : undefined
-        }
-      >
+      <div style={styles.activePreview}>
         <div style={styles.thumbStack}>
           {previews.map((it, idx) => (
             <div
@@ -213,6 +206,127 @@ function ActiveOrderCard({
       </div>
 
       <div style={styles.timelineWrap} aria-label="order progress">
+        <div style={styles.timelineTrack}>
+          {steps.map((step, idx) => {
+            const done = idx <= stepIndex;
+            const current = idx === stepIndex;
+            const showConnector = idx < steps.length - 1;
+            const nextDone = idx + 1 <= stepIndex;
+            return (
+              <div
+                key={step.key}
+                style={{
+                  ...styles.timelineNodeWrap,
+                  ...(showConnector ? styles.timelineNodeWrapGrow : {}),
+                }}
+              >
+                <span
+                  style={{
+                    ...styles.timelineNode,
+                    ...(done ? styles.timelineNodeDone : {}),
+                    ...(current ? styles.timelineNodeCurrent : {}),
+                  }}
+                  aria-current={current ? "step" : undefined}
+                >
+                  {done && !current ? <CheckIcon /> : null}
+                  {current ? <span style={styles.timelinePulse} /> : null}
+                </span>
+                {showConnector && (
+                  <span
+                    style={{
+                      ...styles.timelineConnector,
+                      ...(nextDone ? styles.timelineConnectorDone : {}),
+                    }}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div style={styles.timelineLabels}>
+          {steps.map((step, idx) => {
+            const done = idx <= stepIndex;
+            const current = idx === stepIndex;
+            const isFirst = idx === 0;
+            const isLast = idx === steps.length - 1;
+            const align: React.CSSProperties = isFirst
+              ? { justifyContent: "flex-start" }
+              : isLast
+                ? { justifyContent: "flex-end" }
+                : { justifyContent: "center" };
+            return (
+              <div
+                key={step.key}
+                style={{
+                  ...styles.timelineLabelSlot,
+                  ...align,
+                  ...(isFirst || isLast
+                    ? styles.timelineLabelSlotEdge
+                    : styles.timelineLabelSlotMid),
+                }}
+              >
+                <span
+                  style={{
+                    ...styles.timelineLabel,
+                    ...(done ? styles.timelineLabelDone : {}),
+                    ...(current ? styles.timelineLabelCurrent : {}),
+                  }}
+                >
+                  {t(lang, step.labelKey)}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function CustomOrderCard({
+  order,
+  lang,
+}: {
+  order: MyCustomOrder;
+  lang: Lang;
+}) {
+  const stepIndex = getStepIndex(order.status);
+
+  const steps: { key: StepKey; labelKey: string }[] = [
+    { key: "placed", labelKey: "historyStepPlaced" },
+    { key: "processing", labelKey: "historyStepProcessing" },
+    { key: "in_transit", labelKey: "historyStepInTransit" },
+    { key: "delivered", labelKey: "historyStepDelivered" },
+  ];
+
+  const description = order.description?.trim();
+  const size = order.size?.trim();
+
+  return (
+    <article style={styles.activeCard}>
+      <div style={styles.activeCardHeader}>
+        <div>
+          <span style={styles.customBadge}>{t(lang, "historyCustomBadge")}</span>
+          <span style={{ ...styles.activeOrderDate, marginTop: 4, display: "block" }}>
+            {formatDate(order.created_at, lang)}
+          </span>
+        </div>
+      </div>
+
+      <div style={styles.customBody}>
+        {description ? (
+          <p style={styles.customDescription}>{description}</p>
+        ) : (
+          <p style={{ ...styles.customDescription, color: "var(--muted)", fontStyle: "italic" }}>
+            {t(lang, "historyCustomNoDesc")}
+          </p>
+        )}
+        {size && (
+          <span style={styles.customSize}>{t(lang, "historyCustomSize")}: <strong>{size}</strong></span>
+        )}
+      </div>
+
+      <div style={styles.timelineWrap} aria-label="custom order progress">
         <div style={styles.timelineTrack}>
           {steps.map((step, idx) => {
             const done = idx <= stepIndex;
@@ -402,7 +516,39 @@ const styles: Record<string, React.CSSProperties> = {
     background: "var(--surface-elevated)",
     borderRadius: 12,
   },
-  activePreviewClickable: { cursor: "pointer" },
+
+  customBadge: {
+    display: "inline-block",
+    padding: "3px 10px",
+    background: "var(--accent-soft, rgba(198,40,40,0.12))",
+    color: "var(--accent)",
+    borderRadius: 999,
+    fontSize: 10,
+    fontWeight: 600,
+    letterSpacing: "0.12em",
+    textTransform: "uppercase",
+  },
+  customBody: {
+    padding: "12px 14px",
+    background: "var(--surface-elevated)",
+    borderRadius: 12,
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+  },
+  customDescription: {
+    margin: 0,
+    fontSize: 13.5,
+    lineHeight: 1.5,
+    color: "var(--text)",
+    whiteSpace: "pre-wrap",
+    wordBreak: "break-word",
+  },
+  customSize: {
+    fontSize: 12,
+    color: "var(--muted)",
+    letterSpacing: "0.02em",
+  },
   thumbStack: { display: "flex", alignItems: "center", flexShrink: 0 },
   thumb: {
     width: 44,

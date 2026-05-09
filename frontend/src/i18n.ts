@@ -135,6 +135,9 @@ const texts: Record<Lang, Record<string, string>> = {
     historyStepProcessing: "В обработке",
     historyStepInTransit: "В пути",
     historyStepDelivered: "Доставлен",
+    historyCustomBadge: "Не из каталога",
+    historyCustomNoDesc: "Без описания",
+    historyCustomSize: "Размер",
     historyEmptyHeadline: "Ваша история пока пуста",
     historyEmptySubline: "Но наши новинки уже ждут вас",
     historyEmptyCta: "Перейти в каталог",
@@ -328,6 +331,9 @@ const texts: Record<Lang, Record<string, string>> = {
     historyStepProcessing: "Processing",
     historyStepInTransit: "In transit",
     historyStepDelivered: "Delivered",
+    historyCustomBadge: "Custom request",
+    historyCustomNoDesc: "No description",
+    historyCustomSize: "Size",
     historyEmptyHeadline: "Your history is still empty",
     historyEmptySubline: "Our new arrivals are waiting for you",
     historyEmptyCta: "Browse the catalog",
@@ -391,4 +397,12 @@ const texts: Record<Lang, Record<string, string>> = {
 
 export function t(lang: Lang, key: string): string {
   return texts[lang][key] ?? texts.ru[key] ?? key;
+}
+
+// Лейбл категории с учётом языка: предпочитаем перевод по коду из i18n
+// (tee/hoodie/pants/...) и падаем обратно на name из БД для категорий, которые
+// админ добавил руками и которых нет в словаре.
+export function categoryLabel(lang: Lang, c: { code: string; name: string }): string {
+  const translated = texts[lang]?.[c.code];
+  return translated ?? c.name;
 }

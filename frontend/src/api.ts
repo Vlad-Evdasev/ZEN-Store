@@ -397,6 +397,21 @@ export async function submitCustomOrder(
   if (!res.ok) throw new Error("Failed to submit custom order");
 }
 
+// Минимальная инфа о собственной заявке — отдаётся юзеру в истории.
+export interface MyCustomOrder {
+  id: number;
+  description: string;
+  size: string;
+  status: string;
+  created_at: string;
+}
+
+export async function getMyCustomOrders(userId: string): Promise<MyCustomOrder[]> {
+  const res = await fetchWithRetry(`${API_URL}/api/custom-orders/${encodeURIComponent(userId)}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
 export interface Review {
   id: number;
   user_id: string;

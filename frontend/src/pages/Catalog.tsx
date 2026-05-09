@@ -9,7 +9,7 @@ import { FiltersSheet } from "../components/catalog/FiltersSheet";
 import type { FiltersSheetHandle } from "../components/catalog/FiltersSheet";
 import type { DraftFiltersValue } from "../components/catalog/FiltersSheet.types";
 import { useSettings } from "../context/SettingsContext";
-import { t } from "../i18n";
+import { t, categoryLabel } from "../i18n";
 
 const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400";
 
@@ -100,7 +100,7 @@ export function Catalog({
               const fallback = FALLBACK_BY_CODE[c.code];
               return {
                 id: c.code,
-                name: c.name,
+                name: categoryLabel(lang, c),
                 image: fallback?.image ?? DEFAULT_IMAGE,
                 desc: fallback?.desc ?? "",
                 isReal: false as const,
@@ -251,7 +251,7 @@ export function Catalog({
 
   const categoryTabs = useMemo(() => {
     if (categories.length > 0) {
-      return [{ code: "all", label: t(lang, "all") }, ...categories.map((c) => ({ code: c.code, label: c.name }))];
+      return [{ code: "all", label: t(lang, "all") }, ...categories.map((c) => ({ code: c.code, label: categoryLabel(lang, c) }))];
     }
     return FALLBACK_CATEGORY_CODES.map((code) => ({ code, label: t(lang, code) }));
   }, [categories, lang]);

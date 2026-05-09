@@ -1,6 +1,8 @@
 import { useRef, useEffect } from "react";
 import { StoreCard } from "./StoreCard";
 import type { Store, Category } from "../api";
+import { useSettings } from "../context/SettingsContext";
+import { categoryLabel } from "../i18n";
 
 /** Картинка и описание по умолчанию для категорий из API (для известных кодов) */
 const FALLBACK_BY_CODE: Record<string, { image: string; desc: string }> = {
@@ -26,6 +28,8 @@ interface StoresCarouselProps {
 }
 
 export function StoresCarousel({ stores, categories = [], onStoreClick, compact }: StoresCarouselProps) {
+  const { settings } = useSettings();
+  const lang = settings.lang;
   const scrollRef = useRef<HTMLDivElement>(null);
   const marqueePausedRef = useRef(false);
   const pauseTimeoutRef = useRef<number | null>(null);
@@ -61,7 +65,7 @@ export function StoresCarousel({ stores, categories = [], onStoreClick, compact 
             const fallback = FALLBACK_BY_CODE[c.code];
             return {
               id: c.code,
-              name: c.name,
+              name: categoryLabel(lang, c),
               image: fallback?.image ?? DEFAULT_CATEGORY_IMAGE,
               desc: fallback?.desc ?? DEFAULT_CATEGORY_DESC,
               isReal: false as const,
