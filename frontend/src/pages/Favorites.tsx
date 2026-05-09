@@ -69,6 +69,8 @@ export function Favorites({
             </button>
             <ProductCard
               product={p}
+              compact
+              sizeVariant="default"
               onClick={() => onProductClick(p.id)}
               inWishlist={true}
             />
