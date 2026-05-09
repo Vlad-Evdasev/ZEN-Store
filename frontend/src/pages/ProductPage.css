@@ -13,29 +13,6 @@
   padding-bottom: 0;
 }
 
-/* Soft fade-to-bg в самой нижней полосе вьюпорта. Когда контента под
-   пилюлей нет — слой невидимый (bg-color поверх bg-color). Когда
-   через 12-px зазор у нижнего края просвечивает контент (актуально
-   для Telegram WebApp на iOS) — он мягко растворяется в фон, не
-   выглядит как обрезок. Высота строго подгоняется под gap CTA + safe-
-   area, чтобы тень пилюли не «срезалась». */
-.product-v2::after {
-  content: "";
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: calc(20px + env(safe-area-inset-bottom, 0px));
-  background: linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--bg) 0%, transparent) 0%,
-    color-mix(in srgb, var(--bg) 70%, transparent) 55%,
-    var(--bg) 100%
-  );
-  pointer-events: none;
-  z-index: 19;
-}
-
 /* ─── HERO ─── */
 .product-v2__hero {
   position: relative;
@@ -418,6 +395,16 @@
   display: flex;
   flex-direction: column;
   padding-bottom: 8px;
+}
+/* На узких устройствах (Telegram WebApp на iOS) добавляем отступ
+   перед блоком размеров — чтобы при открытии карточки size-кружки
+   уже не торчали из-под CTA-пилюли. Пользователь видит их только
+   после небольшого скролла. На ноутбуке/планшете отступ не нужен —
+   там и так всё хорошо помещается. */
+@media (max-width: 600px) {
+  .product-v2__size-block {
+    margin-top: 28px;
+  }
 }
 .product-v2__sizes {
   display: flex;
