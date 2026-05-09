@@ -3,7 +3,7 @@ import { flushSync } from "react-dom";
 import { useTelegram } from "./hooks/useTelegram";
 import { TelegramAuth } from "./components/TelegramAuth";
 import { useWishlist } from "./hooks/useWishlist";
-import { getProducts, getStores, getCategories, getCart, botHeartbeat, type Product, type Store, type Category } from "./api";
+import { getProducts, getStores, getCategories, getCart, botHeartbeat, type Product, type Store, type Category, type CartItem } from "./api";
 import { Catalog } from "./pages/Catalog";
 import { Cart } from "./pages/Cart";
 import { Favorites } from "./pages/Favorites";
@@ -75,7 +75,8 @@ function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [cartCount, setCartCount] = useState(0);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const cartCount = cartItems.reduce((a, i) => a + i.quantity, 0);
   const [menuOpen, setMenuOpen] = useState(false);
   const hamburgerRef = useRef<HTMLButtonElement | null>(null);
   const [productReturnTo, setProductReturnTo] = useState<Page | null>(null);
@@ -109,7 +110,7 @@ function App() {
     loadCategories();
 
     getCart(userId || "").then((items) => {
-      if (!cancelled) setCartCount(items.reduce((a, i) => a + i.quantity, 0));
+      if (!cancelled) setCartItems(items);
     }).catch(() => {});
 
     if (userId) {
@@ -207,9 +208,9 @@ function App() {
   };
 
   const refreshCartCount = () => {
-    getCart(userId || "").then((items) =>
-      setCartCount(items.reduce((a, i) => a + i.quantity, 0))
-    ).catch(() => {});
+    getCart(userId || "")
+      .then((items) => setCartItems(items))
+      .catch(() => {});
   };
   const openCatalog = () => {
     setPage("catalog");
@@ -316,6 +317,7 @@ function App() {
         {page === "product" && productId && (
           <ProductPage
             product={products.find((p) => p.id === productId)}
+            cartItems={cartItems}
             onBack={goBackFromProduct}
             onCart={openCart}
             onAddedToCart={refreshCartCount}
