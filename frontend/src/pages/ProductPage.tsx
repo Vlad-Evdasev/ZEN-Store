@@ -272,13 +272,8 @@ export function ProductPage({
       )}
 
       <div className="product-v2__sheet">
-        {product.brand?.trim() && (
-          <div className="product-v2__eyebrow">{product.brand.trim()}</div>
-        )}
-
-        <header className="product-v2__head-row">
+        <header className="product-v2__header">
           <h1 className="product-v2__title">{product.name}</h1>
-          <div className="product-v2__price">{formatPrice(product.price)}</div>
         </header>
 
         {product.description && (
@@ -303,10 +298,6 @@ export function ProductPage({
             )}
           </div>
         )}
-
-        <div className="product-v2__highlights">
-          В наличии · Доставка 1–3 дня · Возврат 14 дней
-        </div>
 
         <div className="product-v2__divider" />
 

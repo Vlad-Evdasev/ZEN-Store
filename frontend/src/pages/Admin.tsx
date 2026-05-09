@@ -1684,7 +1684,6 @@ function ProductsTab({
   const [price, setPrice] = useState("");
   const [imageUrls, setImageUrls] = useState<string[]>(["", "", "", "", ""]);
   const [category, setCategory] = useState(defaultCategory);
-  const [brand, setBrand] = useState("");
   const [sizes, setSizes] = useState("S,M,L,XL");
 
   useEffect(() => {
@@ -1700,7 +1699,6 @@ function ProductsTab({
     setPrice(String(p.price));
     const urls = (p.image_urls && p.image_urls.length > 0) ? p.image_urls : (p.image_url ? [p.image_url] : []);
     setImageUrls([...urls, "", "", "", "", ""].slice(0, 5));
-    setBrand(p.brand ?? "");
     setCategory(categories.some((c) => c.code === p.category) ? p.category : defaultCategory);
     setSizes(p.sizes || "S,M,L,XL");
   };
@@ -1711,7 +1709,6 @@ function ProductsTab({
     setDescription("");
     setPrice("");
     setImageUrls(["", "", "", "", ""]);
-    setBrand("");
     setCategory(defaultCategory);
     setSizes("S,M,L,XL");
   };
@@ -1728,7 +1725,6 @@ function ProductsTab({
       const urls = imageUrls.map((x) => x.trim()).filter(Boolean);
       const data = {
         store_id: 1,
-        brand: brand.trim() || undefined,
         name: name.trim(),
         description: description.trim() || undefined,
         price: Number(price.replace(/\s/g, "")) || 0,
@@ -1791,8 +1787,6 @@ function ProductsTab({
             style={styles.input}
           />
         ))}
-        <label style={styles.label}>Бренд</label>
-        <input type="text" value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="Название бренда" style={styles.input} />
         <label style={styles.label}>Категория</label>
         <select value={category} onChange={(e) => setCategory(e.target.value)} style={styles.input}>
           {categories.length === 0 ? (
@@ -1821,7 +1815,7 @@ function ProductsTab({
             <img src={(p.image_urls && p.image_urls[0]) || p.image_url || "https://via.placeholder.com/48"} alt="" style={styles.thumb} />
             <div style={styles.productInfo}>
               <p style={styles.productName}>{p.name}</p>
-              <p style={styles.productPrice}>{p.price} $ · {p.brand?.trim() || "—"}</p>
+              <p style={styles.productPrice}>{p.price} $</p>
             </div>
             <div style={styles.productActions}>
               <button type="button" onClick={() => startEdit(p)} style={styles.smallBtn}>Изменить</button>
