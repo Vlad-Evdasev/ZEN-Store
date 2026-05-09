@@ -32,14 +32,11 @@ import {
   createPost,
   updatePost,
   deletePost,
-  deletePostComment,
-  getPostComments,
   type Product,
   type Category,
   type Order,
   type CustomOrderAdmin,
   type Post,
-  type PostComment,
   type BroadcastPost,
   type BotConversation,
   type BotMessage,
@@ -289,10 +286,7 @@ export function Admin() {
       )}
 
       {tab === "posts" && (
-        <PostsTab
-          products={products}
-          adminSecret={adminSecret}
-        />
+        <PostsTab adminSecret={adminSecret} />
       )}
 
       {tab === "channel" && (
@@ -1840,7 +1834,7 @@ function ProductsTab({
   );
 }
 
-function PostsTab({ products, adminSecret }: { products: Product[]; adminSecret: string }) {
+function PostsTab({ adminSecret }: { adminSecret: string }) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -1851,13 +1845,7 @@ function PostsTab({ products, adminSecret }: { products: Product[]; adminSecret:
   const [formCaption, setFormCaption] = useState("");
   const [formImageUrl, setFormImageUrl] = useState("");
   const [formImageData, setFormImageData] = useState<string | null>(null);
-  const [formProductId, setFormProductId] = useState<string>("");
-  const [formProductUrl, setFormProductUrl] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const [expandedPostId, setExpandedPostId] = useState<number | null>(null);
-  const [comments, setComments] = useState<PostComment[]>([]);
-  const [commentsLoading, setCommentsLoading] = useState(false);
 
   const loadPosts = async () => {
     setLoading(true);
@@ -1878,8 +1866,6 @@ function PostsTab({ products, adminSecret }: { products: Product[]; adminSecret:
     setFormCaption("");
     setFormImageUrl("");
     setFormImageData(null);
-    setFormProductId("");
-    setFormProductUrl("");
     setShowForm(true);
   };
 
@@ -1888,8 +1874,6 @@ function PostsTab({ products, adminSecret }: { products: Product[]; adminSecret:
     setFormCaption(post.caption ?? "");
     setFormImageUrl(post.image_url ?? "");
     setFormImageData(post.image_data ?? null);
-    setFormProductId(post.product_id != null ? String(post.product_id) : "");
-    setFormProductUrl(post.product_url ?? "");
     setShowForm(true);
   };
 
@@ -1918,8 +1902,8 @@ function PostsTab({ products, adminSecret }: { products: Product[]; adminSecret:
         caption: formCaption.trim() || null,
         image_url: formImageData ? null : (formImageUrl.trim() || null),
         image_data: formImageData || null,
-        product_id: formProductId ? parseInt(formProductId, 10) : null,
-        product_url: formProductUrl.trim() || null,
+        product_id: null,
+        product_url: null,
       };
       if (editingPost) {
         await updatePost(editingPost.id, data, adminSecret);
@@ -1946,35 +1930,6 @@ function PostsTab({ products, adminSecret }: { products: Product[]; adminSecret:
       setMessage(e instanceof Error ? e.message : "Ошибка");
     } finally {
       setBusy(false);
-    }
-  };
-
-  const toggleComments = async (postId: number) => {
-    if (expandedPostId === postId) {
-      setExpandedPostId(null);
-      setComments([]);
-      return;
-    }
-    setExpandedPostId(postId);
-    setCommentsLoading(true);
-    try {
-      const data = await getPostComments(postId);
-      setComments(data);
-    } catch {
-      setMessage("Ошибка загрузки комментариев");
-    } finally {
-      setCommentsLoading(false);
-    }
-  };
-
-  const handleDeleteComment = async (postId: number, commentId: number) => {
-    if (!confirm("Удалить комментарий?")) return;
-    try {
-      await deletePostComment(postId, commentId, adminSecret);
-      setComments((prev) => prev.filter((c) => c.id !== commentId));
-      setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, comments_count: Math.max(0, p.comments_count - 1) } : p));
-    } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Ошибка");
     }
   };
 
@@ -2055,33 +2010,6 @@ function PostsTab({ products, adminSecret }: { products: Product[]; adminSecret:
             />
           )}
 
-          <label style={styles.label}>
-            Привязка к товару
-            <select
-              value={formProductId}
-              onChange={(e) => setFormProductId(e.target.value)}
-              style={styles.input}
-            >
-              <option value="">Не привязан</option>
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} {p.brand?.trim() ? `(${p.brand.trim()})` : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label style={styles.label}>
-            Внешняя ссылка на товар (URL)
-            <input
-              type="url"
-              value={formProductUrl}
-              onChange={(e) => setFormProductUrl(e.target.value)}
-              placeholder="https://..."
-              style={styles.input}
-            />
-          </label>
-
           <div style={styles.formActions}>
             <button type="button" onClick={savePost} disabled={busy} style={styles.submit}>
               {busy ? "Сохранение…" : editingPost ? "Сохранить" : "Создать"}
@@ -2100,70 +2028,31 @@ function PostsTab({ products, adminSecret }: { products: Product[]; adminSecret:
         ) : (
           posts.map((p) => {
             const imgSrc = p.image_data || p.image_url;
-            const linkedProduct = p.product_id != null ? products.find((pr) => pr.id === p.product_id) : null;
             return (
-              <div key={p.id}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: "1px solid var(--border)" }}>
-                  {imgSrc ? (
-                    <img src={imgSrc} alt="" style={{ width: 60, height: 60, objectFit: "cover", borderRadius: 8, flexShrink: 0 }} />
-                  ) : (
-                    <div style={{ width: 60, height: 60, borderRadius: 8, background: "var(--border)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "var(--muted)" }}>
-                      нет фото
-                    </div>
-                  )}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", margin: 0 }}>
-                      {p.caption?.trim() || "— без подписи —"}
-                    </p>
-                    <p style={{ fontSize: 13, color: "var(--muted)", margin: "4px 0 0" }}>
-                      {new Date(p.created_at).toLocaleString("ru")}
-                      {linkedProduct ? ` · 🔗 ${linkedProduct.name}` : ""}
-                      {p.product_url && !linkedProduct ? ` · 🔗 ссылка` : ""}
-                    </p>
-                    <p style={{ fontSize: 13, color: "var(--muted)", margin: "2px 0 0" }}>
-                      ❤️ {p.likes_count} · 💬 {p.comments_count}
-                    </p>
-                  </div>
-                  <div style={{ display: "flex", gap: 6, flexShrink: 0, flexWrap: "wrap" }}>
-                    <button type="button" onClick={() => toggleComments(p.id)} style={styles.smallBtn}>
-                      {expandedPostId === p.id ? "Скрыть" : "Комм."}
-                    </button>
-                    <button type="button" onClick={() => openEdit(p)} style={styles.smallBtn} disabled={busy}>
-                      Изменить
-                    </button>
-                    <button type="button" onClick={() => handleDelete(p.id)} style={styles.deleteBtn} disabled={busy}>
-                      Удалить
-                    </button>
-                  </div>
-                </div>
-                {expandedPostId === p.id && (
-                  <div style={{ padding: "8px 0 8px 72px", borderBottom: "1px solid var(--border)" }}>
-                    {commentsLoading ? (
-                      <p style={styles.hint}>Загрузка…</p>
-                    ) : comments.length === 0 ? (
-                      <p style={styles.hint}>Нет комментариев</p>
-                    ) : (
-                      comments.map((c) => (
-                        <div key={c.id} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 8 }}>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <span style={{ fontWeight: 600, fontSize: 13 }}>{c.user_name || c.user_id}</span>
-                            <span style={{ fontSize: 13, marginLeft: 8 }}>{c.text}</span>
-                            <span style={{ fontSize: 11, color: "var(--muted)", marginLeft: 8 }}>{new Date(c.created_at).toLocaleString("ru")}</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteComment(p.id, c.id)}
-                            style={styles.deleteOrderIconBtn}
-                            aria-label="Удалить комментарий"
-                            title="Удалить"
-                          >
-                            <TrashIcon />
-                          </button>
-                        </div>
-                      ))
-                    )}
+              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: "1px solid var(--border)" }}>
+                {imgSrc ? (
+                  <img src={imgSrc} alt="" style={{ width: 60, height: 60, objectFit: "cover", borderRadius: 8, flexShrink: 0 }} />
+                ) : (
+                  <div style={{ width: 60, height: 60, borderRadius: 8, background: "var(--border)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "var(--muted)" }}>
+                    нет фото
                   </div>
                 )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", margin: 0 }}>
+                    {p.caption?.trim() || "— без подписи —"}
+                  </p>
+                  <p style={{ fontSize: 13, color: "var(--muted)", margin: "4px 0 0" }}>
+                    {new Date(p.created_at).toLocaleString("ru")} · ❤️ {p.likes_count}
+                  </p>
+                </div>
+                <div style={{ display: "flex", gap: 6, flexShrink: 0, flexWrap: "wrap" }}>
+                  <button type="button" onClick={() => openEdit(p)} style={styles.smallBtn} disabled={busy}>
+                    Изменить
+                  </button>
+                  <button type="button" onClick={() => handleDelete(p.id)} style={styles.deleteBtn} disabled={busy}>
+                    Удалить
+                  </button>
+                </div>
               </div>
             );
           })

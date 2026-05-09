@@ -10,7 +10,6 @@ import { t } from "../i18n";
 interface NewArrivalsPageProps {
   userId: string;
   onBack: () => void;
-  onProductClick: (id: number) => void;
 }
 
 function HeartIcon({ filled }: { filled: boolean }) {
@@ -24,16 +23,6 @@ function HeartIcon({ filled }: { filled: boolean }) {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-    </svg>
-  );
-}
-
-function ShopBagIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="rgba(255,255,255,0.9)" stroke="rgba(255,255,255,0.9)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-      <line x1="3" y1="6" x2="21" y2="6" />
-      <path d="M16 10a4 4 0 0 1-8 0" />
     </svg>
   );
 }
@@ -53,7 +42,7 @@ interface PostCardProps {
   post: Post;
   userId: string;
   lang: Lang;
-  onProductClick: (id: number) => void;
+  onPreview: (src: string) => void;
   onLikeToggle: (postId: number, newLiked: boolean, newCount: number) => void;
 }
 
@@ -61,19 +50,10 @@ function PostCard({
   post,
   userId,
   lang,
-  onProductClick,
+  onPreview,
   onLikeToggle,
 }: PostCardProps) {
   const imageSrc = post.image_data || post.image_url;
-  const isTappable = post.product_id != null || post.product_url != null;
-
-  const handleImageTap = () => {
-    if (post.product_id != null) {
-      onProductClick(post.product_id);
-    } else if (post.product_url) {
-      window.open(post.product_url, "_blank", "noopener");
-    }
-  };
 
   const handleLike = async () => {
     const wasLiked = post.user_liked;
@@ -92,22 +72,18 @@ function PostCard({
       {imageSrc && (
         <div
           style={cardStyles.imageWrap}
-          onClick={isTappable ? handleImageTap : undefined}
-          role={isTappable ? "button" : undefined}
-          tabIndex={isTappable ? 0 : undefined}
-          onKeyDown={isTappable ? (e) => { if (e.key === "Enter") handleImageTap(); } : undefined}
-          aria-label={isTappable ? "Open product" : undefined}
+          onClick={() => onPreview(imageSrc)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === "Enter") onPreview(imageSrc); }}
+          aria-label="Открыть фото"
         >
           <img src={imageSrc} alt="" style={cardStyles.image} />
-          {isTappable && (
-            <div style={cardStyles.shopOverlay}>
-              <ShopBagIcon />
-            </div>
-          )}
         </div>
       )}
 
       <div style={cardStyles.body}>
+        {post.caption && <p style={cardStyles.caption}>{post.caption}</p>}
         <div style={cardStyles.metaRow}>
           <div style={cardStyles.actions}>
             <button
@@ -124,9 +100,47 @@ function PostCard({
           </div>
           <span style={cardStyles.date}>{formatPostDate(post.created_at, lang)}</span>
         </div>
-
-        {post.caption && <p style={cardStyles.caption}>{post.caption}</p>}
       </div>
+    </div>
+  );
+}
+
+function PostImageLightbox({ src, onClose }: { src: string; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, zIndex: 1000,
+        background: "rgba(0, 0, 0, 0.92)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: 16, cursor: "zoom-out",
+      }}
+    >
+      <img
+        src={src}
+        alt=""
+        onClick={(e) => e.stopPropagation()}
+        style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", borderRadius: 12 }}
+      />
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Закрыть"
+        style={{
+          position: "absolute", top: 14, right: 14,
+          width: 40, height: 40, borderRadius: "50%",
+          background: "rgba(255,255,255,0.14)", color: "#fff",
+          border: "none", cursor: "pointer", fontSize: 22, lineHeight: 1,
+          backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
+        }}
+      >×</button>
     </div>
   );
 }
@@ -150,12 +164,12 @@ function SkeletonCard({ index = 0 }: { index?: number }) {
 
 export function NewArrivalsPage({
   userId,
-  onProductClick,
 }: Omit<NewArrivalsPageProps, "onBack"> & { onBack?: NewArrivalsPageProps["onBack"] }) {
   const { settings } = useSettings();
   const lang = settings.lang;
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -226,13 +240,15 @@ export function NewArrivalsPage({
                 post={post}
                 userId={userId}
                 lang={lang}
-                onProductClick={onProductClick}
+                onPreview={setPreviewImage}
                 onLikeToggle={handleLikeToggle}
               />
             </div>
           ))}
         </div>
       )}
+
+      {previewImage && <PostImageLightbox src={previewImage} onClose={() => setPreviewImage(null)} />}
     </div>
   );
 }
@@ -241,7 +257,7 @@ const pageStyles: Record<string, React.CSSProperties> = {
   wrap: {
     maxWidth: 480,
     margin: "0 auto",
-    padding: "8px 0 32px",
+    padding: "8px 0 calc(96px + env(safe-area-inset-bottom, 0px))",
   },
   headerArea: {
     display: "flex",

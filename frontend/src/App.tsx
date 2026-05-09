@@ -303,7 +303,6 @@ function App() {
           <NewArrivalsPage
             userId={userId || ""}
             onBack={openCatalog}
-            onProductClick={(id) => openProduct(id, "newArrivals")}
           />
         )}
         {page === "customOrder" && (
