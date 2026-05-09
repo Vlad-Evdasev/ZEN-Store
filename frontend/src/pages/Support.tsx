@@ -172,9 +172,9 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "10px 14px",
     maxWidth: "86%",
     fontSize: 14.5,
-    fontWeight: 600,
-    lineHeight: 1.3,
-    letterSpacing: "-0.01em",
+    fontWeight: 400,
+    lineHeight: 1.35,
+    letterSpacing: 0,
     boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
   },
 
