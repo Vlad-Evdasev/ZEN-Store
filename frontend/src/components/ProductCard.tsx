@@ -330,6 +330,6 @@ const styles: Record<string, React.CSSProperties> = {
   imageWrapTall: { aspectRatio: "4/5" },
   imageWrapFillHeight: { flex: "1 1 0%", minHeight: 120, aspectRatio: "unset" as const },
   descWrapFillHeight: { flex: "0 0 auto", minHeight: 52, flexShrink: 0 },
-  nameCompact: { padding: 0, margin: "0 0 3px", fontSize: 13, lineHeight: 1.3 },
+  nameCompact: { padding: 0, margin: "0 0 3px", fontSize: 16, lineHeight: 1.25, letterSpacing: "-0.01em" },
   priceCompact: { padding: 0, margin: 0, fontSize: 13, fontWeight: 500, color: "var(--text)", lineHeight: 1.25 },
 };
