@@ -36,7 +36,10 @@ export function ProductPage({
 }: ProductPageProps) {
   const { formatPrice, settings } = useSettings();
   const lang = settings.lang;
-  const [size, setSize] = useState<string>("");
+  const [size, setSize] = useState<string>(() => {
+    if (!product) return "";
+    return product.sizes.split(",").map((s) => s.trim())[0] ?? "";
+  });
   const [adding, setAdding] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
   const [reviews, setReviews] = useState<ProductReview[]>([]);
