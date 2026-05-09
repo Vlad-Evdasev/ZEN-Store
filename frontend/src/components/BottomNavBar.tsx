@@ -54,11 +54,10 @@ function CatalogIcon({ active }: IconProps) {
   );
 }
 
-/* Custom Order — концентрический круг + офсетная точка. Абстрактная
-   модерн-метафора: одна конкретная точка интереса в общем поле
-   возможностей — указать вещь, которой нет в каталоге. Никаких
-   литеральных скобок/самолётов/палочек.                              */
+/* Custom Order — глобус: метафора «закажем со всего мира то, чего нет
+   в каталоге». Сфера + меридиан-эллипс + экватор.                    */
 function CustomOrderIcon({ active }: IconProps) {
+  const sw = active ? 2 : 1.7;
   return (
     <svg
       width="26"
@@ -68,17 +67,35 @@ function CustomOrderIcon({ active }: IconProps) {
       aria-hidden="true"
       style={{ transition: "transform 0.25s ease" }}
     >
-      {/* внешний круг — поле возможностей */}
+      {/* сфера */}
       <circle
-        cx="11.5"
-        cy="12.5"
+        cx="12"
+        cy="12"
         r="8.5"
         fill="none"
         stroke="currentColor"
-        strokeWidth={active ? 2 : 1.7}
+        strokeWidth={sw}
       />
-      {/* офсетная точка — конкретный запрос пользователя */}
-      <circle cx="16" cy="8.5" r="2.2" fill="currentColor" />
+      {/* меридиан — вертикальный эллипс */}
+      <ellipse
+        cx="12"
+        cy="12"
+        rx="3.6"
+        ry="8.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={sw}
+      />
+      {/* экватор */}
+      <line
+        x1="3.5"
+        y1="12"
+        x2="20.5"
+        y2="12"
+        stroke="currentColor"
+        strokeWidth={sw}
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
