@@ -1019,8 +1019,9 @@ function CurrencyRateTab({ adminSecret }: { adminSecret: string }) {
 
 const SITE_CONTENT_KEYS = [
   "hero_title", "hero_subtitle", "hero_image_url", "about_text",
-  "catalog_cta", "custom_order_cta",
-  "arrived_title", "arrived_subtitle",
+  "catalog_cta", "catalog_image_url",
+  "custom_order_cta", "custom_order_image_url",
+  "arrived_title", "arrived_subtitle", "arrived_image_url",
 ] as const;
 const SITE_CONTENT_LABELS: Record<string, string> = {
   hero_title: "Заголовок hero",
@@ -1028,9 +1029,12 @@ const SITE_CONTENT_LABELS: Record<string, string> = {
   hero_image_url: "URL картинки hero",
   about_text: "Текст про оригиналы / о магазине",
   catalog_cta: "Текст кнопки «Каталог»",
+  catalog_image_url: "Картинка блока «Каталог»",
   custom_order_cta: "Текст кнопки «Заказ не из каталога»",
+  custom_order_image_url: "Картинка блока «Заказ не из каталога»",
   arrived_title: "Заголовок блока «Уже привезли»",
   arrived_subtitle: "Подзаголовок блока «Уже привезли»",
+  arrived_image_url: "Картинка блока «Уже привезли»",
 };
 
 function SiteContentTab({ adminSecret }: { adminSecret: string }) {
@@ -1488,6 +1492,9 @@ function ProductsTab({
   const [category, setCategory] = useState(defaultCategory);
   const [brand, setBrand] = useState("");
   const [sizes, setSizes] = useState("S,M,L,XL");
+  const [composition, setComposition] = useState("");
+  const [density, setDensity] = useState("");
+  const [care, setCare] = useState("");
 
   useEffect(() => {
     if (categories.length > 0 && !categories.some((c) => c.code === category)) {
@@ -1505,6 +1512,9 @@ function ProductsTab({
     setBrand(p.brand ?? "");
     setCategory(categories.some((c) => c.code === p.category) ? p.category : defaultCategory);
     setSizes(p.sizes || "S,M,L,XL");
+    setComposition(p.composition ?? "");
+    setDensity(p.density ?? "");
+    setCare(p.care ?? "");
   };
 
   const cancelEdit = () => {
@@ -1516,6 +1526,9 @@ function ProductsTab({
     setBrand("");
     setCategory(defaultCategory);
     setSizes("S,M,L,XL");
+    setComposition("");
+    setDensity("");
+    setCare("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1538,6 +1551,9 @@ function ProductsTab({
         image_urls: urls.length > 0 ? urls : undefined,
         category,
         sizes: sizes.trim() || undefined,
+        composition: composition.trim() || undefined,
+        density: density.trim() || undefined,
+        care: care.trim() || undefined,
       };
       if (editingId) {
         await updateProduct(editingId, data, adminSecret);
@@ -1607,6 +1623,14 @@ function ProductsTab({
         </select>
         <label style={styles.label}>Размеры</label>
         <input type="text" value={sizes} onChange={(e) => setSizes(e.target.value)} placeholder="S,M,L,XL" style={styles.input} />
+        <label style={styles.label}>Состав</label>
+        <input type="text" value={composition} onChange={(e) => setComposition(e.target.value)} placeholder="100% хлопок" style={styles.input} />
+        <p style={styles.hint}>Показывается в карточке как «info-pill».</p>
+        <label style={styles.label}>Плотность</label>
+        <input type="text" value={density} onChange={(e) => setDensity(e.target.value)} placeholder="220 г/м²" style={styles.input} />
+        <label style={styles.label}>Уход</label>
+        <textarea value={care} onChange={(e) => setCare(e.target.value)} rows={2} placeholder="Машинная стирка при 30°. Не отбеливать. Гладить с изнанки." style={styles.input} />
+        <p style={styles.hint}>Если заполнено — открывается отдельным аккордеоном на странице товара.</p>
         {message && <p style={styles.message}>{message}</p>}
         <div style={styles.formActions}>
           <button type="submit" disabled={submitting} style={styles.submit}>

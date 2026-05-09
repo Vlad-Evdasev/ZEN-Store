@@ -40,6 +40,9 @@ export interface Product {
   category: string;
   sizes: string;
   new_arrival_sort_order?: number | null;
+  composition?: string | null;
+  density?: string | null;
+  care?: string | null;
 }
 
 export interface Store {
@@ -229,6 +232,9 @@ export async function createProduct(
     image_urls?: string[];
     category?: string;
     sizes?: string;
+    composition?: string;
+    density?: string;
+    care?: string;
   },
   adminSecret?: string
 ) {
@@ -265,6 +271,9 @@ export async function updateProduct(
     category: string;
     sizes: string;
     new_arrival_sort_order: number | null;
+    composition: string | null;
+    density: string | null;
+    care: string | null;
   }>,
   adminSecret?: string
 ) {

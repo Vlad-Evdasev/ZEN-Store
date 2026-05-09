@@ -61,19 +61,22 @@ productsRouter.post("/", (req, res) => {
   if (ADMIN_SECRET && secret !== ADMIN_SECRET) {
     return res.status(401).json({ error: "Unauthorized. Проверь ADMIN_SECRET и заголовок X-Admin-Secret." });
   }
-  const { store_id, name, description, price, image_url, image_urls, category, sizes, brand } = req.body;
+  const { store_id, name, description, price, image_url, image_urls, category, sizes, brand, composition, density, care } = req.body;
   if (!name || price == null) return res.status(400).json({ error: "Требуются name и price" });
   const sid = store_id ?? 1;
   const cat = category || "tee";
   const sz = sizes || "S,M,L,XL";
   const brandVal = typeof brand === "string" ? (brand.trim() || null) : null;
+  const compositionVal = typeof composition === "string" ? (composition.trim() || null) : null;
+  const densityVal = typeof density === "string" ? (density.trim() || null) : null;
+  const careVal = typeof care === "string" ? (care.trim() || null) : null;
   const urls = Array.isArray(image_urls) ? image_urls.slice(0, MAX_IMAGES).filter(Boolean) : (image_url ? [image_url] : []);
   const firstUrl = urls[0] ?? image_url ?? null;
   const imagesJson = urls.length > 0 ? JSON.stringify(urls) : null;
   try {
     db.prepare(
-      "INSERT INTO products (store_id, name, description, price, image_url, images, category, sizes, brand) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-    ).run(sid, name, description ?? "", Number(price), firstUrl, imagesJson, cat, sz, brandVal);
+      "INSERT INTO products (store_id, name, description, price, image_url, images, category, sizes, brand, composition, density, care) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    ).run(sid, name, description ?? "", Number(price), firstUrl, imagesJson, cat, sz, brandVal, compositionVal, densityVal, careVal);
     const row = db.prepare("SELECT last_insert_rowid() as id").get() as { id: number };
     return res.status(201).json({ id: row.id, ok: true });
   } catch (e) {
@@ -88,7 +91,7 @@ productsRouter.patch("/:id", (req, res) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
   const id = parseInt(req.params.id, 10);
-  const { store_id, name, description, price, image_url, image_urls, category, sizes, new_arrival_sort_order, brand } = req.body;
+  const { store_id, name, description, price, image_url, image_urls, category, sizes, new_arrival_sort_order, brand, composition, density, care } = req.body;
   const row = db.prepare("SELECT id FROM products WHERE id = ?").get(id) as { id: number } | undefined;
   if (!row) return res.status(404).json({ error: "Product not found" });
 
@@ -116,6 +119,18 @@ productsRouter.patch("/:id", (req, res) => {
   }
   if (category != null) { updates.push("category = ?"); values.push(category); }
   if (sizes != null) { updates.push("sizes = ?"); values.push(sizes); }
+  if (composition !== undefined) {
+    updates.push("composition = ?");
+    values.push(typeof composition === "string" && composition.trim() ? composition.trim() : null);
+  }
+  if (density !== undefined) {
+    updates.push("density = ?");
+    values.push(typeof density === "string" && density.trim() ? density.trim() : null);
+  }
+  if (care !== undefined) {
+    updates.push("care = ?");
+    values.push(typeof care === "string" && care.trim() ? care.trim() : null);
+  }
   if (updates.length === 0) return res.status(400).json({ error: "No fields to update" });
   values.push(id);
   try {

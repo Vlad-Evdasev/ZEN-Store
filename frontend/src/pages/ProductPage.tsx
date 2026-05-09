@@ -230,8 +230,9 @@ export function ProductPage({
       </div>
 
       <div className="product-v2__sheet">
-        <header className="product-v2__header">
+        <header className="product-v2__head-row">
           <h1 className="product-v2__title">{product.name}</h1>
+          <div className="product-v2__price">{formatPrice(product.price)}</div>
         </header>
 
         {product.description && (
@@ -282,6 +283,46 @@ export function ProductPage({
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="product-v2__info-grid">
+          {product.composition && (
+            <div className="product-v2__info-pill">
+              <div className="product-v2__info-pill-key">Состав</div>
+              <div className="product-v2__info-pill-val">{product.composition}</div>
+            </div>
+          )}
+          {product.density && (
+            <div className="product-v2__info-pill">
+              <div className="product-v2__info-pill-key">Плотность</div>
+              <div className="product-v2__info-pill-val">{product.density}</div>
+            </div>
+          )}
+          <div className="product-v2__info-pill">
+            <div className="product-v2__info-pill-key">Доставка</div>
+            <div className="product-v2__info-pill-val">1–3 дня</div>
+          </div>
+        </div>
+
+        <div className="product-v2__accordions">
+          {product.care && (
+            <details className="product-v2__accordion">
+              <summary className="product-v2__accordion-summary">
+                <span>Уход</span>
+                <span className="product-v2__accordion-icon" aria-hidden />
+              </summary>
+              <div className="product-v2__accordion-body">{product.care}</div>
+            </details>
+          )}
+          <details className="product-v2__accordion">
+            <summary className="product-v2__accordion-summary">
+              <span>Доставка и возврат</span>
+              <span className="product-v2__accordion-icon" aria-hidden />
+            </summary>
+            <div className="product-v2__accordion-body">
+              Доставка по Беларуси за 1–3 дня. Бесплатно при заказе от 5 000 $. 14 дней на возврат с момента получения.
+            </div>
+          </details>
         </div>
 
         <div className="product-v2__divider" />
