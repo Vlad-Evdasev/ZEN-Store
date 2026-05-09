@@ -36,10 +36,8 @@ export function ProductPage({
 }: ProductPageProps) {
   const { formatPrice, settings } = useSettings();
   const lang = settings.lang;
-  const [size, setSize] = useState<string>(() => {
-    if (!product) return "";
-    return product.sizes.split(",").map((s) => s.trim())[0] ?? "";
-  });
+  const [chosenSize, setChosenSize] = useState<string>("");
+  const productIdRef = useRef<number | null>(null);
   const [adding, setAdding] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
   const [reviews, setReviews] = useState<ProductReview[]>([]);
@@ -54,6 +52,20 @@ export function ProductPage({
   const touchStartX = useRef(0);
 
   const sizes = product ? product.sizes.split(",").map((s) => s.trim()) : [];
+
+  // Reset user-chosen size when navigating to a different product (synchronous,
+  // before paint — avoids a one-frame mismatch where the sub-label and CTA
+  // briefly render in the "no size" state).
+  if (product && productIdRef.current !== product.id) {
+    productIdRef.current = product.id;
+    if (chosenSize !== "") setChosenSize("");
+  }
+
+  // Effective size: user pick falls back to first available size so the bottom
+  // bar always renders the sub-label and the active CTA from the very first paint.
+  const size = chosenSize || sizes[0] || "";
+  const setSize = setChosenSize;
+
   const imageUrls = product
     ? ((product.image_urls && product.image_urls.length > 0) ? product.image_urls : (product.image_url ? [product.image_url] : []))
     : [];
@@ -80,10 +92,6 @@ export function ProductPage({
       cancelAnimationFrame(raf);
       clearTimeout(tm);
     };
-  }, [product?.id]);
-
-  useEffect(() => {
-    if (product && sizes.length) setSize(sizes[0]);
   }, [product?.id]);
 
   useEffect(() => {
