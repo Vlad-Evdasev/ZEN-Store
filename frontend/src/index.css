@@ -1318,7 +1318,7 @@ html[data-theme="dark"] .zen-app .zen-filter-icon-btn-dot {
 .zen-filters-price-slider-range {
   position: absolute;
   height: 2px;
-  background: #111;
+  background: var(--accent);
   border-radius: 1px;
   pointer-events: none;
 }
@@ -1442,9 +1442,9 @@ html[data-theme="dark"] .zen-app .zen-filter-icon-btn-dot {
   transform: scale(0.92);
 }
 .zen-filters-sort-round-btn--active {
-  background: #111;
+  background: var(--accent);
   color: #FFF;
-  border-color: #111;
+  border-color: var(--accent);
 }
 .zen-filters-chip-wrap {
   display: flex;
@@ -1472,9 +1472,9 @@ html[data-theme="dark"] .zen-app .zen-filter-icon-btn-dot {
   transform: scale(0.96);
 }
 .zen-filters-chip-active {
-  background: #111;
+  background: var(--accent);
   color: #FFF;
-  border-color: #111;
+  border-color: var(--accent);
 }
 .zen-filters-reset-top {
   position: absolute;
@@ -1498,7 +1498,7 @@ html[data-theme="dark"] .zen-app .zen-filter-icon-btn-dot {
   height: 52px;
   border-radius: 999px;
   border: none;
-  background: #111;
+  background: var(--accent);
   color: #FFF;
   font-size: 15px;
   font-weight: 600;
@@ -1556,7 +1556,7 @@ html[data-theme="dark"] .zen-app .zen-filters-price-slider-track {
   background: var(--border);
 }
 html[data-theme="dark"] .zen-app .zen-filters-price-slider-range {
-  background: var(--text);
+  background: var(--accent);
 }
 html[data-theme="dark"] .zen-app .zen-filters-price-slider-thumb {
   background: var(--surface-elevated);
@@ -1579,9 +1579,9 @@ html[data-theme="dark"] .zen-app .zen-filters-sort-round-btn {
   color: var(--text);
 }
 html[data-theme="dark"] .zen-app .zen-filters-sort-round-btn--active {
-  background: var(--text);
-  color: var(--surface);
-  border-color: var(--text);
+  background: var(--accent);
+  color: #FFF;
+  border-color: var(--accent);
 }
 /* Чипы категорий/брендов */
 html[data-theme="dark"] .zen-app .zen-filters-chip {
@@ -1590,14 +1590,14 @@ html[data-theme="dark"] .zen-app .zen-filters-chip {
   color: var(--text);
 }
 html[data-theme="dark"] .zen-app .zen-filters-chip-active {
-  background: var(--text);
-  color: var(--surface);
-  border-color: var(--text);
+  background: var(--accent);
+  color: #FFF;
+  border-color: var(--accent);
 }
 /* Главная кнопка «Показать N товаров» */
 html[data-theme="dark"] .zen-app .zen-filters-apply-btn {
-  background: var(--text);
-  color: var(--surface);
+  background: var(--accent);
+  color: #FFF;
 }
 html[data-theme="dark"] .zen-app .zen-filters-apply-btn--disabled,
 html[data-theme="dark"] .zen-app .zen-filters-apply-btn:disabled {
