@@ -94,6 +94,25 @@
   }
 }
 
+/* Счётчик в углу hero, видно сразу: «3 / 5». Контрастный, blur подложкой. */
+.product-v2__counter {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  padding: 5px 12px;
+  background: rgba(0, 0, 0, 0.34);
+  -webkit-backdrop-filter: saturate(160%) blur(10px);
+  backdrop-filter: saturate(160%) blur(10px);
+  border-radius: 999px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ─── GALLERY DOTS ─── */
 .product-v2__gallery-dots {
   position: absolute;
@@ -144,21 +163,87 @@
   display: none;
 }
 
-/* ─── HEADER — чистая типографика, без подложек и декоративных элементов ─── */
+/* ─── HEADER — eyebrow + title слева, цена справа крупно ─── */
 .product-v2__header {
   margin-bottom: 14px;
+}
+
+.product-v2__head-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.product-v2__title-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.product-v2__eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 6px;
+  font-feature-settings: "ss01";
 }
 
 /* Название: крупно, лёгкий вес, плотный трекинг. Ничего больше. */
 .product-v2__title {
   font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 600;
-  line-height: 1.1;
+  line-height: 1.12;
   letter-spacing: -0.028em;
   color: var(--text);
   margin: 0;
 }
+
+.product-v2__price {
+  flex: 0 0 auto;
+  font-family: "Proxima Nova", -apple-system, system-ui, sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--text);
+  white-space: nowrap;
+  padding-top: 2px;
+}
+
+/* ─── CHIPS — небольшие фактоиды под описанием (наличие, доставка) ─── */
+.product-v2__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 14px 0 4px;
+}
+.product-v2__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--bg);
+  letter-spacing: 0.005em;
+  white-space: nowrap;
+}
+.product-v2__chip svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+.product-v2__chip:first-child svg { stroke: var(--accent); }
 
 /* ─── DESC — просто второй тип-сайз. Никаких подложек и линий. ─── */
 .product-v2__desc-wrap {

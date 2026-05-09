@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { addToCart, getProductReviews, addProductReview, type Product, type ProductReview } from "../api";
+import { addToCart, getCart, getProductReviews, addProductReview, type Product, type ProductReview } from "../api";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 import "./ProductPage.css";
@@ -39,7 +39,7 @@ export function ProductPage({
   const [chosenSize, setChosenSize] = useState<string>("");
   const productIdRef = useRef<number | null>(null);
   const [adding, setAdding] = useState(false);
-  const [justAdded, setJustAdded] = useState(false);
+  const [cartSizes, setCartSizes] = useState<Set<string>>(new Set());
   const [reviews, setReviews] = useState<ProductReview[]>([]);
   const [reviewText, setReviewText] = useState("");
   const [reviewRating, setReviewRating] = useState(5);
@@ -100,6 +100,21 @@ export function ProductPage({
     }
   }, [product?.id]);
 
+  // Какие размеры этого товара уже в корзине у пользователя — чтобы кнопка
+  // не давала повторно добавить тот же размер. Разные размеры одного товара
+  // считаются разными позициями (сервер хранит cart_items по (product_id, size)).
+  useEffect(() => {
+    if (!product?.id || !userId) {
+      setCartSizes(new Set());
+      return;
+    }
+    getCart(userId)
+      .then((items) => {
+        setCartSizes(new Set(items.filter((i) => i.product_id === product.id).map((i) => i.size)));
+      })
+      .catch(() => setCartSizes(new Set()));
+  }, [product?.id, userId]);
+
   const handleAddReview = async () => {
     if (!product || !reviewText.trim()) return;
     setSubmittingReview(true);
@@ -144,14 +159,19 @@ export function ProductPage({
     );
   }
 
+  const isInCartForSize = !!size && cartSizes.has(size);
+
   const handleAdd = async () => {
-    if (!size) return;
+    if (!size || isInCartForSize) return;
     setAdding(true);
-    setJustAdded(false);
     try {
       await addToCart(userId, product.id, size);
       onAddedToCart?.();
-      setJustAdded(true);
+      setCartSizes((prev) => {
+        const next = new Set(prev);
+        next.add(size);
+        return next;
+      });
     } catch (e) {
       console.error(e);
     } finally {
@@ -215,23 +235,34 @@ export function ProductPage({
         </button>
 
         {imageUrls.length > 1 && (
-          <div className="product-v2__gallery-dots">
-            {imageUrls.map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={(e) => { e.stopPropagation(); setImageIndex(i); }}
-                className={`product-v2__gallery-dot${i === imageIndex ? " is-active" : ""}`}
-                aria-label={`Фото ${i + 1}`}
-              />
-            ))}
-          </div>
+          <>
+            <div className="product-v2__counter" aria-hidden>
+              {imageIndex + 1} / {imageUrls.length}
+            </div>
+            <div className="product-v2__gallery-dots">
+              {imageUrls.map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setImageIndex(i); }}
+                  className={`product-v2__gallery-dot${i === imageIndex ? " is-active" : ""}`}
+                  aria-label={`Фото ${i + 1}`}
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
 
       <div className="product-v2__sheet">
-        <header className="product-v2__header">
-          <h1 className="product-v2__title">{product.name}</h1>
+        <header className="product-v2__head-row">
+          <div className="product-v2__title-wrap">
+            {product.brand?.trim() && (
+              <div className="product-v2__eyebrow">{product.brand.trim()}</div>
+            )}
+            <h1 className="product-v2__title">{product.name}</h1>
+          </div>
+          <div className="product-v2__price">{formatPrice(product.price)}</div>
         </header>
 
         {product.description && (
@@ -256,6 +287,21 @@ export function ProductPage({
             )}
           </div>
         )}
+
+        <div className="product-v2__chips">
+          <div className="product-v2__chip">
+            <svg viewBox="0 0 24 24" aria-hidden><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>
+            В наличии
+          </div>
+          <div className="product-v2__chip">
+            <svg viewBox="0 0 24 24" aria-hidden><path d="M3 7h11l4 4v6h-2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M3 7v10h2"/></svg>
+            1–3 дня
+          </div>
+          <div className="product-v2__chip">
+            <svg viewBox="0 0 24 24" aria-hidden><path d="M3 7v6a4 4 0 004 4h11"/><path d="M14 13l4 4-4 4"/></svg>
+            Возврат 14 дней
+          </div>
+        </div>
 
         <div className="product-v2__divider" />
 
@@ -380,14 +426,14 @@ export function ProductPage({
               </span>
             )}
           </div>
-          {justAdded ? (
+          {isInCartForSize ? (
             <button
               type="button"
               onClick={onCart}
               className="zen-bag-checkout-btn zen-bag-checkout-btn--success"
               aria-label={t(lang, "goToCart")}
             >
-              <span className="zen-bag-checkout-label">{t(lang, "goToCart")}</span>
+              <span className="zen-bag-checkout-label">В корзине · Перейти</span>
               <span className="zen-bag-checkout-arrow" aria-hidden="true">
                 <svg viewBox="0 0 24 24">
                   <polyline points="20 6 9 17 4 12" />
