@@ -1997,11 +1997,12 @@ nav svg {
 }
 /* Модификатор: прикреплён к самому низу экрана, без offset под BottomNavBar
    (используется на странице оформления заказа и карточке товара).
-   max(...) — чтобы на ноутбуке (env=0) был стабильный зазор 12px, а на iOS-
-   устройствах с home indicator (env≈34) панель не уезжала ещё на лишние 12px,
-   а просто учитывала safe-area. Так картинка снизу совпадает в обоих случаях. */
+   Фиксированный 12px зазор от нижнего края — одинаково на ноутбуке и в
+   Telegram WebApp на iOS. Home indicator у iOS — тонкая полупрозрачная
+   полоска, нарисованная поверх системой; контента она не съедает, поэтому
+   safe-area-inset-bottom тут учитывать не нужно. */
 .zen-app .zen-bag-summary--bottom {
-  bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  bottom: 12px;
 }
 .zen-app .zen-bag-summary-bar {
   pointer-events: auto;
