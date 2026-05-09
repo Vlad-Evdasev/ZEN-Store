@@ -1,12 +1,11 @@
 import { Router } from "express";
 import { db } from "../db/schema.js";
 import {
-  broadcastChannelPost,
-  editChannelPost,
-  deleteChannelPost,
-  republishChannelPost,
-  getChannelTargetRaw,
-  setChannelTargetRaw,
+  broadcastToUsers,
+  editBroadcast,
+  deleteBroadcast,
+  getBroadcastRecipients,
+  type BroadcastRecipientResult,
 } from "../bot.js";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET || "";
@@ -54,13 +53,15 @@ adminRouter.patch("/currency-rate", requireAdmin, (req, res) => {
   res.json({ rate: Number.isFinite(savedRate) ? savedRate : 3.2 });
 });
 
-type ChannelPostRow = {
+type BroadcastRow = {
   id: number;
-  message_ids: string;
   text: string | null;
+  image_urls: string | null;
   images_count: number;
   first_image_url: string | null;
-  image_urls: string | null;
+  recipients: string;
+  sent_count: number;
+  failed_count: number;
   created_at: string;
   deleted_at: string | null;
 };
@@ -76,44 +77,40 @@ function parseJsonArray<T>(raw: string | null | undefined, guard: (x: unknown) =
   }
 }
 
-function rowToPost(row: ChannelPostRow) {
+function isRecipientResult(x: unknown): x is BroadcastRecipientResult {
+  if (!x || typeof x !== "object") return false;
+  const r = x as Record<string, unknown>;
+  return typeof r.user_id === "string" && Array.isArray(r.message_ids);
+}
+
+function parseRecipients(raw: string | null | undefined): BroadcastRecipientResult[] {
+  return parseJsonArray<BroadcastRecipientResult>(raw, isRecipientResult);
+}
+
+function rowToBroadcast(row: BroadcastRow) {
+  const recipients = parseRecipients(row.recipients);
+  const images = parseJsonArray<string>(row.image_urls, (x): x is string => typeof x === "string");
   return {
     id: row.id,
-    message_ids: parseJsonArray<number>(row.message_ids, (x): x is number => typeof x === "number"),
     text: row.text ?? "",
+    image_urls: images.map((u) => (u.startsWith("data:") ? "" : u)),
     images_count: row.images_count,
     first_image_url: row.first_image_url,
-    image_urls: parseJsonArray<string>(row.image_urls, (x): x is string => typeof x === "string"),
+    recipients_count: recipients.length,
+    sent_count: row.sent_count,
+    failed_count: row.failed_count,
     created_at: row.created_at,
+    // первое успешное message_id для отображения «msg #N»
+    sample_message_id: recipients.find((r) => r.message_ids.length > 0)?.message_ids[0] ?? null,
   };
 }
 
-function rowToPostPublic(row: ChannelPostRow) {
-  // Скрываем base64 data: URL из API: их объём огромен и админу они в превью
-  // не нужны (для миниатюры используем first_image_url).
-  const post = rowToPost(row);
-  const safeImages = post.image_urls.map((u) => (u.startsWith("data:") ? "" : u));
-  return { ...post, image_urls: safeImages };
-}
-
-// Канал, в который шлём посты. Бот должен быть админом канала.
-adminRouter.get("/channel-settings", requireAdmin, (_req, res) => {
-  res.json({
-    channel_chat_id: getChannelTargetRaw(),
-    env_default: process.env.CHANNEL_CHAT_ID || process.env.ADMIN_CHAT_ID || "",
-  });
+adminRouter.get("/broadcast/users-count", requireAdmin, (_req, res) => {
+  const ids = getBroadcastRecipients();
+  res.json({ count: ids.length });
 });
 
-adminRouter.patch("/channel-settings", requireAdmin, (req, res) => {
-  const value = typeof req.body?.channel_chat_id === "string" ? req.body.channel_chat_id : "";
-  setChannelTargetRaw(value);
-  res.json({ ok: true, channel_chat_id: getChannelTargetRaw() });
-});
-
-// Публикация поста в Telegram-канал. Бот должен быть админом канала; ID канала
-// берётся из CHANNEL_CHAT_ID (или ADMIN_CHAT_ID для обратной совместимости).
-// Принимает image_urls (массив до 10) или одиночный image_url для совместимости.
-adminRouter.post("/telegram/post", requireAdmin, async (req, res) => {
+adminRouter.post("/broadcast", requireAdmin, async (req, res) => {
   const text = typeof req.body?.text === "string" ? req.body.text : "";
   const rawImages: unknown = req.body?.image_urls ?? (req.body?.image_url ? [req.body.image_url] : []);
   const images: string[] = Array.isArray(rawImages)
@@ -122,82 +119,86 @@ adminRouter.post("/telegram/post", requireAdmin, async (req, res) => {
   if (!text.trim() && images.length === 0) {
     return res.status(400).json({ error: "Укажи текст или хотя бы одну картинку" });
   }
-  const result = await broadcastChannelPost(text, images);
-  if (!result.ok) return res.status(500).json({ error: result.error });
+  const recipients = getBroadcastRecipients();
+  if (recipients.length === 0) {
+    return res.status(400).json({ error: "Нет ни одного получателя. Подписчики появятся, когда хоть кто-то нажмёт /start у бота или сделает заказ." });
+  }
+  const result = await broadcastToUsers(text, images);
+  const firstHttp = images.find((s) => /^https?:\/\//i.test(s)) ?? null;
   const insert = db.prepare(
-    "INSERT INTO channel_posts (message_ids, text, images_count, first_image_url, image_urls) VALUES (?, ?, ?, ?, ?)"
+    "INSERT INTO broadcasts (text, image_urls, images_count, first_image_url, recipients, sent_count, failed_count) VALUES (?, ?, ?, ?, ?, ?, ?)"
   );
   const info = insert.run(
-    JSON.stringify(result.messageIds),
     text || null,
-    images.length,
-    result.firstHttpImage,
     JSON.stringify(images),
+    images.length,
+    firstHttp,
+    JSON.stringify(result.recipients),
+    result.sent_count,
+    result.failed_count,
   );
-  const created = db.prepare("SELECT * FROM channel_posts WHERE id = ?").get(Number(info.lastInsertRowid)) as ChannelPostRow;
-  res.json(rowToPostPublic(created));
+  const created = db.prepare("SELECT * FROM broadcasts WHERE id = ?").get(Number(info.lastInsertRowid)) as BroadcastRow;
+  res.json(rowToBroadcast(created));
 });
 
-adminRouter.get("/telegram/posts", requireAdmin, (_req, res) => {
+adminRouter.get("/broadcasts", requireAdmin, (_req, res) => {
   const rows = db
-    .prepare("SELECT * FROM channel_posts WHERE deleted_at IS NULL ORDER BY id DESC LIMIT 100")
-    .all() as ChannelPostRow[];
-  res.json(rows.map(rowToPostPublic));
+    .prepare("SELECT * FROM broadcasts WHERE deleted_at IS NULL ORDER BY id DESC LIMIT 100")
+    .all() as BroadcastRow[];
+  res.json(rows.map(rowToBroadcast));
 });
 
-adminRouter.patch("/telegram/posts/:id", requireAdmin, async (req, res) => {
+adminRouter.patch("/broadcasts/:id", requireAdmin, async (req, res) => {
   const id = parseInt(req.params.id, 10);
-  const row = db.prepare("SELECT * FROM channel_posts WHERE id = ? AND deleted_at IS NULL").get(id) as ChannelPostRow | undefined;
-  if (!row) return res.status(404).json({ error: "Пост не найден" });
+  const row = db.prepare("SELECT * FROM broadcasts WHERE id = ? AND deleted_at IS NULL").get(id) as BroadcastRow | undefined;
+  if (!row) return res.status(404).json({ error: "Рассылка не найдена" });
   const text = typeof req.body?.text === "string" ? req.body.text : "";
-  const oldMessageIds = parseJsonArray<number>(row.message_ids, (x): x is number => typeof x === "number");
+  const oldRecipients = parseRecipients(row.recipients);
   const oldImages = parseJsonArray<string>(row.image_urls, (x): x is string => typeof x === "string");
-
-  // Если клиент прислал image_urls — это явное намерение поменять состав фото.
-  // Иначе оставляем старые message_id и просто меняем caption/text.
   const incomingImagesRaw: unknown = req.body?.image_urls;
   const imagesProvided = Array.isArray(incomingImagesRaw);
   const newImages: string[] = imagesProvided
     ? (incomingImagesRaw as unknown[]).filter((x): x is string => typeof x === "string" && x.trim().length > 0).map((x) => x.trim())
     : oldImages;
-
-  // Считаем, что фотки совпадают, если массивы идентичны (по строкам, по порядку).
   const sameImages = newImages.length === oldImages.length && newImages.every((u, i) => u === oldImages[i]);
 
   if (!imagesProvided || sameImages) {
-    const result = await editChannelPost(oldMessageIds, row.images_count > 0, text);
-    if (!result.ok) return res.status(500).json({ error: result.error });
-    db.prepare("UPDATE channel_posts SET text = ? WHERE id = ?").run(text || null, id);
+    const r = await editBroadcast(oldRecipients, text, row.images_count > 0);
+    if (!r.ok) return res.status(500).json({ error: r.error });
+    db.prepare("UPDATE broadcasts SET text = ? WHERE id = ?").run(text || null, id);
   } else {
     if (!text.trim() && newImages.length === 0) {
       return res.status(400).json({ error: "Нечего публиковать: пустой текст и нет картинки" });
     }
-    const result = await republishChannelPost(oldMessageIds, text, newImages);
-    if (!result.ok) return res.status(500).json({ error: result.error });
+    // Состав фото изменился — нельзя точечно отредактировать альбомы у каждого
+    // получателя. Удаляем старые сообщения и шлём заново всем подписчикам.
+    await deleteBroadcast(oldRecipients);
+    const result = await broadcastToUsers(text, newImages);
     const firstHttp = newImages.find((s) => /^https?:\/\//i.test(s)) ?? null;
     db.prepare(
-      "UPDATE channel_posts SET message_ids = ?, text = ?, images_count = ?, first_image_url = ?, image_urls = ? WHERE id = ?"
+      "UPDATE broadcasts SET text = ?, image_urls = ?, images_count = ?, first_image_url = ?, recipients = ?, sent_count = ?, failed_count = ? WHERE id = ?"
     ).run(
-      JSON.stringify(result.messageIds),
       text || null,
+      JSON.stringify(newImages),
       newImages.length,
       firstHttp,
-      JSON.stringify(newImages),
+      JSON.stringify(result.recipients),
+      result.sent_count,
+      result.failed_count,
       id,
     );
   }
 
-  const updated = db.prepare("SELECT * FROM channel_posts WHERE id = ?").get(id) as ChannelPostRow;
-  res.json(rowToPostPublic(updated));
+  const updated = db.prepare("SELECT * FROM broadcasts WHERE id = ?").get(id) as BroadcastRow;
+  res.json(rowToBroadcast(updated));
 });
 
-adminRouter.delete("/telegram/posts/:id", requireAdmin, async (req, res) => {
+adminRouter.delete("/broadcasts/:id", requireAdmin, async (req, res) => {
   const id = parseInt(req.params.id, 10);
-  const row = db.prepare("SELECT * FROM channel_posts WHERE id = ? AND deleted_at IS NULL").get(id) as ChannelPostRow | undefined;
-  if (!row) return res.status(404).json({ error: "Пост не найден" });
-  const messageIds = parseJsonArray<number>(row.message_ids, (x): x is number => typeof x === "number");
-  const result = await deleteChannelPost(messageIds);
-  if (!result.ok) return res.status(500).json({ error: result.error });
-  db.prepare("UPDATE channel_posts SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?").run(id);
+  const row = db.prepare("SELECT * FROM broadcasts WHERE id = ? AND deleted_at IS NULL").get(id) as BroadcastRow | undefined;
+  if (!row) return res.status(404).json({ error: "Рассылка не найдена" });
+  const recipients = parseRecipients(row.recipients);
+  await deleteBroadcast(recipients);
+  db.prepare("UPDATE broadcasts SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?").run(id);
   res.json({ ok: true });
 });

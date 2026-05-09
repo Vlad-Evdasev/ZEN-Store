@@ -677,21 +677,35 @@ export async function deletePostComment(postId: number, commentId: number, admin
   }
 }
 
-export interface ChannelPost {
+export interface BroadcastPost {
   id: number;
-  message_ids: number[];
   text: string;
+  image_urls: string[];
   images_count: number;
   first_image_url: string | null;
-  image_urls: string[];
+  recipients_count: number;
+  sent_count: number;
+  failed_count: number;
   created_at: string;
+  sample_message_id: number | null;
 }
 
-export async function publishChannelPost(
+export async function getBotUsersCount(adminSecret: string): Promise<{ count: number }> {
+  const res = await fetch(`${API_URL}/api/admin/broadcast/users-count`, {
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+  return res.json();
+}
+
+export async function sendBroadcast(
   data: { text: string; image_urls?: string[] },
   adminSecret: string
-): Promise<ChannelPost> {
-  const res = await fetch(`${API_URL}/api/admin/telegram/post`, {
+): Promise<BroadcastPost> {
+  const res = await fetch(`${API_URL}/api/admin/broadcast`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
     body: JSON.stringify(data),
@@ -703,8 +717,8 @@ export async function publishChannelPost(
   return res.json();
 }
 
-export async function getChannelPosts(adminSecret: string): Promise<ChannelPost[]> {
-  const res = await fetch(`${API_URL}/api/admin/telegram/posts`, {
+export async function getBroadcasts(adminSecret: string): Promise<BroadcastPost[]> {
+  const res = await fetch(`${API_URL}/api/admin/broadcasts`, {
     headers: { "X-Admin-Secret": adminSecret },
   });
   if (!res.ok) {
@@ -714,12 +728,12 @@ export async function getChannelPosts(adminSecret: string): Promise<ChannelPost[
   return res.json();
 }
 
-export async function editChannelPost(
+export async function updateBroadcast(
   id: number,
   data: { text: string; image_urls?: string[] },
   adminSecret: string
-): Promise<ChannelPost> {
-  const res = await fetch(`${API_URL}/api/admin/telegram/posts/${id}`, {
+): Promise<BroadcastPost> {
+  const res = await fetch(`${API_URL}/api/admin/broadcasts/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
     body: JSON.stringify(data),
@@ -731,32 +745,8 @@ export async function editChannelPost(
   return res.json();
 }
 
-export async function getChannelSettings(adminSecret: string): Promise<{ channel_chat_id: string; env_default: string }> {
-  const res = await fetch(`${API_URL}/api/admin/channel-settings`, {
-    headers: { "X-Admin-Secret": adminSecret },
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { error?: string }).error || res.statusText);
-  }
-  return res.json();
-}
-
-export async function updateChannelSettings(channelChatId: string, adminSecret: string): Promise<{ ok: true; channel_chat_id: string }> {
-  const res = await fetch(`${API_URL}/api/admin/channel-settings`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
-    body: JSON.stringify({ channel_chat_id: channelChatId }),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { error?: string }).error || res.statusText);
-  }
-  return res.json();
-}
-
-export async function deleteChannelPost(id: number, adminSecret: string): Promise<void> {
-  const res = await fetch(`${API_URL}/api/admin/telegram/posts/${id}`, {
+export async function deleteBroadcastPost(id: number, adminSecret: string): Promise<void> {
+  const res = await fetch(`${API_URL}/api/admin/broadcasts/${id}`, {
     method: "DELETE",
     headers: { "X-Admin-Secret": adminSecret },
   });

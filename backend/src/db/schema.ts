@@ -153,27 +153,38 @@ try {
   db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('currency_rate_byn', '3.2')").run();
 } catch {}
 
-// История постов в Telegram-канал. Храним массив message_id (альбом — это
-// несколько message_id), текст и оригинальные источники фото в JSON, чтобы при
-// редактировании можно было подставить их обратно или сделать «delete+resend».
+// Подписчики бота — тапнули /start или были замечены в любых заказах/корзине.
+// Шлём им рассылки. blocked_at заполняется, если Telegram возвращает 403/blocked.
 try {
   db.exec(`
-    CREATE TABLE IF NOT EXISTS channel_posts (
+    CREATE TABLE IF NOT EXISTS bot_users (
+      user_id TEXT PRIMARY KEY,
+      first_seen_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      last_seen_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      blocked_at DATETIME
+    )
+  `);
+} catch {}
+
+// История рассылок от бота к подписчикам (и опциональным каналам).
+// recipients = JSON [{ user_id, message_ids, error? }]; image_urls = JSON
+// массив исходных src (включая data: для restore при edit).
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS broadcasts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      message_ids TEXT NOT NULL,
       text TEXT,
+      image_urls TEXT,
       images_count INTEGER NOT NULL DEFAULT 0,
       first_image_url TEXT,
+      recipients TEXT NOT NULL DEFAULT '[]',
+      sent_count INTEGER NOT NULL DEFAULT 0,
+      failed_count INTEGER NOT NULL DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       deleted_at DATETIME
     )
   `);
 } catch {}
-try {
-  db.exec("ALTER TABLE channel_posts ADD COLUMN image_urls TEXT");
-} catch {
-  // column already exists
-}
 
 // Add store_id to products if missing (migration)
 try {

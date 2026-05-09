@@ -15,39 +15,9 @@ export const bot = new Bot(token);
 
 const WEB_APP_URL = process.env.WEB_APP_URL || "https://your-mini-app-url.vercel.app";
 
-// Канал для рассылки постов. Сначала смотрим в app_settings (чтобы админ мог
-// сменить канал из UI без редеплоя), потом env CHANNEL_CHAT_ID, потом
-// исторический ADMIN_CHAT_ID (раньше использовался для уведомлений о заказах).
-const ENV_CHANNEL = process.env.CHANNEL_CHAT_ID || process.env.ADMIN_CHAT_ID || "";
-
 const MAX_IMAGES = 10;
+const SEND_DELAY_MS = 40; // ~25 msg/sec, под лимитами Telegram
 
-export function getChannelTargetRaw(): string {
-  try {
-    const row = db.prepare("SELECT value FROM app_settings WHERE key = 'channel_chat_id'").get() as { value: string } | undefined;
-    if (row && row.value && row.value.trim()) return row.value.trim();
-  } catch {
-    // app_settings table may not exist on first boot
-  }
-  return ENV_CHANNEL;
-}
-
-export function setChannelTargetRaw(value: string): void {
-  const v = (value || "").trim();
-  db.prepare("INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("channel_chat_id", v);
-}
-
-function resolveChannelTarget(): string | number | null {
-  const raw = getChannelTargetRaw();
-  if (!raw) return null;
-  if (raw.startsWith("@")) return raw;
-  const num = Number(raw);
-  return Number.isFinite(num) ? num : raw;
-}
-
-// Telegram Bot API не принимает data:base64 URL в поле photo — это «remote
-// file identifier». Если приходит data-URL, декодируем и шлём как InputFile
-// (multipart). Обычные http(s) URL пропускаем как есть.
 function toPhotoSource(src: string): string | InputFile {
   if (!src.startsWith("data:")) return src;
   const m = src.match(/^data:[^;]+;base64,(.+)$/);
@@ -56,32 +26,83 @@ function toPhotoSource(src: string): string | InputFile {
   return new InputFile(buffer, "image.jpg");
 }
 
-export type ChannelPostResult =
-  | { ok: true; messageIds: number[]; firstHttpImage: string | null }
-  | { ok: false; error: string };
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export async function broadcastChannelPost(text: string, imageSources: string[] = []): Promise<ChannelPostResult> {
-  const target = resolveChannelTarget();
-  if (!target) {
-    return { ok: false, error: "CHANNEL_CHAT_ID (или ADMIN_CHAT_ID) не задан в env. Укажи ID канала или @username и сделай бота его админом." };
+const isUserBlocked = (msg: string) =>
+  /forbidden:/i.test(msg) ||
+  /bot was blocked/i.test(msg) ||
+  /user is deactivated/i.test(msg) ||
+  /chat not found/i.test(msg);
+
+function rememberBotUser(userId: string | number): void {
+  const id = String(userId);
+  try {
+    db.prepare(
+      "INSERT INTO bot_users (user_id, first_seen_at, last_seen_at) VALUES (?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) " +
+      "ON CONFLICT(user_id) DO UPDATE SET last_seen_at = CURRENT_TIMESTAMP, blocked_at = NULL"
+    ).run(id);
+  } catch {
+    // ignore
   }
+}
+
+function markBotUserBlocked(userId: string | number): void {
+  const id = String(userId);
+  try {
+    db.prepare(
+      "INSERT INTO bot_users (user_id, first_seen_at, last_seen_at, blocked_at) VALUES (?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) " +
+      "ON CONFLICT(user_id) DO UPDATE SET blocked_at = CURRENT_TIMESTAMP"
+    ).run(id);
+  } catch {
+    // ignore
+  }
+}
+
+// Получаем уникальные user_id, которым стоит разослать пост.
+// Источник: bot_users (тапнули /start) ∪ orders ∪ cart_items ∪ wishlist ∪ user_settings.
+// Заблокированные через bot_users.blocked_at — исключаются.
+export function getBroadcastRecipients(): string[] {
+  try {
+    const rows = db.prepare(`
+      WITH known(user_id) AS (
+        SELECT user_id FROM bot_users WHERE blocked_at IS NULL
+        UNION
+        SELECT user_id FROM orders
+        UNION
+        SELECT user_id FROM cart_items
+        UNION
+        SELECT user_id FROM wishlist
+        UNION
+        SELECT user_id FROM user_settings
+      )
+      SELECT DISTINCT k.user_id FROM known k
+      WHERE k.user_id IS NOT NULL
+        AND k.user_id <> ''
+        AND k.user_id NOT IN (SELECT user_id FROM bot_users WHERE blocked_at IS NOT NULL)
+    `).all() as { user_id: string }[];
+    return rows.map((r) => r.user_id).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+export type SendResult =
+  | { ok: true; messageIds: number[] }
+  | { ok: false; error: string; blocked?: boolean };
+
+async function sendOne(target: string | number, text: string, images: string[]): Promise<SendResult> {
   const trimmed = (text || "").trim();
-  const images = imageSources.filter((s) => typeof s === "string" && s.trim().length > 0).slice(0, MAX_IMAGES);
-  if (!trimmed && images.length === 0) {
-    return { ok: false, error: "Нечего публиковать: пустой текст и нет картинки" };
-  }
-  const firstHttp = images.find((s) => /^https?:\/\//i.test(s)) ?? null;
   try {
     if (images.length === 0) {
       const msg = await bot.api.sendMessage(target, trimmed, { parse_mode: "HTML" });
-      return { ok: true, messageIds: [msg.message_id], firstHttpImage: null };
+      return { ok: true, messageIds: [msg.message_id] };
     }
     if (images.length === 1) {
       const msg = await bot.api.sendPhoto(target, toPhotoSource(images[0]), {
         caption: trimmed || undefined,
         parse_mode: "HTML",
       });
-      return { ok: true, messageIds: [msg.message_id], firstHttpImage: firstHttp };
+      return { ok: true, messageIds: [msg.message_id] };
     }
     const media: ChannelMediaPhoto[] = images.map((src, i) => {
       const item: ChannelMediaPhoto = { type: "photo", media: toPhotoSource(src) };
@@ -92,68 +113,101 @@ export async function broadcastChannelPost(text: string, imageSources: string[] 
       return item;
     });
     const msgs = await bot.api.sendMediaGroup(target, media);
-    return { ok: true, messageIds: msgs.map((m) => m.message_id), firstHttpImage: firstHttp };
-  } catch (e: unknown) {
+    return { ok: true, messageIds: msgs.map((m) => m.message_id) };
+  } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    return { ok: false, error: msg };
+    return { ok: false, error: msg, blocked: isUserBlocked(msg) };
   }
 }
 
-// Редактирование подписи/текста уже отправленного поста. Для альбома меняем
-// caption на ПЕРВОМ message_id (там было caption у sendMediaGroup). Telegram
-// разрешает edit в течение 48 часов после отправки.
-export async function editChannelPost(messageIds: number[], hasMedia: boolean, text: string): Promise<ChannelPostResult> {
-  const target = resolveChannelTarget();
-  if (!target) return { ok: false, error: "CHANNEL_CHAT_ID не задан" };
-  const first = messageIds[0];
-  if (!first) return { ok: false, error: "Нет message_id для редактирования" };
+export interface BroadcastRecipientResult {
+  user_id: string;
+  message_ids: number[];
+  error?: string;
+}
+
+export interface BroadcastResult {
+  recipients: BroadcastRecipientResult[];
+  sent_count: number;
+  failed_count: number;
+}
+
+export async function broadcastToUsers(text: string, imageSources: string[] = []): Promise<BroadcastResult> {
   const trimmed = (text || "").trim();
-  try {
-    if (hasMedia) {
-      await bot.api.editMessageCaption(target, first, {
-        caption: trimmed || undefined,
-        parse_mode: "HTML",
-      });
+  const images = imageSources.filter((s) => typeof s === "string" && s.trim().length > 0).slice(0, MAX_IMAGES);
+  const recipients: BroadcastRecipientResult[] = [];
+  let sent = 0;
+  let failed = 0;
+  const userIds = getBroadcastRecipients();
+  for (const userId of userIds) {
+    const result = await sendOne(userId, trimmed, images);
+    if (result.ok) {
+      recipients.push({ user_id: userId, message_ids: result.messageIds });
+      sent++;
     } else {
-      if (!trimmed) return { ok: false, error: "Текст не может быть пустым" };
-      await bot.api.editMessageText(target, first, trimmed, { parse_mode: "HTML" });
+      recipients.push({ user_id: userId, message_ids: [], error: result.error });
+      failed++;
+      if (result.blocked) markBotUserBlocked(userId);
     }
-    return { ok: true, messageIds, firstHttpImage: null };
-  } catch (e: unknown) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    await sleep(SEND_DELAY_MS);
   }
+  return { recipients, sent_count: sent, failed_count: failed };
 }
 
-export async function deleteChannelPost(messageIds: number[]): Promise<{ ok: true } | { ok: false; error: string }> {
-  const target = resolveChannelTarget();
-  if (!target) return { ok: false, error: "CHANNEL_CHAT_ID не задан" };
-  const errors: string[] = [];
-  for (const id of messageIds) {
+export async function editBroadcast(
+  recipients: BroadcastRecipientResult[],
+  text: string,
+  hasMedia: boolean
+): Promise<{ ok: true; updated: number; failed: number } | { ok: false; error: string }> {
+  const trimmed = (text || "").trim();
+  if (!hasMedia && !trimmed) return { ok: false, error: "Текст не может быть пустым" };
+  let updated = 0;
+  let failed = 0;
+  for (const r of recipients) {
+    const first = r.message_ids[0];
+    if (!first) continue;
     try {
-      await bot.api.deleteMessage(target, id);
+      if (hasMedia) {
+        await bot.api.editMessageCaption(r.user_id, first, {
+          caption: trimmed || undefined,
+          parse_mode: "HTML",
+        });
+      } else {
+        await bot.api.editMessageText(r.user_id, first, trimmed, { parse_mode: "HTML" });
+      }
+      updated++;
     } catch (e) {
+      // «message is not modified» / «message to edit not found» — не считаем за фатальную ошибку
       const msg = e instanceof Error ? e.message : String(e);
-      // Telegram возвращает 400 «message to delete not found», если уже удалено
-      // — это не ошибка для нас. Остальное копим.
-      if (!/message to delete not found/i.test(msg)) errors.push(`#${id}: ${msg}`);
+      if (!/message is not modified|message to edit not found/i.test(msg)) failed++;
     }
+    await sleep(SEND_DELAY_MS);
   }
-  if (errors.length) return { ok: false, error: errors.join("; ") };
-  return { ok: true };
+  return { ok: true, updated, failed };
 }
 
-// Полный «republish»: удаляем старые сообщения и отправляем заново. Используется,
-// когда меняется состав/количество фото — Telegram Bot API не разрешает добавлять
-// сообщения в существующий media group, проще пересоздать пост целиком.
-// message_ids меняются — сохраним новые в БД на стороне роута.
-export async function republishChannelPost(oldMessageIds: number[], text: string, images: string[]): Promise<ChannelPostResult> {
-  if (oldMessageIds.length > 0) {
-    await deleteChannelPost(oldMessageIds);
+export async function deleteBroadcast(
+  recipients: BroadcastRecipientResult[]
+): Promise<{ ok: true; deleted: number; failed: number }> {
+  let deleted = 0;
+  let failed = 0;
+  for (const r of recipients) {
+    for (const id of r.message_ids) {
+      try {
+        await bot.api.deleteMessage(r.user_id, id);
+        deleted++;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (!/message to delete not found/i.test(msg)) failed++;
+      }
+      await sleep(SEND_DELAY_MS);
+    }
   }
-  return broadcastChannelPost(text, images);
+  return { ok: true, deleted, failed };
 }
 
 bot.command("start", async (ctx) => {
+  if (ctx.from?.id) rememberBotUser(ctx.from.id);
   await ctx.reply("👕 Добро пожаловать в RAW — магазин одежды.", {
     reply_markup: {
       inline_keyboard: [
@@ -164,6 +218,7 @@ bot.command("start", async (ctx) => {
 });
 
 bot.command("shop", async (ctx) => {
+  if (ctx.from?.id) rememberBotUser(ctx.from.id);
   await ctx.reply("Открыть магазин:", {
     reply_markup: {
       inline_keyboard: [
@@ -171,6 +226,12 @@ bot.command("shop", async (ctx) => {
       ],
     },
   });
+});
+
+// Любое взаимодействие с ботом — обновляем last_seen.
+bot.on("message", async (ctx, next) => {
+  if (ctx.from?.id) rememberBotUser(ctx.from.id);
+  await next();
 });
 
 export function startBot() {

@@ -18,12 +18,11 @@ import {
   deleteCustomOrderAdmin,
   getCurrencyRateAdmin,
   updateCurrencyRateAdmin,
-  publishChannelPost,
-  getChannelPosts,
-  editChannelPost,
-  deleteChannelPost,
-  getChannelSettings,
-  updateChannelSettings,
+  sendBroadcast,
+  getBroadcasts,
+  updateBroadcast,
+  deleteBroadcastPost,
+  getBotUsersCount,
   getPosts,
   createPost,
   updatePost,
@@ -36,7 +35,7 @@ import {
   type CustomOrderAdmin,
   type Post,
   type PostComment,
-  type ChannelPost,
+  type BroadcastPost,
 } from "../api";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
@@ -165,7 +164,7 @@ export function Admin() {
             Посты
           </button>
           <button type="button" onClick={() => setTabAndReset("channel")} className={`admin-nav-btn ${tab === "channel" ? "active" : ""}`}>
-            Канал
+            Рассылка
           </button>
           <div style={{ flex: 1 }} />
           <div style={styles.sidebarFooter}>
@@ -970,13 +969,9 @@ function ChannelTab({ adminSecret, products }: { adminSecret: string; products: 
   const [urlInput, setUrlInput] = useState("");
   const [templateProductId, setTemplateProductId] = useState<string>("");
 
-  const [channelTarget, setChannelTarget] = useState("");
-  const [channelEnvDefault, setChannelEnvDefault] = useState("");
-  const [channelTargetDraft, setChannelTargetDraft] = useState("");
-  const [channelSaving, setChannelSaving] = useState(false);
-  const [channelSavedAt, setChannelSavedAt] = useState(0);
+  const [usersCount, setUsersCount] = useState<number | null>(null);
 
-  const [history, setHistory] = useState<ChannelPost[]>([]);
+  const [history, setHistory] = useState<BroadcastPost[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [historyBusy, setHistoryBusy] = useState(false);
 
@@ -984,34 +979,19 @@ function ChannelTab({ adminSecret, products }: { adminSecret: string; products: 
 
   const loadHistory = () => {
     setHistoryLoading(true);
-    getChannelPosts(adminSecret)
+    getBroadcasts(adminSecret)
       .then(setHistory)
       .catch(() => setHistory([]))
       .finally(() => setHistoryLoading(false));
   };
   useEffect(loadHistory, [adminSecret]);
-  useEffect(() => {
-    getChannelSettings(adminSecret)
-      .then((s) => {
-        setChannelTarget(s.channel_chat_id || "");
-        setChannelTargetDraft(s.channel_chat_id || "");
-        setChannelEnvDefault(s.env_default || "");
-      })
-      .catch(() => {});
-  }, [adminSecret]);
 
-  const saveChannelTarget = async () => {
-    setChannelSaving(true);
-    try {
-      const r = await updateChannelSettings(channelTargetDraft.trim(), adminSecret);
-      setChannelTarget(r.channel_chat_id);
-      setChannelSavedAt(Date.now());
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "Ошибка сохранения настроек");
-    } finally {
-      setChannelSaving(false);
-    }
+  const refreshUsersCount = () => {
+    getBotUsersCount(adminSecret)
+      .then(({ count }) => setUsersCount(count))
+      .catch(() => setUsersCount(null));
   };
+  useEffect(refreshUsersCount, [adminSecret]);
 
   const addImage = (src: string) => {
     setImages((prev) => (prev.length >= MAX_CHANNEL_IMAGES ? prev : [...prev, src]));
@@ -1075,7 +1055,7 @@ function ChannelTab({ adminSecret, products }: { adminSecret: string; products: 
     setMessage(null);
   };
 
-  const startEdit = (p: ChannelPost) => {
+  const startEdit = (p: BroadcastPost) => {
     const restored = (p.image_urls ?? []).filter((u) => u && u.length > 0);
     setText(p.text || "");
     setImages(restored);
@@ -1097,27 +1077,29 @@ function ChannelTab({ adminSecret, products }: { adminSecret: string; products: 
     setMessage(null);
     try {
       if (editingId != null) {
-        const updated = await editChannelPost(editingId, { text, image_urls: images }, adminSecret);
+        const updated = await updateBroadcast(editingId, { text, image_urls: images }, adminSecret);
         setHistory((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
-        setMessage({ kind: "ok", text: "Пост обновлён" });
+        setMessage({ kind: "ok", text: `Обновлено у ${updated.sent_count} подписчик(ов)` });
       } else {
-        await publishChannelPost({ text, image_urls: images }, adminSecret);
-        setMessage({ kind: "ok", text: "Опубликовано в канал" });
+        const sent = await sendBroadcast({ text, image_urls: images }, adminSecret);
+        const failedHint = sent.failed_count > 0 ? ` · ${sent.failed_count} не доставлено (заблокировали бота)` : "";
+        setMessage({ kind: "ok", text: `Разослано ${sent.sent_count} подписчик(ам)${failedHint}` });
         loadHistory();
+        refreshUsersCount();
       }
       resetComposer();
     } catch (err) {
-      setMessage({ kind: "err", text: err instanceof Error ? err.message : "Ошибка публикации" });
+      setMessage({ kind: "err", text: err instanceof Error ? err.message : "Ошибка рассылки" });
     } finally {
       setSending(false);
     }
   };
 
   const handleDeletePost = async (id: number) => {
-    if (!confirm("Удалить этот пост из канала? Сообщение(я) будут стёрты у всех подписчиков.")) return;
+    if (!confirm("Удалить эту рассылку у всех подписчиков? Сообщения будут стёрты в их чатах с ботом.")) return;
     setHistoryBusy(true);
     try {
-      await deleteChannelPost(id, adminSecret);
+      await deleteBroadcastPost(id, adminSecret);
       setHistory((prev) => prev.filter((p) => p.id !== id));
       if (editingId === id) resetComposer();
     } catch (err) {
@@ -1128,42 +1110,27 @@ function ChannelTab({ adminSecret, products }: { adminSecret: string; products: 
   };
 
   const isEditing = editingId != null;
-  const channelDirty = channelTargetDraft.trim() !== channelTarget.trim();
 
   return (
     <>
-      <h2 style={styles.pageTitle}>Канал</h2>
+      <h2 style={styles.pageTitle}>Рассылка</h2>
       <p style={{ ...styles.hint, marginBottom: 16 }}>
-        Пост уходит в Telegram-канал. Бот должен быть админом канала. HTML: <code>&lt;b&gt;</code>, <code>&lt;i&gt;</code>, <code>&lt;a href=&quot;…&quot;&gt;</code>. До {MAX_CHANNEL_IMAGES} фото — уйдут альбомом.
+        Бот пишет каждому подписчику в личку. HTML: <code>&lt;b&gt;</code>, <code>&lt;i&gt;</code>, <code>&lt;a href=&quot;…&quot;&gt;</code>. До {MAX_CHANNEL_IMAGES} фото — уйдут одним альбомом. Throttle ~25 сообщ/сек, чтобы не словить лимиты Telegram.
       </p>
 
-      <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "14px 16px", marginBottom: 22, background: "#fafafa" }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-          <strong style={{ fontSize: 13, letterSpacing: 0.2 }}>Куда отправлять</strong>
-          {channelTarget ? (
-            <span style={{ fontSize: 12, color: "var(--muted)" }}>сейчас: <code>{channelTarget}</code></span>
-          ) : (
-            <span style={{ fontSize: 12, color: "#c62828" }}>не настроено — посты уйдут в личку (видно только тебе)</span>
-          )}
+      <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "14px 16px", marginBottom: 22, background: "#fafafa", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <strong style={{ fontSize: 13, letterSpacing: 0.2 }}>Подписчики бота</strong>
+          <div style={{ fontSize: 22, fontWeight: 700, marginTop: 2 }}>
+            {usersCount == null ? "—" : usersCount}
+          </div>
+          <p style={{ ...styles.hint, marginTop: 4, marginBottom: 0 }}>
+            Учитываются все, кто хоть раз тапнул <code>/start</code> у бота, оформлял заказ, добавлял в корзину или избранное. Заблокировавшие бота автоматически исключаются.
+          </p>
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-          <input
-            type="text"
-            value={channelTargetDraft}
-            onChange={(e) => setChannelTargetDraft(e.target.value)}
-            placeholder={channelEnvDefault ? `${channelEnvDefault} (из env)` : "@my_channel или -1001234567890"}
-            style={{ ...styles.input, flex: 1, minWidth: 220, marginBottom: 0 }}
-          />
-          <button type="button" onClick={saveChannelTarget} disabled={!channelDirty || channelSaving} style={styles.smallBtn}>
-            {channelSaving ? "Сохраняю…" : "Сохранить"}
-          </button>
-          {channelSavedAt > 0 && Date.now() - channelSavedAt < 4000 && (
-            <span style={{ fontSize: 12, color: "var(--accent)" }}>Сохранено</span>
-          )}
-        </div>
-        <p style={{ ...styles.hint, marginTop: 8, marginBottom: 0 }}>
-          Создай Telegram-канал, добавь бота админом с правом постить. ID канала: <code>@username</code> для публичного, или числовой <code>-100…</code> для приватного (узнать можно через <code>@getidsbot</code>). Если оставить пусто — будет браться значение из env.
-        </p>
+        <button type="button" onClick={refreshUsersCount} style={styles.smallBtn}>
+          Обновить
+        </button>
       </div>
 
       <div className="channel-grid" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(280px, 380px)", gap: 22, alignItems: "start" }}>
@@ -1260,10 +1227,12 @@ function ChannelTab({ adminSecret, products }: { adminSecret: string; products: 
             </p>
           )}
           <div style={styles.formActions}>
-            <button type="submit" style={styles.submit} disabled={sending}>
+            <button type="submit" style={styles.submit} disabled={sending || (!isEditing && !!usersCount && usersCount === 0)}>
               {sending
-                ? (isEditing ? "Сохраняю…" : "Публикую…")
-                : (isEditing ? "Сохранить изменения" : "Опубликовать в канал")}
+                ? (isEditing ? "Сохраняю…" : "Рассылаю…")
+                : (isEditing
+                    ? "Сохранить изменения"
+                    : `Разослать ${usersCount != null && usersCount > 0 ? `(${usersCount} получ.)` : "всем"}`)}
             </button>
             {isEditing && (
               <button type="button" onClick={resetComposer} style={styles.cancelBtn}>
@@ -1281,11 +1250,11 @@ function ChannelTab({ adminSecret, products }: { adminSecret: string; products: 
         </div>
       </div>
 
-      <h3 style={{ ...styles.subtitle, marginTop: 32 }}>История постов ({history.length})</h3>
+      <h3 style={{ ...styles.subtitle, marginTop: 32 }}>История рассылок ({history.length})</h3>
       {historyLoading ? (
         <p style={styles.hint}>Загрузка…</p>
       ) : history.length === 0 ? (
-        <p style={styles.hint}>Ещё ничего не опубликовано.</p>
+        <p style={styles.hint}>Ещё ничего не отправлено.</p>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {history.map((p) => (
@@ -1316,8 +1285,10 @@ function ChannelTab({ adminSecret, products }: { adminSecret: string; products: 
                 </div>
                 <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6, display: "flex", gap: 10, flexWrap: "wrap" }}>
                   <span>{relTime(p.created_at)}</span>
-                  {p.images_count > 0 && <span>📷 {p.images_count} фото</span>}
-                  <span>msg #{p.message_ids[0] ?? "?"}</span>
+                  {p.images_count > 0 && <span>📷 {p.images_count}</span>}
+                  <span>📤 {p.sent_count}</span>
+                  {p.failed_count > 0 && <span style={{ color: "#c62828" }}>⚠ {p.failed_count}</span>}
+                  {p.sample_message_id != null && <span>msg #{p.sample_message_id}</span>}
                 </div>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
