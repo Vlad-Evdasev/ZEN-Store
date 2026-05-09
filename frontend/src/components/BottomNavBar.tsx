@@ -54,9 +54,10 @@ function CatalogIcon({ active }: IconProps) {
   );
 }
 
-/* Custom Order — бумажный самолётик: отправить запрос на товар,
-   которого нет в каталоге. Геометричный дартс с хорошо читаемым
-   изгибом «фальцовки».                                              */
+/* Custom Order — слот-плейсхолдер `[ • ]`: две скобки и точка по центру.
+   Концептуальная метафора заявки: пустой слот, который заполняется
+   твоим запросом. Чистая letterform-геометрия — ничего общего со
+   стопкой карточек и спарком.                                       */
 function CustomOrderIcon({ active }: IconProps) {
   return (
     <svg
@@ -67,24 +68,26 @@ function CustomOrderIcon({ active }: IconProps) {
       aria-hidden="true"
       style={{ transition: "transform 0.25s ease" }}
     >
-      {/* силуэт самолётика: длинная сторона — фюзеляж, V-образный
-         вырез снизу обозначает крылья и хвост                      */}
+      {/* левая скобка [ */}
       <path
-        d="M3.2 11.4 L 20.5 3.5 L 14.2 20.4 L 11.2 13.5 Z"
+        d="M9 4.5 H 5 V 19.5 H 9"
         fill="none"
         stroke="currentColor"
-        strokeWidth={active ? 2 : 1.7}
+        strokeWidth={active ? 2.1 : 1.8}
+        strokeLinecap="round"
         strokeLinejoin="round"
-        strokeLinecap="round"
       />
-      {/* линия фальцовки — от носа к V-вырезу */}
+      {/* правая скобка ] */}
       <path
-        d="M20.5 3.5 L 11.2 13.5"
-        stroke="currentColor"
-        strokeWidth={active ? 2 : 1.7}
-        strokeLinecap="round"
+        d="M15 4.5 H 19 V 19.5 H 15"
         fill="none"
+        stroke="currentColor"
+        strokeWidth={active ? 2.1 : 1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
+      {/* точка-запрос внутри слота */}
+      <circle cx="12" cy="12" r="1.7" fill="currentColor" />
     </svg>
   );
 }
