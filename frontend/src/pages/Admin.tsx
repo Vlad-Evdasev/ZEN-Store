@@ -1492,9 +1492,6 @@ function ProductsTab({
   const [category, setCategory] = useState(defaultCategory);
   const [brand, setBrand] = useState("");
   const [sizes, setSizes] = useState("S,M,L,XL");
-  const [composition, setComposition] = useState("");
-  const [density, setDensity] = useState("");
-  const [care, setCare] = useState("");
 
   useEffect(() => {
     if (categories.length > 0 && !categories.some((c) => c.code === category)) {
@@ -1512,9 +1509,6 @@ function ProductsTab({
     setBrand(p.brand ?? "");
     setCategory(categories.some((c) => c.code === p.category) ? p.category : defaultCategory);
     setSizes(p.sizes || "S,M,L,XL");
-    setComposition(p.composition ?? "");
-    setDensity(p.density ?? "");
-    setCare(p.care ?? "");
   };
 
   const cancelEdit = () => {
@@ -1526,9 +1520,6 @@ function ProductsTab({
     setBrand("");
     setCategory(defaultCategory);
     setSizes("S,M,L,XL");
-    setComposition("");
-    setDensity("");
-    setCare("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1551,9 +1542,6 @@ function ProductsTab({
         image_urls: urls.length > 0 ? urls : undefined,
         category,
         sizes: sizes.trim() || undefined,
-        composition: composition.trim() || undefined,
-        density: density.trim() || undefined,
-        care: care.trim() || undefined,
       };
       if (editingId) {
         await updateProduct(editingId, data, adminSecret);
@@ -1623,14 +1611,6 @@ function ProductsTab({
         </select>
         <label style={styles.label}>Размеры</label>
         <input type="text" value={sizes} onChange={(e) => setSizes(e.target.value)} placeholder="S,M,L,XL" style={styles.input} />
-        <label style={styles.label}>Состав</label>
-        <input type="text" value={composition} onChange={(e) => setComposition(e.target.value)} placeholder="100% хлопок" style={styles.input} />
-        <p style={styles.hint}>Показывается в карточке как «info-pill».</p>
-        <label style={styles.label}>Плотность</label>
-        <input type="text" value={density} onChange={(e) => setDensity(e.target.value)} placeholder="220 г/м²" style={styles.input} />
-        <label style={styles.label}>Уход</label>
-        <textarea value={care} onChange={(e) => setCare(e.target.value)} rows={2} placeholder="Машинная стирка при 30°. Не отбеливать. Гладить с изнанки." style={styles.input} />
-        <p style={styles.hint}>Если заполнено — открывается отдельным аккордеоном на странице товара.</p>
         {message && <p style={styles.message}>{message}</p>}
         <div style={styles.formActions}>
           <button type="submit" disabled={submitting} style={styles.submit}>

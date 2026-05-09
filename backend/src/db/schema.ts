@@ -257,12 +257,6 @@ try {
   // column already exists
 }
 
-// Дополнительные характеристики товара для редизайна карточки:
-// info-pills (Состав/Плотность) и аккордеон «Уход».
-try { db.exec("ALTER TABLE products ADD COLUMN composition TEXT"); } catch {}
-try { db.exec("ALTER TABLE products ADD COLUMN density TEXT"); } catch {}
-try { db.exec("ALTER TABLE products ADD COLUMN care TEXT"); } catch {}
-
 // Add user_username to orders (instead of/in addition to phone)
 try {
   db.exec("ALTER TABLE orders ADD COLUMN user_username TEXT");

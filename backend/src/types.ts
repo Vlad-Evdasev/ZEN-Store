@@ -8,9 +8,6 @@ export interface Product {
   sizes: string;
   created_at: string;
   new_arrival_sort_order?: number | null;
-  composition?: string | null;
-  density?: string | null;
-  care?: string | null;
 }
 
 export interface CartItem {
