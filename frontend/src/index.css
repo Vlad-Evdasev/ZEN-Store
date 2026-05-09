@@ -1996,9 +1996,12 @@ nav svg {
   pointer-events: none;
 }
 /* Модификатор: прикреплён к самому низу экрана, без offset под BottomNavBar
-   (используется на странице оформления заказа, где навбар не отображается). */
+   (используется на странице оформления заказа и карточке товара).
+   max(...) — чтобы на ноутбуке (env=0) был стабильный зазор 12px, а на iOS-
+   устройствах с home indicator (env≈34) панель не уезжала ещё на лишние 12px,
+   а просто учитывала safe-area. Так картинка снизу совпадает в обоих случаях. */
 .zen-app .zen-bag-summary--bottom {
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  bottom: max(12px, env(safe-area-inset-bottom, 0px));
 }
 .zen-app .zen-bag-summary-bar {
   pointer-events: auto;
