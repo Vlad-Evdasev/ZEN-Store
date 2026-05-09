@@ -79,25 +79,27 @@ function PostCard({
           aria-label="Открыть фото"
         >
           <img src={imageSrc} alt="" style={cardStyles.image} />
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); handleLike(); }}
+            style={{
+              ...cardStyles.heartOverlay,
+              ...(post.user_liked ? cardStyles.heartOverlayActive : null),
+            }}
+            aria-label={post.user_liked ? "Unlike" : "Like"}
+            aria-pressed={post.user_liked}
+          >
+            <HeartIcon filled={post.user_liked} />
+            {post.likes_count > 0 && (
+              <span style={cardStyles.heartOverlayCount}>{post.likes_count}</span>
+            )}
+          </button>
         </div>
       )}
 
       <div style={cardStyles.body}>
         {post.caption && <p style={cardStyles.caption}>{post.caption}</p>}
         <div style={cardStyles.metaRow}>
-          <div style={cardStyles.actions}>
-            <button
-              type="button"
-              onClick={handleLike}
-              style={cardStyles.actionBtn}
-              aria-label={post.user_liked ? "Unlike" : "Like"}
-            >
-              <HeartIcon filled={post.user_liked} />
-              {post.likes_count > 0 && (
-                <span style={cardStyles.actionCount}>{post.likes_count}</span>
-              )}
-            </button>
-          </div>
           <span style={cardStyles.date}>{formatPostDate(post.created_at, lang)}</span>
         </div>
       </div>
@@ -372,6 +374,41 @@ const cardStyles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+  },
+  heartOverlay: {
+    position: "absolute" as const,
+    top: 8,
+    right: 8,
+    minWidth: 36,
+    height: 36,
+    padding: "0 10px",
+    borderRadius: 999,
+    background: "rgba(255,255,255,0.85)",
+    color: "#1a1a1a",
+    border: "none",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    cursor: "pointer",
+    backdropFilter: "saturate(160%) blur(12px)",
+    WebkitBackdropFilter: "saturate(160%) blur(12px)",
+    boxShadow: "0 3px 10px rgba(0,0,0,0.18), 0 1px 2px rgba(0,0,0,0.08)",
+    fontFamily: "inherit",
+    fontSize: 12,
+    fontWeight: 600,
+    lineHeight: 1,
+    WebkitTapHighlightColor: "transparent",
+    transition: "background 0.15s ease, transform 0.08s ease, color 0.15s ease",
+  },
+  heartOverlayActive: {
+    color: "var(--accent)",
+    background: "rgba(255,255,255,0.95)",
+  },
+  heartOverlayCount: {
+    fontSize: 12,
+    fontWeight: 600,
+    color: "inherit",
   },
   body: {
     padding: "8px 10px 10px",

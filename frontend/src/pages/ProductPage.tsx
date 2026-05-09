@@ -254,23 +254,6 @@ export function ProductPage({
         )}
       </div>
 
-      {imageUrls.length > 1 && (
-        <div className="product-v2__thumbs" role="tablist" aria-label="Все фото">
-          {imageUrls.map((url, i) => (
-            <button
-              key={`thumb-${i}`}
-              type="button"
-              role="tab"
-              aria-selected={i === imageIndex}
-              onClick={() => setImageIndex(i)}
-              className={`product-v2__thumb${i === imageIndex ? " is-active" : ""}`}
-            >
-              <img src={url} alt={`Фото ${i + 1}`} />
-            </button>
-          ))}
-        </div>
-      )}
-
       <div className="product-v2__sheet">
         <header className="product-v2__header">
           <h1 className="product-v2__title">{product.name}</h1>
