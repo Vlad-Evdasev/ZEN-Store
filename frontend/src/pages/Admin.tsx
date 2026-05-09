@@ -23,6 +23,11 @@ import {
   updateBroadcast,
   deleteBroadcastPost,
   getBotUsersCount,
+  getConversations,
+  getConversationsUnreadCount,
+  getConversationMessages,
+  markConversationRead,
+  replyToConversation,
   getPosts,
   createPost,
   updatePost,
@@ -36,6 +41,8 @@ import {
   type Post,
   type PostComment,
   type BroadcastPost,
+  type BotConversation,
+  type BotMessage,
 } from "../api";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
@@ -60,7 +67,7 @@ function telegramChatLink(username?: string | null, userId?: string): string {
   return "#";
 }
 
-type Tab = "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel";
+type Tab = "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats";
 
 export function Admin() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -70,6 +77,7 @@ export function Admin() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [tab, setTab] = useState<Tab>("products");
+  const [chatsUnread, setChatsUnread] = useState(0);
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
@@ -95,6 +103,19 @@ export function Admin() {
   useEffect(() => {
     if (authenticated) refresh();
   }, [authenticated]);
+
+  const refreshChatsUnread = () => {
+    if (!adminSecret) return;
+    getConversationsUnreadCount(adminSecret)
+      .then(({ count }) => setChatsUnread(Number(count) || 0))
+      .catch(() => {});
+  };
+  useEffect(() => {
+    if (!adminSecret) return;
+    refreshChatsUnread();
+    const t = setInterval(refreshChatsUnread, 20000);
+    return () => clearInterval(t);
+  }, [adminSecret]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,6 +186,14 @@ export function Admin() {
           </button>
           <button type="button" onClick={() => setTabAndReset("channel")} className={`admin-nav-btn ${tab === "channel" ? "active" : ""}`}>
             Рассылка
+          </button>
+          <button type="button" onClick={() => setTabAndReset("chats")} className={`admin-nav-btn ${tab === "chats" ? "active" : ""}`} style={{ position: "relative" }}>
+            Чаты
+            {chatsUnread > 0 && (
+              <span style={{ position: "absolute", top: 8, right: 12, background: "var(--accent)", color: "#fff", borderRadius: 999, fontSize: 11, fontWeight: 700, minWidth: 18, height: 18, display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 6px" }}>
+                {chatsUnread > 99 ? "99+" : chatsUnread}
+              </span>
+            )}
           </button>
           <div style={{ flex: 1 }} />
           <div style={styles.sidebarFooter}>
@@ -246,6 +275,10 @@ export function Admin() {
 
       {tab === "channel" && (
         <ChannelTab adminSecret={adminSecret} products={products} />
+      )}
+
+      {tab === "chats" && (
+        <ChatsTab adminSecret={adminSecret} onUnreadChanged={refreshChatsUnread} />
       )}
 
           </div>
@@ -847,17 +880,48 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+function categoryEmoji(category: string | undefined): string {
+  switch ((category || "").toLowerCase()) {
+    case "tee": return "👕";
+    case "hoodie": return "🧥";
+    case "pants": return "👖";
+    case "jacket": return "🧥";
+    case "accessories": return "👜";
+    default: return "✨";
+  }
+}
+
+const HEADLINE_HOOKS = [
+  "✨ Только что подъехало",
+  "🆕 Новинка в наличии",
+  "🔥 Залетай — это база",
+  "🛍 Лови, пока есть",
+] as const;
+
+function pickHook(seed: number): string {
+  return HEADLINE_HOOKS[seed % HEADLINE_HOOKS.length];
+}
+
+// Делает рассылку «как в инсте бренда»: короткий хук, имя крупно, бренд в теге,
+// описание лид-абзацем, цена + размеры в одной строке как мета. Без воды.
 function buildProductTemplate(p: Product): { text: string; images: string[] } {
+  const emoji = categoryEmoji(p.category);
+  const hook = pickHook(p.id || Date.now());
   const lines: string[] = [];
-  const head = `<b>${escapeHtml(p.name)}</b>` + (p.brand?.trim() ? ` · ${escapeHtml(p.brand.trim())}` : "");
-  lines.push(head);
+  lines.push(hook);
+  lines.push("");
+  lines.push(`${emoji} <b>${escapeHtml(p.name)}</b>`);
+  if (p.brand?.trim()) lines.push(`<i>${escapeHtml(p.brand.trim())}</i>`);
   if (p.description?.trim()) {
     lines.push("");
     lines.push(escapeHtml(p.description.trim()));
   }
   lines.push("");
-  lines.push(`💰 <b>${p.price} $</b>`);
-  if (p.sizes?.trim()) lines.push(`📐 Размеры: ${p.sizes.trim()}`);
+  const meta: string[] = [`<b>${p.price} $</b>`];
+  if (p.sizes?.trim()) meta.push(p.sizes.trim());
+  lines.push(meta.join("  ·  "));
+  lines.push("");
+  lines.push("Тапни «Открыть каталог» в боте, чтобы заказать →");
   const imgs = (p.image_urls && p.image_urls.length > 0)
     ? p.image_urls.slice(0, MAX_CHANNEL_IMAGES)
     : (p.image_url ? [p.image_url] : []);
@@ -954,6 +1018,212 @@ function ChannelPreview({ text, images }: { text: string; images: string[] }) {
         </div>
       )}
     </div>
+  );
+}
+
+function ChatsTab({ adminSecret, onUnreadChanged }: { adminSecret: string; onUnreadChanged: () => void }) {
+  const [conversations, setConversations] = useState<BotConversation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<BotMessage[]>([]);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [reply, setReply] = useState("");
+  const [sending, setSending] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  const refreshConversations = () => {
+    setLoading(true);
+    getConversations(adminSecret)
+      .then(setConversations)
+      .catch(() => setConversations([]))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(refreshConversations, [adminSecret]);
+  useEffect(() => {
+    const t = setInterval(refreshConversations, 15000);
+    return () => clearInterval(t);
+  }, [adminSecret]);
+
+  const loadMessages = (userId: string) => {
+    setMessagesLoading(true);
+    getConversationMessages(userId, adminSecret)
+      .then(setMessages)
+      .catch(() => setMessages([]))
+      .finally(() => setMessagesLoading(false));
+  };
+
+  const openConversation = (c: BotConversation) => {
+    setSelectedUserId(c.user_id);
+    loadMessages(c.user_id);
+    if (c.unread_count > 0) {
+      markConversationRead(c.user_id, adminSecret).then(() => {
+        setConversations((prev) => prev.map((x) => (x.user_id === c.user_id ? { ...x, unread_count: 0 } : x)));
+        onUnreadChanged();
+      });
+    }
+  };
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ block: "end" });
+  }, [messages]);
+
+  // Подгружаем выбранный диалог по таймеру, пока он открыт.
+  useEffect(() => {
+    if (!selectedUserId) return;
+    const t = setInterval(() => loadMessages(selectedUserId), 8000);
+    return () => clearInterval(t);
+  }, [selectedUserId, adminSecret]);
+
+  const handleReply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUserId || !reply.trim()) return;
+    setSending(true);
+    try {
+      await replyToConversation(selectedUserId, reply.trim(), adminSecret);
+      setReply("");
+      loadMessages(selectedUserId);
+      refreshConversations();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Ошибка отправки");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const selected = conversations.find((c) => c.user_id === selectedUserId) ?? null;
+
+  return (
+    <>
+      <h2 style={styles.pageTitle}>Чаты</h2>
+      <p style={{ ...styles.hint, marginBottom: 16 }}>
+        Каждое сообщение, которое пользователь пишет боту (кроме команд) — приходит сюда. Отвечаешь от имени бота.
+      </p>
+
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(260px, 320px) 1fr", gap: 14, alignItems: "stretch", minHeight: 480 }}>
+        <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden", background: "#fff" }}>
+          {loading ? (
+            <p style={{ ...styles.hint, padding: 14 }}>Загрузка…</p>
+          ) : conversations.length === 0 ? (
+            <p style={{ ...styles.hint, padding: 14 }}>Никто не писал боту.</p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {conversations.map((c) => {
+                const isActive = c.user_id === selectedUserId;
+                const display = c.name || (c.username ? `@${c.username}` : `id ${c.user_id}`);
+                return (
+                  <button
+                    key={c.user_id}
+                    type="button"
+                    onClick={() => openConversation(c)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 10, padding: "12px 14px",
+                      borderBottom: "1px solid var(--border)",
+                      background: isActive ? "rgba(198,40,40,0.06)" : "transparent",
+                      border: "none",
+                      borderLeft: isActive ? "3px solid var(--accent)" : "3px solid transparent",
+                      borderTop: "none", borderRight: "none",
+                      borderBottomWidth: 1, borderBottomStyle: "solid", borderBottomColor: "var(--border)",
+                      textAlign: "left", cursor: "pointer", width: "100%",
+                    }}
+                  >
+                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#f3f3f3", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "#888", flex: "0 0 auto", textTransform: "uppercase" }}>
+                      {(display[0] || "?").replace("@", "")}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                        <strong style={{ fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{display}</strong>
+                        {c.last_at && <span style={{ fontSize: 10, color: "var(--muted)", whiteSpace: "nowrap" }}>{relTime(c.last_at)}</span>}
+                      </div>
+                      <div style={{ fontSize: 12, color: "var(--muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: 2 }}>
+                        {c.last_direction === "out" ? "Ты: " : ""}{c.last_text || "—"}
+                      </div>
+                    </div>
+                    {c.unread_count > 0 && (
+                      <span style={{ background: "var(--accent)", color: "#fff", borderRadius: 999, fontSize: 11, fontWeight: 700, padding: "2px 7px" }}>
+                        {c.unread_count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div style={{ border: "1px solid var(--border)", borderRadius: 10, display: "flex", flexDirection: "column", background: "#fff", minHeight: 480 }}>
+          {!selected ? (
+            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", padding: 24 }}>
+              Выбери диалог слева
+            </div>
+          ) : (
+            <>
+              <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#f3f3f3", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "#888", textTransform: "uppercase" }}>
+                  {((selected.name || selected.username || "?")[0] || "?").replace("@", "")}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{selected.name || (selected.username ? `@${selected.username}` : `id ${selected.user_id}`)}</div>
+                  <div style={{ fontSize: 11, color: "var(--muted)" }}>
+                    {selected.username && <a href={`https://t.me/${selected.username}`} target="_blank" rel="noreferrer" style={{ color: "var(--accent)", textDecoration: "none" }}>@{selected.username}</a>}
+                    {selected.username && " · "}id {selected.user_id}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 12px", background: "#fafafa" }}>
+                {messagesLoading && messages.length === 0 ? (
+                  <p style={styles.hint}>Загрузка…</p>
+                ) : messages.length === 0 ? (
+                  <p style={styles.hint}>Сообщений ещё нет.</p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {messages.map((m) => {
+                      const isOut = m.direction === "out";
+                      return (
+                        <div key={m.id} style={{ alignSelf: isOut ? "flex-end" : "flex-start", maxWidth: "78%" }}>
+                          <div style={{
+                            background: isOut ? "var(--accent)" : "#fff",
+                            color: isOut ? "#fff" : "var(--text)",
+                            border: isOut ? "none" : "1px solid var(--border)",
+                            borderRadius: 14,
+                            padding: "8px 12px",
+                            fontSize: 14,
+                            lineHeight: 1.4,
+                            whiteSpace: "pre-wrap",
+                            wordBreak: "break-word",
+                          }}>
+                            {m.text}
+                          </div>
+                          <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 3, textAlign: isOut ? "right" : "left" }}>
+                            {relTime(m.created_at)}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <div ref={messagesEndRef} />
+                  </div>
+                )}
+              </div>
+
+              <form onSubmit={handleReply} style={{ display: "flex", gap: 8, padding: 12, borderTop: "1px solid var(--border)" }}>
+                <input
+                  type="text"
+                  value={reply}
+                  onChange={(e) => setReply(e.target.value)}
+                  placeholder="Ответить от имени бота…"
+                  style={{ ...styles.input, flex: 1, marginBottom: 0 }}
+                  disabled={sending}
+                />
+                <button type="submit" style={styles.submit} disabled={sending || !reply.trim()}>
+                  {sending ? "Отправка…" : "Отправить"}
+                </button>
+              </form>
+            </>
+          )}
+        </div>
+      </div>
+    </>
   );
 }
 

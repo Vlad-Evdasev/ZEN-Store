@@ -8,7 +8,7 @@ import { settingsRouter } from "./routes/settings.js";
 import { customOrdersRouter } from "./routes/customOrders.js";
 import { ordersRouter } from "./routes/orders.js";
 import { reviewsRouter } from "./routes/reviews.js";
-import { adminRouter } from "./routes/admin.js";
+import { adminRouter, usersHeartbeatRouter } from "./routes/admin.js";
 import { categoriesRouter } from "./routes/categories.js";
 import { postsRouter } from "./routes/posts.js";
 import { db } from "./db/schema.js";
@@ -28,6 +28,7 @@ app.use("/api/custom-orders", customOrdersRouter);
 app.use("/api/orders", ordersRouter);
 app.use("/api/reviews", reviewsRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/users", usersHeartbeatRouter);
 app.use("/api/categories", categoriesRouter);
 app.use("/api/posts", postsRouter);
 

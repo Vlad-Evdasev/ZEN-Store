@@ -5,6 +5,8 @@ import {
   editBroadcast,
   deleteBroadcast,
   getBroadcastRecipients,
+  rememberBotUser,
+  replyAsBot,
   type BroadcastRecipientResult,
 } from "../bot.js";
 
@@ -202,3 +204,94 @@ adminRouter.delete("/broadcasts/:id", requireAdmin, async (req, res) => {
   db.prepare("UPDATE broadcasts SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?").run(id);
   res.json({ ok: true });
 });
+
+// ── Чаты с пользователями ─────────────────────────────────────────────
+
+interface ConversationRow {
+  user_id: string;
+  name: string | null;
+  username: string | null;
+  last_text: string | null;
+  last_direction: "in" | "out" | null;
+  last_at: string | null;
+  unread_count: number;
+}
+
+adminRouter.get("/conversations", requireAdmin, (_req, res) => {
+  const rows = db.prepare(`
+    SELECT
+      bm.user_id,
+      bu.name,
+      bu.username,
+      (SELECT text FROM bot_messages WHERE user_id = bm.user_id ORDER BY id DESC LIMIT 1) AS last_text,
+      (SELECT direction FROM bot_messages WHERE user_id = bm.user_id ORDER BY id DESC LIMIT 1) AS last_direction,
+      (SELECT created_at FROM bot_messages WHERE user_id = bm.user_id ORDER BY id DESC LIMIT 1) AS last_at,
+      (SELECT COUNT(*) FROM bot_messages WHERE user_id = bm.user_id AND direction = 'in' AND read_by_admin = 0) AS unread_count
+    FROM bot_messages bm
+    LEFT JOIN bot_users bu ON bu.user_id = bm.user_id
+    GROUP BY bm.user_id
+    ORDER BY MAX(bm.id) DESC
+    LIMIT 200
+  `).all() as ConversationRow[];
+  res.json(rows);
+});
+
+adminRouter.get("/conversations/unread-count", requireAdmin, (_req, res) => {
+  const row = db.prepare(
+    "SELECT COUNT(*) AS count FROM bot_messages WHERE direction = 'in' AND read_by_admin = 0"
+  ).get() as { count: number };
+  res.json({ count: row.count });
+});
+
+interface BotMessageRow {
+  id: number;
+  user_id: string;
+  direction: "in" | "out";
+  text: string | null;
+  tg_message_id: number | null;
+  created_at: string;
+  read_by_admin: number;
+}
+
+adminRouter.get("/conversations/:userId/messages", requireAdmin, (req, res) => {
+  const userId = String(req.params.userId);
+  const rows = db
+    .prepare("SELECT * FROM bot_messages WHERE user_id = ? ORDER BY id ASC")
+    .all(userId) as BotMessageRow[];
+  res.json(rows.map((r) => ({
+    id: r.id,
+    user_id: r.user_id,
+    direction: r.direction,
+    text: r.text ?? "",
+    tg_message_id: r.tg_message_id,
+    created_at: r.created_at,
+  })));
+});
+
+adminRouter.post("/conversations/:userId/read", requireAdmin, (req, res) => {
+  const userId = String(req.params.userId);
+  db.prepare("UPDATE bot_messages SET read_by_admin = 1 WHERE user_id = ? AND direction = 'in'").run(userId);
+  res.json({ ok: true });
+});
+
+adminRouter.post("/conversations/:userId/reply", requireAdmin, async (req, res) => {
+  const userId = String(req.params.userId);
+  const text = typeof req.body?.text === "string" ? req.body.text : "";
+  if (!text.trim()) return res.status(400).json({ error: "Пустой текст" });
+  const result = await replyAsBot(userId, text);
+  if (!result.ok) return res.status(500).json({ error: result.error });
+  res.json({ ok: true, message_id: result.messageId });
+});
+
+// Heartbeat от WebApp: при первом открытии мини-аппы регистрируем пользователя
+// в bot_users, чтобы он попал в список подписчиков. Без admin-secret — открыто.
+const usersHeartbeatRouter = Router();
+usersHeartbeatRouter.post("/heartbeat", (req, res) => {
+  const userId = req.body?.user_id;
+  if (!userId) return res.status(400).json({ error: "user_id required" });
+  const name = typeof req.body?.name === "string" ? req.body.name : undefined;
+  const username = typeof req.body?.username === "string" ? req.body.username : undefined;
+  rememberBotUser(String(userId), name, username);
+  res.json({ ok: true });
+});
+export { usersHeartbeatRouter };

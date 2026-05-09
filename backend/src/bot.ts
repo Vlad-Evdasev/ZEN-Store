@@ -34,13 +34,18 @@ const isUserBlocked = (msg: string) =>
   /user is deactivated/i.test(msg) ||
   /chat not found/i.test(msg);
 
-function rememberBotUser(userId: string | number): void {
+export function rememberBotUser(userId: string | number, name?: string, username?: string): void {
   const id = String(userId);
   try {
     db.prepare(
       "INSERT INTO bot_users (user_id, first_seen_at, last_seen_at) VALUES (?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) " +
       "ON CONFLICT(user_id) DO UPDATE SET last_seen_at = CURRENT_TIMESTAMP, blocked_at = NULL"
     ).run(id);
+    if (name || username) {
+      db.prepare(
+        "UPDATE bot_users SET name = COALESCE(?, name), username = COALESCE(?, username) WHERE user_id = ?"
+      ).run(name ?? null, username ?? null, id);
+    }
   } catch {
     // ignore
   }
@@ -206,8 +211,61 @@ export async function deleteBroadcast(
   return { ok: true, deleted, failed };
 }
 
+function fullName(first?: string | null, last?: string | null): string | undefined {
+  const a = (first ?? "").trim();
+  const b = (last ?? "").trim();
+  const out = [a, b].filter(Boolean).join(" ").trim();
+  return out || undefined;
+}
+
+function saveIncomingMessage(userId: string | number, tgMessageId: number, text: string): void {
+  try {
+    db.prepare(
+      "INSERT INTO bot_messages (user_id, direction, text, tg_message_id, read_by_admin) VALUES (?, 'in', ?, ?, 0)"
+    ).run(String(userId), text, tgMessageId);
+  } catch {
+    // ignore
+  }
+}
+
+function saveOutgoingMessage(userId: string | number, tgMessageId: number, text: string): void {
+  try {
+    db.prepare(
+      "INSERT INTO bot_messages (user_id, direction, text, tg_message_id, read_by_admin) VALUES (?, 'out', ?, ?, 1)"
+    ).run(String(userId), text, tgMessageId);
+  } catch {
+    // ignore
+  }
+}
+
+// Отправка сообщения пользователю от имени бота — для ответа из админ-чата.
+export async function replyAsBot(userId: string | number, text: string): Promise<{ ok: true; messageId: number } | { ok: false; error: string }> {
+  const trimmed = (text || "").trim();
+  if (!trimmed) return { ok: false, error: "Пустой текст" };
+  try {
+    const msg = await bot.api.sendMessage(userId, trimmed, { parse_mode: "HTML" });
+    saveOutgoingMessage(userId, msg.message_id, trimmed);
+    return { ok: true, messageId: msg.message_id };
+  } catch (e) {
+    const err = e instanceof Error ? e.message : String(e);
+    if (isUserBlocked(err)) markBotUserBlocked(userId);
+    return { ok: false, error: err };
+  }
+}
+
+// ── Bot lifecycle ──────────────────────────────────────────────────────────
+
+// Глобальный middleware: любой апдейт от любого юзера → запоминаем.
+// Так подтянутся даже те, кто давно начал чат с ботом и не открывал /start
+// после миграции — лишь бы написал хоть что-то.
+bot.use(async (ctx, next) => {
+  if (ctx.from?.id) {
+    rememberBotUser(ctx.from.id, fullName(ctx.from.first_name, ctx.from.last_name), ctx.from.username);
+  }
+  await next();
+});
+
 bot.command("start", async (ctx) => {
-  if (ctx.from?.id) rememberBotUser(ctx.from.id);
   await ctx.reply("👕 Добро пожаловать в RAW — магазин одежды.", {
     reply_markup: {
       inline_keyboard: [
@@ -218,7 +276,6 @@ bot.command("start", async (ctx) => {
 });
 
 bot.command("shop", async (ctx) => {
-  if (ctx.from?.id) rememberBotUser(ctx.from.id);
   await ctx.reply("Открыть магазин:", {
     reply_markup: {
       inline_keyboard: [
@@ -228,10 +285,13 @@ bot.command("shop", async (ctx) => {
   });
 });
 
-// Любое взаимодействие с ботом — обновляем last_seen.
-bot.on("message", async (ctx, next) => {
-  if (ctx.from?.id) rememberBotUser(ctx.from.id);
-  await next();
+// Любое НЕ-командное текстовое сообщение от пользователя — ловим в админ-чат.
+// Команды (/start, /shop) идут отдельными хендлерами выше и не сохраняются как
+// диалог, чтобы не засорять список чатов.
+bot.on("message:text", async (ctx) => {
+  const text = ctx.message.text;
+  if (!text || text.startsWith("/")) return;
+  if (ctx.from?.id) saveIncomingMessage(ctx.from.id, ctx.message.message_id, text);
 });
 
 export function startBot() {

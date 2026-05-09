@@ -677,6 +677,88 @@ export async function deletePostComment(postId: number, commentId: number, admin
   }
 }
 
+export async function botHeartbeat(userId: string, name?: string, username?: string): Promise<void> {
+  if (!userId) return;
+  try {
+    await fetch(`${API_URL}/api/users/heartbeat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: userId, name, username }),
+    });
+  } catch {
+    // best-effort, не падаем
+  }
+}
+
+export interface BotConversation {
+  user_id: string;
+  name: string | null;
+  username: string | null;
+  last_text: string | null;
+  last_direction: "in" | "out" | null;
+  last_at: string | null;
+  unread_count: number;
+}
+
+export interface BotMessage {
+  id: number;
+  user_id: string;
+  direction: "in" | "out";
+  text: string;
+  tg_message_id: number | null;
+  created_at: string;
+}
+
+export async function getConversations(adminSecret: string): Promise<BotConversation[]> {
+  const res = await fetch(`${API_URL}/api/admin/conversations`, {
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+  return res.json();
+}
+
+export async function getConversationsUnreadCount(adminSecret: string): Promise<{ count: number }> {
+  const res = await fetch(`${API_URL}/api/admin/conversations/unread-count`, {
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) return { count: 0 };
+  return res.json();
+}
+
+export async function getConversationMessages(userId: string, adminSecret: string): Promise<BotMessage[]> {
+  const res = await fetch(`${API_URL}/api/admin/conversations/${encodeURIComponent(userId)}/messages`, {
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+  return res.json();
+}
+
+export async function markConversationRead(userId: string, adminSecret: string): Promise<void> {
+  await fetch(`${API_URL}/api/admin/conversations/${encodeURIComponent(userId)}/read`, {
+    method: "POST",
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+}
+
+export async function replyToConversation(userId: string, text: string, adminSecret: string): Promise<{ ok: true; message_id: number }> {
+  const res = await fetch(`${API_URL}/api/admin/conversations/${encodeURIComponent(userId)}/reply`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
+    body: JSON.stringify({ text }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+  return res.json();
+}
+
 export interface BroadcastPost {
   id: number;
   text: string;

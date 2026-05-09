@@ -3,7 +3,7 @@ import { flushSync } from "react-dom";
 import { useTelegram } from "./hooks/useTelegram";
 import { TelegramAuth } from "./components/TelegramAuth";
 import { useWishlist } from "./hooks/useWishlist";
-import { getProducts, getStores, getCategories, getCart, type Product, type Store, type Category } from "./api";
+import { getProducts, getStores, getCategories, getCart, botHeartbeat, type Product, type Store, type Category } from "./api";
 import { Catalog } from "./pages/Catalog";
 import { Cart } from "./pages/Cart";
 import { Favorites } from "./pages/Favorites";
@@ -112,8 +112,13 @@ function App() {
       if (!cancelled) setCartCount(items.reduce((a, i) => a + i.quantity, 0));
     }).catch(() => {});
 
+    if (userId) {
+      const username = userName ? userName.replace(/^@/, "") : undefined;
+      botHeartbeat(userId, firstName || undefined, username);
+    }
+
     return () => { cancelled = true; };
-  }, [userId]);
+  }, [userId, firstName, userName]);
 
   const scrollableCatalogPages: Page[] = ["catalog", "newArrivals"];
   useEffect(() => {
