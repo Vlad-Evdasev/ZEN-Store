@@ -29,6 +29,7 @@ const iconStyle: React.CSSProperties = {
   color: "currentColor",
 };
 
+/* Поддержка — пузырь с тремя точками (typing) */
 function IconSupport() {
   return (
     <svg
@@ -42,10 +43,14 @@ function IconSupport() {
       aria-hidden
     >
       <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+      <circle cx="8.5" cy="12" r="0.9" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none" />
+      <circle cx="15.5" cy="12" r="0.9" fill="currentColor" stroke="none" />
     </svg>
   );
 }
 
+/* История — часы со стрелками */
 function IconHistory() {
   return (
     <svg
@@ -58,12 +63,13 @@ function IconHistory() {
       style={iconStyle}
       aria-hidden
     >
-      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-      <path d="M3 3v5h5" />
+      <circle cx="12" cy="12" r="9" />
+      <polyline points="12 7 12 12 15.5 14" />
     </svg>
   );
 }
 
+/* Отзывы — звезда с акцентной искрой */
 function IconReviews() {
   return (
     <svg
@@ -76,11 +82,17 @@ function IconReviews() {
       style={iconStyle}
       aria-hidden
     >
-      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+      <polygon points="10 3 12 8 17 9 13 12.5 14 17.5 10 15 6 17.5 7 12.5 3 9 8 8 10 3" />
+      <path
+        d="M18 13l0.7 1.6 1.6 0.7-1.6 0.7-0.7 1.6-0.7-1.6-1.6-0.7 1.6-0.7z"
+        fill="currentColor"
+        stroke="none"
+      />
     </svg>
   );
 }
 
+/* Настройки — профиль/силуэт юзера */
 function IconSettings() {
   return (
     <svg
@@ -93,8 +105,8 @@ function IconSettings() {
       style={iconStyle}
       aria-hidden
     >
-      <circle cx="12" cy="12" r="3" />
-      <path d="M12 2v2m0 16v2M2 12h2m16 0h2M5.64 5.64l1.41 1.41m11.32 11.32l1.41 1.41M5.64 18.36l1.41-1.41m11.32-11.32l1.41-1.41" />
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" />
     </svg>
   );
 }
