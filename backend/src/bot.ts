@@ -39,7 +39,9 @@ function toPhotoSource(src: string): string | InputFile {
   return new InputFile(buffer, "image.jpg");
 }
 
-export type ChannelPostResult = { ok: true; messageId: number } | { ok: false; error: string };
+export type ChannelPostResult =
+  | { ok: true; messageIds: number[]; firstHttpImage: string | null }
+  | { ok: false; error: string };
 
 export async function broadcastChannelPost(text: string, imageSources: string[] = []): Promise<ChannelPostResult> {
   const target = resolveChannelTarget();
@@ -51,17 +53,18 @@ export async function broadcastChannelPost(text: string, imageSources: string[] 
   if (!trimmed && images.length === 0) {
     return { ok: false, error: "Нечего публиковать: пустой текст и нет картинки" };
   }
+  const firstHttp = images.find((s) => /^https?:\/\//i.test(s)) ?? null;
   try {
     if (images.length === 0) {
       const msg = await bot.api.sendMessage(target, trimmed, { parse_mode: "HTML" });
-      return { ok: true, messageId: msg.message_id };
+      return { ok: true, messageIds: [msg.message_id], firstHttpImage: null };
     }
     if (images.length === 1) {
       const msg = await bot.api.sendPhoto(target, toPhotoSource(images[0]), {
         caption: trimmed || undefined,
         parse_mode: "HTML",
       });
-      return { ok: true, messageId: msg.message_id };
+      return { ok: true, messageIds: [msg.message_id], firstHttpImage: firstHttp };
     }
     const media: ChannelMediaPhoto[] = images.map((src, i) => {
       const item: ChannelMediaPhoto = { type: "photo", media: toPhotoSource(src) };
@@ -72,11 +75,54 @@ export async function broadcastChannelPost(text: string, imageSources: string[] 
       return item;
     });
     const msgs = await bot.api.sendMediaGroup(target, media);
-    return { ok: true, messageId: msgs[0]?.message_id ?? 0 };
+    return { ok: true, messageIds: msgs.map((m) => m.message_id), firstHttpImage: firstHttp };
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     return { ok: false, error: msg };
   }
+}
+
+// Редактирование подписи/текста уже отправленного поста. Для альбома меняем
+// caption на ПЕРВОМ message_id (там было caption у sendMediaGroup). Telegram
+// разрешает edit в течение 48 часов после отправки.
+export async function editChannelPost(messageIds: number[], hasMedia: boolean, text: string): Promise<ChannelPostResult> {
+  const target = resolveChannelTarget();
+  if (!target) return { ok: false, error: "CHANNEL_CHAT_ID не задан" };
+  const first = messageIds[0];
+  if (!first) return { ok: false, error: "Нет message_id для редактирования" };
+  const trimmed = (text || "").trim();
+  try {
+    if (hasMedia) {
+      await bot.api.editMessageCaption(target, first, {
+        caption: trimmed || undefined,
+        parse_mode: "HTML",
+      });
+    } else {
+      if (!trimmed) return { ok: false, error: "Текст не может быть пустым" };
+      await bot.api.editMessageText(target, first, trimmed, { parse_mode: "HTML" });
+    }
+    return { ok: true, messageIds, firstHttpImage: null };
+  } catch (e: unknown) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export async function deleteChannelPost(messageIds: number[]): Promise<{ ok: true } | { ok: false; error: string }> {
+  const target = resolveChannelTarget();
+  if (!target) return { ok: false, error: "CHANNEL_CHAT_ID не задан" };
+  const errors: string[] = [];
+  for (const id of messageIds) {
+    try {
+      await bot.api.deleteMessage(target, id);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      // Telegram возвращает 400 «message to delete not found», если уже удалено
+      // — это не ошибка для нас. Остальное копим.
+      if (!/message to delete not found/i.test(msg)) errors.push(`#${id}: ${msg}`);
+    }
+  }
+  if (errors.length) return { ok: false, error: errors.join("; ") };
+  return { ok: true };
 }
 
 bot.command("start", async (ctx) => {

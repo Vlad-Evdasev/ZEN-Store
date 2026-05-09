@@ -677,10 +677,19 @@ export async function deletePostComment(postId: number, commentId: number, admin
   }
 }
 
+export interface ChannelPost {
+  id: number;
+  message_ids: number[];
+  text: string;
+  images_count: number;
+  first_image_url: string | null;
+  created_at: string;
+}
+
 export async function publishChannelPost(
   data: { text: string; image_urls?: string[] },
   adminSecret: string
-): Promise<{ ok: true; message_id: number }> {
+): Promise<ChannelPost & { ok: true }> {
   const res = await fetch(`${API_URL}/api/admin/telegram/post`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
@@ -691,4 +700,43 @@ export async function publishChannelPost(
     throw new Error((err as { error?: string }).error || res.statusText);
   }
   return res.json();
+}
+
+export async function getChannelPosts(adminSecret: string): Promise<ChannelPost[]> {
+  const res = await fetch(`${API_URL}/api/admin/telegram/posts`, {
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+  return res.json();
+}
+
+export async function editChannelPost(
+  id: number,
+  text: string,
+  adminSecret: string
+): Promise<ChannelPost> {
+  const res = await fetch(`${API_URL}/api/admin/telegram/posts/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
+    body: JSON.stringify({ text }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+  return res.json();
+}
+
+export async function deleteChannelPost(id: number, adminSecret: string): Promise<void> {
+  const res = await fetch(`${API_URL}/api/admin/telegram/posts/${id}`, {
+    method: "DELETE",
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
 }

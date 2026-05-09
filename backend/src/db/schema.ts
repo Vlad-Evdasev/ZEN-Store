@@ -153,6 +153,23 @@ try {
   db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('currency_rate_byn', '3.2')").run();
 } catch {}
 
+// История постов в Telegram-канал. Храним массив message_id (альбом — это
+// несколько message_id), текст и количество фото для отображения в админке.
+// data:base64-картинки в БД не сохраняем (тяжело); только http(s) превью первой.
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS channel_posts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      message_ids TEXT NOT NULL,
+      text TEXT,
+      images_count INTEGER NOT NULL DEFAULT 0,
+      first_image_url TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      deleted_at DATETIME
+    )
+  `);
+} catch {}
+
 // Add store_id to products if missing (migration)
 try {
   db.exec("ALTER TABLE products ADD COLUMN store_id INTEGER NOT NULL DEFAULT 1");

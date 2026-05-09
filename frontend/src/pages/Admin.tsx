@@ -19,6 +19,9 @@ import {
   getCurrencyRateAdmin,
   updateCurrencyRateAdmin,
   publishChannelPost,
+  getChannelPosts,
+  editChannelPost,
+  deleteChannelPost,
   getPosts,
   createPost,
   updatePost,
@@ -31,6 +34,7 @@ import {
   type CustomOrderAdmin,
   type Post,
   type PostComment,
+  type ChannelPost,
 } from "../api";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
@@ -240,7 +244,7 @@ export function Admin() {
       )}
 
       {tab === "channel" && (
-        <ChannelTab adminSecret={adminSecret} />
+        <ChannelTab adminSecret={adminSecret} products={products} />
       )}
 
           </div>
@@ -838,12 +842,143 @@ function CurrencyRateTab({ adminSecret }: { adminSecret: string }) {
 
 const MAX_CHANNEL_IMAGES = 10;
 
-function ChannelTab({ adminSecret }: { adminSecret: string }) {
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function buildProductTemplate(p: Product): { text: string; images: string[] } {
+  const lines: string[] = [];
+  const head = `<b>${escapeHtml(p.name)}</b>` + (p.brand?.trim() ? ` · ${escapeHtml(p.brand.trim())}` : "");
+  lines.push(head);
+  if (p.description?.trim()) {
+    lines.push("");
+    lines.push(escapeHtml(p.description.trim()));
+  }
+  lines.push("");
+  lines.push(`💰 <b>${p.price} $</b>`);
+  if (p.sizes?.trim()) lines.push(`📐 Размеры: ${p.sizes.trim()}`);
+  const imgs = (p.image_urls && p.image_urls.length > 0)
+    ? p.image_urls.slice(0, MAX_CHANNEL_IMAGES)
+    : (p.image_url ? [p.image_url] : []);
+  return { text: lines.join("\n"), images: imgs };
+}
+
+function relTime(iso: string): string {
+  const d = new Date(iso.endsWith("Z") || iso.includes("+") ? iso : iso + "Z");
+  const diff = Date.now() - d.getTime();
+  const m = Math.round(diff / 60000);
+  if (m < 1) return "только что";
+  if (m < 60) return `${m} мин назад`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h} ч назад`;
+  const days = Math.round(h / 24);
+  if (days < 7) return `${days} дн назад`;
+  return d.toLocaleDateString("ru-RU", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function ChannelPreview({ text, images }: { text: string; images: string[] }) {
+  const visible = images.slice(0, 4);
+  const rest = Math.max(0, images.length - 4);
+  const html = (text || "").trim().replace(/\n/g, "<br>");
+  return (
+    <div style={{
+      background: "#fff",
+      border: "1px solid var(--border)",
+      borderRadius: 14,
+      overflow: "hidden",
+      boxShadow: "0 8px 24px -16px rgba(0,0,0,0.18)",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderBottom: "1px solid #f0f0f0" }}>
+        <div style={{
+          width: 36, height: 36, borderRadius: "50%", background: "var(--accent)", color: "#fff",
+          display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 15,
+        }}>R</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 600, fontSize: 14 }}>RAW</div>
+          <div style={{ fontSize: 11, color: "var(--muted)", letterSpacing: 0.2 }}>канал · сейчас</div>
+        </div>
+      </div>
+      {images.length > 0 && (
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: images.length === 1 ? "1fr" : "1fr 1fr",
+          gap: 2,
+          background: "#fff",
+        }}>
+          {visible.map((src, i) => {
+            const last = i === visible.length - 1 && rest > 0;
+            const span = images.length === 3 && i === 2;
+            return (
+              <div
+                key={i}
+                style={{
+                  position: "relative",
+                  aspectRatio: images.length === 1 ? "4 / 5" : "1 / 1",
+                  background: "#eee",
+                  overflow: "hidden",
+                  gridColumn: span ? "span 2" : undefined,
+                }}
+              >
+                <img
+                  src={src}
+                  alt=""
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                  onError={(e) => { (e.target as HTMLImageElement).style.opacity = "0.3"; }}
+                />
+                {last && (
+                  <div style={{
+                    position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", color: "#fff",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 22, fontWeight: 700, letterSpacing: -0.5,
+                  }}>+{rest}</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {(html || images.length === 0) && (
+        <div style={{ padding: "12px 14px 14px" }}>
+          {html ? (
+            <div
+              style={{ fontSize: 14, lineHeight: 1.5, color: "var(--text)", wordBreak: "break-word" }}
+              dangerouslySetInnerHTML={{ __html: html }}
+            />
+          ) : (
+            <div style={{ fontSize: 13, color: "var(--muted)", fontStyle: "italic" }}>
+              (без подписи — будет только альбом)
+            </div>
+          )}
+          <div style={{ fontSize: 11, color: "var(--muted)", textAlign: "right", marginTop: 8 }}>сейчас</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ChannelTab({ adminSecret, products }: { adminSecret: string; products: Product[] }) {
   const [text, setText] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [urlInput, setUrlInput] = useState("");
+  const [templateProductId, setTemplateProductId] = useState<string>("");
+
+  const [history, setHistory] = useState<ChannelPost[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingText, setEditingText] = useState("");
+  const [historyBusy, setHistoryBusy] = useState(false);
+
+  const loadHistory = () => {
+    setHistoryLoading(true);
+    getChannelPosts(adminSecret)
+      .then(setHistory)
+      .catch(() => setHistory([]))
+      .finally(() => setHistoryLoading(false));
+  };
+  useEffect(loadHistory, [adminSecret]);
 
   const addImage = (src: string) => {
     setImages((prev) => (prev.length >= MAX_CHANNEL_IMAGES ? prev : [...prev, src]));
@@ -875,12 +1010,28 @@ function ChannelTab({ adminSecret }: { adminSecret: string }) {
     });
   };
 
-  const [urlInput, setUrlInput] = useState("");
   const addUrl = () => {
     const u = urlInput.trim();
     if (!u) return;
     addImage(u);
     setUrlInput("");
+  };
+
+  const applyProductTemplate = () => {
+    const id = parseInt(templateProductId, 10);
+    const p = products.find((x) => x.id === id);
+    if (!p) return;
+    const t = buildProductTemplate(p);
+    setText(t.text);
+    setImages(t.images);
+    setMessage(null);
+  };
+  const resetForm = () => {
+    setText("");
+    setImages([]);
+    setUrlInput("");
+    setTemplateProductId("");
+    setMessage(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -892,10 +1043,12 @@ function ChannelTab({ adminSecret }: { adminSecret: string }) {
     setSending(true);
     setMessage(null);
     try {
-      const r = await publishChannelPost({ text, image_urls: images }, adminSecret);
-      setMessage({ kind: "ok", text: `Опубликовано в канал (message_id ${r.message_id})` });
+      await publishChannelPost({ text, image_urls: images }, adminSecret);
+      setMessage({ kind: "ok", text: "Опубликовано в канал" });
       setText("");
       setImages([]);
+      setTemplateProductId("");
+      loadHistory();
     } catch (err) {
       setMessage({ kind: "err", text: err instanceof Error ? err.message : "Ошибка публикации" });
     } finally {
@@ -903,114 +1056,193 @@ function ChannelTab({ adminSecret }: { adminSecret: string }) {
     }
   };
 
+  const startEdit = (p: ChannelPost) => {
+    setEditingId(p.id);
+    setEditingText(p.text);
+  };
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditingText("");
+  };
+  const saveEdit = async () => {
+    if (editingId == null) return;
+    setHistoryBusy(true);
+    try {
+      const updated = await editChannelPost(editingId, editingText, adminSecret);
+      setHistory((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+      cancelEdit();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Ошибка редактирования");
+    } finally {
+      setHistoryBusy(false);
+    }
+  };
+  const handleDeletePost = async (id: number) => {
+    if (!confirm("Удалить этот пост из канала? Сообщение(я) будут стёрты у всех подписчиков.")) return;
+    setHistoryBusy(true);
+    try {
+      await deleteChannelPost(id, adminSecret);
+      setHistory((prev) => prev.filter((p) => p.id !== id));
+      if (editingId === id) cancelEdit();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Ошибка удаления");
+    } finally {
+      setHistoryBusy(false);
+    }
+  };
+
   return (
     <>
       <h2 style={styles.pageTitle}>Канал</h2>
       <p style={{ ...styles.hint, marginBottom: 16 }}>
-        Сообщение уходит в Telegram-канал, ID которого задан в <code>CHANNEL_CHAT_ID</code> (или <code>ADMIN_CHAT_ID</code>) на бэкенде. Бот должен быть админом канала. Поддерживается базовый HTML: <code>&lt;b&gt;</code>, <code>&lt;i&gt;</code>, <code>&lt;a href=&quot;…&quot;&gt;</code>. До {MAX_CHANNEL_IMAGES} фото — отправятся альбомом.
+        Пост уходит в Telegram-канал из <code>CHANNEL_CHAT_ID</code> (или <code>ADMIN_CHAT_ID</code>). Бот должен быть админом канала. HTML: <code>&lt;b&gt;</code>, <code>&lt;i&gt;</code>, <code>&lt;a href=&quot;…&quot;&gt;</code>. До {MAX_CHANNEL_IMAGES} фото — уйдут альбомом.
       </p>
-      <form onSubmit={handleSubmit} style={styles.form}>
-        <label style={styles.label}>Текст поста</label>
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          rows={6}
-          placeholder="Что-то тёплое для подписчиков…"
-          style={{ ...styles.input, minHeight: 140, fontFamily: "inherit" }}
-        />
 
-        <label style={styles.label}>
-          Фото ({images.length} / {MAX_CHANNEL_IMAGES})
-        </label>
-        <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            style={styles.smallBtn}
-            disabled={images.length >= MAX_CHANNEL_IMAGES}
-          >
-            Загрузить с устройства
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            style={{ display: "none" }}
-            onChange={onFileChange}
-          />
-          <input
-            type="url"
-            value={urlInput}
-            onChange={(e) => setUrlInput(e.target.value)}
-            placeholder="…или вставь URL"
-            style={{ ...styles.input, flex: 1, minWidth: 200, marginBottom: 0 }}
-            disabled={images.length >= MAX_CHANNEL_IMAGES}
-          />
-          <button
-            type="button"
-            onClick={addUrl}
-            style={styles.smallBtn}
-            disabled={!urlInput.trim() || images.length >= MAX_CHANNEL_IMAGES}
-          >
-            Добавить URL
-          </button>
-        </div>
-
-        {images.length > 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10, marginBottom: 12 }}>
-            {images.map((src, i) => (
-              <div
-                key={`${i}-${src.slice(0, 32)}`}
-                style={{ position: "relative", borderRadius: 10, overflow: "hidden", aspectRatio: "1 / 1", background: "#f3f3f3" }}
-              >
-                <img
-                  src={src}
-                  alt={`Фото ${i + 1}`}
-                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                  onError={(e) => { (e.target as HTMLImageElement).style.opacity = "0.3"; }}
-                />
-                <div style={{ position: "absolute", top: 6, left: 6, background: "rgba(0,0,0,0.55)", color: "#fff", borderRadius: 999, fontSize: 11, padding: "2px 8px", letterSpacing: 0.5 }}>
-                  {i + 1}
-                </div>
-                <div style={{ position: "absolute", top: 6, right: 6, display: "flex", gap: 4 }}>
-                  <button
-                    type="button"
-                    onClick={() => moveImage(i, -1)}
-                    disabled={i === 0}
-                    title="Выше в порядке"
-                    style={{ width: 26, height: 26, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.92)", cursor: "pointer", fontSize: 13, lineHeight: 1, padding: 0 }}
-                  >↑</button>
-                  <button
-                    type="button"
-                    onClick={() => moveImage(i, 1)}
-                    disabled={i === images.length - 1}
-                    title="Ниже в порядке"
-                    style={{ width: 26, height: 26, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.92)", cursor: "pointer", fontSize: 13, lineHeight: 1, padding: 0 }}
-                  >↓</button>
-                  <button
-                    type="button"
-                    onClick={() => removeImage(i)}
-                    title="Удалить"
-                    style={{ width: 26, height: 26, borderRadius: "50%", border: "none", background: "#c62828", color: "#fff", cursor: "pointer", fontSize: 13, lineHeight: 1, padding: 0 }}
-                  >×</button>
-                </div>
-              </div>
-            ))}
+      <div className="channel-grid" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(280px, 380px)", gap: 22, alignItems: "start" }}>
+        <form onSubmit={handleSubmit} style={styles.form}>
+          <label style={styles.label}>Шаблон</label>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
+            <select
+              value={templateProductId}
+              onChange={(e) => setTemplateProductId(e.target.value)}
+              style={{ ...styles.input, flex: 1, minWidth: 200, marginBottom: 0 }}
+            >
+              <option value="">— выбрать товар для автотекста —</option>
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}{p.brand?.trim() ? ` · ${p.brand.trim()}` : ""} · {p.price} $
+                </option>
+              ))}
+            </select>
+            <button type="button" onClick={applyProductTemplate} disabled={!templateProductId} style={styles.smallBtn}>
+              Применить
+            </button>
+            <button type="button" onClick={resetForm} style={styles.smallBtn}>
+              Очистить
+            </button>
           </div>
-        )}
 
-        {message && (
-          <p style={{ ...styles.message, color: message.kind === "ok" ? "var(--accent)" : "#c62828" }}>
-            {message.text}
-          </p>
-        )}
-        <div style={styles.formActions}>
-          <button type="submit" style={styles.submit} disabled={sending}>
-            {sending ? "Публикую…" : "Опубликовать в канал"}
-          </button>
+          <label style={styles.label}>Текст поста</label>
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={7}
+            placeholder="Что-то тёплое для подписчиков…"
+            style={{ ...styles.input, minHeight: 160, fontFamily: "inherit" }}
+          />
+
+          <label style={styles.label}>Фото ({images.length} / {MAX_CHANNEL_IMAGES})</label>
+          <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+            <button type="button" onClick={() => fileInputRef.current?.click()} style={styles.smallBtn} disabled={images.length >= MAX_CHANNEL_IMAGES}>
+              Загрузить с устройства
+            </button>
+            <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={onFileChange} />
+            <input
+              type="url"
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              placeholder="…или вставь URL"
+              style={{ ...styles.input, flex: 1, minWidth: 200, marginBottom: 0 }}
+              disabled={images.length >= MAX_CHANNEL_IMAGES}
+            />
+            <button type="button" onClick={addUrl} style={styles.smallBtn} disabled={!urlInput.trim() || images.length >= MAX_CHANNEL_IMAGES}>
+              Добавить URL
+            </button>
+          </div>
+
+          {images.length > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10, marginBottom: 12 }}>
+              {images.map((src, i) => (
+                <div key={`${i}-${src.slice(0, 32)}`} style={{ position: "relative", borderRadius: 10, overflow: "hidden", aspectRatio: "1 / 1", background: "#f3f3f3" }}>
+                  <img src={src} alt={`Фото ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                    onError={(e) => { (e.target as HTMLImageElement).style.opacity = "0.3"; }}
+                  />
+                  <div style={{ position: "absolute", top: 6, left: 6, background: "rgba(0,0,0,0.55)", color: "#fff", borderRadius: 999, fontSize: 11, padding: "2px 8px", letterSpacing: 0.5 }}>{i + 1}</div>
+                  <div style={{ position: "absolute", top: 6, right: 6, display: "flex", gap: 4 }}>
+                    <button type="button" onClick={() => moveImage(i, -1)} disabled={i === 0} title="Выше в порядке" style={{ width: 26, height: 26, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.92)", cursor: "pointer", fontSize: 13, lineHeight: 1, padding: 0 }}>↑</button>
+                    <button type="button" onClick={() => moveImage(i, 1)} disabled={i === images.length - 1} title="Ниже в порядке" style={{ width: 26, height: 26, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.92)", cursor: "pointer", fontSize: 13, lineHeight: 1, padding: 0 }}>↓</button>
+                    <button type="button" onClick={() => removeImage(i)} title="Удалить" style={{ width: 26, height: 26, borderRadius: "50%", border: "none", background: "#c62828", color: "#fff", cursor: "pointer", fontSize: 13, lineHeight: 1, padding: 0 }}>×</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {message && (
+            <p style={{ ...styles.message, color: message.kind === "ok" ? "var(--accent)" : "#c62828" }}>
+              {message.text}
+            </p>
+          )}
+          <div style={styles.formActions}>
+            <button type="submit" style={styles.submit} disabled={sending}>
+              {sending ? "Публикую…" : "Опубликовать в канал"}
+            </button>
+          </div>
+        </form>
+
+        <div style={{ position: "sticky", top: 12 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 0.18, textTransform: "uppercase", color: "var(--muted)", marginBottom: 10 }}>
+            Превью
+          </div>
+          <ChannelPreview text={text} images={images} />
         </div>
-      </form>
+      </div>
+
+      <h3 style={{ ...styles.subtitle, marginTop: 32 }}>История постов ({history.length})</h3>
+      {historyLoading ? (
+        <p style={styles.hint}>Загрузка…</p>
+      ) : history.length === 0 ? (
+        <p style={styles.hint}>Ещё ничего не опубликовано.</p>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {history.map((p) => (
+            <div key={p.id} style={{ display: "flex", gap: 12, padding: 12, border: "1px solid var(--border)", borderRadius: 10, alignItems: "flex-start" }}>
+              <div style={{ width: 56, height: 56, flex: "0 0 auto", borderRadius: 8, overflow: "hidden", background: "#f3f3f3", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: 11 }}>
+                {p.first_image_url ? (
+                  <img src={p.first_image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                ) : p.images_count > 0 ? (
+                  <span>📷 {p.images_count}</span>
+                ) : (
+                  <span>—</span>
+                )}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {editingId === p.id ? (
+                  <>
+                    <textarea
+                      value={editingText}
+                      onChange={(e) => setEditingText(e.target.value)}
+                      rows={4}
+                      style={{ ...styles.input, minHeight: 100, fontFamily: "inherit", marginBottom: 6 }}
+                    />
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button type="button" onClick={saveEdit} disabled={historyBusy} style={styles.smallBtn}>Сохранить</button>
+                      <button type="button" onClick={cancelEdit} disabled={historyBusy} style={styles.smallBtn}>Отмена</button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontSize: 13, lineHeight: 1.5, color: "var(--text)", whiteSpace: "pre-wrap", wordBreak: "break-word", maxHeight: 80, overflow: "hidden" }}>
+                      {p.text || <span style={{ color: "var(--muted)", fontStyle: "italic" }}>(без текста — только фото)</span>}
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                      <span>{relTime(p.created_at)}</span>
+                      {p.images_count > 0 && <span>📷 {p.images_count} фото</span>}
+                      <span>msg #{p.message_ids[0] ?? "?"}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+              {editingId !== p.id && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <button type="button" onClick={() => startEdit(p)} disabled={historyBusy} style={styles.smallBtn}>Редактировать</button>
+                  <button type="button" onClick={() => handleDeletePost(p.id)} disabled={historyBusy} style={{ ...styles.smallBtn, color: "#c62828" }}>Удалить</button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </>
   );
 }
