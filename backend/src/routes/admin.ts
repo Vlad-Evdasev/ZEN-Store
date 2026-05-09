@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { db } from "../db/schema.js";
+import { broadcastChannelPost } from "../bot.js";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET || "";
 
@@ -46,23 +47,15 @@ adminRouter.patch("/currency-rate", requireAdmin, (req, res) => {
   res.json({ rate: Number.isFinite(savedRate) ? savedRate : 3.2 });
 });
 
-const SITE_CONTENT_KEYS = [
-  "hero_title", "hero_subtitle", "hero_image_url", "about_text",
-  "catalog_cta", "custom_order_cta", "arrived_title", "arrived_subtitle", "arrived_image_url",
-  "catalog_image_url", "custom_order_image_url",
-] as const;
-
-adminRouter.patch("/site-content", requireAdmin, (req, res) => {
-  const body = req.body as Record<string, unknown>;
-  const upsert = db.prepare("INSERT INTO site_content (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value");
-  for (const key of SITE_CONTENT_KEYS) {
-    const v = body[key];
-    const value = v === undefined || v === null ? "" : String(v).trim();
-    upsert.run(key, value);
+// Публикация поста в Telegram-канал. Бот должен быть админом канала; ID канала
+// берётся из CHANNEL_CHAT_ID (или ADMIN_CHAT_ID для обратной совместимости).
+adminRouter.post("/telegram/post", requireAdmin, async (req, res) => {
+  const text = typeof req.body?.text === "string" ? req.body.text : "";
+  const imageUrl = typeof req.body?.image_url === "string" && req.body.image_url.trim() ? req.body.image_url.trim() : null;
+  if (!text.trim() && !imageUrl) {
+    return res.status(400).json({ error: "Укажи текст или картинку (или то и другое)" });
   }
-  const rows = db.prepare("SELECT key, value FROM site_content WHERE key IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").all(...SITE_CONTENT_KEYS) as { key: string; value: string | null }[];
-  const map: Record<string, string> = {};
-  for (const k of SITE_CONTENT_KEYS) map[k] = "";
-  for (const r of rows) if (r.value != null) map[r.key] = r.value;
-  res.json(map);
+  const result = await broadcastChannelPost(text, imageUrl);
+  if (!result.ok) return res.status(500).json({ error: result.error });
+  return res.json({ ok: true, message_id: result.messageId });
 });

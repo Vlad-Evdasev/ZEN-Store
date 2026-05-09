@@ -16,17 +16,9 @@ import {
   deleteOrderAdmin,
   updateCustomOrderStatusAdmin,
   deleteCustomOrderAdmin,
-  getSupportChatsAdmin,
-  getSupportUnreadCountAdmin,
-  getSupportMessagesAdmin,
-  markSupportChatReadAdmin,
-  sendSupportMessageAdmin,
-  updateSupportMessageAdmin,
-  deleteSupportMessageAdmin,
   getCurrencyRateAdmin,
   updateCurrencyRateAdmin,
-  getSiteContent,
-  updateSiteContentAdmin,
+  publishChannelPost,
   getPosts,
   createPost,
   updatePost,
@@ -37,8 +29,6 @@ import {
   type Category,
   type Order,
   type CustomOrderAdmin,
-  type SupportChat,
-  type SupportMessage,
   type Post,
   type PostComment,
 } from "../api";
@@ -65,7 +55,7 @@ function telegramChatLink(username?: string | null, userId?: string): string {
   return "#";
 }
 
-type Tab = "products" | "categories" | "orders" | "customOrders" | "support" | "currencyRate" | "newArrivals" | "siteContent" | "posts";
+type Tab = "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel";
 
 export function Admin() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -75,7 +65,6 @@ export function Admin() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [tab, setTab] = useState<Tab>("products");
-  const [supportUnreadCount, setSupportUnreadCount] = useState(0);
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
@@ -101,15 +90,6 @@ export function Admin() {
   useEffect(() => {
     if (authenticated) refresh();
   }, [authenticated]);
-
-  useEffect(() => {
-    if (!adminSecret) return;
-    getSupportUnreadCountAdmin(adminSecret).then(({ count }) => setSupportUnreadCount(Number(count) || 0)).catch(() => {});
-    const t = setInterval(() => {
-      getSupportUnreadCountAdmin(adminSecret).then(({ count }) => setSupportUnreadCount(Number(count) || 0)).catch(() => {});
-    }, 25000);
-    return () => clearInterval(t);
-  }, [adminSecret]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -172,23 +152,14 @@ export function Admin() {
           <button type="button" onClick={() => setTabAndReset("customOrders")} className={`admin-nav-btn ${tab === "customOrders" ? "active" : ""}`}>
             Заявки не из каталога
           </button>
-          <button type="button" onClick={() => setTabAndReset("support")} className={`admin-nav-btn ${tab === "support" ? "active" : ""}`} style={{ position: "relative" }}>
-            Поддержка
-            {supportUnreadCount > 0 && (
-              <span style={styles.supportNavBadge} aria-label="Непрочитанные">{supportUnreadCount > 99 ? "99+" : supportUnreadCount}</span>
-            )}
-          </button>
           <button type="button" onClick={() => setTabAndReset("currencyRate")} className={`admin-nav-btn ${tab === "currencyRate" ? "active" : ""}`}>
             Курс валюты
           </button>
-          <button type="button" onClick={() => setTabAndReset("newArrivals")} className={`admin-nav-btn ${tab === "newArrivals" ? "active" : ""}`}>
-            Новинки
-          </button>
-          <button type="button" onClick={() => setTabAndReset("siteContent")} className={`admin-nav-btn ${tab === "siteContent" ? "active" : ""}`}>
-            Главная (контент)
-          </button>
           <button type="button" onClick={() => setTabAndReset("posts")} className={`admin-nav-btn ${tab === "posts" ? "active" : ""}`}>
             Посты
+          </button>
+          <button type="button" onClick={() => setTabAndReset("channel")} className={`admin-nav-btn ${tab === "channel" ? "active" : ""}`}>
+            Канал
           </button>
           <div style={{ flex: 1 }} />
           <div style={styles.sidebarFooter}>
@@ -257,29 +228,8 @@ export function Admin() {
         <CustomOrdersTab adminSecret={adminSecret} />
       )}
 
-      {tab === "support" && (
-        <SupportTab
-          adminSecret={adminSecret}
-          onUnreadCountChange={() => {
-            getSupportUnreadCountAdmin(adminSecret).then(({ count }) => setSupportUnreadCount(Number(count) || 0)).catch(() => {});
-          }}
-        />
-      )}
-
       {tab === "currencyRate" && (
         <CurrencyRateTab adminSecret={adminSecret} />
-      )}
-
-      {tab === "newArrivals" && (
-        <NewArrivalsTab
-          products={products}
-          adminSecret={adminSecret}
-          onRefresh={refresh}
-        />
-      )}
-
-      {tab === "siteContent" && (
-        <SiteContentTab adminSecret={adminSecret} />
       )}
 
       {tab === "posts" && (
@@ -287,6 +237,10 @@ export function Admin() {
           products={products}
           adminSecret={adminSecret}
         />
+      )}
+
+      {tab === "channel" && (
+        <ChannelTab adminSecret={adminSecret} />
       )}
 
           </div>
@@ -812,141 +766,6 @@ function CategoriesTab({
   );
 }
 
-function NewArrivalsTab({
-  products,
-  adminSecret,
-  onRefresh,
-}: {
-  products: Product[];
-  adminSecret: string;
-  onRefresh: () => void;
-}) {
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
-  const [addProductId, setAddProductId] = useState<string>("");
-
-  const newArrivals = products
-    .filter((p) => p.new_arrival_sort_order != null)
-    .sort((a, b) => (a.new_arrival_sort_order ?? 0) - (b.new_arrival_sort_order ?? 0));
-  const notInNewArrivals = products.filter((p) => p.new_arrival_sort_order == null);
-
-  const run = async (fn: () => Promise<void>) => {
-    setBusy(true);
-    setMessage("");
-    try {
-      await fn();
-      onRefresh();
-    } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Ошибка");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const addToNewArrivals = () => {
-    const id = parseInt(addProductId, 10);
-    if (!Number.isFinite(id)) return;
-    run(async () => {
-      await updateProduct(id, { new_arrival_sort_order: newArrivals.length }, adminSecret);
-      setAddProductId("");
-    });
-  };
-
-  const removeFromNewArrivals = (product: Product) => {
-    run(async () => {
-      await updateProduct(product.id, { new_arrival_sort_order: null }, adminSecret);
-      const rest = newArrivals.filter((p) => p.id !== product.id);
-      for (let i = 0; i < rest.length; i++) {
-        await updateProduct(rest[i].id, { new_arrival_sort_order: i }, adminSecret);
-      }
-    });
-  };
-
-  const moveUp = (index: number) => {
-    if (index <= 0) return;
-    const a = newArrivals[index];
-    const b = newArrivals[index - 1];
-    run(async () => {
-      await updateProduct(a.id, { new_arrival_sort_order: index - 1 }, adminSecret);
-      await updateProduct(b.id, { new_arrival_sort_order: index }, adminSecret);
-    });
-  };
-
-  const moveDown = (index: number) => {
-    if (index >= newArrivals.length - 1) return;
-    const a = newArrivals[index];
-    const b = newArrivals[index + 1];
-    run(async () => {
-      await updateProduct(a.id, { new_arrival_sort_order: index + 1 }, adminSecret);
-      await updateProduct(b.id, { new_arrival_sort_order: index }, adminSecret);
-    });
-  };
-
-  return (
-    <>
-      <h2 style={styles.pageTitle}>Новинки</h2>
-      <p style={{ ...styles.hint, marginBottom: 16 }}>
-        Товары в блоке «Новинки» на главной. Порядок отображается сверху вниз.
-      </p>
-      {message && <p style={styles.message}>{message}</p>}
-      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16, flexWrap: "wrap" }}>
-        <select
-          value={addProductId}
-          onChange={(e) => setAddProductId(e.target.value)}
-          style={styles.input}
-          disabled={busy || notInNewArrivals.length === 0}
-        >
-          <option value="">Добавить товар в новинки</option>
-          {notInNewArrivals.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name} {p.brand?.trim() ? `(${p.brand.trim()})` : ""}
-            </option>
-          ))}
-        </select>
-        <button type="button" onClick={addToNewArrivals} style={styles.submit} disabled={busy || !addProductId}>
-          Добавить
-        </button>
-      </div>
-      {newArrivals.length === 0 ? (
-        <p style={styles.hint}>Пока нет товаров в новинках. Добавьте товары выше.</p>
-      ) : (
-        <div style={{ overflowX: "auto" }}>
-          <table className="admin-table" style={styles.table}>
-            <thead>
-              <tr>
-                <th style={styles.th}>#</th>
-                <th style={styles.th}>Товар</th>
-                <th style={styles.th}>Бренд</th>
-                <th style={styles.th}>Действия</th>
-              </tr>
-            </thead>
-            <tbody>
-              {newArrivals.map((p, i) => (
-                <tr key={p.id}>
-                  <td style={styles.td}>{i + 1}</td>
-                  <td style={styles.td}>{p.name}</td>
-                  <td style={styles.td}>{p.brand?.trim() ?? "—"}</td>
-                  <td style={{ ...styles.td, display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    <button type="button" onClick={() => moveUp(i)} disabled={busy || i === 0} style={styles.smallBtn} title="Выше">
-                      ↑
-                    </button>
-                    <button type="button" onClick={() => moveDown(i)} disabled={busy || i === newArrivals.length - 1} style={styles.smallBtn} title="Ниже">
-                      ↓
-                    </button>
-                    <button type="button" onClick={() => removeFromNewArrivals(p)} disabled={busy} style={{ ...styles.smallBtn, color: "#c62828" }} title="Убрать из новинок">
-                      ✕
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </>
-  );
-}
-
 function CurrencyRateTab({ adminSecret }: { adminSecret: string }) {
   const [rate, setRate] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -1017,449 +836,77 @@ function CurrencyRateTab({ adminSecret }: { adminSecret: string }) {
   );
 }
 
-const SITE_CONTENT_KEYS = [
-  "hero_title", "hero_subtitle", "hero_image_url", "about_text",
-  "catalog_cta", "catalog_image_url",
-  "custom_order_cta", "custom_order_image_url",
-  "arrived_title", "arrived_subtitle", "arrived_image_url",
-] as const;
-const SITE_CONTENT_LABELS: Record<string, string> = {
-  hero_title: "Заголовок hero",
-  hero_subtitle: "Подзаголовок hero",
-  hero_image_url: "URL картинки hero",
-  about_text: "Текст про оригиналы / о магазине",
-  catalog_cta: "Текст кнопки «Каталог»",
-  catalog_image_url: "Картинка блока «Каталог»",
-  custom_order_cta: "Текст кнопки «Заказ не из каталога»",
-  custom_order_image_url: "Картинка блока «Заказ не из каталога»",
-  arrived_title: "Заголовок блока «Уже привезли»",
-  arrived_subtitle: "Подзаголовок блока «Уже привезли»",
-  arrived_image_url: "Картинка блока «Уже привезли»",
-};
+function ChannelTab({ adminSecret }: { adminSecret: string }) {
+  const [text, setText] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [sending, setSending] = useState(false);
+  const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
 
-function SiteContentTab({ adminSecret }: { adminSecret: string }) {
-  const [content, setContent] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
-  const imageInputRef = useRef<Record<string, HTMLInputElement | null>>({});
-
-  const load = () => {
-    setLoading(true);
-    getSiteContent()
-      .then((data) => {
-        const next: Record<string, string> = {};
-        for (const k of SITE_CONTENT_KEYS) next[k] = data[k] ?? "";
-        setContent(next);
-      })
-      .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  const handleImageUpload = (key: string, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !file.type.startsWith("image/")) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result as string;
-      setContent((c) => ({ ...c, [key]: base64 }));
-    };
-    reader.readAsDataURL(file);
-    e.target.value = "";
-  };
-
-  const handleSave = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
-    setMessage("");
-    updateSiteContentAdmin(content, adminSecret)
-      .then((saved) => {
-        setContent((prev) => ({ ...prev, ...saved }));
-        setMessage("Сохранено");
-      })
-      .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")))
-      .finally(() => setSaving(false));
+    if (!text.trim() && !imageUrl.trim()) {
+      setMessage({ kind: "err", text: "Заполни текст или укажи картинку" });
+      return;
+    }
+    setSending(true);
+    setMessage(null);
+    try {
+      const r = await publishChannelPost({ text, image_url: imageUrl.trim() || null }, adminSecret);
+      setMessage({ kind: "ok", text: `Опубликовано в канал (message_id ${r.message_id})` });
+      setText("");
+      setImageUrl("");
+    } catch (err) {
+      setMessage({ kind: "err", text: err instanceof Error ? err.message : "Ошибка публикации" });
+    } finally {
+      setSending(false);
+    }
   };
-
-  if (loading) return <p style={styles.hint}>Загрузка...</p>;
 
   return (
     <>
-      {message && <p style={styles.message}>{message}</p>}
-      <h2 style={styles.pageTitle}>Главная страница</h2>
-      <p style={{ ...styles.hint, marginBottom: 16 }}>Тексты и картинка hero блока. Если поле пустое, в приложении подставится значение по умолчанию. Кнопки "Заказать не из каталога" и "Товары которые мы привезли" имеют встроенный красный градиент.</p>
-      <form onSubmit={handleSave} style={styles.form}>
-        {SITE_CONTENT_KEYS.map((key) => (
-          <label key={key} style={styles.label}>
-            {SITE_CONTENT_LABELS[key] ?? key}
-            {key === "about_text" ? (
-              <textarea
-                value={content[key] ?? ""}
-                onChange={(e) => setContent((c) => ({ ...c, [key]: e.target.value }))}
-                placeholder="Все вещи оригинальные из брендовых магазинов."
-                rows={3}
-                style={{ ...styles.input, minHeight: 80 }}
-              />
-            ) : key.endsWith("_image_url") ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <input
-                    type="url"
-                    value={content[key] ?? ""}
-                    onChange={(e) => setContent((c) => ({ ...c, [key]: e.target.value }))}
-                    placeholder="https://..."
-                    style={{ ...styles.input, flex: 1 }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => imageInputRef.current[key]?.click()}
-                    style={{ ...styles.smallBtn, padding: "10px 16px", whiteSpace: "nowrap" }}
-                  >
-                    Загрузить
-                  </button>
-                </div>
-                <input
-                  ref={(el) => { imageInputRef.current[key] = el; }}
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleImageUpload(key, e)}
-                  style={{ display: "none" }}
-                />
-                {content[key] && (
-                  <img
-                    src={content[key]}
-                    alt="Preview"
-                    style={{ maxWidth: "100%", maxHeight: 200, borderRadius: 8, objectFit: "cover" }}
-                  />
-                )}
-              </div>
-            ) : (
-              <input
-                type="text"
-                value={content[key] ?? ""}
-                onChange={(e) => setContent((c) => ({ ...c, [key]: e.target.value }))}
-                placeholder={key === "catalog_cta" ? "В каталог" : key === "custom_order_cta" ? "Заказать не из каталога" : key === "arrived_title" ? "Уже привезли" : key === "arrived_subtitle" ? "Вещи в наличии" : ""}
-                style={styles.input}
-              />
-            )}
-          </label>
-        ))}
+      <h2 style={styles.pageTitle}>Канал</h2>
+      <p style={{ ...styles.hint, marginBottom: 16 }}>
+        Сообщение уходит в Telegram-канал, ID которого задан в <code>CHANNEL_CHAT_ID</code> (или <code>ADMIN_CHAT_ID</code>) на бэкенде. Бот должен быть админом канала. Поддерживается базовый HTML: <code>&lt;b&gt;</code>, <code>&lt;i&gt;</code>, <code>&lt;a href=&quot;…&quot;&gt;</code>.
+      </p>
+      <form onSubmit={handleSubmit} style={styles.form}>
+        <label style={styles.label}>Текст поста</label>
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={6}
+          placeholder="Что-то тёплое для подписчиков…"
+          style={{ ...styles.input, minHeight: 140, fontFamily: "inherit" }}
+        />
+        <label style={styles.label}>Картинка (URL)</label>
+        <input
+          type="url"
+          value={imageUrl}
+          onChange={(e) => setImageUrl(e.target.value)}
+          placeholder="https://… (опционально)"
+          style={styles.input}
+        />
+        {imageUrl.trim() && (
+          <img
+            src={imageUrl}
+            alt="Превью"
+            style={{ maxWidth: "100%", maxHeight: 240, borderRadius: 8, objectFit: "cover", marginTop: 4 }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+        )}
+        {message && (
+          <p style={{ ...styles.message, color: message.kind === "ok" ? "var(--accent)" : "#c62828" }}>
+            {message.text}
+          </p>
+        )}
         <div style={styles.formActions}>
-          <button type="submit" style={styles.submit} disabled={saving}>
-            {saving ? "Сохранение…" : "Сохранить"}
+          <button type="submit" style={styles.submit} disabled={sending}>
+            {sending ? "Публикую…" : "Опубликовать в канал"}
           </button>
         </div>
       </form>
     </>
   );
 }
-
-function SupportTab({ adminSecret, onUnreadCountChange }: { adminSecret: string; onUnreadCountChange?: () => void }) {
-  const [chats, setChats] = useState<SupportChat[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedChatId, setSelectedChatId] = useState<number | null>(null);
-  const [messages, setMessages] = useState<SupportMessage[]>([]);
-  const [messagesLoading, setMessagesLoading] = useState(false);
-  const [input, setInput] = useState("");
-  const [sending, setSending] = useState(false);
-  const [message, setMessage] = useState("");
-  const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
-  const [editingMessageText, setEditingMessageText] = useState("");
-  const [expandedImageUrl, setExpandedImageUrl] = useState<string | null>(null);
-  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-  const messagesScrollRef = useRef<HTMLDivElement>(null);
-  const ADMIN_INPUT_MIN_H = 40;
-  const ADMIN_INPUT_MAX_H = 160;
-
-  useEffect(() => {
-    const el = messagesScrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [messages, selectedChatId]);
-
-  useEffect(() => {
-    const el = inputRef.current;
-    if (!el) return;
-    el.style.height = "0px";
-    const h = el.scrollHeight;
-    el.style.height = Math.max(ADMIN_INPUT_MIN_H, Math.min(h, ADMIN_INPUT_MAX_H)) + "px";
-  }, [input]);
-
-  useEffect(() => {
-    if (!adminSecret) return;
-    setLoading(true);
-    getSupportChatsAdmin(adminSecret)
-      .then(setChats)
-      .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")))
-      .finally(() => setLoading(false));
-  }, [adminSecret]);
-
-  useEffect(() => {
-    if (!adminSecret || !selectedChatId) return;
-    setMessagesLoading(true);
-    getSupportMessagesAdmin(selectedChatId, adminSecret)
-      .then((fetched) => {
-        setMessages(fetched);
-        markSupportChatReadAdmin(selectedChatId, adminSecret)
-          .then(() => {
-            getSupportChatsAdmin(adminSecret).then(setChats);
-            onUnreadCountChange?.();
-          })
-          .catch(() => {});
-      })
-      .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")))
-      .finally(() => setMessagesLoading(false));
-  }, [adminSecret, selectedChatId]);
-
-  useEffect(() => {
-    if (!selectedChatId || !adminSecret) return;
-    const t = setInterval(() => {
-      getSupportMessagesAdmin(selectedChatId, adminSecret).then(setMessages).catch(() => {});
-      getSupportChatsAdmin(adminSecret).then((list) => {
-        setChats(list);
-        if (!list.some((c) => c.id === selectedChatId)) setSelectedChatId(null);
-      }).catch(() => {});
-    }, 5000);
-    return () => clearInterval(t);
-  }, [selectedChatId, adminSecret]);
-
-  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !file.type.startsWith("image/")) return;
-    const reader = new FileReader();
-    reader.onload = () => setPhotoDataUrl(reader.result as string);
-    reader.readAsDataURL(file);
-    e.target.value = "";
-  };
-
-  const handleSend = () => {
-    const text = input.trim();
-    if ((!text && !photoDataUrl) || selectedChatId == null || sending) return;
-    setSending(true);
-    setMessage("");
-    const imageToSend = photoDataUrl;
-    const payload = { text: text || undefined, image_url: imageToSend || undefined };
-    setInput("");
-    setPhotoDataUrl(null);
-    sendSupportMessageAdmin(selectedChatId, adminSecret, payload)
-      .then((msg) => {
-        setMessages((prev) => [...prev, msg]);
-      })
-      .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")))
-      .finally(() => setSending(false));
-  };
-
-  const formatDate = (s: string) => {
-    try {
-      return new Date(s).toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-    } catch {
-      return s;
-    }
-  };
-
-  const handleUpdateMessage = () => {
-    if (selectedChatId == null || editingMessageId == null) return;
-    const text = editingMessageText.trim();
-    if (!text) return;
-    setSending(true);
-    setMessage("");
-    updateSupportMessageAdmin(selectedChatId, editingMessageId, adminSecret, { text })
-      .then((updated) => {
-        setMessages((prev) => prev.map((x) => (x.id === editingMessageId ? updated : x)));
-        setEditingMessageId(null);
-        setEditingMessageText("");
-      })
-      .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")))
-      .finally(() => setSending(false));
-  };
-
-  const handleDeleteMessage = (messageId: number) => {
-    if (selectedChatId == null || !confirm("Удалить сообщение?")) return;
-    setSending(true);
-    setMessage("");
-    deleteSupportMessageAdmin(selectedChatId, messageId, adminSecret)
-      .then(() => {
-        setMessages((prev) => prev.filter((m) => m.id !== messageId));
-        if (editingMessageId === messageId) {
-          setEditingMessageId(null);
-          setEditingMessageText("");
-        }
-      })
-      .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")))
-      .finally(() => setSending(false));
-  };
-
-  if (loading) return <p style={styles.hint}>Загрузка чатов...</p>;
-
-  const chat = selectedChatId != null ? chats.find((c) => c.id === selectedChatId) : null;
-
-  return (
-    <>
-      {message && <p style={styles.message}>{message}</p>}
-      <h2 style={styles.pageTitle}>Поддержка</h2>
-      <div className="admin-support-layout">
-        <div style={styles.supportListPanel}>
-          <h3 style={styles.subtitle}>Чаты ({chats.length})</h3>
-          {chats.length === 0 ? (
-            <p style={styles.hint}>Нет чатов. Когда пользователь создаст чат из приложения, он появится здесь.</p>
-          ) : (
-            <div style={styles.chatList}>
-              {chats.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => setSelectedChatId(c.id)}
-                  style={{
-                    ...styles.chatListItem,
-                    ...(selectedChatId === c.id ? styles.chatListItemActive : {}),
-                  }}
-                >
-                  <span style={styles.chatListItemTitle}>
-                    {c.title?.trim() || `Чат #${c.id}`}
-                    {Number(c.unread_count ?? 0) > 0 && (
-                      <span style={styles.adminChatUnreadBadge} aria-label="Непрочитанные">{Number(c.unread_count)}</span>
-                    )}
-                  </span>
-                  <span style={styles.chatListItemMeta}>{c.user_name || c.user_username || "—"}</span>
-                  <span style={styles.chatListItemDate}>{formatDate(c.created_at)}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        <div style={styles.supportThreadPanel}>
-          {chat ? (
-            <>
-              <div style={styles.supportThreadHeader}>
-                <h3 style={{ margin: 0, fontSize: 16 }}>{chat.title?.trim() || `Чат #${chat.id}`}</h3>
-                <span style={{ fontSize: 13, color: "var(--muted)" }}>{chat.user_name || chat.user_username || chat.user_id}</span>
-              </div>
-              <div ref={messagesScrollRef} style={supportThreadStyle}>
-                {messagesLoading && messages.length === 0 ? (
-                  <p style={styles.hint}>Загрузка сообщений...</p>
-                ) : (
-                  messages.map((m) => (
-                    <div
-                      key={m.id}
-                      style={{
-                        ...supportBubbleStyle,
-                        ...(m.sender_type === "admin" ? supportBubbleAdminStyle : supportBubbleUserStyle),
-                        position: "relative",
-                      }}
-                    >
-                      {editingMessageId === m.id && m.sender_type === "admin" ? (
-                        <div style={styles.supportEditBlock}>
-                          <input
-                            type="text"
-                            value={editingMessageText}
-                            onChange={(e) => setEditingMessageText(e.target.value)}
-                            style={styles.supportEditInput}
-                            autoFocus
-                          />
-                          <div style={styles.supportEditActions}>
-                            <button type="button" onClick={handleUpdateMessage} disabled={sending} style={styles.supportMsgSaveBtn}>
-                              Сохранить
-                            </button>
-                            <button type="button" onClick={() => { setEditingMessageId(null); setEditingMessageText(""); }} style={styles.supportMsgCancelBtn}>
-                              Отмена
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          {m.sender_type === "admin" && (
-                            <div style={styles.supportBubbleActions}>
-                              <button type="button" onClick={() => { setEditingMessageId(m.id); setEditingMessageText(m.text || ""); }} style={styles.supportMsgIconBtn} title="Изменить">
-                                ✎
-                              </button>
-                              <button type="button" onClick={() => handleDeleteMessage(m.id)} disabled={sending} style={styles.supportMsgIconBtn} title="Удалить">
-                                ×
-                              </button>
-                            </div>
-                          )}
-                          {m.image_url && (
-                            <button type="button" onClick={() => setExpandedImageUrl(m.image_url)} style={styles.supportBubbleImgBtn}>
-                              <img src={m.image_url} alt="" style={styles.supportBubbleImg} />
-                            </button>
-                          )}
-                          {m.text ? <span style={{ display: "block", fontSize: 14, paddingRight: m.sender_type === "admin" ? 48 : 0, whiteSpace: "pre-wrap", wordBreak: "break-word", overflowWrap: "break-word" }}>{m.text}</span> : null}
-                          <span style={{ display: "block", fontSize: 11, opacity: 0.8, marginTop: 4 }}>{formatDate(m.created_at)}</span>
-                        </>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-              {photoDataUrl && (
-                <div style={styles.supportPreviewRow}>
-                  <img src={photoDataUrl} alt="" style={styles.supportPreviewImg} />
-                  <button type="button" onClick={() => setPhotoDataUrl(null)} style={styles.supportPreviewRemove}>×</button>
-                </div>
-              )}
-              <div style={styles.supportInputRow}>
-                <label style={styles.supportAttachLabel}>
-                  <input type="file" accept="image/*" onChange={handlePhotoSelect} style={styles.supportHiddenInput} />
-                  <span style={styles.supportAttachBtn} aria-hidden>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-                    </svg>
-                  </span>
-                </label>
-                <textarea
-                  ref={inputRef}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Сообщение..."
-                  style={styles.supportTextarea}
-                  rows={1}
-                  disabled={sending}
-                />
-                <button type="button" onClick={handleSend} style={styles.submit} disabled={sending || (!input.trim() && !photoDataUrl)}>
-                  Отправить
-                </button>
-              </div>
-              {expandedImageUrl && (
-                <div style={styles.supportImageOverlay} onClick={() => setExpandedImageUrl(null)}>
-                  <img src={expandedImageUrl} alt="" style={styles.supportImageExpanded} onClick={(e) => e.stopPropagation()} />
-                </div>
-              )}
-            </>
-          ) : (
-            <div style={styles.supportPlaceholder}>
-              <p style={styles.hint}>Выберите чат слева</p>
-            </div>
-          )}
-        </div>
-      </div>
-    </>
-  );
-}
-
-const supportThreadStyle: React.CSSProperties = {
-  flex: 1,
-  minHeight: 280,
-  maxHeight: 420,
-  overflowY: "auto",
-  display: "flex",
-  flexDirection: "column",
-  gap: 8,
-  padding: 16,
-  background: "var(--surface-elevated)",
-  borderRadius: 12,
-  border: "1px solid var(--border)",
-};
-const supportBubbleStyle: React.CSSProperties = {
-  maxWidth: "85%",
-  padding: "10px 14px",
-  borderRadius: 12,
-  alignSelf: "flex-start",
-};
-const supportBubbleAdminStyle: React.CSSProperties = { ...supportBubbleStyle, background: "var(--accent)", color: "#fff", alignSelf: "flex-end" };
-const supportBubbleUserStyle: React.CSSProperties = { ...supportBubbleStyle, background: "var(--border)", color: "var(--text)" };
 
 function ProductsTab({
   products,
@@ -1983,22 +1430,6 @@ const styles: Record<string, React.CSSProperties> = {
   input: { padding: 12, background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text)", fontSize: 15, fontFamily: "inherit" },
   submit: { padding: 14, background: "var(--accent)", border: "none", borderRadius: 8, color: "#fff", fontSize: 15, fontWeight: 600, cursor: "pointer" },
   sidebarFooter: { paddingTop: 16, borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 8 },
-  supportNavBadge: {
-    position: "absolute",
-    top: 6,
-    right: 8,
-    minWidth: 18,
-    height: 18,
-    padding: "0 5px",
-    borderRadius: 9,
-    background: "#c62828",
-    color: "#fff",
-    fontSize: 11,
-    fontWeight: 700,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
   logoutBtn: { padding: "10px 14px", background: "none", border: "1px solid var(--border)", borderRadius: 8, color: "var(--muted)", fontSize: 13, cursor: "pointer", marginTop: 8 },
   checkBtn: { padding: "8px 12px", background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 6, color: "var(--text)", fontSize: 12, cursor: "pointer" },
   apiHint: { marginTop: 2, fontSize: 11, color: "var(--muted)" },

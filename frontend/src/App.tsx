@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { flushSync } from "react-dom";
 import { useTelegram } from "./hooks/useTelegram";
 import { TelegramAuth } from "./components/TelegramAuth";
 import { useWishlist } from "./hooks/useWishlist";
-import { getProducts, getStores, getCategories, getCart, getSupportUnreadCount, type Product, type Store, type Category } from "./api";
+import { getProducts, getStores, getCategories, getCart, type Product, type Store, type Category } from "./api";
 import { Catalog } from "./pages/Catalog";
 import { Cart } from "./pages/Cart";
 import { Favorites } from "./pages/Favorites";
@@ -76,7 +76,6 @@ function App() {
   const [stores, setStores] = useState<Store[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [cartCount, setCartCount] = useState(0);
-  const [supportUnreadCount, setSupportUnreadCount] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const hamburgerRef = useRef<HTMLButtonElement | null>(null);
   const [productReturnTo, setProductReturnTo] = useState<Page | null>(null);
@@ -89,13 +88,6 @@ function App() {
       history.scrollRestoration = "manual";
     }
   }, []);
-
-  const refreshSupportUnread = useCallback(() => {
-    if (!userId) return;
-    getSupportUnreadCount(userId)
-      .then(({ count }) => setSupportUnreadCount(Number(count) || 0))
-      .catch(() => {});
-  }, [userId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -120,25 +112,8 @@ function App() {
       if (!cancelled) setCartCount(items.reduce((a, i) => a + i.quantity, 0));
     }).catch(() => {});
 
-    if (userId) {
-      getSupportUnreadCount(userId).then(({ count }) => {
-        if (!cancelled) setSupportUnreadCount(Number(count) || 0);
-      }).catch(() => {});
-    }
-
     return () => { cancelled = true; };
   }, [userId]);
-
-  useEffect(() => {
-    if (page !== "support") return;
-    refreshSupportUnread();
-  }, [page, refreshSupportUnread]);
-
-  useEffect(() => {
-    if (!userId) return;
-    const t = setInterval(refreshSupportUnread, 25000);
-    return () => clearInterval(t);
-  }, [userId, refreshSupportUnread]);
 
   const scrollableCatalogPages: Page[] = ["catalog", "newArrivals"];
   useEffect(() => {
@@ -275,7 +250,6 @@ function App() {
             open={menuOpen}
             lang={lang}
             anchorRef={hamburgerRef}
-            supportUnreadCount={supportUnreadCount}
             onClose={() => setMenuOpen(false)}
             onSupport={openSupport}
             onHistory={openHistory}

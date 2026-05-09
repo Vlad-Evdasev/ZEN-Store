@@ -7,7 +7,6 @@ export interface Product {
   category: string;
   sizes: string;
   created_at: string;
-  new_arrival_sort_order?: number | null;
 }
 
 export interface CartItem {

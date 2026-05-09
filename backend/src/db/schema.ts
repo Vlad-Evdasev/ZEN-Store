@@ -118,25 +118,6 @@ db.exec(`
     sort_order INTEGER NOT NULL DEFAULT 0
   );
 
-  CREATE TABLE IF NOT EXISTS support_chats (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id TEXT NOT NULL,
-    user_name TEXT,
-    user_username TEXT,
-    title TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    deleted_at DATETIME
-  );
-
-  CREATE TABLE IF NOT EXISTS support_messages (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    chat_id INTEGER NOT NULL,
-    sender_type TEXT NOT NULL,
-    text TEXT NOT NULL,
-    image_url TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (chat_id) REFERENCES support_chats(id)
-  );
 `);
 
 // Migrations for existing DBs
@@ -159,35 +140,7 @@ try {
 } catch {}
 
 try {
-  db.exec("ALTER TABLE support_chats ADD COLUMN title TEXT");
-} catch {}
-try {
-  db.exec("ALTER TABLE support_messages ADD COLUMN image_url TEXT");
-} catch {}
-try {
   db.exec("ALTER TABLE review_comments ADD COLUMN image_url TEXT");
-} catch {}
-
-try {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS support_chat_read (
-      user_id TEXT NOT NULL,
-      chat_id INTEGER NOT NULL,
-      last_read_message_id INTEGER NOT NULL DEFAULT 0,
-      PRIMARY KEY (user_id, chat_id),
-      FOREIGN KEY (chat_id) REFERENCES support_chats(id)
-    )
-  `);
-} catch {}
-
-try {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS support_chat_read_admin (
-      chat_id INTEGER PRIMARY KEY,
-      last_read_message_id INTEGER NOT NULL DEFAULT 0,
-      FOREIGN KEY (chat_id) REFERENCES support_chats(id)
-    )
-  `);
 } catch {}
 
 try {
@@ -200,35 +153,6 @@ try {
   db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('currency_rate_byn', '3.2')").run();
 } catch {}
 
-// Контент главной страницы (hero, тексты) — редактируется в админке
-try {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS site_content (
-      key TEXT PRIMARY KEY,
-      value TEXT
-    )
-  `);
-} catch {}
-// Предзаполнение главной (как у Ralph Lauren): hero + два блока
-const siteContentCount = db.prepare("SELECT COUNT(*) as count FROM site_content").get() as { count: number };
-if (siteContentCount.count === 0) {
-  const insertSc = db.prepare("INSERT OR IGNORE INTO site_content (key, value) VALUES (?, ?)");
-  const defaults: [string, string][] = [
-    ["hero_title", "RAW"],
-    ["hero_subtitle", "Оригинальная одежда из брендовых магазинов"],
-    ["hero_image_url", "https://images.unsplash.com/photo-1558769132-cb1aea3c9b9e?w=1200"],
-    ["about_text", "Все вещи оригинальные. В каталоге — в наличии в Минске. Под заказ — доставка из Китая."],
-    ["catalog_cta", "В каталог"],
-    ["custom_order_cta", "Заказать не из каталога"],
-    ["arrived_title", "Уже привезли"],
-    ["arrived_subtitle", "Вещи в наличии после заказов клиентов"],
-    ["arrived_image_url", "https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=800"],
-    ["catalog_image_url", "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=800"],
-    ["custom_order_image_url", "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800"],
-  ];
-  for (const [k, v] of defaults) insertSc.run(k, v);
-}
-
 // Add store_id to products if missing (migration)
 try {
   db.exec("ALTER TABLE products ADD COLUMN store_id INTEGER NOT NULL DEFAULT 1");
@@ -239,13 +163,6 @@ try {
 // Add images (JSON array of URLs, max 5) for product gallery
 try {
   db.exec("ALTER TABLE products ADD COLUMN images TEXT");
-} catch {
-  // column already exists
-}
-
-// New arrivals: NULL = not in section, 0,1,2... = order in "Новинки"
-try {
-  db.exec("ALTER TABLE products ADD COLUMN new_arrival_sort_order INTEGER");
 } catch {
   // column already exists
 }

@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { db } from "../db/schema.js";
-import { notifyAdminNewOrder } from "../bot.js";
 
 export const ordersRouter = Router();
 
@@ -26,8 +25,6 @@ ordersRouter.post("/:userId", async (req, res) => {
   if (!items || total == null) return res.status(400).json({ error: "items and total required" });
 
   const itemsStr = typeof items === "string" ? items : JSON.stringify(items);
-  const itemsArr = typeof items === "string" ? JSON.parse(items) : items;
-  const itemsCount = Array.isArray(itemsArr) ? itemsArr.reduce((s: number, i: { quantity?: number }) => s + (i.quantity || 1), 0) : 0;
 
   db.prepare(
     "INSERT INTO orders (user_id, user_name, user_phone, user_username, user_address, items, total, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')"
@@ -36,11 +33,6 @@ ordersRouter.post("/:userId", async (req, res) => {
   const row = db.prepare("SELECT last_insert_rowid() as id").get() as { id: number };
 
   db.prepare("DELETE FROM cart_items WHERE user_id = ?").run(userId);
-
-  const contact = user_username || user_phone || "";
-  notifyAdminNewOrder(row.id, userId, user_name || "", contact, total, itemsCount).catch((err) => {
-    console.error("[RAW] Ошибка отправки уведомления о заказе:", err);
-  });
 
   res.status(201).json({ ok: true, orderId: row.id });
 });

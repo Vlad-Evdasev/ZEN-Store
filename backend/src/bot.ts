@@ -6,34 +6,43 @@ if (!token) throw new Error("BOT_TOKEN is required");
 export const bot = new Bot(token);
 
 const WEB_APP_URL = process.env.WEB_APP_URL || "https://your-mini-app-url.vercel.app";
-const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID ? parseInt(process.env.ADMIN_CHAT_ID, 10) : null;
 
-if (!ADMIN_CHAT_ID) {
-  console.warn("[RAW] ADMIN_CHAT_ID не задан. Добавь переменную ADMIN_CHAT_ID (твой Telegram ID) в Railway → Variables → Redeploy.");
+// Канал для рассылки постов из админки. ID может быть числовым (-100…) или
+// @username публичного канала; бот должен быть админом канала.
+const CHANNEL_CHAT_ID = process.env.CHANNEL_CHAT_ID || process.env.ADMIN_CHAT_ID || "";
+
+function resolveChannelTarget(): string | number | null {
+  const raw = String(CHANNEL_CHAT_ID).trim();
+  if (!raw) return null;
+  if (raw.startsWith("@")) return raw;
+  const num = Number(raw);
+  return Number.isFinite(num) ? num : raw;
 }
 
-export async function notifyAdminNewOrder(orderId: number, userId: string, userName: string, userPhone: string, total: number, itemsCount: number) {
-  if (!ADMIN_CHAT_ID) {
-    return;
+export type ChannelPostResult = { ok: true; messageId: number } | { ok: false; error: string };
+
+export async function broadcastChannelPost(text: string, imageUrl?: string | null): Promise<ChannelPostResult> {
+  const target = resolveChannelTarget();
+  if (!target) {
+    return { ok: false, error: "CHANNEL_CHAT_ID (или ADMIN_CHAT_ID) не задан в env. Укажи ID канала или @username и сделай бота его админом." };
   }
-  const text = [
-    `🛒 Новый заказ #${orderId}`,
-    `👤 ${userName || "—"}`,
-    `📞 ${userPhone || "—"}`,
-    `💰 ${total} ₽`,
-    `📦 Товаров: ${itemsCount}`,
-    ``,
-    `Связаться: tg://user?id=${userId}`,
-  ].join("\n");
+  const trimmed = (text || "").trim();
+  if (!trimmed && !imageUrl) {
+    return { ok: false, error: "Нечего публиковать: пустой текст и нет картинки" };
+  }
   try {
-    await bot.api.sendMessage(ADMIN_CHAT_ID, text);
-    console.log("[RAW] Уведомление о заказе #" + orderId + " отправлено");
-  } catch (e: unknown) {
-    const msg = String(e);
-    console.error("[RAW] Ошибка отправки уведомления продавцу:", e);
-    if (msg.includes("403") || msg.includes("bot was blocked") || msg.includes("user is deactivated")) {
-      console.error("[RAW] Совет: открой бота в Telegram, нажми Start (/start) — бот не может первым написать.");
+    if (imageUrl) {
+      const msg = await bot.api.sendPhoto(target, imageUrl, {
+        caption: trimmed || undefined,
+        parse_mode: "HTML",
+      });
+      return { ok: true, messageId: msg.message_id };
     }
+    const msg = await bot.api.sendMessage(target, trimmed, { parse_mode: "HTML" });
+    return { ok: true, messageId: msg.message_id };
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: msg };
   }
 }
 
