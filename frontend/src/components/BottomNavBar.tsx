@@ -54,8 +54,9 @@ function CatalogIcon({ active }: IconProps) {
   );
 }
 
-/* Custom Order — глобус: метафора «закажем со всего мира то, чего нет
-   в каталоге». Сфера + меридиан-эллипс + экватор.                    */
+/* Custom Order — глобус с континентами: сфера + органичные пятна-
+   материки внутри. Метафора «привезём со всего мира то, чего нет
+   в каталоге».                                                       */
 function CustomOrderIcon({ active }: IconProps) {
   const sw = active ? 2 : 1.7;
   return (
@@ -76,25 +77,23 @@ function CustomOrderIcon({ active }: IconProps) {
         stroke="currentColor"
         strokeWidth={sw}
       />
-      {/* меридиан — вертикальный эллипс */}
-      <ellipse
-        cx="12"
-        cy="12"
-        rx="3.6"
-        ry="8.5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={sw}
+      {/* верхний материк (слева сверху) */}
+      <path
+        d="M 7.2 7.5 Q 9.8 6 11.5 7.7 Q 12.3 9.4 11.2 10.7 Q 9.5 11.4 7.4 10.2 Q 6.4 8.7 7.2 7.5 Z"
+        fill="currentColor"
+        stroke="none"
       />
-      {/* экватор */}
-      <line
-        x1="3.5"
-        y1="12"
-        x2="20.5"
-        y2="12"
-        stroke="currentColor"
-        strokeWidth={sw}
-        strokeLinecap="round"
+      {/* правый материк */}
+      <path
+        d="M 13 12.2 Q 16 11.4 17 13.6 Q 17.2 15.4 15 16.4 Q 13 16 13 14.5 Z"
+        fill="currentColor"
+        stroke="none"
+      />
+      {/* небольшой остров слева снизу */}
+      <path
+        d="M 7 14 Q 8.4 13.6 9 14.6 Q 9 15.6 8 15.8 Q 7 15.5 7 14 Z"
+        fill="currentColor"
+        stroke="none"
       />
     </svg>
   );
