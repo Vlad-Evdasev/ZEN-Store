@@ -268,15 +268,70 @@ interface ExpandedViewProps {
    *  в стеке: открыли related → возвращаемся к предыдущему посту, у которого
    *  thumb уже не виден на экране). */
   fadeOnClose: boolean;
+  /** True если этот ExpandedView появляется в результате back-nav из
+   *  стека (юзер закрыл related → возвращается к предыдущему посту).
+   *  Тогда incoming-анимация — zoom-in fade, без FLIP. */
+  isBackNav: boolean;
+  initialScrollTop?: number;
   onClose: () => void;
   onPinToggle: (postId: number, newPinned: boolean, newCount: number) => void;
   onShare: (post: Post) => void;
-  onOpenRelated: (post: Post, thumbRect: DOMRect | null, src: string, photoIndex: number) => void;
+  onOpenRelated: (post: Post, thumbRect: DOMRect | null, src: string, photoIndex: number, currentScrollTop: number) => void;
+}
+
+// Считаем CSS для sheet в зависимости от фазы. Три enter-режима:
+//   - flip: классический FLIP открытия, sheet просто фейдится 0→1 (картинка
+//     внутри морфится из thumb-rect → fullscreen).
+//   - zoom: back-nav incoming — sheet появляется со scale(1.04) + opacity 0
+//     и плавно подтягивается к scale 1 + opacity 1. Аккуратный «всплыв»
+//     предыдущего поста после закрытия related.
+//   - fade: deep-link / без thumb-а — просто fade-in.
+// Два exit-режима:
+//   - !fadeOnClose (FLIP-close): sheet фейдится, картинка внутри морфится
+//     обратно в thumb-rect (см. requestClose).
+//   - fadeOnClose (back-nav out): sheet «уезжает вниз» translateY(60) +
+//     opacity 0. Снизу появляется уже распакованный предыдущий expanded.
+function computeSheetAnim({
+  phase, dragY, fadeOnClose, enterAnim,
+}: {
+  phase: "opening" | "open" | "closing";
+  dragY: number;
+  fadeOnClose: boolean;
+  enterAnim: "flip" | "zoom" | "fade";
+}): React.CSSProperties {
+  if (phase === "open") {
+    return {
+      opacity: 1,
+      transform: `translate3d(0, ${dragY}px, 0) scale(1)`,
+      transition: dragY === 0
+        ? "opacity 320ms cubic-bezier(0.4, 0, 0.2, 1), transform 320ms cubic-bezier(0.22, 1, 0.36, 1)"
+        : "none",
+    };
+  }
+  if (phase === "opening") {
+    if (enterAnim === "zoom") {
+      return { opacity: 0, transform: "translate3d(0, 0, 0) scale(1.04)", transition: "none" };
+    }
+    return { opacity: 0, transform: "translate3d(0, 0, 0) scale(1)", transition: "none" };
+  }
+  // phase = closing
+  if (fadeOnClose) {
+    return {
+      opacity: 0,
+      transform: "translate3d(0, 60px, 0) scale(1)",
+      transition: "opacity 250ms cubic-bezier(0.4, 0, 0.2, 1), transform 250ms cubic-bezier(0.4, 0, 0.2, 1)",
+    };
+  }
+  return {
+    opacity: 0,
+    transform: `translate3d(0, ${dragY}px, 0) scale(1)`,
+    transition: "opacity 320ms cubic-bezier(0.4, 0, 0.2, 1)",
+  };
 }
 
 function ExpandedView({
   post, startRect, startSrc, startIndex, userId, lang,
-  fadeOnClose, onClose, onPinToggle, onShare, onOpenRelated,
+  fadeOnClose, isBackNav, initialScrollTop, onClose, onPinToggle, onShare, onOpenRelated,
 }: ExpandedViewProps) {
   const images = getPostImages(post);
   const [currentIdx, setCurrentIdx] = useState(Math.min(startIndex, Math.max(images.length - 1, 0)));
@@ -338,25 +393,24 @@ function ExpandedView({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Body class «zen-inspire-overlay-on» добавляем при маунте,
-  // СНИМАЕМ синхронно в requestClose (а не на unmount), чтобы фоновая
-  // страница начинала расправляться одновременно с закрытием диалога,
-  // а не после него — иначе чувствуется «прыжок».
-  useEffect(() => {
-    document.body.classList.add("zen-inspire-overlay-on");
-    return () => {
-      document.body.classList.remove("zen-inspire-overlay-on");
-    };
+  // body-class теперь управляется в parent (NewArrivalsPage) — это
+  // позволяет избежать мерцания при back-nav через стек, когда ExpandedView
+  // быстро unmount-mount с новым ключом: parent видит expanded != null
+  // всё время и не снимает класс. Здесь только восстанавливаем scrollTop.
+  useLayoutEffect(() => {
+    if (!initialScrollTop || !sheetRef.current) return;
+    sheetRef.current.scrollTop = initialScrollTop;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const requestClose = useCallback(() => {
     if (phase === "closing") return;
-    // Снимаем body-class СРАЗУ — фон-страница начинает плавно
-    // возвращаться к нормальному масштабу одновременно с FLIP-close.
-    document.body.classList.remove("zen-inspire-overlay-on");
 
     const img = imageRef.current;
     if (img && startRect && !fadeOnClose) {
+      // FLIP-close: картинка плавно возвращается в координаты thumb-а.
+      // Используем только при финальном закрытии (стек пуст) — на back-nav
+      // используется slide-down + fade у sheet-а (см. ниже).
       const final = img.getBoundingClientRect();
       const dx = startRect.left - final.left;
       const dy = startRect.top - final.top;
@@ -367,19 +421,16 @@ function ExpandedView({
       img.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
     }
     setPhase("closing");
-    setTimeout(onClose, fadeOnClose ? 220 : 320);
+    setTimeout(onClose, fadeOnClose ? 250 : 320);
   }, [phase, onClose, startRect, fadeOnClose]);
 
   useEffect(() => {
+    // body.overflow управляется в parent (NewArrivalsPage) — здесь только
+    // обработчик Esc для закрытия диалога.
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") requestClose(); };
     window.addEventListener("keydown", onKey);
-    // Body overflow:hidden + сохраняем текущую позицию скролла, чтобы
-    // после закрытия диалога юзер оказался на том же месте в инспайре.
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     return () => {
       window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
     };
   }, [requestClose]);
 
@@ -473,11 +524,7 @@ function ExpandedView({
         onTouchEnd={onTouchEnd}
         style={{
           ...expandedStyles.sheet,
-          transform: `translate3d(0, ${dragY}px, 0)`,
-          opacity: phase === "open" ? 1 : 0,
-          transition: dragY === 0
-            ? "opacity 320ms cubic-bezier(0.4, 0, 0.2, 1), transform 260ms cubic-bezier(0.22, 1, 0.36, 1)"
-            : "none",
+          ...computeSheetAnim({ phase, dragY, fadeOnClose, enterAnim: startRect ? "flip" : (isBackNav ? "zoom" : "fade") }),
         }}
       >
         <button
@@ -495,6 +542,8 @@ function ExpandedView({
             key={currentIdx}
             src={images[currentIdx] ?? startSrc}
             alt=""
+            loading="eager"
+            decoding="sync"
             style={expandedStyles.image}
             draggable={false}
           />
@@ -563,7 +612,7 @@ function ExpandedView({
                 <MasonryCard
                   key={rp.id}
                   post={rp}
-                  onOpen={(p, rect, src, idx) => onOpenRelated(p, rect, src, idx)}
+                  onOpen={(p, rect, src, idx) => onOpenRelated(p, rect, src, idx, sheetRef.current?.scrollTop ?? 0)}
                 />
               ))}
             </div>
@@ -596,6 +645,12 @@ interface ExpandedItem {
   rect: DOMRect | null;
   src: string;
   index: number;
+  /** Позиция скролла внутри expanded sheet, чтобы восстановить при
+   *  возврате через стек. */
+  scrollTop?: number;
+  /** True если этот item открывается как back-nav из стека (а не вперёд).
+   *  Влияет только на incoming-анимацию sheet-а: zoom вместо fade. */
+  isBackNav?: boolean;
 }
 
 export function NewArrivalsPage({
@@ -646,6 +701,23 @@ export function NewArrivalsPage({
     setStack([]);
     onInitialPostHandled?.();
   }, [initialPostId, posts, onInitialPostHandled]);
+
+  // Body-class + overflow управляем ОТСЮДА (parent), а не из ExpandedView.
+  // Так при back-nav через стек (когда expanded быстро меняется на
+  // предыдущий, не становясь null) фоновая страница НЕ мигает между
+  // scale(0.94) и scale(1) — класс не снимается ни на миг.
+  useEffect(() => {
+    if (expanded) {
+      document.body.classList.add("zen-inspire-overlay-on");
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.classList.remove("zen-inspire-overlay-on");
+        document.body.style.overflow = prev;
+      };
+    }
+    return undefined;
+  }, [expanded === null]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePinToggle = useCallback(
     (postId: number, newPinned: boolean, newCount: number) => {
@@ -707,9 +779,10 @@ export function NewArrivalsPage({
     setExpanded({ post, rect, src, index });
   }, []);
 
-  const openRelated = useCallback((post: Post, rect: DOMRect | null, src: string, index: number) => {
-    // Текущий expanded уходит в стек, новый становится верхним.
-    setStack((prev) => (expanded ? [...prev, expanded] : prev));
+  const openRelated = useCallback((post: Post, rect: DOMRect | null, src: string, index: number, currentScrollTop: number) => {
+    // Текущий expanded уходит в стек ВМЕСТЕ с его scrollTop — чтобы при
+    // возврате через стек юзер оказался на том же месте, а не сверху.
+    setStack((prev) => (expanded ? [...prev, { ...expanded, scrollTop: currentScrollTop }] : prev));
     setExpanded({ post, rect, src, index });
   }, [expanded]);
 
@@ -724,8 +797,9 @@ export function NewArrivalsPage({
       const next = prev.slice(0, -1);
       const last = prev[prev.length - 1];
       // rect=null чтобы новый expanded НЕ пытался сделать FLIP из
-      // мёртвого related-thumb-а — просто фейдится.
-      setExpanded({ ...last, rect: null });
+      // мёртвого related-thumb-а. isBackNav=true → красивая zoom-in
+      // анимация sheet-а. scrollTop сохранён в push-момент.
+      setExpanded({ ...last, rect: null, isBackNav: true });
       return next;
     });
   }, []);
@@ -834,6 +908,8 @@ export function NewArrivalsPage({
           userId={userId}
           lang={lang}
           fadeOnClose={stack.length > 0}
+          isBackNav={!!expanded.isBackNav}
+          initialScrollTop={expanded.scrollTop}
           onClose={closeExpanded}
           onPinToggle={handlePinToggle}
           onShare={handleShare}
@@ -1064,19 +1140,27 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     WebkitTapHighlightColor: "transparent",
     boxShadow: "0 2px 8px rgba(0, 0, 0, 0.22)",
   },
+  // Картинка живёт внутри подложки с safe-area-top и padding по бокам.
+  // Сама картинка скруглена — выглядит как полноразмерная Pinterest-карточка,
+  // а не «застрявший на весь экран full-bleed». Места под back-кнопку
+  // даём через padding-top.
   imageArea: {
     position: "relative" as const,
     width: "100%",
-    background: "rgba(0,0,0,0.04)",
     flex: "0 0 auto",
+    padding: "calc(env(safe-area-inset-top, 0px) + 64px) 12px 0",
   },
   image: {
     width: "100%",
     height: "auto",
     display: "block",
     objectFit: "contain" as const,
+    borderRadius: 18,
+    boxShadow: "0 12px 32px -12px rgba(0, 0, 0, 0.35)",
     userSelect: "none" as const,
     WebkitUserSelect: "none" as const,
+    // Подсказка браузеру держать максимальное качество при ресемплинге.
+    imageRendering: "auto" as const,
   },
   dotsRow: {
     position: "absolute" as const,

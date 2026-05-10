@@ -1391,17 +1391,17 @@ html[data-theme="light"] .zen-app .product-card-price {
 
 /* Pinterest-style плотная упаковка с одинаковыми вертикальными
    зазорами вне зависимости от того, есть ли у карточки подпись. */
-.zen-app .zen-pin-grid {
+.zen-pin-grid {
   column-count: 2;
   column-gap: 4px;
 }
 @media (min-width: 520px) {
-  .zen-app .zen-pin-grid { column-count: 3; column-gap: 5px; }
+  .zen-pin-grid { column-count: 3; column-gap: 5px; }
 }
 @media (min-width: 820px) {
-  .zen-app .zen-pin-grid { column-count: 4; column-gap: 6px; }
+  .zen-pin-grid { column-count: 4; column-gap: 6px; }
 }
-.zen-app .zen-pin-card {
+.zen-pin-card {
   /* Одинаковый отступ снизу = ровно одна высота строки подписи (~18px),
      чтобы между карточками с подписью и без визуально было одно
      расстояние. Без этого карточки без подписи слипались, а с подписью
@@ -1413,9 +1413,9 @@ html[data-theme="light"] .zen-app .product-card-price {
   display: block;
 }
 @media (min-width: 520px) {
-  .zen-app .zen-pin-card { margin-bottom: 20px; }
+  .zen-pin-card { margin-bottom: 20px; }
 }
-.zen-app .zen-pin-card:active { transform: scale(0.985); transition: transform 0.1s ease; }
+.zen-pin-card:active { transform: scale(0.985); transition: transform 0.1s ease; }
 
 /* ── Maintenance screen ────────────────────────────────────────────── */
 .zen-maintenance {
@@ -1637,9 +1637,9 @@ body.zen-inspire-overlay-on .zen-app .zen-inspire-page {
 }
 
 /* FAB-переключатель «Всё / Закреплённые» в правом нижнем углу. */
-.zen-app .zen-pin-fab:active { transform: scale(0.94); }
+.zen-pin-fab:active { transform: scale(0.94); }
 @media (hover: hover) {
-  .zen-app .zen-pin-fab:hover { transform: translateY(-2px); }
+  .zen-pin-fab:hover { transform: translateY(-2px); }
 }
 
 /* Скелетон-плитка каталога: показывается на холодном старте, пока товары
