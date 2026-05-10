@@ -38,6 +38,13 @@ import {
   createSupportEntry,
   updateSupportEntry,
   deleteSupportEntry,
+  getPromoCodes,
+  createPromoCode,
+  deletePromoCode,
+  getDrops,
+  createDrop,
+  deleteDrop,
+  getBotAnalytics,
   type Product,
   type Category,
   type Order,
@@ -47,6 +54,9 @@ import {
   type BotConversation,
   type BotMessage,
   type SupportEntry,
+  type PromoCode,
+  type DropItem,
+  type BotAnalytics,
 } from "../api";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
@@ -76,7 +86,7 @@ function StatusPill({ status }: { status: string }) {
   return <span className={`admin-status admin-status--${c.variant}`}>{c.label}</span>;
 }
 
-function NavIcon({ tab }: { tab: "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" }) {
+function NavIcon({ tab }: { tab: "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" | "promo" | "drops" | "analytics" }) {
   switch (tab) {
     case "products":
       return (<svg viewBox="0 0 24 24" aria-hidden><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>);
@@ -96,6 +106,12 @@ function NavIcon({ tab }: { tab: "products" | "categories" | "orders" | "customO
       return (<svg viewBox="0 0 24 24" aria-hidden><path d="M21 11.5a8.4 8.4 0 01-1.2 4.4 8.5 8.5 0 01-7.4 4.1 8.4 8.4 0 01-4.4-1.2L3 20l1.2-4.9A8.4 8.4 0 013 10.5a8.5 8.5 0 014.2-7.4A8.4 8.4 0 0111.5 2h.5a8.5 8.5 0 018 8z"/></svg>);
     case "support":
       return (<svg viewBox="0 0 24 24" aria-hidden><circle cx="12" cy="12" r="9"/><path d="M9.1 9.5a3 3 0 015.8 1c0 1.5-1.5 2-2.4 2.5-.4.2-.5.5-.5.9V14"/><circle cx="12" cy="17" r="0.5" fill="currentColor"/></svg>);
+    case "promo":
+      return (<svg viewBox="0 0 24 24" aria-hidden><path d="M20.6 11.4 12.7 3.5a1.5 1.5 0 0 0-1-.5H5a2 2 0 0 0-2 2v6.7a1.5 1.5 0 0 0 .4 1l8 8a2 2 0 0 0 2.8 0l6.4-6.4a2 2 0 0 0 0-2.9Z"/><circle cx="7.5" cy="7.5" r="1" fill="currentColor"/></svg>);
+    case "drops":
+      return (<svg viewBox="0 0 24 24" aria-hidden><path d="M12 2v6"/><path d="m4.93 10.93 4.24 4.24"/><path d="M2 18h20"/><path d="M19.07 10.93 14.83 15.17"/><path d="M12 22a4 4 0 0 0 4-4H8a4 4 0 0 0 4 4z"/></svg>);
+    case "analytics":
+      return (<svg viewBox="0 0 24 24" aria-hidden><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-7"/></svg>);
   }
 }
 
@@ -109,7 +125,7 @@ function telegramChatLink(username?: string | null, userId?: string): string {
   return "#";
 }
 
-type Tab = "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support";
+type Tab = "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" | "promo" | "drops" | "analytics";
 
 export function Admin() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -250,6 +266,15 @@ export function Admin() {
           <button type="button" onClick={() => setTabAndReset("support")} className={`admin-nav-btn ${tab === "support" ? "active" : ""}`}>
             <NavIcon tab="support" /> Поддержка
           </button>
+          <button type="button" onClick={() => setTabAndReset("promo")} className={`admin-nav-btn ${tab === "promo" ? "active" : ""}`}>
+            <NavIcon tab="promo" /> Промокоды
+          </button>
+          <button type="button" onClick={() => setTabAndReset("drops")} className={`admin-nav-btn ${tab === "drops" ? "active" : ""}`}>
+            <NavIcon tab="drops" /> Дропы
+          </button>
+          <button type="button" onClick={() => setTabAndReset("analytics")} className={`admin-nav-btn ${tab === "analytics" ? "active" : ""}`}>
+            <NavIcon tab="analytics" /> Аналитика
+          </button>
           <div style={{ flex: 1 }} />
           <div style={styles.sidebarFooter}>
             <button
@@ -343,6 +368,18 @@ export function Admin() {
 
       {tab === "support" && (
         <SupportTab adminSecret={adminSecret} />
+      )}
+
+      {tab === "promo" && (
+        <PromoTab adminSecret={adminSecret} />
+      )}
+
+      {tab === "drops" && (
+        <DropsTab adminSecret={adminSecret} products={products} />
+      )}
+
+      {tab === "analytics" && (
+        <AnalyticsTab adminSecret={adminSecret} />
       )}
 
           </div>
@@ -2644,6 +2681,358 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
           )}
         </div>
       </section>
+    </>
+  );
+}
+
+// ── Promo codes ──────────────────────────────────────────────────────
+
+function PromoTab({ adminSecret }: { adminSecret: string }) {
+  const [list, setList] = useState<PromoCode[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+  const [code, setCode] = useState("");
+  const [discount, setDiscount] = useState<string>("10");
+  const [maxUses, setMaxUses] = useState<string>("");
+  const [validUntil, setValidUntil] = useState<string>("");
+
+  const load = () => {
+    setLoading(true);
+    getPromoCodes(adminSecret)
+      .then(setList)
+      .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!code.trim() || !Number(discount)) {
+      setMessage("Заполни код и процент скидки");
+      return;
+    }
+    setMessage("");
+    try {
+      await createPromoCode(
+        {
+          code: code.trim(),
+          discount_percent: Number(discount),
+          max_uses: maxUses ? Number(maxUses) : null,
+          valid_until: validUntil || null,
+        },
+        adminSecret
+      );
+      setMessage("Промокод создан");
+      setCode("");
+      setDiscount("10");
+      setMaxUses("");
+      setValidUntil("");
+      load();
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    }
+  };
+
+  const handleDelete = async (codeStr: string) => {
+    if (!confirm(`Удалить промокод ${codeStr}?`)) return;
+    try {
+      await deletePromoCode(codeStr, adminSecret);
+      load();
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    }
+  };
+
+  if (loading) return <p style={styles.hint}>Загрузка...</p>;
+
+  return (
+    <>
+      <div className="admin-page-head">
+        <div className="admin-page-head-text">
+          <h2>Промокоды</h2>
+          <p className="admin-page-head-sub">Создавай коды на скидку. Применяются юзером при оформлении заказа.</p>
+        </div>
+      </div>
+      {message && <p style={styles.message}>{message}</p>}
+
+      <section className="admin-card">
+        <div className="admin-card-head"><h3>Новый промокод</h3></div>
+        <form onSubmit={handleCreate} className="admin-card-body" style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end" }}>
+          <label className="admin-field">
+            <span className="admin-field-label">Код</span>
+            <input type="text" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="WELCOME10" style={{ ...styles.input, width: 160 }} />
+          </label>
+          <label className="admin-field">
+            <span className="admin-field-label">Скидка %</span>
+            <input type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} min={1} max={100} style={{ ...styles.input, width: 80 }} />
+          </label>
+          <label className="admin-field">
+            <span className="admin-field-label">Лимит (необяз.)</span>
+            <input type="number" value={maxUses} onChange={(e) => setMaxUses(e.target.value)} placeholder="∞" min={1} style={{ ...styles.input, width: 100 }} />
+          </label>
+          <label className="admin-field">
+            <span className="admin-field-label">До (UTC)</span>
+            <input type="datetime-local" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} style={{ ...styles.input, width: 200 }} />
+          </label>
+          <button type="submit" style={styles.submit}>Создать</button>
+        </form>
+      </section>
+
+      <section className="admin-card">
+        <div className="admin-card-head">
+          <h3>Активные промокоды</h3>
+          <span className="admin-card-head-meta">{list.length}</span>
+        </div>
+        {list.length === 0 ? (
+          <div className="admin-empty" style={{ borderRadius: 0, border: "none" }}>
+            <p className="admin-empty-title">Нет промокодов</p>
+            <p className="admin-empty-sub">Создай первый через форму выше</p>
+          </div>
+        ) : (
+          <table className="admin-table" style={{ borderRadius: 0, border: "none" }}>
+            <thead>
+              <tr>
+                <th>Код</th>
+                <th>Скидка</th>
+                <th>Использовано</th>
+                <th>Истекает</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.map((p) => (
+                <tr key={p.code}>
+                  <td style={{ fontWeight: 600 }}>{p.code}</td>
+                  <td>{p.discount_percent}%</td>
+                  <td style={{ fontVariantNumeric: "tabular-nums" }}>
+                    {p.used_count}{p.max_uses != null ? ` / ${p.max_uses}` : ""}
+                  </td>
+                  <td style={{ fontSize: 12.5, color: "var(--muted)" }}>
+                    {p.valid_until ? new Date(p.valid_until).toLocaleString("ru") : "—"}
+                  </td>
+                  <td style={{ textAlign: "right" }}>
+                    <button type="button" onClick={() => handleDelete(p.code)} style={styles.deleteBtn}>Удалить</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+    </>
+  );
+}
+
+// ── Live drops ───────────────────────────────────────────────────────
+
+function DropsTab({ adminSecret, products }: { adminSecret: string; products: Product[] }) {
+  const [list, setList] = useState<DropItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [dropAt, setDropAt] = useState("");
+  const [productIds, setProductIds] = useState<number[]>([]);
+
+  const load = () => {
+    setLoading(true);
+    getDrops()
+      .then(setList)
+      .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim() || !dropAt) {
+      setMessage("Заполни название и время");
+      return;
+    }
+    setMessage("");
+    try {
+      await createDrop(
+        { title: title.trim(), description, drop_at: new Date(dropAt).toISOString(), product_ids: productIds },
+        adminSecret
+      );
+      setMessage("Дроп запланирован");
+      setTitle("");
+      setDescription("");
+      setDropAt("");
+      setProductIds([]);
+      load();
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Удалить дроп?")) return;
+    try {
+      await deleteDrop(id, adminSecret);
+      load();
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    }
+  };
+
+  const toggleProduct = (id: number) => {
+    setProductIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  if (loading) return <p style={styles.hint}>Загрузка...</p>;
+
+  return (
+    <>
+      <div className="admin-page-head">
+        <div className="admin-page-head-text">
+          <h2>Дропы</h2>
+          <p className="admin-page-head-sub">
+            Запланируй релиз товаров: бот разошлёт тизеры за 24 ч / 1 ч / 5 мин до старта и live-пуш в момент дропа.
+          </p>
+        </div>
+      </div>
+      {message && <p style={styles.message}>{message}</p>}
+
+      <section className="admin-card">
+        <div className="admin-card-head"><h3>Новый дроп</h3></div>
+        <form onSubmit={handleCreate} className="admin-card-body" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <label className="admin-field">
+            <span className="admin-field-label">Название *</span>
+            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="SS26 Capsule" style={styles.input} />
+          </label>
+          <label className="admin-field">
+            <span className="admin-field-label">Описание</span>
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Лимитка из 30 худи. First come — first served." style={{ ...styles.input, height: "auto", minHeight: 64 }} />
+          </label>
+          <label className="admin-field">
+            <span className="admin-field-label">Дата и время старта (локальное) *</span>
+            <input type="datetime-local" value={dropAt} onChange={(e) => setDropAt(e.target.value)} style={{ ...styles.input, width: 240 }} />
+          </label>
+          <div className="admin-field">
+            <span className="admin-field-label">Товары в дропе</span>
+            <span className="admin-field-hint">Опционально. Юзеры всё равно получат пуш — но если выберешь, в будущем сможем линковать сразу на товар.</span>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+              {products.map((p) => {
+                const on = productIds.includes(p.id);
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => toggleProduct(p.id)}
+                    style={{
+                      ...styles.smallBtn,
+                      background: on ? "var(--text)" : "var(--surface)",
+                      color: on ? "#fff" : "var(--text-2)",
+                      borderColor: on ? "var(--text)" : "var(--border)",
+                    }}
+                  >
+                    {p.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div style={styles.formActions}>
+            <button type="submit" style={styles.submit}>Запланировать дроп</button>
+          </div>
+        </form>
+      </section>
+
+      <section className="admin-card">
+        <div className="admin-card-head">
+          <h3>Запланированные / прошедшие</h3>
+          <span className="admin-card-head-meta">{list.length}</span>
+        </div>
+        {list.length === 0 ? (
+          <div className="admin-empty" style={{ borderRadius: 0, border: "none" }}>
+            <p className="admin-empty-title">Дропов нет</p>
+            <p className="admin-empty-sub">Запланируй первый через форму выше</p>
+          </div>
+        ) : (
+          <div className="admin-card-body" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {list.map((d) => {
+              const dt = new Date(d.drop_at);
+              const isPast = dt.getTime() < Date.now();
+              return (
+                <div key={d.id} style={{ border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: 14, display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{d.title}</div>
+                    {d.description && <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 4 }}>{d.description}</div>}
+                    <div style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 4, fontVariantNumeric: "tabular-nums" }}>
+                      {dt.toLocaleString("ru")} · {isPast ? (d.live_sent_at ? "live-пуш отправлен" : "прошёл") : "запланирован"}
+                    </div>
+                  </div>
+                  <button type="button" onClick={() => handleDelete(d.id)} style={styles.deleteBtn}>Удалить</button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+    </>
+  );
+}
+
+// ── Bot analytics ────────────────────────────────────────────────────
+
+function AnalyticsTab({ adminSecret }: { adminSecret: string }) {
+  const [data, setData] = useState<BotAnalytics | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+
+  const load = () => {
+    setLoading(true);
+    getBotAnalytics(adminSecret)
+      .then(setData)
+      .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); }, []);
+
+  if (loading) return <p style={styles.hint}>Загрузка...</p>;
+  if (!data) return <p style={styles.message}>{message || "Нет данных"}</p>;
+
+  const cards: { label: string; value: string; sub?: string }[] = [
+    { label: "DAU", value: String(data.dau), sub: "активных за сутки" },
+    { label: "WAU", value: String(data.wau), sub: "активных за неделю" },
+    { label: "MAU", value: String(data.mau), sub: "активных за месяц" },
+    { label: "Подписчиков", value: String(data.total_subscribers), sub: `заблокировано ${data.blocked}` },
+    { label: "Заказов сегодня", value: String(data.orders_today) },
+    { label: "Заказов за неделю", value: String(data.orders_week) },
+    { label: "Выручка за неделю", value: `${data.revenue_week} $` },
+    { label: "Cart-abandon rate", value: `${data.cart_abandon_rate}%`, sub: "от тех, кто кладёт в корзину" },
+  ];
+
+  return (
+    <>
+      <div className="admin-page-head">
+        <div className="admin-page-head-text">
+          <h2>Аналитика бота</h2>
+          <p className="admin-page-head-sub">Сводка по подписчикам, активности и заказам.</p>
+        </div>
+        <div className="admin-page-head-actions">
+          <button type="button" onClick={load} style={styles.smallBtn}>Обновить</button>
+        </div>
+      </div>
+      {message && <p style={styles.message}>{message}</p>}
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
+        {cards.map((c) => (
+          <div key={c.label} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: 18 }}>
+            <div style={{ fontSize: 11.5, fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              {c.label}
+            </div>
+            <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.022em", marginTop: 4, fontVariantNumeric: "tabular-nums" }}>
+              {c.value}
+            </div>
+            {c.sub && <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6 }}>{c.sub}</div>}
+          </div>
+        ))}
+      </div>
     </>
   );
 }

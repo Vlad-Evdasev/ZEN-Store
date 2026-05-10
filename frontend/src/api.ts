@@ -946,3 +946,187 @@ export async function deleteBroadcastPost(id: number, adminSecret: string): Prom
     throw new Error((err as { error?: string }).error || res.statusText);
   }
 }
+
+// ─── Engagement API ────────────────────────────────────────────────────
+
+export interface LoyaltyBalance {
+  balance: number;
+  lifetime_earned: number;
+  lifetime_spent: number;
+}
+
+export async function getLoyaltyBalance(userId: string): Promise<LoyaltyBalance> {
+  const res = await fetchWithRetry(`${API_URL}/api/engagement/points/${userId}`);
+  if (!res.ok) throw new Error("Failed to fetch loyalty balance");
+  return res.json();
+}
+
+export async function redeemLoyaltyPoints(
+  userId: string,
+  amount: number
+): Promise<{ ok: true; applied: number }> {
+  const res = await fetch(`${API_URL}/api/engagement/points/${userId}/redeem`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ amount }),
+  });
+  if (!res.ok) throw new Error("Failed to redeem points");
+  return res.json();
+}
+
+export async function getCategorySubscriptions(userId: string): Promise<string[]> {
+  const res = await fetchWithRetry(`${API_URL}/api/engagement/subscriptions/${userId}`);
+  if (!res.ok) throw new Error("Failed to fetch subscriptions");
+  return res.json();
+}
+
+export async function subscribeToCategory(userId: string, categoryCode: string): Promise<void> {
+  const res = await fetch(`${API_URL}/api/engagement/subscriptions/${userId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ category_code: categoryCode }),
+  });
+  if (!res.ok) throw new Error("Failed to subscribe");
+}
+
+export async function unsubscribeFromCategory(userId: string, categoryCode: string): Promise<void> {
+  const res = await fetch(
+    `${API_URL}/api/engagement/subscriptions/${userId}/${encodeURIComponent(categoryCode)}`,
+    { method: "DELETE" }
+  );
+  if (!res.ok) throw new Error("Failed to unsubscribe");
+}
+
+export interface PromoCode {
+  code: string;
+  discount_percent: number;
+  max_uses: number | null;
+  used_count: number;
+  valid_until: string | null;
+  created_at: string;
+}
+
+export async function getPromoCodes(adminSecret: string): Promise<PromoCode[]> {
+  const res = await fetch(`${API_URL}/api/engagement/promo`, {
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) throw new Error("Failed to fetch promo codes");
+  return res.json();
+}
+
+export async function createPromoCode(
+  data: { code: string; discount_percent: number; max_uses?: number | null; valid_until?: string | null },
+  adminSecret: string
+): Promise<void> {
+  const res = await fetch(`${API_URL}/api/engagement/promo`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+}
+
+export async function deletePromoCode(code: string, adminSecret: string): Promise<void> {
+  const res = await fetch(`${API_URL}/api/engagement/promo/${encodeURIComponent(code)}`, {
+    method: "DELETE",
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) throw new Error("Failed to delete promo");
+}
+
+export async function applyPromoCode(
+  code: string,
+  userId: string
+): Promise<{ ok: true; discount_percent: number }> {
+  const res = await fetch(
+    `${API_URL}/api/engagement/promo/${encodeURIComponent(code)}/apply/${userId}`,
+    { method: "POST" }
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error((data as { error?: string }).error || "Промокод недоступен");
+  }
+  return data as { ok: true; discount_percent: number };
+}
+
+export interface DropItem {
+  id: number;
+  title: string;
+  description: string | null;
+  product_ids: number[];
+  drop_at: string;
+  live_sent_at: string | null;
+  created_at: string;
+}
+
+export async function getDrops(): Promise<DropItem[]> {
+  const res = await fetchWithRetry(`${API_URL}/api/engagement/drops`);
+  if (!res.ok) throw new Error("Failed to fetch drops");
+  return res.json();
+}
+
+export async function createDrop(
+  data: { title: string; description?: string; product_ids?: number[]; drop_at: string },
+  adminSecret: string
+): Promise<void> {
+  const res = await fetch(`${API_URL}/api/engagement/drops`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+}
+
+export async function deleteDrop(id: number, adminSecret: string): Promise<void> {
+  const res = await fetch(`${API_URL}/api/engagement/drops/${id}`, {
+    method: "DELETE",
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) throw new Error("Failed to delete drop");
+}
+
+export async function getTogetherProducts(productId: number): Promise<{ product_ids: number[] }> {
+  const res = await fetchWithRetry(`${API_URL}/api/engagement/together/${productId}`);
+  if (!res.ok) throw new Error("Failed to fetch together products");
+  return res.json();
+}
+
+export type SegmentKey = "all" | "vip" | "loyal" | "new" | "dormant" | "cart_abandoners";
+
+export async function getSegmentCount(
+  segment: SegmentKey,
+  adminSecret: string
+): Promise<number> {
+  const res = await fetch(`${API_URL}/api/engagement/segments/${segment}/count`, {
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) throw new Error("Failed to fetch segment count");
+  const data = (await res.json()) as { count: number };
+  return data.count;
+}
+
+export interface BotAnalytics {
+  dau: number;
+  wau: number;
+  mau: number;
+  total_subscribers: number;
+  blocked: number;
+  orders_today: number;
+  orders_week: number;
+  revenue_week: number;
+  cart_abandon_rate: number;
+}
+
+export async function getBotAnalytics(adminSecret: string): Promise<BotAnalytics> {
+  const res = await fetch(`${API_URL}/api/engagement/analytics`, {
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) throw new Error("Failed to fetch analytics");
+  return res.json();
+}
