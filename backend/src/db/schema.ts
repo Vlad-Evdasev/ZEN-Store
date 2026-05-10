@@ -486,6 +486,10 @@ try { db.exec("ALTER TABLE orders ADD COLUMN promo_code TEXT"); } catch {}
 try { db.exec("ALTER TABLE orders ADD COLUMN points_redeemed INTEGER DEFAULT 0"); } catch {}
 try { db.exec("ALTER TABLE orders ADD COLUMN payment_reminder_sent_at DATETIME"); } catch {}
 
+// Мульти-фото посты во вкладке «Вдохновиться» — JSON-массив URL/data:URL,
+// до 10 элементов. image_url/image_data остаются для обратной совместимости.
+try { db.exec("ALTER TABLE posts ADD COLUMN images TEXT"); } catch {}
+
 // Платёжный intent — мост между ордером и транзакцией в сети.
 // id (наш payload) уйдёт в комментарий TON-транзакции, потом по нему
 // матчим входящую транзакцию на блокчейне. Курс фиксируется на момент

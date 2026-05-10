@@ -3,9 +3,48 @@ import { db } from "../db/schema.js";
 import type { Post, PostComment } from "../types.js";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET || "";
+const MAX_POST_IMAGES = 10;
 
 function checkAdmin(secret: string | undefined): boolean {
   return !ADMIN_SECRET || secret === ADMIN_SECRET;
+}
+
+// Парсим images из БД (JSON-массив строк) → string[]. Падает в []
+// если поле NULL или невалидный JSON.
+function parsePostImages(raw: unknown): string[] {
+  if (!raw || typeof raw !== "string") return [];
+  try {
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr.filter((x): x is string => typeof x === "string" && x.length > 0).slice(0, MAX_POST_IMAGES);
+  } catch {
+    return [];
+  }
+}
+
+// Берём массив из тела запроса. Принимаем строки, slice до 10. Для
+// обратной совместимости: если только image_url/image_data передан —
+// возвращаем undefined чтобы не затирать images.
+function readImagesFromBody(body: { images?: unknown }): string[] | undefined {
+  if (!Array.isArray(body.images)) return undefined;
+  return body.images
+    .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+    .slice(0, MAX_POST_IMAGES);
+}
+
+// Из row БД (с images-string) собираем нормализованный пост: images
+// всегда string[] (возможно пустой). image_url/image_data сохраняем для
+// клиентов, ещё не обновлённых.
+function expandPost<T extends { image_url?: string | null; image_data?: string | null; images?: string | null }>(row: T) {
+  const imagesParsed = parsePostImages(row.images);
+  // Если images пуст, но есть legacy image_data/image_url — кладём в массив
+  // как один элемент. Клиент тогда рендерит как single-photo пост.
+  let images = imagesParsed;
+  if (images.length === 0) {
+    const legacy = (row.image_data || row.image_url) as string | undefined | null;
+    if (legacy) images = [legacy];
+  }
+  return { ...row, images };
 }
 
 export const postsRouter = Router();
@@ -21,7 +60,7 @@ postsRouter.get("/", (req, res) => {
        FROM posts p
        ORDER BY p.created_at DESC`
     )
-    .all() as (Post & { likes_count: number; comments_count: number })[];
+    .all() as (Post & { likes_count: number; comments_count: number; images?: string | null })[];
 
   if (userId) {
     const likedSet = new Set<number>();
@@ -29,10 +68,10 @@ postsRouter.get("/", (req, res) => {
       .prepare("SELECT post_id FROM post_likes WHERE user_id = ?")
       .all(userId) as { post_id: number }[];
     for (const r of liked) likedSet.add(r.post_id);
-    return res.json(rows.map((p) => ({ ...p, user_liked: likedSet.has(p.id) })));
+    return res.json(rows.map((p) => ({ ...expandPost(p), user_liked: likedSet.has(p.id) })));
   }
 
-  return res.json(rows);
+  return res.json(rows.map(expandPost));
 });
 
 postsRouter.get("/:id", (req, res) => {
@@ -47,7 +86,7 @@ postsRouter.get("/:id", (req, res) => {
        FROM posts p
        WHERE p.id = ?`
     )
-    .get(id) as (Post & { likes_count: number; comments_count: number }) | undefined;
+    .get(id) as (Post & { likes_count: number; comments_count: number; images?: string | null }) | undefined;
 
   if (!row) return res.status(404).json({ error: "Post not found" });
 
@@ -55,10 +94,10 @@ postsRouter.get("/:id", (req, res) => {
     const like = db
       .prepare("SELECT 1 FROM post_likes WHERE post_id = ? AND user_id = ?")
       .get(id, userId);
-    return res.json({ ...row, user_liked: !!like });
+    return res.json({ ...expandPost(row), user_liked: !!like });
   }
 
-  return res.json(row);
+  return res.json(expandPost(row));
 });
 
 postsRouter.post("/", (req, res) => {
@@ -68,16 +107,28 @@ postsRouter.post("/", (req, res) => {
   }
 
   const { caption, image_url, image_data, product_id, product_url } = req.body;
+  const images = readImagesFromBody(req.body);
+  const imagesJson = images && images.length > 0 ? JSON.stringify(images) : null;
+  // Когда передан images-массив, в legacy-поля кладём первый элемент,
+  // чтобы старые клиенты (без поддержки images) могли отрендерить хотя
+  // бы первое фото.
+  const legacyUrl = images && images.length > 0
+    ? (images[0].startsWith("data:") ? null : images[0])
+    : (image_url ?? null);
+  const legacyData = images && images.length > 0
+    ? (images[0].startsWith("data:") ? images[0] : null)
+    : (image_data ?? null);
 
   try {
     const result = db
       .prepare(
-        "INSERT INTO posts (caption, image_url, image_data, product_id, product_url) VALUES (?, ?, ?, ?, ?)"
+        "INSERT INTO posts (caption, image_url, image_data, images, product_id, product_url) VALUES (?, ?, ?, ?, ?, ?)"
       )
       .run(
         caption ?? null,
-        image_url ?? null,
-        image_data ?? null,
+        legacyUrl,
+        legacyData,
+        imagesJson,
         product_id ?? null,
         product_url ?? null
       );
@@ -99,13 +150,30 @@ postsRouter.patch("/:id", (req, res) => {
   if (!existing) return res.status(404).json({ error: "Post not found" });
 
   const { caption, image_url, image_data, product_id, product_url } = req.body;
+  const images = readImagesFromBody(req.body);
 
   const updates: string[] = [];
   const values: unknown[] = [];
 
   if (caption !== undefined) { updates.push("caption = ?"); values.push(caption); }
-  if (image_url !== undefined) { updates.push("image_url = ?"); values.push(image_url); }
-  if (image_data !== undefined) { updates.push("image_data = ?"); values.push(image_data); }
+  if (images !== undefined) {
+    updates.push("images = ?");
+    values.push(images.length > 0 ? JSON.stringify(images) : null);
+    // Legacy-поля синхронизируем с первым элементом
+    if (images.length > 0) {
+      const first = images[0];
+      updates.push("image_url = ?");
+      values.push(first.startsWith("data:") ? null : first);
+      updates.push("image_data = ?");
+      values.push(first.startsWith("data:") ? first : null);
+    } else {
+      updates.push("image_url = ?"); values.push(null);
+      updates.push("image_data = ?"); values.push(null);
+    }
+  } else {
+    if (image_url !== undefined) { updates.push("image_url = ?"); values.push(image_url); }
+    if (image_data !== undefined) { updates.push("image_data = ?"); values.push(image_data); }
+  }
   if (product_id !== undefined) { updates.push("product_id = ?"); values.push(product_id); }
   if (product_url !== undefined) { updates.push("product_url = ?"); values.push(product_url); }
 

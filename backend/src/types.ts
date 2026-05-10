@@ -35,6 +35,7 @@ export interface Post {
   caption: string | null;
   image_url: string | null;
   image_data: string | null;
+  images?: string[];
   product_id: number | null;
   product_url: string | null;
   created_at: string;

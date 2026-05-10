@@ -2489,8 +2489,11 @@ function PostsTab({ adminSecret }: { adminSecret: string }) {
   const [showForm, setShowForm] = useState(false);
   const [formCaption, setFormCaption] = useState("");
   const [formImageUrl, setFormImageUrl] = useState("");
-  const [formImageData, setFormImageData] = useState<string | null>(null);
+  // formImages — единый массив, до 10 элементов: либо URL, либо data:base64.
+  // Single-photo посты = массив из одного. Мульти-посты = до 10.
+  const [formImages, setFormImages] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const MAX_POST_IMAGES = 10;
 
   const loadPosts = async () => {
     setLoading(true);
@@ -2510,15 +2513,16 @@ function PostsTab({ adminSecret }: { adminSecret: string }) {
     setEditingPost(null);
     setFormCaption("");
     setFormImageUrl("");
-    setFormImageData(null);
+    setFormImages([]);
     setShowForm(true);
   };
 
   const openEdit = (post: Post) => {
     setEditingPost(post);
     setFormCaption(post.caption ?? "");
-    setFormImageUrl(post.image_url ?? "");
-    setFormImageData(post.image_data ?? null);
+    setFormImageUrl("");
+    // images массив всегда есть на бэке (legacy → один элемент)
+    setFormImages(post.images && post.images.length > 0 ? post.images.slice(0, MAX_POST_IMAGES) : []);
     setShowForm(true);
   };
 
@@ -2527,26 +2531,73 @@ function PostsTab({ adminSecret }: { adminSecret: string }) {
     setEditingPost(null);
   };
 
+  // Загружаем несколько файлов, добавляем их к существующим (не больше 10).
   const onPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { setMessage("Макс размер фото 5 МБ"); return; }
-    const reader = new FileReader();
-    reader.onload = () => {
-      setFormImageData(reader.result as string);
-      setFormImageUrl("");
-    };
-    reader.readAsDataURL(file);
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+    e.target.value = ""; // позволяет повторно выбрать тот же файл
+    const slotsLeft = MAX_POST_IMAGES - formImages.length;
+    if (slotsLeft <= 0) {
+      setMessage(`Можно прикрепить максимум ${MAX_POST_IMAGES} фото`);
+      return;
+    }
+    const accepted = files.slice(0, slotsLeft);
+    let warned = false;
+    accepted.forEach((file) => {
+      if (file.size > 5 * 1024 * 1024) {
+        if (!warned) { setMessage("Пропущено: фото больше 5 МБ"); warned = true; }
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        if (typeof result !== "string") return;
+        setFormImages((prev) => prev.length >= MAX_POST_IMAGES ? prev : [...prev, result]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const addImageUrl = () => {
+    const url = formImageUrl.trim();
+    if (!url) return;
+    if (formImages.length >= MAX_POST_IMAGES) {
+      setMessage(`Можно прикрепить максимум ${MAX_POST_IMAGES} фото`);
+      return;
+    }
+    setFormImages((prev) => [...prev, url]);
+    setFormImageUrl("");
+  };
+
+  const removeImageAt = (idx: number) => {
+    setFormImages((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const moveImage = (idx: number, dir: -1 | 1) => {
+    setFormImages((prev) => {
+      const next = [...prev];
+      const target = idx + dir;
+      if (target < 0 || target >= next.length) return prev;
+      [next[idx], next[target]] = [next[target], next[idx]];
+      return next;
+    });
   };
 
   const savePost = async () => {
+    if (formImages.length === 0 && !formImageUrl.trim()) {
+      setMessage("Добавь хотя бы одно фото");
+      return;
+    }
     setBusy(true);
     setMessage("");
     try {
+      // Если у юзера URL остался в input — добавляем его перед сохранением
+      const finalImages = formImages.length > 0
+        ? formImages
+        : (formImageUrl.trim() ? [formImageUrl.trim()] : []);
       const data = {
         caption: formCaption.trim() || null,
-        image_url: formImageData ? null : (formImageUrl.trim() || null),
-        image_data: formImageData || null,
+        images: finalImages,
         product_id: null,
         product_url: null,
       };
@@ -2577,8 +2628,6 @@ function PostsTab({ adminSecret }: { adminSecret: string }) {
       setBusy(false);
     }
   };
-
-  const previewSrc = formImageData || (formImageUrl.trim() ? formImageUrl.trim() : null);
 
   if (loading) return <p style={styles.hint}>Загрузка постов...</p>;
 
@@ -2615,49 +2664,85 @@ function PostsTab({ adminSecret }: { adminSecret: string }) {
           </label>
 
           <label style={styles.label}>
-            Картинка (URL)
-            <input
-              type="url"
-              value={formImageUrl}
-              onChange={(e) => { setFormImageUrl(e.target.value); if (e.target.value.trim()) setFormImageData(null); }}
-              placeholder="https://..."
-              style={styles.input}
-              disabled={!!formImageData}
-            />
+            <span>Фото ({formImages.length}/{MAX_POST_IMAGES})</span>
+            <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 400 }}>
+              Можно загрузить несколько за раз. Если фото &gt;1, во вкладке «Вдохновиться» пост рендерится крупнее с галереей.
+            </span>
           </label>
 
-          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               style={styles.smallBtn}
+              disabled={formImages.length >= MAX_POST_IMAGES}
             >
-              Загрузить фото
+              + Загрузить фото
             </button>
             <input
               ref={fileInputRef}
               type="file"
               accept="image/*"
+              multiple
               onChange={onPhotoChange}
               style={{ display: "none" }}
             />
-            {formImageData && (
-              <button
-                type="button"
-                onClick={() => setFormImageData(null)}
-                style={{ ...styles.smallBtn, color: "#c62828" }}
-              >
-                Убрать фото
-              </button>
-            )}
+            <input
+              type="url"
+              value={formImageUrl}
+              onChange={(e) => setFormImageUrl(e.target.value)}
+              placeholder="…или вставь URL"
+              style={{ ...styles.input, flex: 1, minWidth: 200, height: 30 }}
+              disabled={formImages.length >= MAX_POST_IMAGES}
+            />
+            <button
+              type="button"
+              onClick={addImageUrl}
+              style={styles.smallBtn}
+              disabled={!formImageUrl.trim() || formImages.length >= MAX_POST_IMAGES}
+            >
+              Добавить URL
+            </button>
           </div>
 
-          {previewSrc && (
-            <img
-              src={previewSrc}
-              alt="Превью"
-              style={{ width: 120, height: 120, objectFit: "cover", borderRadius: 8, marginTop: 4 }}
-            />
+          {formImages.length > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(96px, 1fr))", gap: 8, marginTop: 8 }}>
+              {formImages.map((src, idx) => (
+                <div
+                  key={idx}
+                  style={{ position: "relative", aspectRatio: "1 / 1", borderRadius: 8, overflow: "hidden", border: "1px solid var(--border)", background: "var(--surface-2)" }}
+                >
+                  <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  {/* Бейдж порядкового номера */}
+                  <span style={{ position: "absolute", top: 4, left: 4, background: "rgba(0,0,0,0.7)", color: "#fff", fontFamily: "var(--font-mono)", fontSize: 10, padding: "2px 6px", borderRadius: 3, letterSpacing: "0.06em" }}>
+                    {String(idx + 1).padStart(2, "0")}
+                  </span>
+                  {/* Кнопки управления */}
+                  <div style={{ position: "absolute", bottom: 4, left: 4, right: 4, display: "flex", gap: 4 }}>
+                    <button
+                      type="button"
+                      onClick={() => moveImage(idx, -1)}
+                      disabled={idx === 0}
+                      style={{ flex: 1, padding: "2px 0", background: "rgba(255,255,255,0.92)", border: "none", borderRadius: 4, cursor: "pointer", fontSize: 11, fontWeight: 600 }}
+                      title="Сдвинуть влево"
+                    >‹</button>
+                    <button
+                      type="button"
+                      onClick={() => moveImage(idx, 1)}
+                      disabled={idx === formImages.length - 1}
+                      style={{ flex: 1, padding: "2px 0", background: "rgba(255,255,255,0.92)", border: "none", borderRadius: 4, cursor: "pointer", fontSize: 11, fontWeight: 600 }}
+                      title="Сдвинуть вправо"
+                    >›</button>
+                    <button
+                      type="button"
+                      onClick={() => removeImageAt(idx)}
+                      style={{ flex: 1, padding: "2px 0", background: "rgba(200,30,30,0.92)", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", fontSize: 11, fontWeight: 600 }}
+                      title="Удалить"
+                    >×</button>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
 
           <div style={styles.formActions}>
@@ -2677,11 +2762,19 @@ function PostsTab({ adminSecret }: { adminSecret: string }) {
           <p style={styles.hint}>Нет постов. Создайте первый.</p>
         ) : (
           posts.map((p) => {
-            const imgSrc = p.image_data || p.image_url;
+            const imgSrc = (p.images && p.images[0]) || p.image_data || p.image_url;
+            const photoCount = p.images?.length ?? (imgSrc ? 1 : 0);
             return (
               <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: "1px solid var(--border)" }}>
                 {imgSrc ? (
-                  <img src={imgSrc} alt="" style={{ width: 60, height: 60, objectFit: "cover", borderRadius: 8, flexShrink: 0 }} />
+                  <div style={{ position: "relative", flexShrink: 0 }}>
+                    <img src={imgSrc} alt="" style={{ width: 60, height: 60, objectFit: "cover", borderRadius: 8, display: "block" }} />
+                    {photoCount > 1 && (
+                      <span style={{ position: "absolute", top: 4, right: 4, background: "rgba(0,0,0,0.78)", color: "#fff", fontFamily: "var(--font-mono)", fontSize: 10, padding: "2px 5px", borderRadius: 3, letterSpacing: "0.06em" }}>
+                        ×{photoCount}
+                      </span>
+                    )}
+                  </div>
                 ) : (
                   <div style={{ width: 60, height: 60, borderRadius: 8, background: "var(--border)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "var(--muted)" }}>
                     нет фото

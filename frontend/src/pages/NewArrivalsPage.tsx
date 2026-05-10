@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   getPosts,
   togglePostLike,
@@ -53,7 +53,14 @@ function PostCard({
   onPreview,
   onLikeToggle,
 }: PostCardProps) {
-  const imageSrc = post.image_data || post.image_url;
+  // Бэкенд всегда возвращает images: string[] (для legacy single = массив
+  // из одного). Если нет ни одного — рендерим заглушку.
+  const images = post.images && post.images.length > 0
+    ? post.images
+    : ((post.image_data || post.image_url) ? [(post.image_data || post.image_url)!] : []);
+  const isMulti = images.length > 1;
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const touchStartX = useRef(0);
 
   const handleLike = async () => {
     const wasLiked = post.user_liked;
@@ -67,18 +74,91 @@ function PostCard({
     }
   };
 
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (!isMulti) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(dx) < 40) return;
+    setCurrentIdx((prev) => {
+      if (dx < 0) return Math.min(images.length - 1, prev + 1);
+      return Math.max(0, prev - 1);
+    });
+  };
+
   return (
-    <div style={cardStyles.card}>
-      {imageSrc && (
+    <div style={isMulti ? cardStyles.cardLarge : cardStyles.card}>
+      {images.length > 0 && (
         <div
-          style={cardStyles.imageWrap}
-          onClick={() => onPreview(imageSrc)}
+          style={isMulti ? cardStyles.imageWrapLarge : cardStyles.imageWrap}
+          onClick={() => onPreview(images[currentIdx])}
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => { if (e.key === "Enter") onPreview(imageSrc); }}
+          onKeyDown={(e) => { if (e.key === "Enter") onPreview(images[currentIdx]); }}
           aria-label="Открыть фото"
         >
-          <img src={imageSrc} alt="" style={cardStyles.image} />
+          {/* Слайды накладываются, активный fade-in */}
+          {images.map((src, i) => (
+            <img
+              key={i}
+              src={src}
+              alt=""
+              style={{
+                ...cardStyles.image,
+                ...(isMulti ? cardStyles.imageStacked : null),
+                opacity: i === currentIdx ? 1 : (isMulti ? 0 : 1),
+                pointerEvents: i === currentIdx ? "auto" : "none",
+              }}
+            />
+          ))}
+
+          {/* Counter "3 / 7" в углу */}
+          {isMulti && (
+            <span style={cardStyles.multiCounter}>
+              {currentIdx + 1} / {images.length}
+            </span>
+          )}
+
+          {/* Стрелки слева/справа — для desktop / больших thumb-таргетов */}
+          {isMulti && currentIdx > 0 && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setCurrentIdx((p) => Math.max(0, p - 1)); }}
+              style={{ ...cardStyles.navArrow, left: 8 }}
+              aria-label="Предыдущее"
+            >
+              ‹
+            </button>
+          )}
+          {isMulti && currentIdx < images.length - 1 && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setCurrentIdx((p) => Math.min(images.length - 1, p + 1)); }}
+              style={{ ...cardStyles.navArrow, right: 8 }}
+              aria-label="Следующее"
+            >
+              ›
+            </button>
+          )}
+
+          {/* Дотики-индикатор */}
+          {isMulti && (
+            <div style={cardStyles.dotsRow}>
+              {images.map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setCurrentIdx(i); }}
+                  style={{ ...cardStyles.dot, ...(i === currentIdx ? cardStyles.dotActive : null) }}
+                  aria-label={`Фото ${i + 1}`}
+                />
+              ))}
+            </div>
+          )}
+
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); handleLike(); }}
@@ -235,18 +315,24 @@ export function NewArrivalsPage({
       )}
 
       {!loading && posts.length > 0 && (
-        <div style={pageStyles.feedMasonry}>
-          {posts.map((post) => (
-            <div key={post.id} style={pageStyles.masonryItem}>
-              <PostCard
-                post={post}
-                userId={userId}
-                lang={lang}
-                onPreview={setPreviewImage}
-                onLikeToggle={handleLikeToggle}
-              />
-            </div>
-          ))}
+        <div style={pageStyles.feedGrid}>
+          {posts.map((post) => {
+            const isMulti = (post.images?.length ?? 0) > 1;
+            return (
+              <div
+                key={post.id}
+                style={isMulti ? pageStyles.gridItemFull : pageStyles.gridItem}
+              >
+                <PostCard
+                  post={post}
+                  userId={userId}
+                  lang={lang}
+                  onPreview={setPreviewImage}
+                  onLikeToggle={handleLikeToggle}
+                />
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -330,6 +416,21 @@ const pageStyles: Record<string, React.CSSProperties> = {
     marginBottom: 10,
     display: "block",
   },
+  /* Новый layout: 2-column grid, мульти-фото посты span 1/-1 (на всю
+     ширину). Single-фото остаются плотной парой. */
+  feedGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 10,
+    alignItems: "start",
+  },
+  gridItem: {
+    minWidth: 0,
+  },
+  gridItemFull: {
+    gridColumn: "1 / -1",
+    minWidth: 0,
+  },
   empty: {
     display: "flex",
     alignItems: "center",
@@ -350,17 +451,106 @@ const cardStyles: Record<string, React.CSSProperties> = {
     borderRadius: 14,
     overflow: "hidden",
   },
+  /* Большая карточка под мульти-фото пост — занимает всю ширину
+     ленты, картинка чуть выше (4:5) для драматичной подачи. */
+  cardLarge: {
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: 18,
+    overflow: "hidden",
+    boxShadow: "0 10px 30px -16px rgba(0, 0, 0, 0.16)",
+  },
   imageWrap: {
     position: "relative" as const,
     width: "100%",
     cursor: "pointer",
     overflow: "hidden",
   },
+  imageWrapLarge: {
+    position: "relative" as const,
+    width: "100%",
+    aspectRatio: "4 / 5",
+    cursor: "pointer",
+    overflow: "hidden",
+    background: "#0a0a08",
+  },
   image: {
     width: "100%",
     height: "auto",
     objectFit: "cover" as const,
     display: "block",
+  },
+  /* В мульти-режиме слайды накладываются (для cross-fade) */
+  imageStacked: {
+    position: "absolute" as const,
+    inset: 0,
+    width: "100%",
+    height: "100%",
+    transition: "opacity 0.25s ease",
+  },
+  multiCounter: {
+    position: "absolute" as const,
+    top: 12,
+    left: 12,
+    padding: "4px 10px",
+    background: "rgba(0,0,0,0.65)",
+    color: "#fff",
+    fontFamily: 'ui-monospace, "SF Mono", Menlo, monospace',
+    fontSize: 11,
+    fontWeight: 600,
+    letterSpacing: "0.06em",
+    borderRadius: 999,
+    backdropFilter: "blur(6px)",
+    WebkitBackdropFilter: "blur(6px)",
+  },
+  navArrow: {
+    position: "absolute" as const,
+    top: "50%",
+    transform: "translateY(-50%)",
+    width: 36,
+    height: 36,
+    borderRadius: "50%",
+    background: "rgba(255,255,255,0.85)",
+    color: "#1a1a1a",
+    border: "none",
+    fontSize: 22,
+    fontWeight: 700,
+    cursor: "pointer",
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    lineHeight: 1,
+    paddingBottom: 2,
+  },
+  dotsRow: {
+    position: "absolute" as const,
+    bottom: 12,
+    left: "50%",
+    transform: "translateX(-50%)",
+    display: "flex",
+    gap: 6,
+    padding: "6px 10px",
+    background: "rgba(0,0,0,0.32)",
+    backdropFilter: "blur(6px)",
+    WebkitBackdropFilter: "blur(6px)",
+    borderRadius: 999,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: "50%",
+    background: "rgba(255,255,255,0.5)",
+    border: "none",
+    padding: 0,
+    cursor: "pointer",
+    transition: "background 0.15s ease, width 0.2s ease",
+  },
+  dotActive: {
+    background: "#fff",
+    width: 16,
+    borderRadius: 3,
   },
   shopOverlay: {
     position: "absolute" as const,

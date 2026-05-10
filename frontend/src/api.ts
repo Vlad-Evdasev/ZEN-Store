@@ -733,6 +733,10 @@ export interface Post {
   caption: string | null;
   image_url: string | null;
   image_data: string | null;
+  /** Бэкенд всегда возвращает images: string[] (может быть []). Для постов
+   *  с одним фото содержит [image_data || image_url]. Для мульти-постов —
+   *  до 10 элементов в порядке отображения. */
+  images: string[];
   product_id: number | null;
   product_url: string | null;
   created_at: string;
@@ -784,7 +788,7 @@ export async function addPostComment(postId: number, userId: string, userName: s
 }
 
 export async function createPost(
-  data: { caption?: string | null; image_url?: string | null; image_data?: string | null; product_id?: number | null; product_url?: string | null },
+  data: { caption?: string | null; image_url?: string | null; image_data?: string | null; images?: string[]; product_id?: number | null; product_url?: string | null },
   adminSecret: string
 ): Promise<{ id: number; ok: boolean }> {
   const res = await fetch(`${API_URL}/api/posts`, {
@@ -801,7 +805,7 @@ export async function createPost(
 
 export async function updatePost(
   id: number,
-  data: { caption?: string | null; image_url?: string | null; image_data?: string | null; product_id?: number | null; product_url?: string | null },
+  data: { caption?: string | null; image_url?: string | null; image_data?: string | null; images?: string[]; product_id?: number | null; product_url?: string | null },
   adminSecret: string
 ): Promise<{ ok: boolean }> {
   const res = await fetch(`${API_URL}/api/posts/${id}`, {
