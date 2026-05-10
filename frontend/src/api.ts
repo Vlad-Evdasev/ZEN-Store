@@ -1365,3 +1365,80 @@ export async function getTonRate(usd?: number): Promise<TonRate> {
   if (!res.ok) throw new Error("Failed to fetch TON rate");
   return res.json();
 }
+
+// ── Maintenance mode ────────────────────────────────────────────────
+
+export interface MaintenanceStatus {
+  enabled: boolean;
+  allowed: boolean;
+}
+
+export interface MaintenanceAllowItem {
+  user_id: string;
+  added_at: string;
+  name: string | null;
+  username: string | null;
+}
+
+export interface MaintenanceAdminState {
+  enabled: boolean;
+  allowlist: MaintenanceAllowItem[];
+}
+
+export async function getMaintenanceStatus(userId: string): Promise<MaintenanceStatus> {
+  const url = userId
+    ? `${API_URL}/api/maintenance/status?user_id=${encodeURIComponent(userId)}`
+    : `${API_URL}/api/maintenance/status`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Failed to fetch maintenance status");
+  return res.json();
+}
+
+export async function getMaintenanceAdmin(adminSecret: string): Promise<MaintenanceAdminState> {
+  const res = await fetch(`${API_URL}/api/maintenance/admin`, {
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) throw new Error("Failed to fetch maintenance admin");
+  return res.json();
+}
+
+export async function setMaintenanceEnabled(enabled: boolean, adminSecret: string): Promise<void> {
+  const res = await fetchWrite(`${API_URL}/api/maintenance/admin/toggle`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
+    body: JSON.stringify({ enabled }),
+  });
+  if (!res.ok) throw new Error("Failed to toggle maintenance");
+}
+
+export async function addMaintenanceAllow(userId: string, adminSecret: string): Promise<void> {
+  const res = await fetchWrite(`${API_URL}/api/maintenance/admin/allowlist`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
+    body: JSON.stringify({ user_id: userId }),
+  });
+  if (!res.ok) throw new Error("Failed to add to allowlist");
+}
+
+export async function removeMaintenanceAllow(userId: string, adminSecret: string): Promise<void> {
+  const res = await fetchWrite(`${API_URL}/api/maintenance/admin/allowlist/${encodeURIComponent(userId)}`, {
+    method: "DELETE",
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) throw new Error("Failed to remove from allowlist");
+}
+
+export interface MaintenanceUserHit {
+  user_id: string;
+  name: string | null;
+  username: string | null;
+}
+
+export async function searchMaintenanceUsers(q: string, adminSecret: string): Promise<MaintenanceUserHit[]> {
+  const url = q
+    ? `${API_URL}/api/maintenance/admin/search-users?q=${encodeURIComponent(q)}`
+    : `${API_URL}/api/maintenance/admin/search-users`;
+  const res = await fetch(url, { headers: { "X-Admin-Secret": adminSecret } });
+  if (!res.ok) throw new Error("Failed to search users");
+  return res.json();
+}

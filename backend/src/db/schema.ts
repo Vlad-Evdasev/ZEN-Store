@@ -507,6 +507,18 @@ try { db.exec("CREATE INDEX IF NOT EXISTS idx_posts_category ON posts(category)"
 // мы предпочитаем name_en для en. Если поле NULL — фолбэк на name (RU).
 try { db.exec("ALTER TABLE categories ADD COLUMN name_en TEXT"); } catch {}
 
+// Maintenance-режим: когда включён, все пользователи кроме allowlist
+// видят maintenance-экран вместо приложения. Сам флаг живёт в
+// app_settings под ключом 'maintenance_mode' ('on'/'off').
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS maintenance_allowlist (
+      user_id TEXT PRIMARY KEY,
+      added_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+} catch {}
+
 // ─── Индексы для горячих запросов ──────────────────────────────────────
 // Используются в GET /orders/:userId, GET /custom-orders/:userId, фид
 // постов, поиск по корзине/wishlist, payment-cron'ах. Без них SQLite

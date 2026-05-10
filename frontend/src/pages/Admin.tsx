@@ -44,6 +44,13 @@ import {
   createPromoCode,
   deletePromoCode,
   getBotAnalytics,
+  getMaintenanceAdmin,
+  setMaintenanceEnabled,
+  addMaintenanceAllow,
+  removeMaintenanceAllow,
+  searchMaintenanceUsers,
+  type MaintenanceAllowItem,
+  type MaintenanceUserHit,
   getSegmentCount,
   markOrderPaid,
   sendOrderInvoice,
@@ -88,7 +95,7 @@ function StatusPill({ status }: { status: string }) {
   return <span className={`admin-status admin-status--${c.variant}`}>{c.label}</span>;
 }
 
-function NavIcon({ tab }: { tab: "home" | "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" | "promo" | "analytics" }) {
+function NavIcon({ tab }: { tab: "home" | "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" | "promo" | "analytics" | "maintenance" }) {
   switch (tab) {
     case "home":
       return (<svg viewBox="0 0 24 24" aria-hidden><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="5" rx="1"/><rect x="13" y="10" width="8" height="11" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/></svg>);
@@ -114,6 +121,8 @@ function NavIcon({ tab }: { tab: "home" | "products" | "categories" | "orders" |
       return (<svg viewBox="0 0 24 24" aria-hidden><path d="M20.6 11.4 12.7 3.5a1.5 1.5 0 0 0-1-.5H5a2 2 0 0 0-2 2v6.7a1.5 1.5 0 0 0 .4 1l8 8a2 2 0 0 0 2.8 0l6.4-6.4a2 2 0 0 0 0-2.9Z"/><circle cx="7.5" cy="7.5" r="1" fill="currentColor"/></svg>);
     case "analytics":
       return (<svg viewBox="0 0 24 24" aria-hidden><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-7"/></svg>);
+    case "maintenance":
+      return (<svg viewBox="0 0 24 24" aria-hidden><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>);
   }
 }
 
@@ -127,7 +136,7 @@ function telegramChatLink(username?: string | null, userId?: string): string {
   return "#";
 }
 
-type Tab = "home" | "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" | "promo" | "analytics";
+type Tab = "home" | "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" | "promo" | "analytics" | "maintenance";
 
 /** Хедер-eyebrow в topbar: показывает раздел в стиле «OPS / ORDERS». */
 function tabEyebrow(tab: Tab): string {
@@ -144,6 +153,7 @@ function tabEyebrow(tab: Tab): string {
     case "channel": return "MARKETING / BROADCAST";
     case "promo": return "MARKETING / PROMO";
     case "support": return "CONTENT / SUPPORT";
+    case "maintenance": return "SYSTEM / MAINTENANCE";
   }
 }
 
@@ -363,6 +373,11 @@ export function Admin() {
             <NavIcon tab="support" /> Поддержка
           </button>
 
+          <div className="admin-nav-section">System</div>
+          <button type="button" onClick={() => setTabAndReset("maintenance")} className={`admin-nav-btn ${tab === "maintenance" ? "active" : ""}`}>
+            <NavIcon tab="maintenance" /> Тех. работы
+          </button>
+
           <div style={{ flex: 1 }} />
           <div style={styles.sidebarFooter}>
             <button
@@ -463,6 +478,10 @@ export function Admin() {
 
       {tab === "promo" && (
         <PromoTab adminSecret={adminSecret} />
+      )}
+
+      {tab === "maintenance" && (
+        <MaintenanceTab adminSecret={adminSecret} />
       )}
 
       {tab === "analytics" && (
@@ -3462,6 +3481,213 @@ function PromoTab({ adminSecret }: { adminSecret: string }) {
             </tbody>
           </table>
         )}
+      </section>
+    </>
+  );
+}
+
+// ── Maintenance / тех. работы ────────────────────────────────────────
+
+function MaintenanceTab({ adminSecret }: { adminSecret: string }) {
+  const [enabled, setEnabled] = useState(false);
+  const [allowlist, setAllowlist] = useState<MaintenanceAllowItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  // Поиск юзеров для добавления.
+  const [query, setQuery] = useState("");
+  const [hits, setHits] = useState<MaintenanceUserHit[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const r = await getMaintenanceAdmin(adminSecret);
+      setEnabled(r.enabled);
+      setAllowlist(r.allowlist);
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  // Дебаунс поиска: ждём 250ms после последнего ввода, чтобы не
+  // долбить бэк на каждой нажатой клавише.
+  useEffect(() => {
+    const tid = setTimeout(() => {
+      setSearching(true);
+      searchMaintenanceUsers(query, adminSecret)
+        .then(setHits)
+        .catch(() => {})
+        .finally(() => setSearching(false));
+    }, 250);
+    return () => clearTimeout(tid);
+  }, [query, adminSecret]);
+
+  const toggle = async () => {
+    setBusy(true);
+    setMessage("");
+    try {
+      await setMaintenanceEnabled(!enabled, adminSecret);
+      setEnabled(!enabled);
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const addUser = async (userId: string) => {
+    if (!userId) return;
+    if (allowlist.some((a) => a.user_id === userId)) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      await addMaintenanceAllow(userId, adminSecret);
+      await load();
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeUser = async (userId: string) => {
+    if (!confirm(`Убрать ${userId} из списка?`)) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      await removeMaintenanceAllow(userId, adminSecret);
+      await load();
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (loading) return <p style={styles.hint}>Загрузка...</p>;
+
+  const allowSet = new Set(allowlist.map((a) => a.user_id));
+  const filteredHits = hits.filter((h) => !allowSet.has(h.user_id));
+
+  return (
+    <>
+      <div className="admin-page-head">
+        <div className="admin-page-head-text">
+          <h2>Тех. работы</h2>
+          <p className="admin-page-head-sub">
+            Включи режим, чтобы временно скрыть приложение от всех, кроме выбранных пользователей.
+            Заблокированным юзерам показывается тёмный экран «подкручиваем гайки» вместо каталога.
+          </p>
+        </div>
+      </div>
+      {message && <p style={styles.message}>{message}</p>}
+
+      <section className="admin-card">
+        <div className="admin-card-head"><h3>Режим тех. работ</h3></div>
+        <div className="admin-card-body" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
+              {enabled ? "Включён" : "Выключен"}
+            </div>
+            <div style={{ fontSize: 12.5, color: "var(--muted)" }}>
+              {enabled
+                ? `Сейчас приложение видят только ${allowlist.length} ${allowlist.length === 1 ? "пользователь" : "пользователей"} из списка ниже.`
+                : "Все пользователи видят приложение в обычном режиме."}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={toggle}
+            disabled={busy}
+            style={{
+              ...styles.submit,
+              background: enabled ? "var(--accent)" : "var(--text)",
+              minWidth: 130,
+            }}
+          >
+            {enabled ? "Выключить" : "Включить"}
+          </button>
+        </div>
+      </section>
+
+      <section className="admin-card">
+        <div className="admin-card-head">
+          <h3>Allowlist — кто видит приложение в режиме тех. работ</h3>
+          <span className="admin-card-head-meta">{allowlist.length}</span>
+        </div>
+        <div className="admin-card-body">
+          {allowlist.length === 0 ? (
+            <div className="admin-empty" style={{ borderRadius: 0, border: "none" }}>
+              <p className="admin-empty-title">Список пуст</p>
+              <p className="admin-empty-sub">Добавь сюда минимум себя — иначе в режиме тех. работ ты сам не сможешь зайти в WebApp.</p>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {allowlist.map((a) => (
+                <div key={a.user_id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", border: "1px solid var(--border)", borderRadius: 8 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 600 }}>
+                      {a.name || a.username ? (a.name || `@${a.username}`) : a.user_id}
+                    </div>
+                    <div style={{ fontSize: 11.5, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>
+                      {a.username ? `@${a.username} · ` : ""}{a.user_id}
+                    </div>
+                  </div>
+                  <button type="button" onClick={() => removeUser(a.user_id)} style={styles.deleteBtn}>
+                    Убрать
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="admin-card">
+        <div className="admin-card-head"><h3>Добавить пользователя</h3></div>
+        <div className="admin-card-body" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <label className="admin-field">
+            <span className="admin-field-label">Поиск по имени, @username или ID</span>
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Например: Влад, krot, 12345..."
+              style={styles.input}
+            />
+          </label>
+          <div style={{ fontSize: 12, color: "var(--muted)" }}>
+            {searching ? "Ищу..." : `${filteredHits.length} результат(ов). Тапни «Добавить», чтобы внести в allowlist.`}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 360, overflowY: "auto" }}>
+            {filteredHits.map((h) => (
+              <div key={h.user_id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", border: "1px solid var(--border)", borderRadius: 8 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 600 }}>
+                    {h.name || (h.username ? `@${h.username}` : h.user_id)}
+                  </div>
+                  <div style={{ fontSize: 11.5, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>
+                    {h.username ? `@${h.username} · ` : ""}{h.user_id}
+                  </div>
+                </div>
+                <button type="button" onClick={() => addUser(h.user_id)} disabled={busy} style={styles.smallBtn}>
+                  Добавить
+                </button>
+              </div>
+            ))}
+            {!searching && filteredHits.length === 0 && (
+              <div style={{ fontSize: 13, color: "var(--muted)", padding: "10px 0" }}>
+                Никого не нашёл. Попробуй другой запрос.
+              </div>
+            )}
+          </div>
+        </div>
       </section>
     </>
   );

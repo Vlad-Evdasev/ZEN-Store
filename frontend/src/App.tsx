@@ -3,7 +3,8 @@ import { flushSync } from "react-dom";
 import { useTelegram } from "./hooks/useTelegram";
 import { TelegramAuth } from "./components/TelegramAuth";
 import { useWishlist } from "./hooks/useWishlist";
-import { getProducts, getStores, getCategories, getCart, botHeartbeat, type Product, type Store, type Category, type CartItem } from "./api";
+import { getProducts, getStores, getCategories, getCart, botHeartbeat, getMaintenanceStatus, type Product, type Store, type Category, type CartItem } from "./api";
+import { MaintenancePage } from "./pages/MaintenancePage";
 import { Catalog } from "./pages/Catalog";
 import { Cart } from "./pages/Cart";
 import { Favorites } from "./pages/Favorites";
@@ -177,6 +178,42 @@ function App() {
   const mainScrollRef = useRef<HTMLElement | null>(null);
   const savedScrollTopRef = useRef(0);
 
+  // Maintenance gate: если админ включил maintenance, всем кроме allowlist
+  // показываем maintenance-экран вместо приложения. checking=true пока
+  // первый запрос status в полёте — чтобы не мигать на холодном старте.
+  const [maintBlocked, setMaintBlocked] = useState(false);
+  const [maintChecking, setMaintChecking] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    getMaintenanceStatus(userId || "")
+      .then((s) => {
+        if (cancelled) return;
+        setMaintBlocked(s.enabled && !s.allowed);
+      })
+      .catch(() => {
+        // Если status-эндпоинт упал — не блокируем юзера. Лучше пропустить
+        // в каталог, чем показать ложный maintenance.
+        if (!cancelled) setMaintBlocked(false);
+      })
+      .finally(() => {
+        if (!cancelled) setMaintChecking(false);
+      });
+    // Перепроверяем при возврате во вкладку — мог поменяться статус.
+    const onVis = () => {
+      if (document.visibilityState !== "visible") return;
+      getMaintenanceStatus(userId || "")
+        .then((s) => {
+          if (!cancelled) setMaintBlocked(s.enabled && !s.allowed);
+        })
+        .catch(() => {});
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [userId]);
+
   useEffect(() => {
     if (typeof history !== "undefined" && "scrollRestoration" in history) {
       history.scrollRestoration = "manual";
@@ -342,6 +379,14 @@ function App() {
         </div>
       </div>
     );
+  }
+
+  // Maintenance gate: показываем тёмный экран ВСЕМ, кто не в allowlist.
+  // Во время первой проверки (maintChecking) рендерим обычное приложение
+  // — это безопасный default, лучше короткая мигалка чем ложный
+  // maintenance на холодном старте.
+  if (!maintChecking && maintBlocked) {
+    return <MaintenancePage />;
   }
 
   return (
