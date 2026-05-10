@@ -585,12 +585,12 @@ bot.command("start", async (ctx) => {
       // что в этой клавиатуре только вторичная навигация.
       keyboard: [
         [
-          { text: "Вдохновиться", web_app: { url: `${WEB_APP_URL}#page=inspire` } },
-          { text: "Заказы", web_app: { url: `${WEB_APP_URL}#page=history` } },
+          { text: "✨ Вдохновиться", web_app: { url: `${WEB_APP_URL}#page=inspire` } },
+          { text: "📦 Заказы", web_app: { url: `${WEB_APP_URL}#page=history` } },
         ],
         [
-          { text: "Профиль", web_app: { url: `${WEB_APP_URL}#page=settings` } },
-          { text: "Поддержка", web_app: { url: `${WEB_APP_URL}#page=support` } },
+          { text: "👤 Профиль", web_app: { url: `${WEB_APP_URL}#page=settings` } },
+          { text: "💬 Поддержка", web_app: { url: `${WEB_APP_URL}#page=support` } },
         ],
       ],
       is_persistent: true,
