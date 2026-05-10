@@ -342,3 +342,130 @@ if (storeCount.count === 0) {
 }
 
 // Товары вносятся через админку — никаких sample/seed-данных не подкладываем.
+
+// ─── Engagement / loyalty / referrals tables ────────────────────────────
+
+// Бонусные баллы пользователя (1$ потрачено в completed заказе = 1 балл).
+// Тратятся на следующих чекаутах (см. Phase 3).
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS loyalty_points (
+      user_id TEXT PRIMARY KEY,
+      balance INTEGER NOT NULL DEFAULT 0,
+      lifetime_earned INTEGER NOT NULL DEFAULT 0,
+      lifetime_spent INTEGER NOT NULL DEFAULT 0,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+} catch {}
+
+// Журнал движений баллов — для дебага и отображения в профиле.
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS loyalty_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      delta INTEGER NOT NULL,
+      reason TEXT NOT NULL,
+      ref_id INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+} catch {}
+
+// Реферальные связи. invited_user_id — UNIQUE: один юзер может быть приведён
+// только одним рефером (тот, кто привёл первым).
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS referrals (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      referrer_user_id TEXT NOT NULL,
+      invited_user_id TEXT NOT NULL UNIQUE,
+      first_order_id INTEGER,
+      reward_granted_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+} catch {}
+
+// Подписка юзера на новинки в категории. Когда админ создаёт продукт в этой
+// категории — бот пингует подписчика.
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS category_subscriptions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      category_code TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, category_code)
+    )
+  `);
+} catch {}
+
+// Логи отправленных cart-abandonment напоминаний — чтобы не спамить (не чаще
+// 1 раза в 7 дней на юзера).
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS cart_reminders (
+      user_id TEXT PRIMARY KEY,
+      last_sent_at DATETIME NOT NULL
+    )
+  `);
+} catch {}
+
+// Промокоды.
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS promo_codes (
+      code TEXT PRIMARY KEY,
+      discount_percent INTEGER NOT NULL,
+      max_uses INTEGER,
+      used_count INTEGER NOT NULL DEFAULT 0,
+      valid_until DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+} catch {}
+
+// Применения промокодов конкретными пользователями.
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS promo_redemptions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      order_id INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(code, user_id)
+    )
+  `);
+} catch {}
+
+// Live drops — запланированный релиз товаров с обратным отсчётом.
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS drops (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT,
+      product_ids TEXT NOT NULL DEFAULT '[]',
+      drop_at DATETIME NOT NULL,
+      teaser_sent_24h_at DATETIME,
+      teaser_sent_1h_at DATETIME,
+      teaser_sent_5min_at DATETIME,
+      live_sent_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+} catch {}
+
+// Стиль-квиз: ответы юзера для персонализации (Phase 8).
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS style_profiles (
+      user_id TEXT PRIMARY KEY,
+      answers TEXT NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+} catch {}

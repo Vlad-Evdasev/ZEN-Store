@@ -286,6 +286,163 @@ export async function replyAsBot(
   }
 }
 
+// ── Order status notifications ────────────────────────────────────────────
+// Бот пишет юзеру в личку, когда админ меняет статус заказа.
+// Тихо игнорируем 403 / blocked-by-user (помечаем юзера как blocked).
+
+const ORDER_STATUS_TEXT: Record<string, { emoji: string; title: string; sub?: string }> = {
+  pending: { emoji: "✅", title: "Заказ #{id} оформлен", sub: "Мы получили запрос — скоро свяжемся для уточнения деталей." },
+  in_transit: { emoji: "🚚", title: "Заказ #{id} в пути", sub: "Уже едет к тебе. Отслеживай статус в /track." },
+  delivered: { emoji: "📦", title: "Заказ #{id} доставлен", sub: "Забирай! Если что-то не так — пиши, поможем." },
+  completed: { emoji: "💚", title: "Заказ #{id} завершён", sub: "Спасибо за покупку! Будем рады видеть тебя снова 🤍" },
+};
+
+const CUSTOM_STATUS_TEXT: Record<string, { emoji: string; title: string; sub?: string }> = {
+  pending: { emoji: "✅", title: "Кастом-заявка #{id} одобрена", sub: "Принята в работу. Свяжемся для уточнений." },
+  in_transit: { emoji: "🚚", title: "Кастом-заявка #{id} в пути", sub: "Уже едет к тебе." },
+  delivered: { emoji: "📦", title: "Кастом-заявка #{id} доставлена", sub: "Забирай!" },
+  completed: { emoji: "💚", title: "Кастом-заявка #{id} завершена", sub: "Спасибо!" },
+};
+
+async function sendStatusNotification(
+  userId: string | number,
+  cfg: { emoji: string; title: string; sub?: string },
+  id: number
+): Promise<void> {
+  const text = `${cfg.emoji} <b>${cfg.title.replace("{id}", String(id))}</b>${cfg.sub ? `\n\n${cfg.sub}` : ""}`;
+  try {
+    await bot.api.sendMessage(userId, text, {
+      parse_mode: "HTML",
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "📜 Открыть историю", web_app: { url: WEB_APP_URL } }],
+        ],
+      },
+    });
+  } catch (e) {
+    const err = e instanceof Error ? e.message : String(e);
+    if (isUserBlocked(err)) markBotUserBlocked(userId);
+    console.error(`[notify] failed for ${userId} #${id}:`, err);
+  }
+}
+
+export async function notifyOrderStatusChange(userId: string | number, orderId: number, status: string): Promise<void> {
+  const cfg = ORDER_STATUS_TEXT[status];
+  if (!cfg) return;
+  await sendStatusNotification(userId, cfg, orderId);
+}
+
+export async function notifyCustomOrderStatusChange(userId: string | number, customOrderId: number, status: string): Promise<void> {
+  const cfg = CUSTOM_STATUS_TEXT[status];
+  if (!cfg) return;
+  await sendStatusNotification(userId, cfg, customOrderId);
+}
+
+// ── Cart abandonment reminder ────────────────────────────────────────────
+// Cron-таск: каждый час смотрит cart_items старше 24h без активного заказа,
+// шлёт юзеру напоминание (но не чаще 1 раза в 7 дней на юзера).
+
+export async function notifyCartAbandonment(userId: string | number, itemsCount: number, total: number): Promise<void> {
+  const text =
+    `🛒 <b>Твоя корзина ждёт</b>\n\n` +
+    `${itemsCount} ${itemsCount === 1 ? "вещь" : itemsCount < 5 ? "вещи" : "вещей"} на сумму <b>${total} $</b>. ` +
+    `Готов оформить?`;
+  try {
+    await bot.api.sendMessage(userId, text, {
+      parse_mode: "HTML",
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "🛍 Открыть корзину", web_app: { url: WEB_APP_URL } }],
+        ],
+      },
+    });
+  } catch (e) {
+    const err = e instanceof Error ? e.message : String(e);
+    if (isUserBlocked(err)) markBotUserBlocked(userId);
+  }
+}
+
+// ── New product in subscribed category ───────────────────────────────────
+
+export async function notifyNewArrival(
+  userId: string | number,
+  productName: string,
+  productId: number,
+  categoryName: string,
+  imageUrl: string | null
+): Promise<void> {
+  const text =
+    `🔥 <b>Новинка в категории «${categoryName}»</b>\n\n` +
+    `${productName} — только что добавили в каталог. Залетай первым.`;
+  try {
+    if (imageUrl) {
+      await bot.api.sendPhoto(userId, toPhotoSource(imageUrl), {
+        caption: text,
+        parse_mode: "HTML",
+        reply_markup: {
+          inline_keyboard: [[{ text: "🛍 Открыть каталог", web_app: { url: `${WEB_APP_URL}#product=${productId}` } }]],
+        },
+      });
+    } else {
+      await bot.api.sendMessage(userId, text, {
+        parse_mode: "HTML",
+        reply_markup: {
+          inline_keyboard: [[{ text: "🛍 Открыть каталог", web_app: { url: WEB_APP_URL } }]],
+        },
+      });
+    }
+  } catch (e) {
+    const err = e instanceof Error ? e.message : String(e);
+    if (isUserBlocked(err)) markBotUserBlocked(userId);
+  }
+}
+
+// ── Drop teaser ──────────────────────────────────────────────────────
+
+export async function notifyDrop(
+  userId: string | number,
+  title: string,
+  description: string,
+  phase: "24h" | "1h" | "5min" | "live",
+  dropTime: number
+): Promise<void> {
+  let header = "";
+  switch (phase) {
+    case "24h":
+      header = `🔥 <b>Drop через 24 часа: ${escapeHtml(title)}</b>`;
+      break;
+    case "1h":
+      header = `⏰ <b>Drop через 1 час: ${escapeHtml(title)}</b>`;
+      break;
+    case "5min":
+      header = `🚨 <b>5 минут до дропа: ${escapeHtml(title)}</b>`;
+      break;
+    case "live":
+      header = `⚡ <b>${escapeHtml(title)} — LIVE сейчас</b>`;
+      break;
+  }
+  const tail =
+    phase === "live"
+      ? "Залетай в каталог — первые получают первые слоты."
+      : `Старт: ${new Date(dropTime).toLocaleString("ru-RU")}.`;
+  const text = `${header}\n\n${description ? escapeHtml(description) + "\n\n" : ""}${tail}`;
+  try {
+    await bot.api.sendMessage(userId, text, {
+      parse_mode: "HTML",
+      reply_markup: {
+        inline_keyboard: [[{ text: "🛍 Открыть каталог", web_app: { url: WEB_APP_URL } }]],
+      },
+    });
+  } catch (e) {
+    const err = e instanceof Error ? e.message : String(e);
+    if (isUserBlocked(err)) markBotUserBlocked(userId);
+  }
+}
+
+function escapeHtml(s: string): string {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 // ── Bot lifecycle ──────────────────────────────────────────────────────────
 
 // Глобальный middleware: любой апдейт от любого юзера → запоминаем.
@@ -299,7 +456,25 @@ bot.use(async (ctx, next) => {
 });
 
 bot.command("start", async (ctx) => {
-  await ctx.reply("👕 Добро пожаловать в RAW — магазин одежды.", {
+  const userId = ctx.from?.id;
+  // /start ref_<USERID> — реферальная ссылка
+  const payload = (ctx.match || "").trim();
+  if (userId && payload.startsWith("ref_")) {
+    const referrer = payload.slice(4);
+    if (referrer && referrer !== String(userId)) {
+      try {
+        const exists = db
+          .prepare("SELECT 1 FROM referrals WHERE invited_user_id = ?")
+          .get(String(userId));
+        if (!exists) {
+          db.prepare(
+            "INSERT INTO referrals (referrer_user_id, invited_user_id) VALUES (?, ?)"
+          ).run(referrer, String(userId));
+        }
+      } catch {}
+    }
+  }
+  await ctx.reply("👕 Добро пожаловать в RAW — магазин одежды.\n\nКоманды:\n/shop — каталог\n/track — статус заказа\n/profile — твой профиль\n/size — твой размер\n/referral — пригласить друга\n/help — поддержка", {
     reply_markup: {
       inline_keyboard: [
         [{ text: "🛍 Открыть каталог", web_app: { url: WEB_APP_URL } }],
@@ -316,6 +491,154 @@ bot.command("shop", async (ctx) => {
       ],
     },
   });
+});
+
+// /track — статус последнего активного заказа (catalog или custom)
+bot.command("track", async (ctx) => {
+  const userId = ctx.from?.id;
+  if (!userId) return;
+  const order = db
+    .prepare(
+      "SELECT id, status, total, created_at FROM orders WHERE user_id = ? AND status != 'completed' ORDER BY created_at DESC LIMIT 1"
+    )
+    .get(String(userId)) as { id: number; status: string; total: number; created_at: string } | undefined;
+  const custom = db
+    .prepare(
+      "SELECT id, status, created_at FROM custom_orders WHERE user_id = ? AND status NOT IN ('completed', 'review') ORDER BY created_at DESC LIMIT 1"
+    )
+    .get(String(userId)) as { id: number; status: string; created_at: string } | undefined;
+  if (!order && !custom) {
+    await ctx.reply("📭 У тебя нет активных заказов.\n\nТапни <b>«Открыть каталог»</b>, чтобы оформить первый.", {
+      parse_mode: "HTML",
+      reply_markup: {
+        inline_keyboard: [[{ text: "🛍 Открыть каталог", web_app: { url: WEB_APP_URL } }]],
+      },
+    });
+    return;
+  }
+  const lines: string[] = ["<b>Активные заказы</b>", ""];
+  if (order) {
+    const cfg = ORDER_STATUS_TEXT[order.status];
+    lines.push(
+      `${cfg?.emoji ?? "📦"} Заказ #${order.id} — <b>${cfg?.title.replace("{id}", String(order.id)) ?? order.status}</b>`,
+      `Сумма: ${order.total} $ · от ${new Date(order.created_at).toLocaleDateString("ru")}`,
+      ""
+    );
+  }
+  if (custom) {
+    const cfg = CUSTOM_STATUS_TEXT[custom.status];
+    lines.push(
+      `${cfg?.emoji ?? "✨"} Кастом #${custom.id} — <b>${cfg?.title.replace("{id}", String(custom.id)) ?? custom.status}</b>`,
+      `от ${new Date(custom.created_at).toLocaleDateString("ru")}`
+    );
+  }
+  await ctx.reply(lines.join("\n"), {
+    parse_mode: "HTML",
+    reply_markup: {
+      inline_keyboard: [[{ text: "📜 История", web_app: { url: WEB_APP_URL } }]],
+    },
+  });
+});
+
+// /profile — сводка
+bot.command("profile", async (ctx) => {
+  const userId = ctx.from?.id;
+  if (!userId) return;
+  const ordersCount = db
+    .prepare("SELECT COUNT(*) as c FROM orders WHERE user_id = ?")
+    .get(String(userId)) as { c: number };
+  const customsCount = db
+    .prepare("SELECT COUNT(*) as c FROM custom_orders WHERE user_id = ? AND status != 'review'")
+    .get(String(userId)) as { c: number };
+  const totalSpent = db
+    .prepare("SELECT COALESCE(SUM(total), 0) as t FROM orders WHERE user_id = ? AND status = 'completed'")
+    .get(String(userId)) as { t: number };
+  const points = db
+    .prepare("SELECT COALESCE(balance, 0) as b FROM loyalty_points WHERE user_id = ?")
+    .get(String(userId)) as { b: number } | undefined;
+  const totalCount = ordersCount.c + customsCount.c;
+  const text =
+    `<b>Твой профиль</b>\n\n` +
+    `📦 Заказов: <b>${totalCount}</b> (каталог: ${ordersCount.c}, кастом: ${customsCount.c})\n` +
+    `💵 Потрачено: <b>${totalSpent.t} $</b>\n` +
+    `💎 Бонусов: <b>${points?.b ?? 0}</b>`;
+  await ctx.reply(text, {
+    parse_mode: "HTML",
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "🛍 Открыть RAW", web_app: { url: WEB_APP_URL } }],
+        [{ text: "📜 История", web_app: { url: WEB_APP_URL } }],
+      ],
+    },
+  });
+});
+
+// /size — самый частый размер из прошлых заказов
+bot.command("size", async (ctx) => {
+  const userId = ctx.from?.id;
+  if (!userId) return;
+  const rows = db
+    .prepare("SELECT items FROM orders WHERE user_id = ?")
+    .all(String(userId)) as { items: string }[];
+  const counts: Record<string, number> = {};
+  for (const r of rows) {
+    try {
+      const items = typeof r.items === "string" ? JSON.parse(r.items) : r.items;
+      if (Array.isArray(items)) {
+        for (const it of items) {
+          const s = (it?.size ?? "").toString().trim();
+          if (s) counts[s] = (counts[s] ?? 0) + (Number(it?.quantity) || 1);
+        }
+      }
+    } catch {}
+  }
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  if (sorted.length === 0) {
+    await ctx.reply("📐 У тебя ещё нет заказов — мы не знаем твой размер.\n\nЗакажи первую вещь, и в следующий раз я запомню.", {
+      reply_markup: { inline_keyboard: [[{ text: "🛍 Открыть каталог", web_app: { url: WEB_APP_URL } }]] },
+    });
+    return;
+  }
+  const main = sorted[0];
+  const others = sorted.slice(1, 3).map(([s, n]) => `${s} (×${n})`);
+  const text =
+    `📐 <b>Твой размер: ${main[0]}</b>\n\n` +
+    `Заказывал ${main[1]} ${main[1] === 1 ? "раз" : "раза"}.` +
+    (others.length ? `\n\nТакже встречались: ${others.join(", ")}` : "");
+  await ctx.reply(text, { parse_mode: "HTML" });
+});
+
+// /help — открыть страницу поддержки в WebApp
+bot.command("help", async (ctx) => {
+  await ctx.reply(
+    "❓ <b>Нужна помощь?</b>\n\n" +
+      "Открой раздел <b>Поддержка</b> в приложении — там самые частые вопросы.\n" +
+      "Или просто напиши сюда — мы всегда на связи.",
+    {
+      parse_mode: "HTML",
+      reply_markup: {
+        inline_keyboard: [[{ text: "💬 Открыть поддержку", web_app: { url: WEB_APP_URL } }]],
+      },
+    }
+  );
+});
+
+// /referral — твоя реферальная ссылка (см. Phase 2)
+bot.command("referral", async (ctx) => {
+  const userId = ctx.from?.id;
+  if (!userId) return;
+  const me = await bot.api.getMe();
+  const link = `https://t.me/${me.username}?start=ref_${userId}`;
+  const stats = db
+    .prepare("SELECT COUNT(*) as c FROM referrals WHERE referrer_user_id = ?")
+    .get(String(userId)) as { c: number } | undefined;
+  await ctx.reply(
+    `🎁 <b>Твоя реферальная ссылка</b>\n\n` +
+      `<code>${link}</code>\n\n` +
+      `Кто пройдёт по ней и сделает первый заказ — оба получите <b>10% скидку</b>.\n\n` +
+      `Приглашено друзей: <b>${stats?.c ?? 0}</b>`,
+    { parse_mode: "HTML" }
+  );
 });
 
 // Любое НЕ-командное текстовое сообщение от пользователя — ловим в админ-чат.

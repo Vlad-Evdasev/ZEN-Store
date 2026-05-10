@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { db } from "../db/schema.js";
+import { notifyCustomOrderStatusChange } from "../bot.js";
 
 export const customOrdersRouter = Router();
 
@@ -26,8 +27,16 @@ customOrdersRouter.patch("/admin/order/:id/status", (req, res) => {
   if (!status || !["review", "pending", "in_transit", "delivered", "completed"].includes(status)) {
     return res.status(400).json({ error: "status must be review, pending, in_transit, delivered or completed" });
   }
+  const before = db
+    .prepare("SELECT user_id, status FROM custom_orders WHERE id = ?")
+    .get(id) as { user_id: string; status: string } | undefined;
+  if (!before) return res.status(404).json({ error: "Custom order not found" });
   const result = db.prepare("UPDATE custom_orders SET status = ? WHERE id = ?").run(status, id);
   if (result.changes === 0) return res.status(404).json({ error: "Custom order not found" });
+  // Не шлём пуш для перехода в 'review' (админский черновик) и при no-op
+  if (before.status !== status && status !== "review") {
+    notifyCustomOrderStatusChange(before.user_id, id, status).catch(() => {});
+  }
   res.json({ ok: true });
 });
 

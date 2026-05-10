@@ -12,6 +12,11 @@ import { adminRouter, usersHeartbeatRouter } from "./routes/admin.js";
 import { categoriesRouter } from "./routes/categories.js";
 import { postsRouter } from "./routes/posts.js";
 import { supportRouter } from "./routes/support.js";
+import {
+  engagementRouter,
+  runCartAbandonmentSweep,
+  runDropTeaserSweep,
+} from "./routes/engagement.js";
 import { db } from "./db/schema.js";
 
 const app = express();
@@ -33,6 +38,7 @@ app.use("/api/users", usersHeartbeatRouter);
 app.use("/api/categories", categoriesRouter);
 app.use("/api/posts", postsRouter);
 app.use("/api/support", supportRouter);
+app.use("/api/engagement", engagementRouter);
 
 app.get("/api/health", (_req, res) => {
   try {
@@ -49,8 +55,33 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
   res.status(500).json({ error: err instanceof Error ? err.message : "Internal server error" });
 });
 
+// Cron-задачи: cart-abandonment sweep + drop teasers + apply referral signups.
+// Запускаем сразу при старте, потом каждый час. Лёгкий setInterval — не для
+// production-cron, но достаточно для одного процесса бэкэнда.
+function startCronJobs() {
+  const HOUR = 60 * 60 * 1000;
+  const tick = async () => {
+    try {
+      const r = await runCartAbandonmentSweep();
+      if (r.sent > 0) console.log(`[cron] cart-abandon sweep: sent=${r.sent}, skipped=${r.skipped}`);
+    } catch (e) {
+      console.error("[cron] cart-abandon failed:", e);
+    }
+    try {
+      const r = await runDropTeaserSweep();
+      if (r.sent > 0) console.log(`[cron] drop-teaser sweep: sent=${r.sent}`);
+    } catch (e) {
+      console.error("[cron] drop-teaser failed:", e);
+    }
+  };
+  // Прогон при старте — но через 30 секунд после, чтобы дождаться готовности БД.
+  setTimeout(tick, 30_000);
+  setInterval(tick, HOUR);
+}
+
 export function startServer() {
   app.listen(PORT, () => {
     console.log(`🚀 API running at http://localhost:${PORT}`);
   });
+  startCronJobs();
 }
