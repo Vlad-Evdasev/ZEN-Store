@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect } from "react";
 import {
   getPosts,
   togglePostLike,
@@ -14,8 +14,6 @@ interface NewArrivalsPageProps {
   onInitialPostHandled?: () => void;
 }
 
-// Микрокэш постов в localStorage — показываем последний снимок мгновенно,
-// потом тихо обновляем с бэка. Скелетон видят только новые юзеры.
 const POSTS_CACHE_KEY = "raw_cache_v1:posts";
 function readPostsCache(): Post[] | null {
   if (typeof window === "undefined") return null;
@@ -33,8 +31,8 @@ function writePostsCache(posts: Post[]): void {
 
 // ── Иконки ──────────────────────────────────────────────────────────
 
-// Классический канцелярский пушпин — простая чистая форма, узнаваемая.
-function PinIcon({ filled, size = 22 }: { filled: boolean; size?: number }) {
+// Классический канцелярский пушпин — outline и filled варианты.
+function PinIcon({ filled, size = 26 }: { filled: boolean; size?: number }) {
   if (filled) {
     return (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -50,7 +48,7 @@ function PinIcon({ filled, size = 22 }: { filled: boolean; size?: number }) {
   );
 }
 
-function ShareIcon({ size = 22 }: { size?: number }) {
+function ShareIcon({ size = 26 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
@@ -76,9 +74,6 @@ function getPostImages(post: Post): string[] {
 }
 
 // ── Pinterest masonry card ───────────────────────────────────────────
-// Чистая плитка: один <img> в normal flow (без position: absolute, иначе
-// обёртка схлопывалась в 0 и пост с >1 фото вообще не показывался).
-// Свайп переключает src — простой и надёжный путь.
 
 interface MasonryCardProps {
   post: Post;
@@ -90,13 +85,18 @@ function MasonryCard({ post, onOpen }: MasonryCardProps) {
   const isMulti = images.length > 1;
   const [currentIdx, setCurrentIdx] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
   const touchStartX = useRef<number | null>(null);
   const touchMoveDx = useRef(0);
 
   if (images.length === 0) return null;
 
   const handleClick = () => {
-    const rect = ref.current?.getBoundingClientRect() ?? null;
+    // Берём rect самой картинки (не всей карточки) — анимация морфит
+    // именно изображение, а не carrier-блок.
+    const rect = imgRef.current?.getBoundingClientRect()
+      ?? ref.current?.getBoundingClientRect()
+      ?? null;
     onOpen(post, rect, images[currentIdx], currentIdx);
   };
 
@@ -149,6 +149,7 @@ function MasonryCard({ post, onOpen }: MasonryCardProps) {
     >
       <div style={cardStyles.imageWrap}>
         <img
+          ref={imgRef}
           key={currentIdx}
           src={images[currentIdx]}
           alt=""
@@ -179,11 +180,13 @@ function MasonryCard({ post, onOpen }: MasonryCardProps) {
 }
 
 // ── Expanded fullscreen view ─────────────────────────────────────────
-// Простая надёжная анимация: backdrop fade-in + sheet fade + slide-up.
-// Без морфа из thumb — он давал «дёрганое» открытие на разных размерах.
+// FLIP-анимация: при открытии картинка стартует в координатах thumb-а
+// (через инверсный transform), затем плавно «расправляется» до своих
+// финальных размеров на экране. На закрытии — обратная анимация.
 
 interface ExpandedViewProps {
   post: Post;
+  startRect: DOMRect | null;
   startSrc: string;
   startIndex: number;
   userId: string;
@@ -193,7 +196,7 @@ interface ExpandedViewProps {
   onShare: (post: Post) => void;
 }
 
-function ExpandedView({ post, startSrc, startIndex, userId, lang, onClose, onPinToggle, onShare }: ExpandedViewProps) {
+function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onClose, onPinToggle, onShare }: ExpandedViewProps) {
   const images = getPostImages(post);
   const [currentIdx, setCurrentIdx] = useState(Math.min(startIndex, Math.max(images.length - 1, 0)));
   const [phase, setPhase] = useState<"opening" | "open" | "closing">("opening");
@@ -204,21 +207,75 @@ function ExpandedView({ post, startSrc, startIndex, userId, lang, onClose, onPin
   const dragDirection = useRef<"horizontal" | "vertical" | null>(null);
   const [dragY, setDragY] = useState(0);
   const sheetRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
 
-  // На следующий кадр после маунта переключаемся в "open" — CSS-transition
-  // плавно покажет sheet через opacity + translateY.
-  useEffect(() => {
-    const r = requestAnimationFrame(() => {
+  // Для optimistic-пина с защитой от race-condition.
+  const reqVersion = useRef(0);
+
+  // FLIP: измеряем где картинка ХОЧЕТ оказаться, считаем дельту до
+  // thumb-а, накладываем её через transform мгновенно, потом отпускаем
+  // — CSS-transition сам анимирует transform → identity.
+  useLayoutEffect(() => {
+    const img = imageRef.current;
+    if (!img || !startRect) {
+      // Если rect-а нет (deep-link, без thumb-а) — просто фейдим.
+      requestAnimationFrame(() => requestAnimationFrame(() => setPhase("open")));
+      return;
+    }
+    const apply = () => {
+      const final = img.getBoundingClientRect();
+      if (final.width === 0 || final.height === 0) return;
+      const dx = startRect.left - final.left;
+      const dy = startRect.top - final.top;
+      const sx = startRect.width / final.width;
+      const sy = startRect.height / final.height;
+      img.style.transformOrigin = "top left";
+      img.style.transition = "none";
+      img.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
+      // Force reflow перед очисткой transition + transform = identity.
+      void img.offsetWidth;
+      img.style.transition = "transform 320ms cubic-bezier(0.22, 1, 0.36, 1)";
+      img.style.transform = "translate3d(0, 0, 0) scale(1, 1)";
       requestAnimationFrame(() => setPhase("open"));
-    });
-    return () => cancelAnimationFrame(r);
+    };
+    if (img.complete && img.naturalWidth > 0) {
+      apply();
+    } else {
+      // Картинка ещё грузится — ждём, иначе getBoundingClientRect даст
+      // 0×0 и анимация сорвётся.
+      const onLoad = () => {
+        img.removeEventListener("load", onLoad);
+        apply();
+      };
+      img.addEventListener("load", onLoad);
+      // Запасной таймаут на случай, если картинка кешированная и
+      // load уже отстрелил между маунтом и addEventListener.
+      const t = setTimeout(apply, 50);
+      return () => { img.removeEventListener("load", onLoad); clearTimeout(t); };
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const requestClose = useCallback(() => {
     if (phase === "closing") return;
+    const img = imageRef.current;
+    if (!img || !startRect) {
+      setPhase("closing");
+      setTimeout(onClose, 240);
+      return;
+    }
+    // Обратная FLIP: считаем текущую позицию картинки, целевая — thumb.
+    const final = img.getBoundingClientRect();
+    const dx = startRect.left - final.left;
+    const dy = startRect.top - final.top;
+    const sx = startRect.width / Math.max(final.width, 1);
+    const sy = startRect.height / Math.max(final.height, 1);
+    img.style.transformOrigin = "top left";
+    img.style.transition = "transform 280ms cubic-bezier(0.4, 0, 0.2, 1)";
+    img.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
     setPhase("closing");
-    setTimeout(() => onClose(), 240);
-  }, [phase, onClose]);
+    setTimeout(onClose, 280);
+  }, [phase, onClose, startRect]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") requestClose(); };
@@ -231,16 +288,29 @@ function ExpandedView({ post, startSrc, startIndex, userId, lang, onClose, onPin
     };
   }, [requestClose]);
 
+  // Пин с защитой от race condition. Каждый вызов получает новую версию;
+  // при возврате с сети применяем ответ, только если версия не устарела.
+  // Это решает баг «при быстрых нажатиях пин ломается» — даже если
+  // ответы приходят не в том порядке, оптимистичный стейт остаётся
+  // консистентным.
   const handlePin = async () => {
+    const myVersion = ++reqVersion.current;
     const wasPinned = post.user_liked;
     const prevCount = post.likes_count;
+    const newPinned = !wasPinned;
+
     window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.("light");
-    onPinToggle(post.id, !wasPinned, wasPinned ? prevCount - 1 : prevCount + 1);
+    onPinToggle(post.id, newPinned, wasPinned ? prevCount - 1 : prevCount + 1);
+
     try {
       const result = await togglePostLike(post.id, userId);
-      onPinToggle(post.id, result.liked, result.likes_count);
+      if (myVersion === reqVersion.current) {
+        onPinToggle(post.id, result.liked, result.likes_count);
+      }
     } catch {
-      onPinToggle(post.id, wasPinned, prevCount);
+      if (myVersion === reqVersion.current) {
+        onPinToggle(post.id, wasPinned, prevCount);
+      }
     }
   };
 
@@ -249,10 +319,6 @@ function ExpandedView({ post, startSrc, startIndex, userId, lang, onClose, onPin
     onShare(post);
   };
 
-  // Touch: горизонтальный свайп (только если касание началось НЕ во время
-  // вертикального скролла) листает фото; вертикальный вниз > 100px при
-  // sheetRef.scrollTop === 0 закрывает. Направление фиксируем по первым
-  // 8px движения, чтобы не путать.
   const onTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
@@ -296,12 +362,8 @@ function ExpandedView({ post, startSrc, startIndex, userId, lang, onClose, onPin
     }
   };
 
-  const sheetTransform = (() => {
-    if (phase === "open") return `translate3d(0, ${dragY}px, 0)`;
-    return "translate3d(0, 24px, 0)";
-  })();
-  const sheetOpacity = phase === "open" ? Math.max(0.4, 1 - dragY / 600) : 0;
-  const backdropOpacity = phase === "open" ? Math.max(0.3, 1 - dragY / 500) : 0;
+  // Для closing — sheet/backdrop тоже фейдятся вместе с обратной FLIP.
+  const backdropOpacity = phase === "closing" ? 0 : (phase === "open" ? Math.max(0.3, 1 - dragY / 500) : 0);
 
   return (
     <div
@@ -311,10 +373,7 @@ function ExpandedView({ post, startSrc, startIndex, userId, lang, onClose, onPin
         ...expandedStyles.root,
         background: `rgba(var(--bg-rgb), ${0.98 * backdropOpacity})`,
         pointerEvents: phase === "closing" ? "none" : "auto",
-        opacity: phase === "closing" ? 0 : 1,
-        transition: phase === "closing"
-          ? "opacity 240ms ease, background 240ms ease"
-          : "background 220ms ease",
+        transition: "background 280ms cubic-bezier(0.4, 0, 0.2, 1)",
       }}
     >
       <div
@@ -325,14 +384,16 @@ function ExpandedView({ post, startSrc, startIndex, userId, lang, onClose, onPin
         onTouchEnd={onTouchEnd}
         style={{
           ...expandedStyles.sheet,
-          transform: sheetTransform,
-          opacity: sheetOpacity,
-          transition: dragY === 0
-            ? "transform 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease"
-            : "none",
+          transform: `translate3d(0, ${dragY}px, 0)`,
+          opacity: phase === "closing" ? 0 : (phase === "open" ? 1 : 0),
+          transition: phase === "open"
+            ? (dragY === 0 ? "opacity 320ms ease, transform 260ms cubic-bezier(0.22, 1, 0.36, 1)" : "none")
+            : "opacity 280ms cubic-bezier(0.4, 0, 0.2, 1)",
+          // На фазе opening/closing UI-элементы (кроме картинки) скрыты,
+          // чтобы не перекрывать FLIP-анимацию.
+          visibility: phase === "opening" ? "hidden" : "visible",
         }}
       >
-        {/* Floating back button — сверху, поверх фото */}
         <button
           type="button"
           onClick={requestClose}
@@ -342,11 +403,9 @@ function ExpandedView({ post, startSrc, startIndex, userId, lang, onClose, onPin
           <BackArrowIcon size={20} />
         </button>
 
-        {/* Hero image — width 100%, высота естественная (без max-height-бутылочного
-            горлышка). Если пост с несколькими фото, рендерим один <img> и
-            свайпом меняем src — никаких absolute-стопок, всё в нормальном flow. */}
         <div style={expandedStyles.imageArea}>
           <img
+            ref={imageRef}
             key={currentIdx}
             src={images[currentIdx] ?? startSrc}
             alt=""
@@ -368,27 +427,28 @@ function ExpandedView({ post, startSrc, startIndex, userId, lang, onClose, onPin
           )}
         </div>
 
-        {/* Action row: пин слева (только иконка), шер справа */}
+        {/* Action row: голые иконки, без круглых кнопок-бэкграундов.
+            Пин в активном состоянии — заполненный в accent. */}
         <div style={expandedStyles.actionsRow}>
           <button
             type="button"
             onClick={handlePin}
             style={{
-              ...expandedStyles.actionIconBtn,
-              ...(post.user_liked ? expandedStyles.actionIconBtnPinned : null),
+              ...expandedStyles.iconBtn,
+              color: post.user_liked ? "var(--accent)" : "var(--text)",
             }}
             aria-pressed={post.user_liked}
             aria-label={post.user_liked ? t(lang, "postPinned") : t(lang, "postPin")}
           >
-            <PinIcon filled={post.user_liked} size={22} />
+            <PinIcon filled={post.user_liked} size={28} />
           </button>
           <button
             type="button"
             onClick={handleShare}
-            style={{ ...expandedStyles.actionIconBtn, marginLeft: "auto" }}
+            style={{ ...expandedStyles.iconBtn, marginLeft: "auto" }}
             aria-label={t(lang, "postShare")}
           >
-            <ShareIcon size={22} />
+            <ShareIcon size={26} />
           </button>
         </div>
 
@@ -411,6 +471,10 @@ function ExpandedView({ post, startSrc, startIndex, userId, lang, onClose, onPin
           </div>
         )}
       </div>
+
+      {/* Floating image для FLIP — вынесен поверх sheet, чтобы анимация
+          не перекрывалась загрузкой / paint-ом sheet содержимого.
+          Видим только во время opening/closing — потом скрыт. */}
     </div>
   );
 }
@@ -442,9 +506,8 @@ export function NewArrivalsPage({
   const [posts, setPosts] = useState<Post[]>(() => readPostsCache() ?? []);
   const [loading, setLoading] = useState<boolean>(() => (readPostsCache() ?? []).length === 0);
   const [tab, setTab] = useState<FilterTab>("all");
-  const [expanded, setExpanded] = useState<{ post: Post; src: string; index: number } | null>(null);
+  const [expanded, setExpanded] = useState<{ post: Post; rect: DOMRect | null; src: string; index: number } | null>(null);
 
-  // Память скролла — переключение через FAB не теряет позицию в каждом из табов.
   const scrollMemory = useRef<Record<FilterTab, number>>({ all: 0, liked: 0 });
 
   useEffect(() => {
@@ -471,7 +534,7 @@ export function NewArrivalsPage({
     const target = posts.find((p) => p.id === initialPostId);
     if (!target) return;
     const cover = getPostImages(target)[0] ?? "";
-    setExpanded({ post: target, src: cover, index: 0 });
+    setExpanded({ post: target, rect: null, src: cover, index: 0 });
     onInitialPostHandled?.();
   }, [initialPostId, posts, onInitialPostHandled]);
 
@@ -500,12 +563,6 @@ export function NewArrivalsPage({
 
     let shareUrl: string;
     if (bot) {
-      // Старый-добрый t.me/<bot>?start=<param> формат — Telegram у получателя
-      // ОБЯЗАТЕЛЬНО открывает чат с ботом + передаёт payload в /start.
-      // Дальше бот ловит /start post_42 и отдаёт inline-кнопку «Открыть пост»
-      // → юзер один раз тапает → попадает в Mini App на нужном посте.
-      // Это надёжнее, чем t.me/<bot>/<short>?startapp=, который у части
-      // клиентов открывал не Mini App, а просто чат с ботом без payload.
       shareUrl = `https://t.me/${bot}?start=${encodeURIComponent(startParam)}`;
     } else if (typeof window !== "undefined") {
       shareUrl = `${window.location.origin}${window.location.pathname}#post=${post.id}`;
@@ -551,6 +608,17 @@ export function NewArrivalsPage({
 
   return (
     <div style={pageStyles.wrap} className="zen-inspire-page">
+      {/* Welcome bubble — компактный, всегда сверху */}
+      <div style={pageStyles.headerArea}>
+        <div style={pageStyles.bubbleRow}>
+          <div style={pageStyles.avatar}>R</div>
+          <div style={pageStyles.bubbleMain}>
+            <div style={pageStyles.bubbleTitle}>{t(lang, "postsInspireTitle")}</div>
+            <div style={pageStyles.bubbleSubtitle}>{t(lang, "postsInspireSubtitle")}</div>
+          </div>
+        </div>
+      </div>
+
       {loading && (
         <div className="zen-pin-grid">
           <SkeletonCard index={0} />
@@ -575,13 +643,12 @@ export function NewArrivalsPage({
             <MasonryCard
               key={post.id}
               post={post}
-              onOpen={(p, _rect, src, index) => setExpanded({ post: p, src, index })}
+              onOpen={(p, rect, src, index) => setExpanded({ post: p, rect, src, index })}
             />
           ))}
         </div>
       )}
 
-      {/* FAB: переключатель Всё ↔ Закреплённые с памятью скролла */}
       {!loading && posts.length > 0 && (
         <button
           type="button"
@@ -605,6 +672,7 @@ export function NewArrivalsPage({
       {expanded && (
         <ExpandedView
           post={expanded.post}
+          startRect={expanded.rect}
           startSrc={expanded.src}
           startIndex={expanded.index}
           userId={userId}
@@ -624,6 +692,53 @@ const pageStyles: Record<string, React.CSSProperties> = {
   wrap: {
     width: "100%",
     padding: "8px 0 calc(96px + env(safe-area-inset-bottom, 0px))",
+  },
+  headerArea: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 6,
+    marginBottom: 10,
+    padding: "0 8px",
+  },
+  bubbleRow: {
+    display: "flex",
+    alignItems: "flex-end",
+    gap: 8,
+  },
+  avatar: {
+    width: 30,
+    height: 30,
+    borderRadius: "50%",
+    background: "var(--accent)",
+    color: "#fff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 12,
+    fontWeight: 800,
+    letterSpacing: "0.06em",
+    flexShrink: 0,
+  },
+  bubbleMain: {
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: "16px 16px 16px 4px",
+    padding: "10px 13px",
+    maxWidth: "86%",
+    boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
+  },
+  bubbleTitle: {
+    fontSize: 14,
+    fontWeight: 600,
+    lineHeight: 1.2,
+    letterSpacing: "-0.01em",
+    color: "var(--text)",
+  },
+  bubbleSubtitle: {
+    fontSize: 12,
+    color: "var(--muted)",
+    marginTop: 3,
+    lineHeight: 1.4,
   },
   empty: {
     textAlign: "center" as const,
@@ -762,7 +877,6 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     background: "var(--bg)",
     overflowY: "auto" as const,
     overflowX: "hidden" as const,
-    transformOrigin: "center top",
     willChange: "transform, opacity",
     display: "flex",
     flexDirection: "column" as const,
@@ -788,9 +902,6 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     WebkitTapHighlightColor: "transparent",
     boxShadow: "0 2px 8px rgba(0, 0, 0, 0.22)",
   },
-  // Картинка — в нормальном flow, width 100%, высота естественная
-  // (без max-height-бутылочного-горлышка). Длинная пикча просто
-  // даст возможность скроллить sheet вниз — это ок и ожидаемо.
   imageArea: {
     position: "relative" as const,
     width: "100%",
@@ -804,6 +915,7 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     objectFit: "contain" as const,
     userSelect: "none" as const,
     WebkitUserSelect: "none" as const,
+    willChange: "transform",
   },
   dotsRow: {
     position: "absolute" as const,
@@ -831,19 +943,19 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     width: 18,
     borderRadius: 3,
   },
+  // Action row: голые иконки без круглых кнопок-фонов.
   actionsRow: {
     flex: "0 0 auto",
     display: "flex",
     alignItems: "center",
-    gap: 12,
-    padding: "14px 18px 4px",
+    gap: 14,
+    padding: "16px 20px 6px",
   },
-  actionIconBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: "50%",
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
+  iconBtn: {
+    background: "transparent",
+    border: "none",
+    padding: 6,
+    margin: -6,
     color: "var(--text)",
     cursor: "pointer",
     display: "inline-flex",
@@ -851,16 +963,11 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     justifyContent: "center",
     fontFamily: "inherit",
     WebkitTapHighlightColor: "transparent",
-    transition: "background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.08s ease",
-  },
-  actionIconBtnPinned: {
-    background: "var(--accent)",
-    color: "#fff",
-    borderColor: "var(--accent)",
+    transition: "color 0.15s ease, transform 0.08s ease",
   },
   captionWrap: {
     flex: "0 0 auto",
-    padding: "8px 18px 4px",
+    padding: "8px 20px 4px",
   },
   caption: {
     fontSize: 14.5,
@@ -871,7 +978,7 @@ const expandedStyles: Record<string, React.CSSProperties> = {
   },
   productCtaWrap: {
     flex: "0 0 auto",
-    padding: "10px 18px calc(env(safe-area-inset-bottom, 0px) + 18px)",
+    padding: "10px 20px calc(env(safe-area-inset-bottom, 0px) + 18px)",
   },
   productCta: {
     display: "inline-block",
