@@ -15,12 +15,19 @@ const tonConnectManifestUrl =
     ? `${window.location.origin}/tonconnect-manifest.json`
     : "/tonconnect-manifest.json";
 
+// Админка не использует TON Connect — оборачиваем провайдером только
+// клиентское приложение. Это и быстрее (TonConnect не грузится в
+// админ-бандле), и не падает, если у админ-роута нет TG-контекста.
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <TonConnectUIProvider manifestUrl={tonConnectManifestUrl}>
-      <SettingsProvider>
-        {isAdmin ? <Admin /> : <App />}
-      </SettingsProvider>
-    </TonConnectUIProvider>
+    <SettingsProvider>
+      {isAdmin ? (
+        <Admin />
+      ) : (
+        <TonConnectUIProvider manifestUrl={tonConnectManifestUrl}>
+          <App />
+        </TonConnectUIProvider>
+      )}
+    </SettingsProvider>
   </React.StrictMode>
 );
