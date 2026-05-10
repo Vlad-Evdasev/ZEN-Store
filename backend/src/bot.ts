@@ -797,7 +797,38 @@ bot.on("message:photo", async (ctx) => {
   saveIncomingMessage(ctx.from.id, ctx.message.message_id, caption, imageUrl);
 });
 
+// Регистрация команд + menu button в TG. Запускается при старте бота
+// (асинхронно, ошибки не валим — это «приятная мелочь», не критика).
+async function configureBotMenu(): Promise<void> {
+  try {
+    // Список slash-команд — появляется при тапе на «Menu» или вводе «/»
+    await bot.api.setMyCommands([
+      { command: "start", description: "Главная" },
+      { command: "shop", description: "Каталог" },
+      { command: "track", description: "Статус заказа" },
+      { command: "profile", description: "Профиль и бонусы" },
+      { command: "size", description: "Твой размер" },
+      { command: "referral", description: "Пригласить друга" },
+      { command: "help", description: "Поддержка" },
+    ]);
+    // Persistent menu button слева от поля ввода — открывает WebApp
+    // одним тапом из любого диалога, без необходимости скроллить
+    // вверх к /start.
+    await bot.api.setChatMenuButton({
+      menu_button: {
+        type: "web_app",
+        text: "Открыть RAW",
+        web_app: { url: `${WEB_APP_URL}#page=catalog` },
+      },
+    });
+    console.log("✅ Bot menu configured (commands + menu button)");
+  } catch (e) {
+    console.error("Failed to configure bot menu:", e instanceof Error ? e.message : e);
+  }
+}
+
 export function startBot() {
   bot.start();
   console.log("🤖 Bot is running");
+  configureBotMenu();
 }
