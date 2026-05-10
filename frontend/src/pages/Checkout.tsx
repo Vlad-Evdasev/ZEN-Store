@@ -148,12 +148,16 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
     // Фолбэк ведём НЕ на бота (юзер уже в боте), а на живого админа.
     // Иначе кнопка молча открывала чат с самим ботом — выглядело как баг.
     const base = sellerLink || "https://t.me/krot_eno";
-    const parts = items.map((i) => {
-      const line = [i.name].concat(i.size ? [`размер ${i.size}`] : []).join(", ");
-      const img = i.image_url || "";
-      return img ? `${line}\n${img}` : line;
-    });
-    const text = parts.join("\n\n");
+    // В тексте — только название и размер. Раньше тащили image_url, и для
+    // base64-картинок (загруженных через админку как data:image/...) в чат
+    // улетала километровая строка — выглядело как мусор. Картинку продавец
+    // и так увидит в админке по номеру заказа.
+    const parts = items.map((i) =>
+      [i.name, i.size ? `размер ${i.size}` : null].filter(Boolean).join(", ")
+    );
+    const text = parts.length > 0
+      ? `Здравствуйте! Только что оформил заказ:\n\n${parts.map((p) => `· ${p}`).join("\n")}`
+      : "";
     const sep = base.includes("?") ? "&" : "?";
     const url = text ? `${base}${sep}text=${encodeURIComponent(text)}` : base;
     // Внутри Telegram WebApp обычный window.open для t.me/* блокируется

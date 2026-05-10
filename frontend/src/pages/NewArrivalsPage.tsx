@@ -105,10 +105,10 @@ function PostCard({
   };
 
   return (
-    <div style={isMulti ? cardStyles.cardLarge : cardStyles.card}>
+    <div style={cardStyles.card}>
       {images.length > 0 && (
         <div
-          style={isMulti ? cardStyles.imageWrapLarge : cardStyles.imageWrap}
+          style={cardStyles.imageWrap}
           onClick={() => onPreview(images[currentIdx])}
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
@@ -333,23 +333,17 @@ export function NewArrivalsPage({
 
       {!loading && posts.length > 0 && (
         <div style={pageStyles.feedGrid}>
-          {posts.map((post) => {
-            const isMulti = (post.images?.length ?? 0) > 1;
-            return (
-              <div
-                key={post.id}
-                style={isMulti ? pageStyles.gridItemFull : pageStyles.gridItem}
-              >
-                <PostCard
-                  post={post}
-                  userId={userId}
-                  lang={lang}
-                  onPreview={setPreviewImage}
-                  onLikeToggle={handleLikeToggle}
-                />
-              </div>
-            );
-          })}
+          {posts.map((post) => (
+            <div key={post.id} style={pageStyles.gridItem}>
+              <PostCard
+                post={post}
+                userId={userId}
+                lang={lang}
+                onPreview={setPreviewImage}
+                onLikeToggle={handleLikeToggle}
+              />
+            </div>
+          ))}
         </div>
       )}
 
@@ -444,10 +438,6 @@ const pageStyles: Record<string, React.CSSProperties> = {
   gridItem: {
     minWidth: 0,
   },
-  gridItemFull: {
-    gridColumn: "1 / -1",
-    minWidth: 0,
-  },
   empty: {
     display: "flex",
     alignItems: "center",
@@ -468,28 +458,11 @@ const cardStyles: Record<string, React.CSSProperties> = {
     borderRadius: 14,
     overflow: "hidden",
   },
-  /* Большая карточка под мульти-фото пост — занимает всю ширину
-     ленты, картинка чуть выше (4:5) для драматичной подачи. */
-  cardLarge: {
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: 18,
-    overflow: "hidden",
-    boxShadow: "0 10px 30px -16px rgba(0, 0, 0, 0.16)",
-  },
   imageWrap: {
     position: "relative" as const,
     width: "100%",
     cursor: "pointer",
     overflow: "hidden",
-  },
-  imageWrapLarge: {
-    position: "relative" as const,
-    width: "100%",
-    aspectRatio: "4 / 5",
-    cursor: "pointer",
-    overflow: "hidden",
-    background: "#0a0a08",
   },
   image: {
     width: "100%",

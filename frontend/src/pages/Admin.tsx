@@ -43,9 +43,6 @@ import {
   getPromoCodes,
   createPromoCode,
   deletePromoCode,
-  getDrops,
-  createDrop,
-  deleteDrop,
   getBotAnalytics,
   getSegmentCount,
   markOrderPaid,
@@ -61,7 +58,6 @@ import {
   type BotMessage,
   type SupportEntry,
   type PromoCode,
-  type DropItem,
   type BotAnalytics,
 } from "../api";
 
@@ -92,7 +88,7 @@ function StatusPill({ status }: { status: string }) {
   return <span className={`admin-status admin-status--${c.variant}`}>{c.label}</span>;
 }
 
-function NavIcon({ tab }: { tab: "home" | "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" | "promo" | "drops" | "analytics" }) {
+function NavIcon({ tab }: { tab: "home" | "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" | "promo" | "analytics" }) {
   switch (tab) {
     case "home":
       return (<svg viewBox="0 0 24 24" aria-hidden><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="5" rx="1"/><rect x="13" y="10" width="8" height="11" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/></svg>);
@@ -116,8 +112,6 @@ function NavIcon({ tab }: { tab: "home" | "products" | "categories" | "orders" |
       return (<svg viewBox="0 0 24 24" aria-hidden><circle cx="12" cy="12" r="9"/><path d="M9.1 9.5a3 3 0 015.8 1c0 1.5-1.5 2-2.4 2.5-.4.2-.5.5-.5.9V14"/><circle cx="12" cy="17" r="0.5" fill="currentColor"/></svg>);
     case "promo":
       return (<svg viewBox="0 0 24 24" aria-hidden><path d="M20.6 11.4 12.7 3.5a1.5 1.5 0 0 0-1-.5H5a2 2 0 0 0-2 2v6.7a1.5 1.5 0 0 0 .4 1l8 8a2 2 0 0 0 2.8 0l6.4-6.4a2 2 0 0 0 0-2.9Z"/><circle cx="7.5" cy="7.5" r="1" fill="currentColor"/></svg>);
-    case "drops":
-      return (<svg viewBox="0 0 24 24" aria-hidden><path d="M12 2v6"/><path d="m4.93 10.93 4.24 4.24"/><path d="M2 18h20"/><path d="M19.07 10.93 14.83 15.17"/><path d="M12 22a4 4 0 0 0 4-4H8a4 4 0 0 0 4 4z"/></svg>);
     case "analytics":
       return (<svg viewBox="0 0 24 24" aria-hidden><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-7"/></svg>);
   }
@@ -133,7 +127,7 @@ function telegramChatLink(username?: string | null, userId?: string): string {
   return "#";
 }
 
-type Tab = "home" | "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" | "promo" | "drops" | "analytics";
+type Tab = "home" | "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" | "promo" | "analytics";
 
 /** Хедер-eyebrow в topbar: показывает раздел в стиле «OPS / ORDERS». */
 function tabEyebrow(tab: Tab): string {
@@ -149,7 +143,6 @@ function tabEyebrow(tab: Tab): string {
     case "posts": return "MARKETING / POSTS";
     case "channel": return "MARKETING / BROADCAST";
     case "promo": return "MARKETING / PROMO";
-    case "drops": return "MARKETING / DROPS";
     case "support": return "CONTENT / SUPPORT";
   }
 }
@@ -364,9 +357,6 @@ export function Admin() {
           <button type="button" onClick={() => setTabAndReset("promo")} className={`admin-nav-btn ${tab === "promo" ? "active" : ""}`}>
             <NavIcon tab="promo" /> Промокоды
           </button>
-          <button type="button" onClick={() => setTabAndReset("drops")} className={`admin-nav-btn ${tab === "drops" ? "active" : ""}`}>
-            <NavIcon tab="drops" /> Дропы
-          </button>
 
           <div className="admin-nav-section">Content</div>
           <button type="button" onClick={() => setTabAndReset("support")} className={`admin-nav-btn ${tab === "support" ? "active" : ""}`}>
@@ -473,10 +463,6 @@ export function Admin() {
 
       {tab === "promo" && (
         <PromoTab adminSecret={adminSecret} />
-      )}
-
-      {tab === "drops" && (
-        <DropsTab adminSecret={adminSecret} products={products} />
       )}
 
       {tab === "analytics" && (
@@ -2287,6 +2273,47 @@ function ChannelTab({ adminSecret, products }: { adminSecret: string; products: 
   );
 }
 
+// Уменьшаем загруженный файл на канвасе до разумного размера и кодируем
+// в data:image/jpeg. Без даунскейла оригинальные фото с телефона/камеры
+// (5–10 МБ) превращались бы в base64-простыню по 13–15 МБ, а после
+// каждый запрос за каталогом тащил бы их по сети целиком. Целимся в
+// MAX_DIM по большей стороне и качество ~0.85 — на глаз неотличимо
+// от исходника на product card, при этом ~150–400 КБ.
+async function fileToDataUrlDownscaled(file: File, maxDim = 1600, quality = 0.85): Promise<string> {
+  // Маленькие picture-файлы (< 200KB) пропускаем как есть — нет смысла
+  // ресайзить «логотипы», PNG-стикеры и т.п.
+  if (file.size < 200 * 1024) {
+    return await new Promise<string>((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(String(r.result));
+      r.onerror = () => rej(new Error("Не удалось прочитать файл"));
+      r.readAsDataURL(file);
+    });
+  }
+  const dataUrl = await new Promise<string>((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(String(r.result));
+    r.onerror = () => rej(new Error("Не удалось прочитать файл"));
+    r.readAsDataURL(file);
+  });
+  const img = await new Promise<HTMLImageElement>((res, rej) => {
+    const im = new Image();
+    im.onload = () => res(im);
+    im.onerror = () => rej(new Error("Не удалось распознать картинку"));
+    im.src = dataUrl;
+  });
+  const ratio = Math.min(1, maxDim / Math.max(img.width, img.height));
+  const w = Math.round(img.width * ratio);
+  const h = Math.round(img.height * ratio);
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas недоступен");
+  ctx.drawImage(img, 0, 0, w, h);
+  return canvas.toDataURL("image/jpeg", quality);
+}
+
 function ProductsTab({
   products,
   categories,
@@ -2317,6 +2344,9 @@ function ProductsTab({
   const [imageUrls, setImageUrls] = useState<string[]>(["", "", "", "", ""]);
   const [category, setCategory] = useState(defaultCategory);
   const [sizes, setSizes] = useState("S,M,L,XL");
+  // Сколько слотов сейчас «заняты» загрузкой файла — чтобы блокировать
+  // submit и подсвечивать прогресс конкретного слота.
+  const [uploadingSlot, setUploadingSlot] = useState<number | null>(null);
 
   useEffect(() => {
     if (categories.length > 0 && !categories.some((c) => c.code === category)) {
@@ -2445,25 +2475,80 @@ function ProductsTab({
               <input type="text" value={sizes} onChange={(e) => setSizes(e.target.value)} placeholder="S,M,L,XL" style={styles.input} />
             </label>
             <div className="admin-field admin-field--full">
-              <span className="admin-field-label">Картинки (до 5 URL)</span>
-              <span className="admin-field-hint">Первая картинка станет главной — она показывается в каталоге и постах</span>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 4 }}>
-                {[0, 1, 2, 3, 4].map((i) => (
-                  <input
-                    key={i}
-                    type="text"
-                    value={imageUrls[i] ?? ""}
-                    onChange={(e) => setImageUrls((prev) => { const n = [...prev]; n[i] = e.target.value; return n; })}
-                    placeholder={i === 0 ? "https://... (обязательно)" : `Картинка ${i + 1} (необязательно)`}
-                    style={styles.input}
-                  />
-                ))}
+              <span className="admin-field-label">Картинки (до 5)</span>
+              <span className="admin-field-hint">Первая картинка станет главной. Можно вставить ссылку или загрузить файл с устройства — он автоматически уменьшится до 1600px.</span>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 6 }}>
+                {[0, 1, 2, 3, 4].map((i) => {
+                  const value = imageUrls[i] ?? "";
+                  const hasValue = value.trim().length > 0;
+                  const isUploading = uploadingSlot === i;
+                  const onPick = async (file: File) => {
+                    setUploadingSlot(i);
+                    setMessage("");
+                    try {
+                      const dataUrl = await fileToDataUrlDownscaled(file);
+                      setImageUrls((prev) => { const n = [...prev]; n[i] = dataUrl; return n; });
+                    } catch (err) {
+                      setMessage("Ошибка загрузки: " + (err instanceof Error ? err.message : ""));
+                    } finally {
+                      setUploadingSlot(null);
+                    }
+                  };
+                  return (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      {hasValue ? (
+                        <img
+                          src={value}
+                          alt=""
+                          style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 6, border: "1px solid var(--border)", flexShrink: 0 }}
+                          onError={(e) => { (e.target as HTMLImageElement).style.opacity = "0.3"; }}
+                        />
+                      ) : (
+                        <div style={{ width: 44, height: 44, borderRadius: 6, border: "1px dashed var(--border)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: 11, fontWeight: 600 }}>
+                          {i + 1}
+                        </div>
+                      )}
+                      <input
+                        type="text"
+                        value={value.startsWith("data:") ? "" : value}
+                        onChange={(e) => setImageUrls((prev) => { const n = [...prev]; n[i] = e.target.value; return n; })}
+                        placeholder={value.startsWith("data:") ? "Загружено с устройства" : i === 0 ? "https://... или загрузи файл" : `Картинка ${i + 1}`}
+                        disabled={value.startsWith("data:")}
+                        style={{ ...styles.input, flex: 1, minWidth: 0 }}
+                      />
+                      <label style={{ ...styles.smallBtn, height: 36, padding: "0 10px", display: "inline-flex", alignItems: "center", cursor: isUploading ? "wait" : "pointer", opacity: isUploading ? 0.6 : 1 }}>
+                        {isUploading ? "…" : "Файл"}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          style={{ display: "none" }}
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            e.target.value = "";
+                            if (f) void onPick(f);
+                          }}
+                        />
+                      </label>
+                      {hasValue && (
+                        <button
+                          type="button"
+                          onClick={() => setImageUrls((prev) => { const n = [...prev]; n[i] = ""; return n; })}
+                          style={{ ...styles.smallBtn, height: 36, width: 36, padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                          aria-label="Убрать картинку"
+                          title="Убрать"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
           <div style={styles.formActions}>
-            <button type="submit" disabled={submitting} style={styles.submit}>
-              {submitting ? "Сохраняю…" : editingId ? "Сохранить" : "Добавить товар"}
+            <button type="submit" disabled={submitting || uploadingSlot !== null} style={styles.submit}>
+              {submitting ? "Сохраняю…" : uploadingSlot !== null ? "Загружаю фото…" : editingId ? "Сохранить" : "Добавить товар"}
             </button>
             {editingId && <button type="button" onClick={cancelEdit} style={styles.cancelBtn}>Отмена</button>}
           </div>
@@ -3310,158 +3395,6 @@ function PromoTab({ adminSecret }: { adminSecret: string }) {
               ))}
             </tbody>
           </table>
-        )}
-      </section>
-    </>
-  );
-}
-
-// ── Live drops ───────────────────────────────────────────────────────
-
-function DropsTab({ adminSecret, products }: { adminSecret: string; products: Product[] }) {
-  const [list, setList] = useState<DropItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState("");
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [dropAt, setDropAt] = useState("");
-  const [productIds, setProductIds] = useState<number[]>([]);
-
-  const load = () => {
-    setLoading(true);
-    getDrops()
-      .then(setList)
-      .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { load(); }, []);
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim() || !dropAt) {
-      setMessage("Заполни название и время");
-      return;
-    }
-    setMessage("");
-    try {
-      await createDrop(
-        { title: title.trim(), description, drop_at: new Date(dropAt).toISOString(), product_ids: productIds },
-        adminSecret
-      );
-      setMessage("Дроп запланирован");
-      setTitle("");
-      setDescription("");
-      setDropAt("");
-      setProductIds([]);
-      load();
-    } catch (e) {
-      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
-    }
-  };
-
-  const handleDelete = async (id: number) => {
-    if (!confirm("Удалить дроп?")) return;
-    try {
-      await deleteDrop(id, adminSecret);
-      load();
-    } catch (e) {
-      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
-    }
-  };
-
-  const toggleProduct = (id: number) => {
-    setProductIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  };
-
-  if (loading) return <p style={styles.hint}>Загрузка...</p>;
-
-  return (
-    <>
-      <div className="admin-page-head">
-        <div className="admin-page-head-text">
-          <h2>Дропы</h2>
-          <p className="admin-page-head-sub">
-            Запланируй релиз товаров: бот разошлёт тизеры за 24 ч / 1 ч / 5 мин до старта и live-пуш в момент дропа.
-          </p>
-        </div>
-      </div>
-      {message && <p style={styles.message}>{message}</p>}
-
-      <section className="admin-card">
-        <div className="admin-card-head"><h3>Новый дроп</h3></div>
-        <form onSubmit={handleCreate} className="admin-card-body" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <label className="admin-field">
-            <span className="admin-field-label">Название *</span>
-            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="SS26 Capsule" style={styles.input} />
-          </label>
-          <label className="admin-field">
-            <span className="admin-field-label">Описание</span>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Лимитка из 30 худи. First come — first served." style={{ ...styles.input, height: "auto", minHeight: 64 }} />
-          </label>
-          <label className="admin-field">
-            <span className="admin-field-label">Дата и время старта (локальное) *</span>
-            <input type="datetime-local" value={dropAt} onChange={(e) => setDropAt(e.target.value)} style={{ ...styles.input, width: 240 }} />
-          </label>
-          <div className="admin-field">
-            <span className="admin-field-label">Товары в дропе</span>
-            <span className="admin-field-hint">Опционально. Юзеры всё равно получат пуш — но если выберешь, в будущем сможем линковать сразу на товар.</span>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
-              {products.map((p) => {
-                const on = productIds.includes(p.id);
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => toggleProduct(p.id)}
-                    style={{
-                      ...styles.smallBtn,
-                      background: on ? "var(--text)" : "var(--surface)",
-                      color: on ? "#fff" : "var(--text-2)",
-                      borderColor: on ? "var(--text)" : "var(--border)",
-                    }}
-                  >
-                    {p.name}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <div style={styles.formActions}>
-            <button type="submit" style={styles.submit}>Запланировать дроп</button>
-          </div>
-        </form>
-      </section>
-
-      <section className="admin-card">
-        <div className="admin-card-head">
-          <h3>Запланированные / прошедшие</h3>
-          <span className="admin-card-head-meta">{list.length}</span>
-        </div>
-        {list.length === 0 ? (
-          <div className="admin-empty" style={{ borderRadius: 0, border: "none" }}>
-            <p className="admin-empty-title">Дропов нет</p>
-            <p className="admin-empty-sub">Запланируй первый через форму выше</p>
-          </div>
-        ) : (
-          <div className="admin-card-body" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {list.map((d) => {
-              const dt = new Date(d.drop_at);
-              const isPast = dt.getTime() < Date.now();
-              return (
-                <div key={d.id} style={{ border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: 14, display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{d.title}</div>
-                    {d.description && <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 4 }}>{d.description}</div>}
-                    <div style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 4, fontVariantNumeric: "tabular-nums" }}>
-                      {dt.toLocaleString("ru")} · {isPast ? (d.live_sent_at ? "live-пуш отправлен" : "прошёл") : "запланирован"}
-                    </div>
-                  </div>
-                  <button type="button" onClick={() => handleDelete(d.id)} style={styles.deleteBtn}>Удалить</button>
-                </div>
-              );
-            })}
-          </div>
         )}
       </section>
     </>
