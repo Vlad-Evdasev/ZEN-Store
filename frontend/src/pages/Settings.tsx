@@ -182,8 +182,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   pointsValue: {
     fontSize: 36,
-    fontWeight: 800,
-    letterSpacing: "-0.024em",
+    fontWeight: 500,
+    letterSpacing: "-0.012em",
     fontVariantNumeric: "tabular-nums",
     color: "var(--text)",
   },
@@ -244,7 +244,7 @@ const styles: Record<string, React.CSSProperties> = {
   refCopyBtn: {
     height: 32,
     padding: "0 14px",
-    background: "var(--text)",
+    background: "var(--accent)",
     color: "#fff",
     border: "none",
     borderRadius: 8,
