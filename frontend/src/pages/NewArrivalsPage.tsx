@@ -10,11 +10,7 @@ import { t } from "../i18n";
 interface NewArrivalsPageProps {
   userId: string;
   onBack: () => void;
-  /** Если задан — открыть указанный пост сразу при маунте. Прокидывается
-   *  из App.tsx, который читает deep-link (start_param бота / URL #post=N). */
   initialPostId?: number | null;
-  /** Зовётся когда initialPostId успешно открыт — родитель может сбросить
-   *  его в null, чтобы повторный визит на вкладку не открывал тот же пост. */
   onInitialPostHandled?: () => void;
 }
 
@@ -62,27 +58,15 @@ function ShareIcon({ size = 22 }: { size?: number }) {
   );
 }
 
-function CloseIcon({ size = 22 }: { size?: number }) {
+function BackArrowIcon({ size = 22 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="6" y1="6" x2="18" y2="18" />
-      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="19" y1="12" x2="5" y2="12" />
+      <polyline points="12 19 5 12 12 5" />
     </svg>
   );
 }
 
-function formatPostDate(dateStr: string, lang: Lang): string {
-  const months: Record<string, string[]> = {
-    ru: ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"],
-    en: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-  };
-  const d = new Date(dateStr);
-  const day = d.getDate();
-  const monthArr = months[lang] ?? months.ru;
-  return `${day} ${monthArr[d.getMonth()]}`;
-}
-
-// Извлекаем images-массив из поста, поддерживая legacy single-image поля.
 function getPostImages(post: Post): string[] {
   if (post.images && post.images.length > 0) return post.images;
   const legacy = post.image_data || post.image_url;
@@ -90,24 +74,67 @@ function getPostImages(post: Post): string[] {
 }
 
 // ── Pinterest masonry card ───────────────────────────────────────────
-// Никаких overlay-кнопок: чистая плитка с фото и (если мульти) счётчиком
-// «1/3» в углу. Всё остальное — лайк, поделиться, caption — в expanded view.
+// Чистая плитка: фото на всю карточку, опциональная подпись в одну
+// строку под ним (truncate). Для мульти-фото — внутрикарточный свайп
+// и точки-индикатор поверх изображения снизу. Размер карточки не
+// меняется в зависимости от кол-ва фото.
 
 interface MasonryCardProps {
   post: Post;
-  onOpen: (post: Post, thumbRect: DOMRect | null, src: string) => void;
+  onOpen: (post: Post, thumbRect: DOMRect | null, src: string, photoIndex: number) => void;
 }
 
 function MasonryCard({ post, onOpen }: MasonryCardProps) {
   const images = getPostImages(post);
-  const cover = images[0];
+  const isMulti = images.length > 1;
+  const [currentIdx, setCurrentIdx] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef<number | null>(null);
+  const touchMoveDx = useRef(0);
 
-  if (!cover) return null;
+  if (images.length === 0) return null;
 
   const handleClick = () => {
     const rect = ref.current?.getBoundingClientRect() ?? null;
-    onOpen(post, rect, cover);
+    onOpen(post, rect, images[currentIdx], currentIdx);
+  };
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (!isMulti) return;
+    touchStartX.current = e.touches[0].clientX;
+    touchMoveDx.current = 0;
+  };
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (!isMulti || touchStartX.current === null) return;
+    touchMoveDx.current = e.touches[0].clientX - touchStartX.current;
+  };
+  const onTouchEnd = () => {
+    if (!isMulti || touchStartX.current === null) {
+      touchStartX.current = null;
+      return;
+    }
+    const dx = touchMoveDx.current;
+    touchStartX.current = null;
+    // Если свайп >40px — переключаем фото и НЕ открываем expanded.
+    if (Math.abs(dx) > 40) {
+      setCurrentIdx((prev) => {
+        if (dx < 0) return Math.min(images.length - 1, prev + 1);
+        return Math.max(0, prev - 1);
+      });
+    }
+  };
+
+  // Click обрабатывает только тапы (короткие, без существенного движения).
+  // Свайп — управляется в onTouchEnd выше; чтобы tap после свайпа не
+  // открывал карточку, ставим preventDefault через capture на click.
+  const handleClickGuarded = (e: React.MouseEvent) => {
+    if (Math.abs(touchMoveDx.current) > 10) {
+      e.preventDefault();
+      e.stopPropagation();
+      touchMoveDx.current = 0;
+      return;
+    }
+    handleClick();
   };
 
   return (
@@ -115,33 +142,63 @@ function MasonryCard({ post, onOpen }: MasonryCardProps) {
       ref={ref}
       role="button"
       tabIndex={0}
-      onClick={handleClick}
+      onClick={handleClickGuarded}
       onKeyDown={(e) => { if (e.key === "Enter") handleClick(); }}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
       className="zen-pin-card"
       style={cardStyles.card}
     >
-      <img src={cover} alt="" style={cardStyles.image} loading="lazy" />
-      {images.length > 1 && (
-        <span style={cardStyles.multiBadge} aria-label={`${images.length} фото`}>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
-            <rect x="8" y="3" width="13" height="13" rx="2" />
-            <path d="M16 16v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h3" />
-          </svg>
-          {images.length}
-        </span>
+      <div style={cardStyles.imageWrap}>
+        {/* Все слайды стопкой; активный — opacity 1 (cross-fade при свайпе) */}
+        {images.map((src, i) => (
+          <img
+            key={i}
+            src={src}
+            alt=""
+            loading={i === 0 ? "eager" : "lazy"}
+            style={{
+              ...cardStyles.image,
+              ...(isMulti ? cardStyles.imageStacked : null),
+              opacity: isMulti ? (i === currentIdx ? 1 : 0) : 1,
+            }}
+          />
+        ))}
+        {/* Точки-индикатор (только для мульти) */}
+        {isMulti && (
+          <div style={cardStyles.dotsRow} aria-hidden>
+            {images.map((_, i) => (
+              <span
+                key={i}
+                style={{
+                  ...cardStyles.dot,
+                  ...(i === currentIdx ? cardStyles.dotActive : null),
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+      {post.caption && (
+        <div style={cardStyles.captionLine} title={post.caption}>
+          {post.caption}
+        </div>
       )}
     </div>
   );
 }
 
-// ── Expanded post view ───────────────────────────────────────────────
-// Pinterest-style: карточка «выезжает» из своего thumb-положения в
-// полноэкранный sheet. Pull-down закрывает.
+// ── Expanded fullscreen view ─────────────────────────────────────────
+// Полноэкранный оверлей. Картинка в центре (contain), кнопки лайк+шер
+// под ним, ниже — описание. Свайпы листают фото. Открытие — Pinterest-
+// style морф из thumb-rect.
 
 interface ExpandedViewProps {
   post: Post;
   startRect: DOMRect | null;
   startSrc: string;
+  startIndex: number;
   userId: string;
   lang: Lang;
   onClose: () => void;
@@ -149,18 +206,20 @@ interface ExpandedViewProps {
   onShare: (post: Post) => void;
 }
 
-function ExpandedView({ post, startRect, startSrc, userId, lang, onClose, onLikeToggle, onShare }: ExpandedViewProps) {
+function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onClose, onLikeToggle, onShare }: ExpandedViewProps) {
   const images = getPostImages(post);
-  const [currentIdx, setCurrentIdx] = useState(0);
+  const [currentIdx, setCurrentIdx] = useState(Math.min(startIndex, images.length - 1));
   const [phase, setPhase] = useState<"opening" | "open" | "closing">("opening");
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const touchMoveDx = useRef(0);
+  const touchMoveDy = useRef(0);
+  const dragDirection = useRef<"horizontal" | "vertical" | null>(null);
+  const [dragX, setDragX] = useState(0);
   const [dragY, setDragY] = useState(0);
-  const dragStartY = useRef<number | null>(null);
-  const dragActive = useRef(false);
-  const sheetRef = useRef<HTMLDivElement>(null);
 
-  // Анимация открытия: при первом маунте размещаем thumb-картинку в её
-  // исходных экранных координатах, затем на следующем кадре «отпускаем» —
-  // CSS transition сам её переносит в финальное состояние (полный экран).
+  // Pinterest-style морф: при первом маунте размещаем sheet в координатах
+  // thumb-картинки, на следующем кадре — в финальное состояние (full-screen).
   useLayoutEffect(() => {
     const r = requestAnimationFrame(() => {
       requestAnimationFrame(() => setPhase("open"));
@@ -168,13 +227,10 @@ function ExpandedView({ post, startRect, startSrc, userId, lang, onClose, onLike
     return () => cancelAnimationFrame(r);
   }, []);
 
-  // Закрытие: меняем фазу на "closing" → CSS возвращает картинку к
-  // её исходному thumb-rect, потом окончательно демонтируем компонент.
   const requestClose = useCallback(() => {
     if (phase === "closing") return;
     setPhase("closing");
-    const TIMEOUT = 280;
-    setTimeout(() => onClose(), TIMEOUT);
+    setTimeout(() => onClose(), 280);
   }, [phase, onClose]);
 
   // Esc + блокировка скролла body пока открыто
@@ -189,7 +245,6 @@ function ExpandedView({ post, startRect, startSrc, userId, lang, onClose, onLike
     };
   }, [requestClose]);
 
-  // Лайк с оптимистичным апдейтом + хаптик-фидбек.
   const handleLike = async () => {
     const wasLiked = post.user_liked;
     const prevCount = post.likes_count;
@@ -205,46 +260,72 @@ function ExpandedView({ post, startRect, startSrc, userId, lang, onClose, onLike
   };
 
   const handleShare = () => {
-    const tg = window.Telegram?.WebApp;
-    tg?.HapticFeedback?.selectionChanged?.();
+    window.Telegram?.WebApp?.HapticFeedback?.selectionChanged?.();
     onShare(post);
   };
 
-  // Pull-to-close: тянем sheet вниз, при превышении порога — закрываем.
+  // Touch handlers: горизонтальный свайп = листание фото; вертикальный
+  // вниз > 100px = закрытие. Направление фиксируем по первым ~10px,
+  // чтобы свайп фото не путался с pull-to-close.
   const onTouchStart = (e: React.TouchEvent) => {
-    // Только если касание началось у верхней части sheet и нет горизонтального
-    // свайпа (для свайпа фоток мы используем стрелки/тап на края).
-    if ((sheetRef.current?.scrollTop ?? 0) > 0) return;
-    dragStartY.current = e.touches[0].clientY;
-    dragActive.current = true;
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    touchMoveDx.current = 0;
+    touchMoveDy.current = 0;
+    dragDirection.current = null;
   };
   const onTouchMove = (e: React.TouchEvent) => {
-    if (!dragActive.current || dragStartY.current === null) return;
-    const dy = e.touches[0].clientY - dragStartY.current;
-    if (dy > 0) setDragY(dy);
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const dx = e.touches[0].clientX - touchStartX.current;
+    const dy = e.touches[0].clientY - touchStartY.current;
+    touchMoveDx.current = dx;
+    touchMoveDy.current = dy;
+    if (dragDirection.current === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+      dragDirection.current = Math.abs(dx) > Math.abs(dy) ? "horizontal" : "vertical";
+    }
+    if (dragDirection.current === "horizontal" && images.length > 1) {
+      setDragX(dx);
+    } else if (dragDirection.current === "vertical" && dy > 0) {
+      setDragY(dy);
+    }
   };
   const onTouchEnd = () => {
-    dragActive.current = false;
-    if (dragY > 100) {
-      requestClose();
+    const dx = touchMoveDx.current;
+    const dy = touchMoveDy.current;
+    const dir = dragDirection.current;
+    touchStartX.current = null;
+    touchStartY.current = null;
+    touchMoveDx.current = 0;
+    touchMoveDy.current = 0;
+    dragDirection.current = null;
+    setDragX(0);
+
+    if (dir === "horizontal" && Math.abs(dx) > 60 && images.length > 1) {
+      setCurrentIdx((prev) => {
+        if (dx < 0) return Math.min(images.length - 1, prev + 1);
+        return Math.max(0, prev - 1);
+      });
+    }
+    if (dir === "vertical") {
+      if (dy > 100) {
+        requestClose();
+      } else {
+        setDragY(0);
+      }
     } else {
       setDragY(0);
     }
-    dragStartY.current = null;
   };
 
-  // Размеры экрана для целевой геометрии.
+  // Размеры экрана для геометрии морфа
   const vw = typeof window !== "undefined" ? window.innerWidth : 0;
   const vh = typeof window !== "undefined" ? window.innerHeight : 0;
 
-  // Хитрая часть: для opening/closing phase мы хотим, чтобы sheet
-  // визуально «вырастал» из позиции thumb. Делаем это через transform.
   const sheetTransform = (() => {
     if (phase === "open") {
       return `translate3d(0, ${dragY}px, 0) scale(1)`;
     }
     if (!startRect || vw === 0) return "translate3d(0, 100%, 0) scale(0.92)";
-    // Считаем translate так, чтобы центр sheet оказался в центре thumb.
     const targetCx = startRect.left + startRect.width / 2;
     const targetCy = startRect.top + startRect.height / 2;
     const sheetCx = vw / 2;
@@ -263,15 +344,11 @@ function ExpandedView({ post, startRect, startSrc, userId, lang, onClose, onLike
       aria-modal="true"
       style={{
         ...expandedStyles.root,
-        background: `rgba(0, 0, 0, ${0.78 * backdropOpacity})`,
-        backdropFilter: phase === "open" ? `blur(${12 * backdropOpacity}px)` : "blur(0px)",
-        WebkitBackdropFilter: phase === "open" ? `blur(${12 * backdropOpacity}px)` : "blur(0px)",
+        background: `rgba(0, 0, 0, ${0.95 * backdropOpacity})`,
         pointerEvents: phase === "closing" ? "none" : "auto",
       }}
-      onClick={requestClose}
     >
       <div
-        ref={sheetRef}
         onClick={(e) => e.stopPropagation()}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
@@ -283,86 +360,91 @@ function ExpandedView({ post, startRect, startSrc, userId, lang, onClose, onLike
           transition: "transform 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease",
         }}
       >
-        {/* Drag-handle — визуальная подсказка что можно тянуть вниз */}
-        <div style={expandedStyles.dragHandle} aria-hidden />
-
-        {/* Hero image */}
-        <div style={expandedStyles.imageWrap}>
-          <img
-            src={images[currentIdx] ?? startSrc}
-            alt=""
-            style={expandedStyles.image}
-          />
-          {images.length > 1 && (
-            <>
-              <span style={expandedStyles.counter}>
-                {currentIdx + 1} / {images.length}
-              </span>
-              {currentIdx > 0 && (
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); setCurrentIdx((p) => Math.max(0, p - 1)); }}
-                  style={{ ...expandedStyles.nav, left: 12 }}
-                  aria-label="Предыдущее"
-                >‹</button>
-              )}
-              {currentIdx < images.length - 1 && (
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); setCurrentIdx((p) => Math.min(images.length - 1, p + 1)); }}
-                  style={{ ...expandedStyles.nav, right: 12 }}
-                  aria-label="Следующее"
-                >›</button>
-              )}
-            </>
-          )}
+        {/* Top bar: back arrow слева */}
+        <div style={expandedStyles.topBar}>
           <button
             type="button"
             onClick={requestClose}
-            style={expandedStyles.closeBtn}
-            aria-label="Закрыть"
+            style={expandedStyles.backBtn}
+            aria-label="Назад"
           >
-            <CloseIcon />
+            <BackArrowIcon />
           </button>
         </div>
 
-        {/* Action bar */}
-        <div style={expandedStyles.body}>
-          <div style={expandedStyles.actionsRow}>
-            <button
-              type="button"
-              onClick={handleLike}
-              style={{
-                ...expandedStyles.actionBtn,
-                ...(post.user_liked ? expandedStyles.actionBtnActive : null),
-              }}
-              aria-pressed={post.user_liked}
-              aria-label={t(lang, "postLike")}
-            >
-              <HeartIcon filled={post.user_liked} />
-              <span style={expandedStyles.actionLabel}>
-                {post.likes_count > 0 ? post.likes_count : t(lang, "postLike")}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={handleShare}
-              style={expandedStyles.actionBtn}
-              aria-label={t(lang, "postShare")}
-            >
-              <ShareIcon />
-              <span style={expandedStyles.actionLabel}>{t(lang, "postShare")}</span>
-            </button>
-            <span style={expandedStyles.dateInline}>
-              {formatPostDate(post.created_at, lang)}
-            </span>
+        {/* Hero image area */}
+        <div style={expandedStyles.imageArea}>
+          <div style={{
+            ...expandedStyles.imageTrack,
+            transform: `translate3d(${-currentIdx * 100 + (dragX / Math.max(vw, 1)) * 100}%, 0, 0)`,
+            transition: dragX === 0 ? "transform 280ms cubic-bezier(0.22, 1, 0.36, 1)" : "none",
+          }}>
+            {images.length > 0 ? images.map((src, i) => (
+              <div key={i} style={expandedStyles.imageSlide}>
+                <img
+                  src={src}
+                  alt=""
+                  style={expandedStyles.image}
+                  draggable={false}
+                />
+              </div>
+            )) : (
+              <div style={expandedStyles.imageSlide}>
+                <img src={startSrc} alt="" style={expandedStyles.image} draggable={false} />
+              </div>
+            )}
           </div>
-
-          {post.caption && (
-            <p style={expandedStyles.caption}>{post.caption}</p>
+          {images.length > 1 && (
+            <div style={expandedStyles.dotsRow} aria-hidden>
+              {images.map((_, i) => (
+                <span
+                  key={i}
+                  style={{
+                    ...expandedStyles.dot,
+                    ...(i === currentIdx ? expandedStyles.dotActive : null),
+                  }}
+                />
+              ))}
+            </div>
           )}
+        </div>
 
-          {post.product_url && (
+        {/* Action row: only like + share */}
+        <div style={expandedStyles.actionsRow}>
+          <button
+            type="button"
+            onClick={handleLike}
+            style={{
+              ...expandedStyles.actionBtn,
+              ...(post.user_liked ? expandedStyles.actionBtnLiked : null),
+            }}
+            aria-pressed={post.user_liked}
+            aria-label={t(lang, "postLike")}
+          >
+            <HeartIcon filled={post.user_liked} size={24} />
+            {post.likes_count > 0 && (
+              <span style={expandedStyles.actionCount}>{post.likes_count}</span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={handleShare}
+            style={expandedStyles.actionBtn}
+            aria-label={t(lang, "postShare")}
+          >
+            <ShareIcon size={24} />
+          </button>
+        </div>
+
+        {/* Description */}
+        {post.caption && (
+          <div style={expandedStyles.captionWrap}>
+            <p style={expandedStyles.caption}>{post.caption}</p>
+          </div>
+        )}
+
+        {post.product_url && (
+          <div style={expandedStyles.productCtaWrap}>
             <a
               href={post.product_url}
               target="_blank"
@@ -371,8 +453,8 @@ function ExpandedView({ post, startRect, startSrc, userId, lang, onClose, onLike
             >
               {t(lang, "postOpenProduct")} →
             </a>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -386,7 +468,7 @@ function SkeletonCard({ index = 0 }: { index?: number }) {
   const h = SKELETON_HEIGHTS[index % SKELETON_HEIGHTS.length];
   return (
     <div className="zen-pin-card" style={{ ...cardStyles.card, padding: 0 }}>
-      <div style={{ ...cardStyles.image, height: h, background: "var(--surface-2, rgba(255,255,255,0.05))" }} />
+      <div style={{ width: "100%", height: h, background: "var(--surface-2, rgba(255,255,255,0.05))" }} />
     </div>
   );
 }
@@ -405,7 +487,7 @@ export function NewArrivalsPage({
   const [posts, setPosts] = useState<Post[]>(() => readPostsCache() ?? []);
   const [loading, setLoading] = useState<boolean>(() => (readPostsCache() ?? []).length === 0);
   const [tab, setTab] = useState<FilterTab>("all");
-  const [expanded, setExpanded] = useState<{ post: Post; rect: DOMRect | null; src: string } | null>(null);
+  const [expanded, setExpanded] = useState<{ post: Post; rect: DOMRect | null; src: string; index: number } | null>(null);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -432,7 +514,7 @@ export function NewArrivalsPage({
     const target = posts.find((p) => p.id === initialPostId);
     if (!target) return;
     const cover = getPostImages(target)[0] ?? "";
-    setExpanded({ post: target, rect: null, src: cover });
+    setExpanded({ post: target, rect: null, src: cover, index: 0 });
     onInitialPostHandled?.();
   }, [initialPostId, posts, onInitialPostHandled]);
 
@@ -445,7 +527,6 @@ export function NewArrivalsPage({
             : p
         )
       );
-      // Если в expanded открыт этот же пост — обновляем и его state.
       setExpanded((prev) =>
         prev && prev.post.id === postId
           ? { ...prev, post: { ...prev.post, user_liked: newLiked, likes_count: newCount } }
@@ -463,23 +544,13 @@ export function NewArrivalsPage({
 
     let shareUrl: string;
     if (bot && shortName) {
-      // Каноничная Mini-App ссылка: t.me/<bot>/<short>?startapp=post_42.
-      // Telegram у получателя сам откроет наш WebApp, а мы прочитаем
-      // start_param и автоматически развернём этот пост.
       shareUrl = `https://t.me/${bot}/${shortName}?startapp=${encodeURIComponent(startParam)}`;
     } else if (typeof window !== "undefined") {
-      // Фолбэк — обычный web-URL с hash, для браузера/тестов.
       shareUrl = `${window.location.origin}${window.location.pathname}#post=${post.id}`;
     } else {
       shareUrl = `#post=${post.id}`;
     }
 
-    const shareText = post.caption
-      ? `${post.caption}\n\n${shareUrl}`
-      : shareUrl;
-
-    // Открываем родной Telegram share — пикер контактов с пред-заполненным
-    // текстом + ссылка-превью. Это самый «нативный» путь внутри клиента.
     const tgShareUrl = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}` +
       (post.caption ? `&text=${encodeURIComponent(post.caption)}` : "");
     if (tg?.openTelegramLink) {
@@ -489,7 +560,7 @@ export function NewArrivalsPage({
     } else if (typeof navigator !== "undefined" && navigator.share) {
       navigator.share({ url: shareUrl, text: post.caption || undefined }).catch(() => {});
     } else if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(shareText).catch(() => {});
+      navigator.clipboard.writeText(shareUrl).catch(() => {});
     }
   }, []);
 
@@ -498,20 +569,11 @@ export function NewArrivalsPage({
     return posts;
   }, [posts, tab]);
 
+  const likedCount = useMemo(() => posts.filter((p) => p.user_liked).length, [posts]);
+
   return (
     <div style={pageStyles.wrap}>
-      {/* Header bubble (приветственный) */}
-      <div style={pageStyles.headerArea}>
-        <div style={pageStyles.bubbleRow}>
-          <div style={pageStyles.avatar}>R</div>
-          <div style={pageStyles.bubbleMain}>
-            <div style={pageStyles.bubbleTitle}>{t(lang, "postsInspireTitle")}</div>
-            <div style={pageStyles.bubbleSubtitle}>{t(lang, "postsInspireSubtitle")}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs: Все / Лайки */}
+      {/* Tabs: Все / Лайки — sticky-pills вверху */}
       <div style={pageStyles.tabsRow} role="tablist" aria-label="Фильтр постов">
         {(["all", "liked"] as FilterTab[]).map((key) => {
           const active = tab === key;
@@ -528,17 +590,14 @@ export function NewArrivalsPage({
               }}
             >
               {t(lang, key === "all" ? "postsTabAll" : "postsTabLiked")}
-              {key === "liked" && posts.some((p) => p.user_liked) && (
-                <span style={pageStyles.tabCount}>
-                  {posts.filter((p) => p.user_liked).length}
-                </span>
+              {key === "liked" && likedCount > 0 && (
+                <span style={pageStyles.tabCount}>{likedCount}</span>
               )}
             </button>
           );
         })}
       </div>
 
-      {/* Лента */}
       {loading && (
         <div className="zen-pin-grid">
           <SkeletonCard index={0} />
@@ -563,7 +622,7 @@ export function NewArrivalsPage({
             <MasonryCard
               key={post.id}
               post={post}
-              onOpen={(p, rect, src) => setExpanded({ post: p, rect, src })}
+              onOpen={(p, rect, src, index) => setExpanded({ post: p, rect, src, index })}
             />
           ))}
         </div>
@@ -574,6 +633,7 @@ export function NewArrivalsPage({
           post={expanded.post}
           startRect={expanded.rect}
           startSrc={expanded.src}
+          startIndex={expanded.index}
           userId={userId}
           lang={lang}
           onClose={() => setExpanded(null)}
@@ -591,66 +651,19 @@ const pageStyles: Record<string, React.CSSProperties> = {
   wrap: {
     maxWidth: 720,
     margin: "0 auto",
-    padding: "8px 10px calc(96px + env(safe-area-inset-bottom, 0px))",
-  },
-  headerArea: {
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: 6,
-    marginBottom: 14,
-  },
-  bubbleRow: {
-    display: "flex",
-    alignItems: "flex-end",
-    gap: 8,
-  },
-  avatar: {
-    width: 30,
-    height: 30,
-    borderRadius: "50%",
-    background: "var(--accent)",
-    color: "#fff",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: 12,
-    fontWeight: 800,
-    letterSpacing: "0.06em",
-    flexShrink: 0,
-    marginBottom: 0,
-  },
-  bubbleMain: {
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: "16px 16px 16px 4px",
-    padding: "10px 13px",
-    maxWidth: "86%",
-    boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
-  },
-  bubbleTitle: {
-    fontSize: 15,
-    fontWeight: 600,
-    lineHeight: 1.2,
-    letterSpacing: "-0.01em",
-    color: "var(--text)",
-  },
-  bubbleSubtitle: {
-    fontSize: 12.5,
-    color: "var(--muted)",
-    marginTop: 4,
-    lineHeight: 1.4,
+    padding: "8px 4px calc(96px + env(safe-area-inset-bottom, 0px))",
   },
   tabsRow: {
     display: "flex",
     gap: 8,
-    marginBottom: 14,
-    padding: "0 2px",
+    marginBottom: 8,
+    padding: "0 6px",
   },
   tabBtn: {
     background: "var(--surface)",
     border: "1px solid var(--border)",
     borderRadius: 999,
-    padding: "8px 16px",
+    padding: "8px 18px",
     fontSize: 13,
     fontWeight: 600,
     color: "var(--muted)",
@@ -696,38 +709,74 @@ const cardStyles: Record<string, React.CSSProperties> = {
   card: {
     position: "relative" as const,
     width: "100%",
-    background: "var(--surface)",
-    borderRadius: 14,
+    background: "transparent",
+    borderRadius: 12,
     overflow: "hidden",
     cursor: "pointer",
     breakInside: "avoid",
     WebkitTapHighlightColor: "transparent",
-    transition: "transform 0.18s ease, box-shadow 0.18s ease",
+    transition: "transform 0.15s ease",
+  },
+  imageWrap: {
+    position: "relative" as const,
+    width: "100%",
+    overflow: "hidden",
+    borderRadius: 12,
+    background: "rgba(0,0,0,0.04)",
   },
   image: {
     width: "100%",
     height: "auto",
     display: "block",
     objectFit: "cover" as const,
+    userSelect: "none" as const,
+    WebkitUserSelect: "none" as const,
+    pointerEvents: "none" as const,
   },
-  multiBadge: {
+  imageStacked: {
     position: "absolute" as const,
-    top: 8,
-    right: 8,
-    padding: "4px 8px 4px 6px",
-    background: "rgba(0, 0, 0, 0.6)",
-    color: "#fff",
-    fontSize: 11,
-    fontWeight: 700,
-    fontVariantNumeric: "tabular-nums",
-    letterSpacing: "0.02em",
-    borderRadius: 999,
+    inset: 0,
+    width: "100%",
+    height: "100%",
+    transition: "opacity 0.25s ease",
+  },
+  dotsRow: {
+    position: "absolute" as const,
+    bottom: 8,
+    left: "50%",
+    transform: "translateX(-50%)",
+    display: "flex",
+    gap: 4,
+    padding: "5px 8px",
+    background: "rgba(0,0,0,0.32)",
     backdropFilter: "blur(6px)",
     WebkitBackdropFilter: "blur(6px)",
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 4,
+    borderRadius: 999,
     pointerEvents: "none",
+  },
+  dot: {
+    width: 5,
+    height: 5,
+    borderRadius: "50%",
+    background: "rgba(255,255,255,0.55)",
+    transition: "background 0.15s ease, width 0.15s ease",
+  },
+  dotActive: {
+    background: "#fff",
+    width: 12,
+    borderRadius: 3,
+  },
+  // Однострочная подпись под фото — Pinterest-style title.
+  // Маленький font, муты, без бэкграунда (чтобы не было «белого блока»).
+  captionLine: {
+    padding: "5px 4px 2px",
+    fontSize: 12,
+    fontWeight: 500,
+    color: "var(--text)",
+    lineHeight: 1.25,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap" as const,
   },
 };
 
@@ -737,94 +786,33 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     inset: 0,
     zIndex: 1100,
     display: "flex",
-    alignItems: "flex-end",
+    alignItems: "stretch",
     justifyContent: "center",
-    transition: "background 280ms ease, backdrop-filter 280ms ease",
+    transition: "background 280ms ease",
   },
   sheet: {
     position: "relative" as const,
-    width: "min(100%, 560px)",
-    maxHeight: "92dvh",
-    background: "var(--bg)",
-    borderRadius: "20px 20px 0 0",
-    overflow: "hidden auto",
-    boxShadow: "0 -10px 40px rgba(0, 0, 0, 0.35)",
+    width: "100%",
+    height: "100%",
+    background: "#000",
+    overflow: "hidden",
     transformOrigin: "center center",
     willChange: "transform, opacity",
-    overscrollBehavior: "contain" as const,
+    display: "flex",
+    flexDirection: "column" as const,
   },
-  dragHandle: {
+  topBar: {
     position: "absolute" as const,
-    top: 8,
-    left: "50%",
-    transform: "translateX(-50%)",
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    background: "rgba(255, 255, 255, 0.35)",
-    zIndex: 2,
-    pointerEvents: "none",
-  },
-  imageWrap: {
-    position: "relative" as const,
-    width: "100%",
-    background: "#0a0a08",
+    top: "calc(env(safe-area-inset-top, 0px) + 12px)",
+    left: 12,
+    right: 12,
+    zIndex: 3,
     display: "flex",
     alignItems: "center",
-    justifyContent: "center",
-    minHeight: 280,
-    maxHeight: "70dvh",
   },
-  image: {
-    width: "100%",
-    height: "auto",
-    maxHeight: "70dvh",
-    objectFit: "contain" as const,
-    display: "block",
-  },
-  counter: {
-    position: "absolute" as const,
-    top: 14,
-    left: 14,
-    padding: "5px 11px",
-    background: "rgba(0, 0, 0, 0.65)",
-    color: "#fff",
-    fontFamily: 'ui-monospace, "SF Mono", Menlo, monospace',
-    fontSize: 11,
-    fontWeight: 600,
-    letterSpacing: "0.06em",
-    borderRadius: 999,
-    backdropFilter: "blur(6px)",
-    WebkitBackdropFilter: "blur(6px)",
-    pointerEvents: "none",
-  },
-  nav: {
-    position: "absolute" as const,
-    top: "50%",
-    transform: "translateY(-50%)",
+  backBtn: {
     width: 40,
     height: 40,
-    borderRadius: "50%",
-    background: "rgba(255, 255, 255, 0.92)",
-    color: "#1a1a1a",
-    border: "none",
-    fontSize: 24,
-    fontWeight: 700,
-    cursor: "pointer",
-    backdropFilter: "blur(8px)",
-    WebkitBackdropFilter: "blur(8px)",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    lineHeight: 1,
-    paddingBottom: 2,
-  },
-  closeBtn: {
-    position: "absolute" as const,
-    top: 14,
-    right: 14,
-    width: 36,
-    height: 36,
     borderRadius: "50%",
     background: "rgba(0, 0, 0, 0.55)",
     color: "#fff",
@@ -835,58 +823,119 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
+    WebkitTapHighlightColor: "transparent",
   },
-  body: {
-    padding: "16px 18px 24px",
-  },
-  actionsRow: {
+  imageArea: {
+    position: "relative" as const,
+    flex: "1 1 auto",
     display: "flex",
     alignItems: "center",
-    gap: 10,
-    marginBottom: 12,
+    justifyContent: "center",
+    overflow: "hidden",
+    minHeight: 0,
+  },
+  imageTrack: {
+    display: "flex",
+    width: "100%",
+    height: "100%",
+    willChange: "transform",
+  },
+  imageSlide: {
+    flex: "0 0 100%",
+    width: "100%",
+    height: "100%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  image: {
+    maxWidth: "100%",
+    maxHeight: "100%",
+    width: "auto",
+    height: "auto",
+    objectFit: "contain" as const,
+    display: "block",
+    userSelect: "none" as const,
+    WebkitUserSelect: "none" as const,
+  },
+  dotsRow: {
+    position: "absolute" as const,
+    bottom: 16,
+    left: "50%",
+    transform: "translateX(-50%)",
+    display: "flex",
+    gap: 5,
+    padding: "6px 10px",
+    background: "rgba(0,0,0,0.4)",
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
+    borderRadius: 999,
+    pointerEvents: "none",
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: "50%",
+    background: "rgba(255,255,255,0.5)",
+    transition: "background 0.15s ease, width 0.15s ease",
+  },
+  dotActive: {
+    background: "#fff",
+    width: 18,
+    borderRadius: 3,
+  },
+  actionsRow: {
+    flex: "0 0 auto",
+    display: "flex",
+    alignItems: "center",
+    gap: 14,
+    padding: "12px 18px 4px",
   },
   actionBtn: {
     display: "inline-flex",
     alignItems: "center",
-    gap: 7,
-    padding: "9px 14px",
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: 999,
-    color: "var(--text)",
+    gap: 8,
+    padding: "6px 4px",
+    background: "transparent",
+    border: "none",
+    color: "#fff",
     cursor: "pointer",
     fontFamily: "inherit",
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: 600,
     lineHeight: 1,
     WebkitTapHighlightColor: "transparent",
-    transition: "background 0.15s ease, border-color 0.15s ease, transform 0.08s ease",
+    transition: "transform 0.08s ease",
   },
-  actionBtnActive: {
+  actionBtnLiked: {
     color: "#ef4444",
-    borderColor: "rgba(239, 68, 68, 0.35)",
-    background: "rgba(239, 68, 68, 0.08)",
   },
-  actionLabel: {
+  actionCount: {
     fontVariantNumeric: "tabular-nums",
+    fontSize: 14,
   },
-  dateInline: {
-    marginLeft: "auto",
-    fontSize: 12,
-    color: "var(--muted)",
+  captionWrap: {
+    flex: "0 0 auto",
+    padding: "6px 18px 4px",
+    maxHeight: "30dvh",
+    overflowY: "auto" as const,
   },
   caption: {
     fontSize: 14,
-    color: "var(--text)",
+    color: "#e5e5e5",
     lineHeight: 1.5,
-    margin: "0 0 12px",
+    margin: 0,
     whiteSpace: "pre-wrap" as const,
+  },
+  productCtaWrap: {
+    flex: "0 0 auto",
+    padding: "8px 18px calc(env(safe-area-inset-bottom, 0px) + 16px)",
   },
   productCta: {
     display: "inline-block",
-    padding: "10px 16px",
-    background: "var(--text)",
-    color: "var(--bg)",
+    padding: "10px 18px",
+    background: "#fff",
+    color: "#000",
     fontSize: 13,
     fontWeight: 600,
     borderRadius: 12,

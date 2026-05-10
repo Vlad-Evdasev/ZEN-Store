@@ -1381,36 +1381,28 @@ html[data-theme="light"] .zen-app .product-card-price {
 }
 
 /* ── Pinterest-style masonry для постов «Вдохновиться» ─────────────── */
+/* Плотная упаковка как в Pinterest: ~2-3px между карточками. */
 .zen-app .zen-pin-grid {
   column-count: 2;
-  column-gap: 8px;
+  column-gap: 3px;
 }
 @media (min-width: 520px) {
-  .zen-app .zen-pin-grid { column-count: 3; column-gap: 10px; }
+  .zen-app .zen-pin-grid { column-count: 3; column-gap: 4px; }
 }
 @media (min-width: 820px) {
-  .zen-app .zen-pin-grid { column-count: 4; column-gap: 12px; }
+  .zen-app .zen-pin-grid { column-count: 4; column-gap: 4px; }
 }
 .zen-app .zen-pin-card {
-  margin: 0 0 8px;
+  margin: 0 0 3px;
   break-inside: avoid;
   page-break-inside: avoid;
   -webkit-column-break-inside: avoid;
   display: block;
 }
 @media (min-width: 520px) {
-  .zen-app .zen-pin-card { margin-bottom: 10px; }
+  .zen-app .zen-pin-card { margin-bottom: 4px; }
 }
-@media (min-width: 820px) {
-  .zen-app .zen-pin-card { margin-bottom: 12px; }
-}
-@media (hover: hover) {
-  .zen-app .zen-pin-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 28px -16px rgba(0, 0, 0, 0.35);
-  }
-}
-.zen-app .zen-pin-card:active { transform: scale(0.98); }
+.zen-app .zen-pin-card:active { transform: scale(0.985); transition: transform 0.1s ease; }
 
 /* Скелетон-плитка каталога: показывается на холодном старте, пока товары
    ещё не пришли с бэка и кэш пуст. Цель — не мигать «ничего не найдено». */
