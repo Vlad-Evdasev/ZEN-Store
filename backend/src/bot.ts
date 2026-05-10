@@ -482,24 +482,32 @@ export async function notifyOrderInvoice(
   total: number,
   ton: { receiveAddress: string; amountNano: string; payload: string; amountTon: number; rateUsd: number } | null
 ): Promise<void> {
-  // Собираем тело сообщения
+  // Собираем тело сообщения. Ведём с названия товара (главный визуальный
+  // якорь), а номер заказа/админа уносим в подвал — фокус на покупке,
+  // а не на «бухгалтерии».
   const lines: string[] = [];
-  lines.push(`<b>Заказ #${orderId}</b>`);
-  lines.push("");
-  for (const it of items) {
-    const qty = (it.quantity ?? 1) > 1 ? ` × ${it.quantity}` : "";
-    const sz = it.size ? ` · ${escapeHtml(it.size)}` : "";
-    lines.push(`— ${escapeHtml(it.name || "Товар")}${sz}${qty}`);
+  const [first, ...rest] = items;
+  if (first) {
+    const sz = first.size ? `  ·  ${escapeHtml(first.size)}` : "";
+    const qty = (first.quantity ?? 1) > 1 ? `  ·  ×${first.quantity}` : "";
+    lines.push(`<b>${escapeHtml(first.name || "Товар")}</b>${sz}${qty}`);
+  }
+  for (const it of rest) {
+    const sz = it.size ? `  ·  ${escapeHtml(it.size)}` : "";
+    const qty = (it.quantity ?? 1) > 1 ? `  ·  ×${it.quantity}` : "";
+    lines.push(`+ ${escapeHtml(it.name || "Товар")}${sz}${qty}`);
   }
   lines.push("");
-  lines.push(`<b>К оплате: ${total} $</b>`);
   if (ton) {
-    lines.push(`≈ <b>${ton.amountTon.toFixed(2)} TON</b> · курс $${ton.rateUsd.toFixed(2)}/TON`);
+    lines.push(`<b>${total} $</b>  ·  ≈ ${ton.amountTon.toFixed(2)} TON`);
+    lines.push(`<i>курс ${ton.rateUsd.toFixed(2)} $/TON</i>`);
     lines.push("");
-    lines.push("Тапни <b>«Оплатить»</b> — кошелёк подставит сумму и адрес автоматически.");
+    lines.push("Жми <b>«Оплатить»</b> — кошелёк откроется с готовой суммой и адресом, останется только подтвердить транзакцию.");
+  } else {
+    lines.push(`<b>${total} $</b>`);
   }
   lines.push("");
-  lines.push(`Если что-то пойдёт не так, напиши нам <a href="https://t.me/${ADMIN_HANDLE}">@${ADMIN_HANDLE}</a>.`);
+  lines.push(`<a href="https://t.me/${ADMIN_HANDLE}">@${ADMIN_HANDLE}</a>  ·  #${orderId}`);
 
   const caption = lines.join("\n");
 
@@ -540,6 +548,42 @@ export async function notifyOrderInvoice(
     const err = e instanceof Error ? e.message : String(e);
     if (isUserBlocked(err)) markBotUserBlocked(userId);
     console.error("notifyOrderInvoice failed:", err);
+  }
+}
+
+// Уведомление, что мы вручную/автоматически приняли оплату. Шлётся
+// один раз — после первого перехода payment_status → 'paid'. Текст
+// в той же стилистике, что и инвойс: ведём с товара, без эмодзи-шума.
+export async function notifyOrderPaid(
+  userId: string | number,
+  orderId: number,
+  firstItem?: { name?: string | null; size?: string | null }
+): Promise<void> {
+  const lines: string[] = [];
+  lines.push("<b>Оплата подтверждена</b>");
+  if (firstItem?.name) {
+    const sz = firstItem.size ? `  ·  ${escapeHtml(firstItem.size)}` : "";
+    lines.push(`${escapeHtml(firstItem.name)}${sz}`);
+  }
+  lines.push("");
+  lines.push("Заказ ушёл в сборку. Когда отправим — пришлём трек-номер.");
+  lines.push("");
+  lines.push(`<a href="https://t.me/${ADMIN_HANDLE}">@${ADMIN_HANDLE}</a>  ·  #${orderId}`);
+  const text = lines.join("\n");
+  try {
+    await bot.api.sendMessage(userId, text, {
+      parse_mode: "HTML",
+      link_preview_options: { is_disabled: true },
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "📜 Открыть историю", web_app: { url: WEB_APP_URL } }],
+        ],
+      },
+    });
+  } catch (e) {
+    const err = e instanceof Error ? e.message : String(e);
+    if (isUserBlocked(err)) markBotUserBlocked(userId);
+    console.error("notifyOrderPaid failed:", err);
   }
 }
 

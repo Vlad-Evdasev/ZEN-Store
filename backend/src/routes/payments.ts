@@ -1,7 +1,7 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
 import { randomBytes } from "crypto";
 import { db } from "../db/schema.js";
-import { notifyOrderStatusChange, notifyTonPaymentVerified, notifyPendingTonPayment } from "../bot.js";
+import { notifyOrderStatusChange, notifyTonPaymentVerified, notifyPendingTonPayment, notifyOrderPaid } from "../bot.js";
 
 // ─── Конфигурация ─────────────────────────────────────────────────────
 // TON_RECEIVE_ADDRESS — наш приёмный адрес (raw или EQ-формат).
@@ -426,12 +426,33 @@ export function runPaymentExpirySweep(): void {
 
 paymentsRouter.post("/admin/order/:id/mark-paid", requireAdmin, (req, res) => {
   const id = Number(req.params.id);
+  // Сначала смотрим текущий статус: уведомление шлём только если оплата
+  // реально перешла из «не оплачено» в «оплачено» (иначе при повторных
+  // тапах юзер получит дубль).
+  const before = db
+    .prepare("SELECT user_id, payment_status, items FROM orders WHERE id = ?")
+    .get(id) as { user_id: string; payment_status: string | null; items: string } | undefined;
+  if (!before) return res.status(404).json({ error: "Order not found" });
+
   db.prepare(
     `UPDATE orders SET payment_status = 'paid',
        payment_verified_at = COALESCE(payment_verified_at, CURRENT_TIMESTAMP),
        status = CASE WHEN status = 'pending_payment' THEN 'pending' ELSE status END
      WHERE id = ?`
   ).run(id);
+
+  if (before.payment_status !== "paid") {
+    // Имя первого товара — для красивой шапки уведомления.
+    let firstItem: { name?: string | null; size?: string | null } | undefined;
+    try {
+      const items = JSON.parse(before.items) as Array<{ name?: string; size?: string }>;
+      if (items[0]) firstItem = { name: items[0].name, size: items[0].size };
+    } catch {}
+    notifyOrderPaid(before.user_id, id, firstItem).catch((e) =>
+      console.error("[mark-paid] notify failed:", e)
+    );
+  }
+
   res.json({ ok: true });
 });
 
