@@ -344,7 +344,9 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
       aria-modal="true"
       style={{
         ...expandedStyles.root,
-        background: `rgba(0, 0, 0, ${0.95 * backdropOpacity})`,
+        // Backdrop в цвете текущей темы (--bg) с opacity-фейдом по pull-to-close.
+        // Для тёмной темы это даст почти-чёрный фон, для светлой — кремовый.
+        background: `rgba(var(--bg-rgb), ${0.97 * backdropOpacity})`,
         pointerEvents: phase === "closing" ? "none" : "auto",
       }}
     >
@@ -794,7 +796,7 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     position: "relative" as const,
     width: "100%",
     height: "100%",
-    background: "#000",
+    background: "var(--bg)",
     overflow: "hidden",
     transformOrigin: "center center",
     willChange: "transform, opacity",
@@ -814,9 +816,10 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     width: 40,
     height: 40,
     borderRadius: "50%",
-    background: "rgba(0, 0, 0, 0.55)",
-    color: "#fff",
-    border: "none",
+    // Полупрозрачная плашка цвета поверхности (читается на любом фото).
+    background: "var(--surface-elevated)",
+    color: "var(--text)",
+    border: "1px solid var(--border)",
     cursor: "pointer",
     backdropFilter: "blur(8px)",
     WebkitBackdropFilter: "blur(8px)",
@@ -824,6 +827,7 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     justifyContent: "center",
     WebkitTapHighlightColor: "transparent",
+    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.18)",
   },
   imageArea: {
     position: "relative" as const,
@@ -898,7 +902,7 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     padding: "6px 4px",
     background: "transparent",
     border: "none",
-    color: "#fff",
+    color: "var(--text)",
     cursor: "pointer",
     fontFamily: "inherit",
     fontSize: 14,
@@ -922,7 +926,7 @@ const expandedStyles: Record<string, React.CSSProperties> = {
   },
   caption: {
     fontSize: 14,
-    color: "#e5e5e5",
+    color: "var(--text)",
     lineHeight: 1.5,
     margin: 0,
     whiteSpace: "pre-wrap" as const,
@@ -934,8 +938,8 @@ const expandedStyles: Record<string, React.CSSProperties> = {
   productCta: {
     display: "inline-block",
     padding: "10px 18px",
-    background: "#fff",
-    color: "#000",
+    background: "var(--text)",
+    color: "var(--bg)",
     fontSize: 13,
     fontWeight: 600,
     borderRadius: 12,
