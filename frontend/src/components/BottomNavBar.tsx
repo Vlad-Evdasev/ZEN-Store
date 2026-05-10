@@ -174,7 +174,7 @@ export function BottomNavBar({ activeTab, onCatalog, onCustomOrder, onArrivals }
   );
 
   return (
-    <nav style={styles.nav}>
+    <nav className="zen-bottom-nav" style={styles.nav}>
       {renderItem(onCatalog, isCatalog, "Каталог", CatalogIcon)}
       {renderItem(onCustomOrder, isCustom, "Заказать не из каталога", CustomOrderIcon)}
       {renderItem(onArrivals, isArrivals, "Товары которые мы привезли", ArrivalsIcon)}

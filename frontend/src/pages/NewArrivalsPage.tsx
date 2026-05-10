@@ -309,14 +309,13 @@ function computeSheetAnim({
   fadeOnClose: boolean;
   enterAnim: "flip" | "zoom" | "fade";
 }): React.CSSProperties {
-  // Тайминги. Main open/close = 460ms (плавно, как раскрытие карточки
-  // товара). Back-nav (close+open суммарно ≈460ms): close 260ms с
-  // приятным scale-down 0.96, open 200ms простой fade.
-  // Одна easing-кривая везде, чтобы две фазы back-nav сливались в
-  // один непрерывный переход.
+  // Тайминги. Main open/close = 460ms (плавно).
+  // Back-nav: close 220ms с заметным scale-down + slide (выглядит как
+  // «фотография уезжает в стопку»), open 180ms быстрый fade-in.
+  // Суммарно back-nav ≈400ms — субъективно snappy.
   if (phase === "open") {
     const isZoom = enterAnim === "zoom";
-    const dur = isZoom ? 200 : 460;
+    const dur = isZoom ? 180 : 460;
     return {
       opacity: 1,
       transform: `translate3d(0, ${dragY}px, 0) scale(1)`,
@@ -326,23 +325,22 @@ function computeSheetAnim({
     };
   }
   if (phase === "opening") {
-    // Back-nav (zoom) стартует opacity 0 + лёгкий scale 0.98 — это
-    // даёт ощущение «всплыва» предыдущего поста, плавно вырастающего
-    // на место текущего. main-режим стартует без scale (обычный fade).
+    // Back-nav incoming: scale 0.96 «всплыв» снизу — эстетически
+    // зеркалит squeeze close (scale 0.88 уезжает → scale 0.96 приходит).
     if (enterAnim === "zoom") {
-      return { opacity: 0, transform: "translate3d(0, 0, 0) scale(0.98)", transition: "none" };
+      return { opacity: 0, transform: "translate3d(0, 0, 0) scale(0.96)", transition: "none" };
     }
     return { opacity: 0, transform: "translate3d(0, 0, 0) scale(1)", transition: "none" };
   }
   // phase = closing
   if (fadeOnClose) {
-    // Back-nav close — приятный «squeeze»: scale 0.96 + translateY 24px
-    // + opacity 0. Картинка плавно сжимается и уезжает вниз —
-    // выглядит «красиво и плавно».
+    // Back-nav close — выраженный «squeeze»: scale 0.88 + translateY 60
+    // + opacity 0. Картинка заметно сжимается и уезжает вниз —
+    // визуально «красиво» и явно отделено от просто fade-out.
     return {
       opacity: 0,
-      transform: "translate3d(0, 24px, 0) scale(0.96)",
-      transition: "opacity 260ms cubic-bezier(0.22, 1, 0.36, 1), transform 260ms cubic-bezier(0.22, 1, 0.36, 1)",
+      transform: "translate3d(0, 60px, 0) scale(0.88)",
+      transition: "opacity 220ms cubic-bezier(0.22, 1, 0.36, 1), transform 220ms cubic-bezier(0.22, 1, 0.36, 1)",
     };
   }
   return {
@@ -393,7 +391,10 @@ function ExpandedView({
   useLayoutEffect(() => {
     const img = imageRef.current;
     if (!img || !startRect) {
-      requestAnimationFrame(() => requestAnimationFrame(() => setPhase("open")));
+      // Один RAF: рендер с phase=opening успевает paint, потом сразу
+      // меняем на open и CSS-transition стартует. Два RAF добавляли
+      // ~16мс задержки, которая для back-nav была ощутима как «лаг».
+      requestAnimationFrame(() => setPhase("open"));
       return;
     }
     const apply = () => {
@@ -452,9 +453,8 @@ function ExpandedView({
       img.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
     }
     setPhase("closing");
-    // Main FLIP-close 460ms, back-nav scale-down+slide 260ms — суммарно
-    // back-nav close (260) + open (200) ≈ 460ms, как main close.
-    setTimeout(onClose, fadeOnClose ? 260 : 460);
+    // Main FLIP-close 460ms, back-nav squeeze 220ms.
+    setTimeout(onClose, fadeOnClose ? 220 : 460);
   }, [phase, onClose, onStartClose, startRect, fadeOnClose]);
 
   useEffect(() => {

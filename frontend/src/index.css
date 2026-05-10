@@ -1629,28 +1629,41 @@ html[data-theme="light"] .zen-app .product-card-price {
    мигания хедера в момент back-nav: при пере-маунтe expanded хедер
    успевал на доли секунды показаться на чёрном фоне. Теперь хедер
    фейдится вместе с остальным контентом и не «проблескивает». */
-.zen-app {
+/* КРИТИЧНЫЙ НЮАНС: transform НЕЛЬЗЯ ставить на .zen-app, потому что
+   создаёт containing block для position:fixed потомков. Хедер у нас
+   fixed внутри .zen-app — при transform на родителе его top: 0
+   становится относительно .zen-app (не viewport). Когда страница
+   проскролена вниз, верх .zen-app выше viewport → хедер уезжает
+   за пределы экрана во время анимации, а при снятии transform-а
+   резко «возвращается» в конце. Это и был баг «хедер появляется
+   резко после загрузки формы».
+
+   Решение: применяем transform/opacity ИЗОЛИРОВАННО к main, и
+   отдельно opacity к хедеру и нав-бару. .zen-app остаётся без
+   transform → containing block для fixed-потомков — viewport,
+   как и должно быть. main увеличивается + фейдится (дайв-эффект),
+   header и bottom-nav просто фейдятся (без scale). Все три
+   синхронизированы по таймингу и easing — выглядит как единое
+   движение, но fixed-позиционирование не ломается. */
+.zen-app > main {
   transform-origin: center center;
   transition: transform 460ms cubic-bezier(0.22, 1, 0.36, 1),
               opacity 460ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-body.zen-inspire-overlay-on .zen-app {
+body.zen-inspire-overlay-on .zen-app > main {
   transform: scale(1.08);
   opacity: 0;
-  /* GPU-композитный hint только во время overlay-анимации — иначе будет
-     сидеть на отдельном слое всегда (хуже для памяти). Это убирает
-     «дёрганое» исчезновение хедера при открытии expanded view. */
   will-change: transform, opacity;
 }
-
-/* Явная подстраховка для header и main: они должны фейдиться плавно
-   ВМЕСТЕ с .zen-app. Хотя они наследуют opacity родителя, дополнительный
-   transition на самих элементах гарантирует, что fade ощущается как
-   один непрерывный поток, без «резкого появления хедера в конце». */
-.zen-app header,
-.zen-app main {
-  transition: opacity 460ms cubic-bezier(0.22, 1, 0.36, 1),
-              transform 460ms cubic-bezier(0.22, 1, 0.36, 1);
+.zen-app > header,
+.zen-app > .zen-bottom-nav,
+.zen-app > nav {
+  transition: opacity 460ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+body.zen-inspire-overlay-on .zen-app > header,
+body.zen-inspire-overlay-on .zen-app > .zen-bottom-nav,
+body.zen-inspire-overlay-on .zen-app > nav {
+  opacity: 0;
 }
 
 /* FAB-переключатель «Всё / Закреплённые» в правом нижнем углу. */
