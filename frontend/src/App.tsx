@@ -114,6 +114,10 @@ function App() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const cartCount = cartItems.reduce((a, i) => a + i.quantity, 0);
+  // Кол-во избранного — только те id, что соответствуют реально
+  // существующим товарам. Иначе точка-индикатор на сердечке висит,
+  // даже если все wishlist-товары были удалены на бэке.
+  const favoritesCount = products.filter((p) => wishlistIds.has(p.id)).length;
   const [menuOpen, setMenuOpen] = useState(false);
   const hamburgerRef = useRef<HTMLButtonElement | null>(null);
   const [productReturnTo, setProductReturnTo] = useState<Page | null>(null);
@@ -306,7 +310,7 @@ function App() {
         <div style={styles.headerRight}>
           <button onClick={openFavorites} className="zen-header-icon-btn" style={styles.headerIconBtn} aria-label={t(lang, "favorites")}>
             <HeaderIconFavorites />
-            {wishlistIds.size > 0 && <span style={styles.headerDot} aria-hidden />}
+            {favoritesCount > 0 && <span style={styles.headerDot} aria-hidden />}
           </button>
           <button onClick={openCart} className="zen-header-icon-btn" style={styles.headerIconBtn} aria-label={t(lang, "cart")}>
             <HeaderIconCart />
