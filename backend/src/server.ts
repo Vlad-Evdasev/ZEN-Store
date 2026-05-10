@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import compression from "compression";
 import { productsRouter } from "./routes/products.js";
 import { storesRouter } from "./routes/stores.js";
 import { cartRouter } from "./routes/cart.js";
@@ -27,7 +28,8 @@ import { db } from "./db/schema.js";
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
 
-app.use(cors({ origin: "*" }));
+app.use(cors({ origin: "*", maxAge: 600 })); // CORS preflight кешируется на 10 минут
+app.use(compression()); // gzip JSON / text — экономит до 70% трафика на orders/posts/products
 app.use(express.json({ limit: "30mb" }));
 
 app.use("/api/products", productsRouter);

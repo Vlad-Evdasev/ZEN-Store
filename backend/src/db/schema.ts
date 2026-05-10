@@ -490,6 +490,35 @@ try { db.exec("ALTER TABLE orders ADD COLUMN payment_reminder_sent_at DATETIME")
 // до 10 элементов. image_url/image_data остаются для обратной совместимости.
 try { db.exec("ALTER TABLE posts ADD COLUMN images TEXT"); } catch {}
 
+// ─── Индексы для горячих запросов ──────────────────────────────────────
+// Используются в GET /orders/:userId, GET /custom-orders/:userId, фид
+// постов, поиск по корзине/wishlist, payment-cron'ах. Без них SQLite
+// делает full-scan на каждом запросе, что заметно при росте данных.
+const indexStatements = [
+  "CREATE INDEX IF NOT EXISTS idx_orders_user_created ON orders(user_id, created_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)",
+  "CREATE INDEX IF NOT EXISTS idx_orders_payment_status ON orders(payment_status)",
+  "CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_custom_user_created ON custom_orders(user_id, created_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_custom_status ON custom_orders(status)",
+  "CREATE INDEX IF NOT EXISTS idx_cart_user ON cart_items(user_id)",
+  "CREATE INDEX IF NOT EXISTS idx_cart_created ON cart_items(created_at)",
+  "CREATE INDEX IF NOT EXISTS idx_wishlist_user ON wishlist(user_id)",
+  "CREATE INDEX IF NOT EXISTS idx_posts_created ON posts(created_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_post_likes_post ON post_likes(post_id)",
+  "CREATE INDEX IF NOT EXISTS idx_post_likes_user ON post_likes(user_id)",
+  "CREATE INDEX IF NOT EXISTS idx_products_category ON products(category)",
+  "CREATE INDEX IF NOT EXISTS idx_products_created ON products(created_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_product_reviews_product ON product_reviews(product_id)",
+  "CREATE INDEX IF NOT EXISTS idx_bot_users_last_seen ON bot_users(last_seen_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_bot_messages_user ON bot_messages(user_id, created_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_payment_intents_order ON payment_intents(order_id)",
+  "CREATE INDEX IF NOT EXISTS idx_payment_intents_status ON payment_intents(status)",
+];
+for (const sql of indexStatements) {
+  try { db.exec(sql); } catch (e) { console.error("[index]", sql, e); }
+}
+
 // Платёжный intent — мост между ордером и транзакцией в сети.
 // id (наш payload) уйдёт в комментарий TON-транзакции, потом по нему
 // матчим входящую транзакцию на блокчейне. Курс фиксируется на момент

@@ -1,21 +1,72 @@
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
-const RETRY_ATTEMPTS = 3;
-const RETRY_DELAY_MS = 600;
+const RETRY_ATTEMPTS = 4;
+const RETRY_BASE_DELAY_MS = 500;
+// 30 секунд таймаут — на холодный старт Railway бэкенда уходит до 15с,
+// плюс запас на медленные мобильные сети.
+const REQUEST_TIMEOUT_MS = 30_000;
 
+/**
+ * fetch с автоматическим retry для GET-запросов чтения.
+ * Cold start Railway бэкенда может занимать до 15 секунд.
+ *
+ * Логика retry:
+ *  1) Сетевая ошибка (cold start, timeout, offline) → ретрай c
+ *     exponential backoff (500ms, 1s, 2s, 4s).
+ *  2) HTTP 5xx (бэкенд внутри упал) → тоже retry.
+ *  3) HTTP 4xx (404 / 401) → возвращаем как есть, ретрай не поможет.
+ */
 async function fetchWithRetry(url: string, options?: RequestInit): Promise<Response> {
   let lastErr: Error | null = null;
   for (let i = 0; i < RETRY_ATTEMPTS; i++) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
     try {
-      const res = await fetch(url, options);
-      if (res.ok || res.status === 404 || res.status === 401) return res;
-      lastErr = new Error(res.statusText || `HTTP ${res.status}`);
+      const res = await fetch(url, { ...options, signal: ctrl.signal });
+      clearTimeout(timer);
+      if (res.ok || (res.status >= 400 && res.status < 500)) return res;
+      lastErr = new Error(`HTTP ${res.status} ${res.statusText}`);
     } catch (e) {
+      clearTimeout(timer);
       lastErr = e instanceof Error ? e : new Error(String(e));
     }
-    if (i < RETRY_ATTEMPTS - 1) await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+    if (i < RETRY_ATTEMPTS - 1) {
+      // Exponential backoff: 500, 1000, 2000, 4000 ms
+      const delay = RETRY_BASE_DELAY_MS * Math.pow(2, i);
+      await new Promise((r) => setTimeout(r, delay));
+    }
   }
   throw lastErr ?? new Error("Request failed");
+}
+
+/**
+ * fetch для write-запросов (POST/PATCH/DELETE) с тайм-аутом и
+ * условным retry: повторяем ТОЛЬКО на pure-network ошибках (TypeError
+ * "Failed to fetch", AbortError). Если сервер ответил любым HTTP-кодом,
+ * не повторяем — иначе можно создать дубликаты.
+ */
+export async function fetchWrite(url: string, options?: RequestInit): Promise<Response> {
+  const tryOnce = async () => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      return await fetch(url, { ...options, signal: ctrl.signal });
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+  try {
+    return await tryOnce();
+  } catch (e) {
+    // TypeError ("Failed to fetch"), AbortError ("aborted") — запрос
+    // не дошёл до сервера. Безопасно повторить один раз.
+    const msg = e instanceof Error ? e.name : "";
+    if (msg === "TypeError" || msg === "AbortError") {
+      await new Promise((r) => setTimeout(r, 800));
+      return tryOnce();
+    }
+    throw e;
+  }
 }
 
 export async function checkApiHealth(): Promise<{ ok: boolean; url: string; error?: string }> {
@@ -248,7 +299,9 @@ export async function getProducts(): Promise<Product[]> {
 }
 
 export async function verifyAdmin(adminSecret: string): Promise<boolean> {
-  const res = await fetch(`${API_URL}/api/admin/verify`, {
+  // Это первый запрос при логине в админку — может попасть на холодный
+  // старт Railway. Поэтому через fetchWithRetry с увеличенным таймаутом.
+  const res = await fetchWithRetry(`${API_URL}/api/admin/verify`, {
     headers: { "X-Admin-Secret": adminSecret },
   });
   return res.ok;
@@ -270,7 +323,7 @@ export async function createProduct(
 ) {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (adminSecret) headers["X-Admin-Secret"] = adminSecret;
-  const res = await fetch(`${API_URL}/api/products`, {
+  const res = await fetchWrite(`${API_URL}/api/products`, {
     method: "POST",
     headers,
     body: JSON.stringify(data),
@@ -305,7 +358,7 @@ export async function updateProduct(
 ) {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (adminSecret) headers["X-Admin-Secret"] = adminSecret;
-  const res = await fetch(`${API_URL}/api/products/${id}`, {
+  const res = await fetchWrite(`${API_URL}/api/products/${id}`, {
     method: "PATCH",
     headers,
     body: JSON.stringify(data),
@@ -320,7 +373,7 @@ export async function updateProduct(
 export async function deleteProduct(id: number, adminSecret?: string) {
   const headers: Record<string, string> = {};
   if (adminSecret) headers["X-Admin-Secret"] = adminSecret;
-  const res = await fetch(`${API_URL}/api/products/${id}`, {
+  const res = await fetchWrite(`${API_URL}/api/products/${id}`, {
     method: "DELETE",
     headers,
   });
@@ -634,7 +687,7 @@ export async function createOrder(
     points_redeemed?: number;
   }
 ): Promise<{ ok: boolean; orderId?: number }> {
-  const res = await fetch(`${API_URL}/api/orders/${userId}`, {
+  const res = await fetchWrite(`${API_URL}/api/orders/${userId}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
