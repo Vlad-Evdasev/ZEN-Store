@@ -521,6 +521,7 @@ bot.command("start", async (ctx) => {
   const userId = ctx.from?.id;
   // /start ref_<USERID> — реферальная ссылка
   const payload = (ctx.match || "").trim();
+  let invitedByRef = false;
   if (userId && payload.startsWith("ref_")) {
     const referrer = payload.slice(4);
     if (referrer && referrer !== String(userId)) {
@@ -532,18 +533,88 @@ bot.command("start", async (ctx) => {
           db.prepare(
             "INSERT INTO referrals (referrer_user_id, invited_user_id) VALUES (?, ?)"
           ).run(referrer, String(userId));
+          invitedByRef = true;
         }
       } catch {}
     }
   }
-  await ctx.reply("👕 Добро пожаловать в RAW — магазин одежды.\n\nКоманды:\n/shop — каталог\n/track — статус заказа\n/profile — твой профиль\n/size — твой размер\n/referral — пригласить друга\n/help — поддержка", {
+
+  // Live-статы для приветствия — делают сообщение «живым», а не статичным.
+  let productCount = 0;
+  let latestProductAgo: string | null = null;
+  try {
+    const c = db.prepare("SELECT COUNT(*) as c FROM products").get() as { c: number };
+    productCount = c.c;
+    const latest = db
+      .prepare("SELECT MAX(created_at) as t FROM products")
+      .get() as { t: string | null };
+    if (latest?.t) latestProductAgo = humanAgo(latest.t);
+  } catch {}
+
+  const firstName = (ctx.from?.first_name || "").trim();
+  const hi = firstName ? escapeHtml(firstName) : "yo";
+
+  // Сборка тела с разными вариантами в зависимости от наличия товаров
+  // и был ли юзер приглашён рефералом.
+  const lines: string[] = [];
+  lines.push(`<b>${hi}</b>, ты в <b>RAW</b>.`);
+  lines.push("");
+  if (productCount > 0) {
+    const noun = pluralRu(productCount, ["вещь", "вещи", "вещей"]);
+    const drop = latestProductAgo ? `Последний дроп — <i>${latestProductAgo}</i>.` : "";
+    lines.push(`Сейчас в каталоге <b>${productCount} ${noun}</b>. ${drop}`.trim());
+  } else {
+    lines.push(`Каталог собирается. Будь первым, кто увидит дроп.`);
+  }
+  lines.push("");
+  lines.push("Без посредников. Только то, что носим сами.");
+  if (invitedByRef) {
+    lines.push("");
+    lines.push("🎁 <b>Тебя пригласил друг</b> — после первого заказа оба получите по 10 баллов.");
+  }
+
+  await ctx.reply(lines.join("\n"), {
+    parse_mode: "HTML",
+    link_preview_options: { is_disabled: true },
     reply_markup: {
       inline_keyboard: [
         [{ text: "🛍 Открыть каталог", web_app: { url: WEB_APP_URL } }],
+        [
+          { text: "✨ Новинки", web_app: { url: WEB_APP_URL } },
+          { text: "📜 Заказы", web_app: { url: WEB_APP_URL } },
+        ],
+        [
+          { text: "💎 Бонусы", web_app: { url: WEB_APP_URL } },
+          { text: "🎁 Пригласить", web_app: { url: WEB_APP_URL } },
+        ],
       ],
     },
   });
 });
+
+// Plural-рулетка для русских числительных.
+function pluralRu(n: number, forms: [string, string, string]): string {
+  const abs = Math.abs(n) % 100;
+  const n1 = abs % 10;
+  if (abs > 10 && abs < 20) return forms[2];
+  if (n1 > 1 && n1 < 5) return forms[1];
+  if (n1 === 1) return forms[0];
+  return forms[2];
+}
+
+// «3 часа назад», «вчера», «5 минут назад»
+function humanAgo(iso: string): string {
+  const d = new Date(iso.endsWith("Z") || iso.includes("+") ? iso : iso + "Z");
+  const diffMs = Date.now() - d.getTime();
+  const m = Math.round(diffMs / 60000);
+  if (m < 1) return "только что";
+  if (m < 60) return `${m} ${pluralRu(m, ["минута", "минуты", "минут"])} назад`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h} ${pluralRu(h, ["час", "часа", "часов"])} назад`;
+  const days = Math.round(h / 24);
+  if (days < 7) return `${days} ${pluralRu(days, ["день", "дня", "дней"])} назад`;
+  return d.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+}
 
 bot.command("shop", async (ctx) => {
   await ctx.reply("Открыть магазин:", {
