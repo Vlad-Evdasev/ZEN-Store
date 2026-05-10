@@ -33,17 +33,19 @@ function writePostsCache(posts: Post[]): void {
 
 // ── Иконки ──────────────────────────────────────────────────────────
 
-function HeartIcon({ filled, size = 22 }: { filled: boolean; size?: number }) {
+function PinIcon({ filled, size = 22 }: { filled: boolean; size?: number }) {
   if (filled) {
     return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="#ef4444" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2.5l1.5 4.2 4.5 0.6-3.3 3 0.9 4.4L12 12.4 8.4 14.7l0.9-4.4-3.3-3 4.5-0.6z" />
+        <line x1="12" y1="14" x2="12" y2="22" stroke="currentColor" strokeWidth="2" />
       </svg>
     );
   }
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+      <path d="M12 2.5l1.5 4.2 4.5 0.6-3.3 3 0.9 4.4L12 12.4 8.4 14.7l0.9-4.4-3.3-3 4.5-0.6z" />
+      <line x1="12" y1="14" x2="12" y2="22" />
     </svg>
   );
 }
@@ -74,10 +76,6 @@ function getPostImages(post: Post): string[] {
 }
 
 // ── Pinterest masonry card ───────────────────────────────────────────
-// Чистая плитка: фото на всю карточку, опциональная подпись в одну
-// строку под ним (truncate). Для мульти-фото — внутрикарточный свайп
-// и точки-индикатор поверх изображения снизу. Размер карточки не
-// меняется в зависимости от кол-ва фото.
 
 interface MasonryCardProps {
   post: Post;
@@ -115,7 +113,6 @@ function MasonryCard({ post, onOpen }: MasonryCardProps) {
     }
     const dx = touchMoveDx.current;
     touchStartX.current = null;
-    // Если свайп >40px — переключаем фото и НЕ открываем expanded.
     if (Math.abs(dx) > 40) {
       setCurrentIdx((prev) => {
         if (dx < 0) return Math.min(images.length - 1, prev + 1);
@@ -124,9 +121,6 @@ function MasonryCard({ post, onOpen }: MasonryCardProps) {
     }
   };
 
-  // Click обрабатывает только тапы (короткие, без существенного движения).
-  // Свайп — управляется в onTouchEnd выше; чтобы tap после свайпа не
-  // открывал карточку, ставим preventDefault через capture на click.
   const handleClickGuarded = (e: React.MouseEvent) => {
     if (Math.abs(touchMoveDx.current) > 10) {
       e.preventDefault();
@@ -151,7 +145,6 @@ function MasonryCard({ post, onOpen }: MasonryCardProps) {
       style={cardStyles.card}
     >
       <div style={cardStyles.imageWrap}>
-        {/* Все слайды стопкой; активный — opacity 1 (cross-fade при свайпе) */}
         {images.map((src, i) => (
           <img
             key={i}
@@ -165,7 +158,6 @@ function MasonryCard({ post, onOpen }: MasonryCardProps) {
             }}
           />
         ))}
-        {/* Точки-индикатор (только для мульти) */}
         {isMulti && (
           <div style={cardStyles.dotsRow} aria-hidden>
             {images.map((_, i) => (
@@ -190,9 +182,6 @@ function MasonryCard({ post, onOpen }: MasonryCardProps) {
 }
 
 // ── Expanded fullscreen view ─────────────────────────────────────────
-// Полноэкранный оверлей. Картинка в центре (contain), кнопки лайк+шер
-// под ним, ниже — описание. Свайпы листают фото. Открытие — Pinterest-
-// style морф из thumb-rect.
 
 interface ExpandedViewProps {
   post: Post;
@@ -202,11 +191,11 @@ interface ExpandedViewProps {
   userId: string;
   lang: Lang;
   onClose: () => void;
-  onLikeToggle: (postId: number, newLiked: boolean, newCount: number) => void;
+  onPinToggle: (postId: number, newPinned: boolean, newCount: number) => void;
   onShare: (post: Post) => void;
 }
 
-function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onClose, onLikeToggle, onShare }: ExpandedViewProps) {
+function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onClose, onPinToggle, onShare }: ExpandedViewProps) {
   const images = getPostImages(post);
   const [currentIdx, setCurrentIdx] = useState(Math.min(startIndex, images.length - 1));
   const [phase, setPhase] = useState<"opening" | "open" | "closing">("opening");
@@ -218,8 +207,6 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
   const [dragX, setDragX] = useState(0);
   const [dragY, setDragY] = useState(0);
 
-  // Pinterest-style морф: при первом маунте размещаем sheet в координатах
-  // thumb-картинки, на следующем кадре — в финальное состояние (full-screen).
   useLayoutEffect(() => {
     const r = requestAnimationFrame(() => {
       requestAnimationFrame(() => setPhase("open"));
@@ -233,7 +220,6 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
     setTimeout(() => onClose(), 280);
   }, [phase, onClose]);
 
-  // Esc + блокировка скролла body пока открыто
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") requestClose(); };
     window.addEventListener("keydown", onKey);
@@ -245,17 +231,17 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
     };
   }, [requestClose]);
 
-  const handleLike = async () => {
-    const wasLiked = post.user_liked;
+  const handlePin = async () => {
+    const wasPinned = post.user_liked;
     const prevCount = post.likes_count;
     const tg = window.Telegram?.WebApp;
     tg?.HapticFeedback?.impactOccurred?.("light");
-    onLikeToggle(post.id, !wasLiked, wasLiked ? prevCount - 1 : prevCount + 1);
+    onPinToggle(post.id, !wasPinned, wasPinned ? prevCount - 1 : prevCount + 1);
     try {
       const result = await togglePostLike(post.id, userId);
-      onLikeToggle(post.id, result.liked, result.likes_count);
+      onPinToggle(post.id, result.liked, result.likes_count);
     } catch {
-      onLikeToggle(post.id, wasLiked, prevCount);
+      onPinToggle(post.id, wasPinned, prevCount);
     }
   };
 
@@ -264,9 +250,6 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
     onShare(post);
   };
 
-  // Touch handlers: горизонтальный свайп = листание фото; вертикальный
-  // вниз > 100px = закрытие. Направление фиксируем по первым ~10px,
-  // чтобы свайп фото не путался с pull-to-close.
   const onTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
@@ -317,7 +300,6 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
     }
   };
 
-  // Размеры экрана для геометрии морфа
   const vw = typeof window !== "undefined" ? window.innerWidth : 0;
   const vh = typeof window !== "undefined" ? window.innerHeight : 0;
 
@@ -344,8 +326,6 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
       aria-modal="true"
       style={{
         ...expandedStyles.root,
-        // Backdrop в цвете текущей темы (--bg) с opacity-фейдом по pull-to-close.
-        // Для тёмной темы это даст почти-чёрный фон, для светлой — кремовый.
         background: `rgba(var(--bg-rgb), ${0.97 * backdropOpacity})`,
         pointerEvents: phase === "closing" ? "none" : "auto",
       }}
@@ -362,7 +342,6 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
           transition: "transform 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease",
         }}
       >
-        {/* Top bar: back arrow слева */}
         <div style={expandedStyles.topBar}>
           <button
             type="button"
@@ -374,7 +353,6 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
           </button>
         </div>
 
-        {/* Hero image area */}
         <div style={expandedStyles.imageArea}>
           <div style={{
             ...expandedStyles.imageTrack,
@@ -411,34 +389,33 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
           )}
         </div>
 
-        {/* Action row: only like + share */}
+        {/* Action row: пин слева, шер справа */}
         <div style={expandedStyles.actionsRow}>
           <button
             type="button"
-            onClick={handleLike}
+            onClick={handlePin}
             style={{
               ...expandedStyles.actionBtn,
-              ...(post.user_liked ? expandedStyles.actionBtnLiked : null),
+              ...(post.user_liked ? expandedStyles.actionBtnPinned : null),
             }}
             aria-pressed={post.user_liked}
-            aria-label={t(lang, "postLike")}
+            aria-label={post.user_liked ? t(lang, "postPinned") : t(lang, "postPin")}
           >
-            <HeartIcon filled={post.user_liked} size={24} />
-            {post.likes_count > 0 && (
-              <span style={expandedStyles.actionCount}>{post.likes_count}</span>
-            )}
+            <PinIcon filled={post.user_liked} size={24} />
+            <span style={expandedStyles.actionText}>
+              {post.user_liked ? t(lang, "postPinned") : t(lang, "postPin")}
+            </span>
           </button>
           <button
             type="button"
             onClick={handleShare}
-            style={expandedStyles.actionBtn}
+            style={{ ...expandedStyles.actionBtn, marginLeft: "auto" }}
             aria-label={t(lang, "postShare")}
           >
             <ShareIcon size={24} />
           </button>
         </div>
 
-        {/* Description */}
         {post.caption && (
           <div style={expandedStyles.captionWrap}>
             <p style={expandedStyles.caption}>{post.caption}</p>
@@ -491,6 +468,11 @@ export function NewArrivalsPage({
   const [tab, setTab] = useState<FilterTab>("all");
   const [expanded, setExpanded] = useState<{ post: Post; rect: DOMRect | null; src: string; index: number } | null>(null);
 
+  // Память скролла для FAB-переключателя: запоминаем позицию каждого таба
+  // и восстанавливаем её при возврате. Это ключ к плавному toggle — юзер
+  // не теряет место в ленте.
+  const scrollMemory = useRef<Record<FilterTab, number>>({ all: 0, liked: 0 });
+
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, []);
@@ -510,7 +492,6 @@ export function NewArrivalsPage({
     return () => { cancelled = true; };
   }, [userId]);
 
-  // Deep link: открыть нужный пост сразу как только он подгрузится.
   useEffect(() => {
     if (!initialPostId || posts.length === 0) return;
     const target = posts.find((p) => p.id === initialPostId);
@@ -520,18 +501,18 @@ export function NewArrivalsPage({
     onInitialPostHandled?.();
   }, [initialPostId, posts, onInitialPostHandled]);
 
-  const handleLikeToggle = useCallback(
-    (postId: number, newLiked: boolean, newCount: number) => {
+  const handlePinToggle = useCallback(
+    (postId: number, newPinned: boolean, newCount: number) => {
       setPosts((prev) =>
         prev.map((p) =>
           p.id === postId
-            ? { ...p, user_liked: newLiked, likes_count: newCount }
+            ? { ...p, user_liked: newPinned, likes_count: newCount }
             : p
         )
       );
       setExpanded((prev) =>
         prev && prev.post.id === postId
-          ? { ...prev, post: { ...prev.post, user_liked: newLiked, likes_count: newCount } }
+          ? { ...prev, post: { ...prev.post, user_liked: newPinned, likes_count: newCount } }
           : prev
       );
     },
@@ -571,11 +552,41 @@ export function NewArrivalsPage({
     return posts;
   }, [posts, tab]);
 
-  const likedCount = useMemo(() => posts.filter((p) => p.user_liked).length, [posts]);
+  const pinnedCount = useMemo(() => posts.filter((p) => p.user_liked).length, [posts]);
+
+  // FAB-переключатель: запоминаем текущую позицию скролла для активного
+  // таба, переключаемся, восстанавливаем сохранённую позицию для нового.
+  const switchTab = useCallback((next: FilterTab) => {
+    if (next === tab) return;
+    if (typeof window !== "undefined") {
+      scrollMemory.current[tab] = window.scrollY;
+    }
+    setTab(next);
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: scrollMemory.current[next] ?? 0, behavior: "instant" });
+    });
+  }, [tab]);
+
+  const toggleViaFab = useCallback(() => {
+    const tg = window.Telegram?.WebApp;
+    tg?.HapticFeedback?.selectionChanged?.();
+    switchTab(tab === "all" ? "liked" : "all");
+  }, [tab, switchTab]);
 
   return (
     <div style={pageStyles.wrap}>
-      {/* Tabs: Все / Лайки — sticky-pills вверху */}
+      {/* Welcome bubble — компактный, всегда в шапке */}
+      <div style={pageStyles.headerArea}>
+        <div style={pageStyles.bubbleRow}>
+          <div style={pageStyles.avatar}>R</div>
+          <div style={pageStyles.bubbleMain}>
+            <div style={pageStyles.bubbleTitle}>{t(lang, "postsInspireTitle")}</div>
+            <div style={pageStyles.bubbleSubtitle}>{t(lang, "postsInspireSubtitle")}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs: Всё / Пины */}
       <div style={pageStyles.tabsRow} role="tablist" aria-label="Фильтр постов">
         {(["all", "liked"] as FilterTab[]).map((key) => {
           const active = tab === key;
@@ -585,15 +596,15 @@ export function NewArrivalsPage({
               role="tab"
               type="button"
               aria-selected={active}
-              onClick={() => setTab(key)}
+              onClick={() => switchTab(key)}
               style={{
                 ...pageStyles.tabBtn,
                 ...(active ? pageStyles.tabBtnActive : null),
               }}
             >
               {t(lang, key === "all" ? "postsTabAll" : "postsTabLiked")}
-              {key === "liked" && likedCount > 0 && (
-                <span style={pageStyles.tabCount}>{likedCount}</span>
+              {key === "liked" && pinnedCount > 0 && (
+                <span style={pageStyles.tabCount}>{pinnedCount}</span>
               )}
             </button>
           );
@@ -630,6 +641,27 @@ export function NewArrivalsPage({
         </div>
       )}
 
+      {/* FAB: тoggle между Всё / Закреплённые с памятью скролла */}
+      {!loading && posts.length > 0 && (
+        <button
+          type="button"
+          onClick={toggleViaFab}
+          className="zen-pin-fab"
+          aria-label={tab === "all" ? t(lang, "postsFabPinned") : t(lang, "postsFabAll")}
+          title={tab === "all" ? t(lang, "postsFabPinned") : t(lang, "postsFabAll")}
+          style={{
+            ...pageStyles.fab,
+            background: tab === "liked" ? "var(--accent)" : "var(--text)",
+            color: tab === "liked" ? "#fff" : "var(--bg)",
+          }}
+        >
+          <PinIcon filled={tab === "liked"} size={22} />
+          {tab === "liked" && pinnedCount > 0 && (
+            <span style={pageStyles.fabBadge}>{pinnedCount}</span>
+          )}
+        </button>
+      )}
+
       {expanded && (
         <ExpandedView
           post={expanded.post}
@@ -639,7 +671,7 @@ export function NewArrivalsPage({
           userId={userId}
           lang={lang}
           onClose={() => setExpanded(null)}
-          onLikeToggle={handleLikeToggle}
+          onPinToggle={handlePinToggle}
           onShare={handleShare}
         />
       )}
@@ -654,6 +686,54 @@ const pageStyles: Record<string, React.CSSProperties> = {
     maxWidth: 720,
     margin: "0 auto",
     padding: "8px 4px calc(96px + env(safe-area-inset-bottom, 0px))",
+  },
+  headerArea: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 6,
+    marginBottom: 12,
+    padding: "0 6px",
+  },
+  bubbleRow: {
+    display: "flex",
+    alignItems: "flex-end",
+    gap: 8,
+  },
+  avatar: {
+    width: 30,
+    height: 30,
+    borderRadius: "50%",
+    background: "var(--accent)",
+    color: "#fff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 12,
+    fontWeight: 800,
+    letterSpacing: "0.06em",
+    flexShrink: 0,
+    marginBottom: 0,
+  },
+  bubbleMain: {
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: "16px 16px 16px 4px",
+    padding: "10px 13px",
+    maxWidth: "86%",
+    boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
+  },
+  bubbleTitle: {
+    fontSize: 14,
+    fontWeight: 600,
+    lineHeight: 1.2,
+    letterSpacing: "-0.01em",
+    color: "var(--text)",
+  },
+  bubbleSubtitle: {
+    fontSize: 12,
+    color: "var(--muted)",
+    marginTop: 3,
+    lineHeight: 1.4,
   },
   tabsRow: {
     display: "flex",
@@ -704,6 +784,42 @@ const pageStyles: Record<string, React.CSSProperties> = {
     lineHeight: 1.45,
     maxWidth: 280,
     margin: "0 auto",
+  },
+  fab: {
+    position: "fixed" as const,
+    right: 16,
+    bottom: "calc(env(safe-area-inset-bottom, 0px) + 84px)",
+    width: 52,
+    height: 52,
+    borderRadius: "50%",
+    border: "none",
+    cursor: "pointer",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow: "0 8px 24px -8px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.18)",
+    zIndex: 900,
+    fontFamily: "inherit",
+    WebkitTapHighlightColor: "transparent",
+    transition: "background 0.18s ease, color 0.18s ease, transform 0.1s ease",
+  },
+  fabBadge: {
+    position: "absolute" as const,
+    top: -4,
+    right: -4,
+    minWidth: 20,
+    height: 20,
+    padding: "0 6px",
+    borderRadius: 999,
+    background: "#fff",
+    color: "var(--accent)",
+    fontSize: 11,
+    fontWeight: 800,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    border: "2px solid var(--accent)",
+    fontVariantNumeric: "tabular-nums",
   },
 };
 
@@ -768,8 +884,6 @@ const cardStyles: Record<string, React.CSSProperties> = {
     width: 12,
     borderRadius: 3,
   },
-  // Однострочная подпись под фото — Pinterest-style title.
-  // Маленький font, муты, без бэкграунда (чтобы не было «белого блока»).
   captionLine: {
     padding: "5px 4px 2px",
     fontSize: 12,
@@ -816,7 +930,6 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     width: 40,
     height: 40,
     borderRadius: "50%",
-    // Полупрозрачная плашка цвета поверхности (читается на любом фото).
     background: "var(--surface-elevated)",
     color: "var(--text)",
     border: "1px solid var(--border)",
@@ -829,6 +942,8 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     WebkitTapHighlightColor: "transparent",
     boxShadow: "0 2px 8px rgba(0, 0, 0, 0.18)",
   },
+  // Hero-image теперь занимает всю доступную ширину карточки
+  // (без огромных пустых полей сверху и снизу).
   imageArea: {
     position: "relative" as const,
     flex: "1 1 auto",
@@ -837,6 +952,7 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     justifyContent: "center",
     overflow: "hidden",
     minHeight: 0,
+    paddingTop: "calc(env(safe-area-inset-top, 0px) + 64px)",
   },
   imageTrack: {
     display: "flex",
@@ -851,12 +967,15 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    padding: "0 4px",
   },
+  // Картинка тянется по ширине, высота по соотношению. Ограничение
+  // по высоте — чтобы не вылезала за пределы видимой области, но при
+  // этом маленькие квадратные пикчи всё равно выглядят крупно.
   image: {
-    maxWidth: "100%",
-    maxHeight: "100%",
-    width: "auto",
+    width: "100%",
     height: "auto",
+    maxHeight: "100%",
     objectFit: "contain" as const,
     display: "block",
     userSelect: "none" as const,
@@ -864,7 +983,7 @@ const expandedStyles: Record<string, React.CSSProperties> = {
   },
   dotsRow: {
     position: "absolute" as const,
-    bottom: 16,
+    bottom: 12,
     left: "50%",
     transform: "translateX(-50%)",
     display: "flex",
@@ -893,15 +1012,16 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     gap: 14,
-    padding: "12px 18px 4px",
+    padding: "16px 20px 8px",
   },
   actionBtn: {
     display: "inline-flex",
     alignItems: "center",
     gap: 8,
-    padding: "6px 4px",
-    background: "transparent",
-    border: "none",
+    padding: "8px 14px",
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: 999,
     color: "var(--text)",
     cursor: "pointer",
     fontFamily: "inherit",
@@ -909,18 +1029,20 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     lineHeight: 1,
     WebkitTapHighlightColor: "transparent",
-    transition: "transform 0.08s ease",
+    transition: "background 0.15s ease, border-color 0.15s ease, transform 0.08s ease, color 0.15s ease",
   },
-  actionBtnLiked: {
-    color: "#ef4444",
+  actionBtnPinned: {
+    background: "var(--accent)",
+    color: "#fff",
+    borderColor: "var(--accent)",
   },
-  actionCount: {
-    fontVariantNumeric: "tabular-nums",
-    fontSize: 14,
+  actionText: {
+    fontSize: 13,
+    fontWeight: 600,
   },
   captionWrap: {
     flex: "0 0 auto",
-    padding: "6px 18px 4px",
+    padding: "6px 20px 4px",
     maxHeight: "30dvh",
     overflowY: "auto" as const,
   },
@@ -933,7 +1055,7 @@ const expandedStyles: Record<string, React.CSSProperties> = {
   },
   productCtaWrap: {
     flex: "0 0 auto",
-    padding: "8px 18px calc(env(safe-area-inset-bottom, 0px) + 16px)",
+    padding: "8px 20px calc(env(safe-area-inset-bottom, 0px) + 16px)",
   },
   productCta: {
     display: "inline-block",

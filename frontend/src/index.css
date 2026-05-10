@@ -1404,6 +1404,12 @@ html[data-theme="light"] .zen-app .product-card-price {
 }
 .zen-app .zen-pin-card:active { transform: scale(0.985); transition: transform 0.1s ease; }
 
+/* FAB-переключатель «Всё / Закреплённые» в правом нижнем углу. */
+.zen-app .zen-pin-fab:active { transform: scale(0.94); }
+@media (hover: hover) {
+  .zen-app .zen-pin-fab:hover { transform: translateY(-2px); }
+}
+
 /* Скелетон-плитка каталога: показывается на холодном старте, пока товары
    ещё не пришли с бэка и кэш пуст. Цель — не мигать «ничего не найдено». */
 .zen-app .zen-product-skeleton {
