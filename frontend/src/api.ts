@@ -623,7 +623,16 @@ export async function deleteOrderAdmin(orderId: number, adminSecret: string) {
 
 export async function createOrder(
   userId: string,
-  data: { user_name?: string; user_phone?: string; user_username?: string; user_address?: string; items: CartItem[]; total: number }
+  data: {
+    user_name?: string;
+    user_phone?: string;
+    user_username?: string;
+    user_address?: string;
+    items: CartItem[];
+    total: number;
+    promo_code?: string;
+    points_redeemed?: number;
+  }
 ): Promise<{ ok: boolean; orderId?: number }> {
   const res = await fetch(`${API_URL}/api/orders/${userId}`, {
     method: "POST",
@@ -913,7 +922,7 @@ export async function getBotUsersCount(adminSecret: string): Promise<{ count: nu
 }
 
 export async function sendBroadcast(
-  data: { text: string; image_urls?: string[] },
+  data: { text: string; image_urls?: string[]; segment?: SegmentKey },
   adminSecret: string
 ): Promise<BroadcastPost> {
   const res = await fetch(`${API_URL}/api/admin/broadcast`, {
@@ -1177,6 +1186,8 @@ export async function createTonCheckout(data: {
   user_address?: string;
   items: CartItem[];
   total: number;
+  promo_code?: string;
+  points_redeemed?: number;
 }): Promise<TonCheckoutResponse> {
   const res = await fetch(`${API_URL}/api/payments/ton/checkout`, {
     method: "POST",

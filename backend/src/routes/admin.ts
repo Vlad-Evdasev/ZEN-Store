@@ -118,14 +118,22 @@ adminRouter.post("/broadcast", requireAdmin, async (req, res) => {
   const images: string[] = Array.isArray(rawImages)
     ? rawImages.filter((x): x is string => typeof x === "string" && x.trim().length > 0).map((x) => x.trim())
     : [];
+  const segment = typeof req.body?.segment === "string" ? req.body.segment : "all";
   if (!text.trim() && images.length === 0) {
     return res.status(400).json({ error: "Укажи текст или хотя бы одну картинку" });
   }
-  const recipients = getBroadcastRecipients();
-  if (recipients.length === 0) {
-    return res.status(400).json({ error: "Нет ни одного получателя. Подписчики появятся, когда хоть кто-то нажмёт /start у бота или сделает заказ." });
+  // Получатели: если segment != "all", фильтруем через getSegmentRecipients
+  let recipients: string[];
+  if (segment !== "all") {
+    const { getSegmentRecipients } = await import("./engagement.js");
+    recipients = getSegmentRecipients(segment as Parameters<typeof getSegmentRecipients>[0]);
+  } else {
+    recipients = getBroadcastRecipients();
   }
-  const result = await broadcastToUsers(text, images);
+  if (recipients.length === 0) {
+    return res.status(400).json({ error: `Нет получателей в сегменте «${segment}». Попробуй другой.` });
+  }
+  const result = await broadcastToUsers(text, images, recipients);
   const firstHttp = images.find((s) => /^https?:\/\//i.test(s)) ?? null;
   const insert = db.prepare(
     "INSERT INTO broadcasts (text, image_urls, images_count, first_image_url, recipients, sent_count, failed_count) VALUES (?, ?, ?, ?, ?, ?, ?)"

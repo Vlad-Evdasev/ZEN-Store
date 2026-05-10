@@ -71,6 +71,8 @@ paymentsRouter.post("/ton/checkout", async (req, res) => {
   const userPhone = req.body?.user_phone ?? null;
   const userUsername = req.body?.user_username ?? null;
   const userAddress = req.body?.user_address ?? null;
+  const promoCode = typeof req.body?.promo_code === "string" && req.body.promo_code.trim() ? req.body.promo_code.trim().toUpperCase() : null;
+  const pointsRedeemed = Math.max(0, Math.floor(Number(req.body?.points_redeemed) || 0));
   if (!userId || !items || !Number.isFinite(total) || total <= 0) {
     return res.status(400).json({ error: "user_id, items, total required" });
   }
@@ -91,9 +93,10 @@ paymentsRouter.post("/ton/checkout", async (req, res) => {
       `INSERT INTO orders (
         user_id, user_name, user_phone, user_username, user_address,
         items, total, status,
-        payment_method, payment_status, payment_amount_nano
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending_payment', 'ton', 'unpaid', ?)`
-    ).run(userId, userName, userPhone, userUsername, userAddress, itemsStr, total, expectedNano.toString());
+        payment_method, payment_status, payment_amount_nano,
+        promo_code, points_redeemed
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending_payment', 'ton', 'unpaid', ?, ?, ?)`
+    ).run(userId, userName, userPhone, userUsername, userAddress, itemsStr, total, expectedNano.toString(), promoCode, pointsRedeemed);
     const orderId = Number(orderRes.lastInsertRowid);
 
     const payload = generatePayload(orderId);
@@ -103,11 +106,34 @@ paymentsRouter.post("/ton/checkout", async (req, res) => {
        VALUES (?, ?, ?, ?, ?)`
     ).run(payload, orderId, expectedNano.toString(), rate, expiresAt);
 
-    // Привязываем payload к ордеру
     db.prepare("UPDATE orders SET payment_payload = ? WHERE id = ?").run(payload, orderId);
-
-    // Чистим корзину как при обычном createOrder
     db.prepare("DELETE FROM cart_items WHERE user_id = ?").run(userId);
+
+    // Промо/баллы фиксируем сразу — пусть будет атомарно с ордером.
+    // Если оплата не состоится, отдельный sweep ничего не вернёт
+    // (баллы остаются на ордере, юзер видит «ты потратил, но не оплатил»);
+    // приемлемо для v1, можно докрутить refund в отдельной задаче.
+    if (promoCode) {
+      try {
+        db.prepare(
+          "INSERT INTO promo_redemptions (code, user_id, order_id) VALUES (?, ?, ?)"
+        ).run(promoCode, userId, orderId);
+        db.prepare("UPDATE promo_codes SET used_count = used_count + 1 WHERE code = ?").run(promoCode);
+      } catch {}
+    }
+    if (pointsRedeemed > 0) {
+      const balRow = db.prepare("SELECT balance FROM loyalty_points WHERE user_id = ?").get(userId) as { balance: number } | undefined;
+      const balance = balRow?.balance ?? 0;
+      const applied = Math.min(balance, pointsRedeemed);
+      if (applied > 0) {
+        db.prepare(
+          "UPDATE loyalty_points SET balance = balance - ?, lifetime_spent = lifetime_spent + ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?"
+        ).run(applied, applied, userId);
+        db.prepare(
+          "INSERT INTO loyalty_log (user_id, delta, reason, ref_id) VALUES (?, ?, 'order_redeem', ?)"
+        ).run(userId, -applied, orderId);
+      }
+    }
 
     return { orderId, payload, expiresAt };
   });

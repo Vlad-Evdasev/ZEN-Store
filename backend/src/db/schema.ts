@@ -481,6 +481,10 @@ try { db.exec("ALTER TABLE orders ADD COLUMN payment_amount_nano TEXT"); } catch
 try { db.exec("ALTER TABLE orders ADD COLUMN payment_verified_at DATETIME"); } catch {}
 try { db.exec("ALTER TABLE orders ADD COLUMN payment_payload TEXT"); } catch {}
 
+// Промо/баллы — записываются прямо в ордер для аудита.
+try { db.exec("ALTER TABLE orders ADD COLUMN promo_code TEXT"); } catch {}
+try { db.exec("ALTER TABLE orders ADD COLUMN points_redeemed INTEGER DEFAULT 0"); } catch {}
+
 // Платёжный intent — мост между ордером и транзакцией в сети.
 // id (наш payload) уйдёт в комментарий TON-транзакции, потом по нему
 // матчим входящую транзакцию на блокчейне. Курс фиксируется на момент

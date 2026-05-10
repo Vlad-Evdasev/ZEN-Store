@@ -8,6 +8,8 @@ import {
   createTonCheckout,
   verifyTonPayment,
   cancelTonPayment,
+  applyPromoCode,
+  getLoyaltyBalance,
   type CartItem,
 } from "../api";
 import { useSettings } from "../context/SettingsContext";
@@ -59,12 +61,57 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
   const [pendingOrderId, setPendingOrderId] = useState<number | null>(null);
   const verifyTimerRef = useRef<number | null>(null);
 
+  // Промокод и лояльность
+  const [promoInput, setPromoInput] = useState<string>("");
+  const [promoApplied, setPromoApplied] = useState<{ code: string; discountPercent: number } | null>(null);
+  const [promoError, setPromoError] = useState<string>("");
+  const [promoChecking, setPromoChecking] = useState(false);
+  const [loyaltyBalance, setLoyaltyBalance] = useState<number>(0);
+  const [pointsToRedeem, setPointsToRedeem] = useState<number>(0);
+
+  useEffect(() => {
+    getLoyaltyBalance(userId)
+      .then((r) => setLoyaltyBalance(r.balance))
+      .catch(() => setLoyaltyBalance(0));
+  }, [userId]);
+
   useEffect(() => {
     getCart(userId).then(setItems).catch(console.error).finally(() => setLoading(false));
   }, [userId]);
 
-  const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const itemsCount = items.reduce((sum, i) => sum + i.quantity, 0);
+
+  // Расчёт скидок: сначала процентная скидка по промо, потом списание баллов.
+  const promoDiscount = promoApplied ? Math.round((subtotal * promoApplied.discountPercent) / 100) : 0;
+  const subtotalAfterPromo = Math.max(0, subtotal - promoDiscount);
+  // Ограничиваем списание: не больше баланса И не больше остатка после промо
+  const maxRedeem = Math.min(loyaltyBalance, subtotalAfterPromo);
+  const effectivePoints = Math.max(0, Math.min(pointsToRedeem, maxRedeem));
+  const total = Math.max(0, subtotalAfterPromo - effectivePoints);
+
+  const handleApplyPromo = async () => {
+    const code = promoInput.trim().toUpperCase();
+    if (!code) return;
+    setPromoChecking(true);
+    setPromoError("");
+    try {
+      const r = await applyPromoCode(code, userId);
+      setPromoApplied({ code, discountPercent: r.discount_percent });
+      setPromoInput(code);
+    } catch (e) {
+      setPromoApplied(null);
+      setPromoError(e instanceof Error ? e.message : "Промокод недействителен");
+    } finally {
+      setPromoChecking(false);
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setPromoApplied(null);
+    setPromoInput("");
+    setPromoError("");
+  };
   const firstItem = items[0];
   const hasMultiple = items.length > 1;
 
@@ -108,6 +155,8 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
         user_address: city.trim(),
         items,
         total,
+        promo_code: promoApplied?.code,
+        points_redeemed: effectivePoints || undefined,
       });
       onOrderSuccess?.();
       setOrderSuccess(true);
@@ -137,6 +186,8 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
         user_address: city.trim(),
         items,
         total,
+        promo_code: promoApplied?.code,
+        points_redeemed: effectivePoints || undefined,
       });
       setPendingOrderId(checkout.order_id);
       onCartChange?.();
@@ -659,6 +710,69 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
           </div>
         </div>
 
+        {/* Промокод */}
+        <div style={styles.discountGroup}>
+          <span style={styles.discountLabel}>
+            {lang === "ru" ? "Промокод" : "Promo code"}
+          </span>
+          {promoApplied ? (
+            <div style={styles.promoApplied}>
+              <span style={styles.promoAppliedCode}>{promoApplied.code}</span>
+              <span style={styles.promoAppliedPercent}>−{promoApplied.discountPercent}%</span>
+              <button type="button" onClick={handleRemovePromo} style={styles.promoRemoveBtn} aria-label="Убрать промокод">×</button>
+            </div>
+          ) : (
+            <div style={styles.promoRow}>
+              <input
+                type="text"
+                value={promoInput}
+                onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                placeholder={lang === "ru" ? "Введи код" : "Enter code"}
+                style={styles.promoInput}
+                autoCapitalize="characters"
+              />
+              <button
+                type="button"
+                onClick={handleApplyPromo}
+                disabled={!promoInput.trim() || promoChecking}
+                style={styles.promoApplyBtn}
+              >
+                {promoChecking ? "…" : (lang === "ru" ? "Применить" : "Apply")}
+              </button>
+            </div>
+          )}
+          {promoError && <span style={styles.promoError}>{promoError}</span>}
+        </div>
+
+        {/* Бонусные баллы */}
+        {loyaltyBalance > 0 && (
+          <div style={styles.discountGroup}>
+            <div style={styles.discountLabelRow}>
+              <span style={styles.discountLabel}>
+                {lang === "ru" ? "Бонусы" : "Bonus points"}
+              </span>
+              <span style={styles.discountBalance}>
+                {lang === "ru" ? "Доступно: " : "Available: "}
+                <strong>{loyaltyBalance}</strong>
+                {" = "}
+                <strong>{loyaltyBalance} $</strong>
+              </span>
+            </div>
+            <div style={styles.pointsSliderRow}>
+              <input
+                type="range"
+                min={0}
+                max={maxRedeem}
+                step={1}
+                value={effectivePoints}
+                onChange={(e) => setPointsToRedeem(Number(e.target.value))}
+                style={styles.pointsSlider}
+              />
+              <span style={styles.pointsValue}>−{effectivePoints} $</span>
+            </div>
+          </div>
+        )}
+
         {/* Способ оплаты */}
         <div style={styles.payMethodGroup}>
           <span style={styles.payMethodLabel}>
@@ -1175,6 +1289,113 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 13,
     color: "var(--text)",
     lineHeight: 1.4,
+  },
+  discountGroup: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+    marginTop: 14,
+  },
+  discountLabel: {
+    fontSize: 12,
+    fontWeight: 600,
+    color: "var(--muted)",
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
+  },
+  discountLabelRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+  },
+  discountBalance: {
+    fontSize: 12,
+    color: "var(--muted)",
+  },
+  promoRow: {
+    display: "grid",
+    gridTemplateColumns: "1fr auto",
+    gap: 8,
+  },
+  promoInput: {
+    padding: "12px 14px",
+    height: 44,
+    background: "var(--surface-elevated)",
+    border: "1px solid var(--border)",
+    borderRadius: 12,
+    fontSize: 14,
+    fontWeight: 600,
+    letterSpacing: "0.04em",
+    fontFamily: "inherit",
+    boxSizing: "border-box",
+    color: "var(--text)",
+  },
+  promoApplyBtn: {
+    height: 44,
+    padding: "0 18px",
+    background: "var(--text)",
+    color: "#fff",
+    border: "none",
+    borderRadius: 12,
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: "pointer",
+    letterSpacing: "-0.005em",
+  },
+  promoApplied: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    padding: "10px 14px",
+    background: "color-mix(in srgb, var(--accent) 8%, var(--surface-elevated))",
+    border: "1px solid color-mix(in srgb, var(--accent) 22%, var(--border))",
+    borderRadius: 12,
+  },
+  promoAppliedCode: {
+    fontSize: 13,
+    fontWeight: 700,
+    letterSpacing: "0.04em",
+    color: "var(--text)",
+  },
+  promoAppliedPercent: {
+    fontSize: 13,
+    fontWeight: 700,
+    color: "var(--accent)",
+    marginLeft: "auto",
+  },
+  promoRemoveBtn: {
+    width: 28,
+    height: 28,
+    border: "none",
+    background: "transparent",
+    color: "var(--muted)",
+    fontSize: 20,
+    lineHeight: 1,
+    cursor: "pointer",
+    padding: 0,
+  },
+  promoError: {
+    fontSize: 12,
+    color: "var(--accent)",
+  },
+  pointsSliderRow: {
+    display: "grid",
+    gridTemplateColumns: "1fr auto",
+    gap: 12,
+    alignItems: "center",
+  },
+  pointsSlider: {
+    width: "100%",
+    accentColor: "var(--accent)",
+  },
+  pointsValue: {
+    fontFamily: "Proxima Nova, -apple-system, system-ui, sans-serif",
+    fontSize: 14,
+    fontWeight: 700,
+    color: "var(--accent)",
+    fontVariantNumeric: "tabular-nums",
+    minWidth: 64,
+    textAlign: "right",
   },
   cityFieldActive: {
     borderColor: "var(--accent)",

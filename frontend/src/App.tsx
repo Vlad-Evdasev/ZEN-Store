@@ -358,7 +358,7 @@ function App() {
             onBack={openCatalog}
           />
         )}
-        {page === "settings" && <Settings onBack={openCatalog} />}
+        {page === "settings" && <Settings onBack={openCatalog} userId={userId} />}
         {page === "history" && (
           <History
             userId={userId}

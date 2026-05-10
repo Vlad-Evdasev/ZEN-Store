@@ -22,20 +22,52 @@ ordersRouter.get("/:userId", (req, res) => {
 
 ordersRouter.post("/:userId", async (req, res) => {
   const { userId } = req.params;
-  const { user_name, user_phone, user_username, user_address, items, total } = req.body;
+  const { user_name, user_phone, user_username, user_address, items, total, promo_code, points_redeemed } = req.body;
   if (!items || total == null) return res.status(400).json({ error: "items and total required" });
 
   const itemsStr = typeof items === "string" ? items : JSON.stringify(items);
+  const promoStr = typeof promo_code === "string" && promo_code.trim() ? promo_code.trim().toUpperCase() : null;
+  const points = Math.max(0, Math.floor(Number(points_redeemed) || 0));
 
-  db.prepare(
-    "INSERT INTO orders (user_id, user_name, user_phone, user_username, user_address, items, total, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')"
-  ).run(userId, user_name || null, user_phone || null, user_username || null, user_address || null, itemsStr, total);
+  const create = db.transaction(() => {
+    const result = db.prepare(
+      "INSERT INTO orders (user_id, user_name, user_phone, user_username, user_address, items, total, status, promo_code, points_redeemed) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)"
+    ).run(userId, user_name || null, user_phone || null, user_username || null, user_address || null, itemsStr, total, promoStr, points);
+    const orderId = Number(result.lastInsertRowid);
 
-  const row = db.prepare("SELECT last_insert_rowid() as id").get() as { id: number };
+    // Записываем применение промокода (если был) — UNIQUE(code, user_id)
+    if (promoStr) {
+      try {
+        db.prepare(
+          "INSERT INTO promo_redemptions (code, user_id, order_id) VALUES (?, ?, ?)"
+        ).run(promoStr, userId, orderId);
+        db.prepare(
+          "UPDATE promo_codes SET used_count = used_count + 1 WHERE code = ?"
+        ).run(promoStr);
+      } catch {} // повторное применение тем же юзером — игнор
+    }
 
-  db.prepare("DELETE FROM cart_items WHERE user_id = ?").run(userId);
+    // Списание баллов
+    if (points > 0) {
+      const balRow = db.prepare("SELECT balance FROM loyalty_points WHERE user_id = ?").get(userId) as { balance: number } | undefined;
+      const balance = balRow?.balance ?? 0;
+      const applied = Math.min(balance, points);
+      if (applied > 0) {
+        db.prepare(
+          "UPDATE loyalty_points SET balance = balance - ?, lifetime_spent = lifetime_spent + ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?"
+        ).run(applied, applied, userId);
+        db.prepare(
+          "INSERT INTO loyalty_log (user_id, delta, reason, ref_id) VALUES (?, ?, 'order_redeem', ?)"
+        ).run(userId, -applied, orderId);
+      }
+    }
 
-  res.status(201).json({ ok: true, orderId: row.id });
+    db.prepare("DELETE FROM cart_items WHERE user_id = ?").run(userId);
+    return orderId;
+  });
+
+  const orderId = create();
+  res.status(201).json({ ok: true, orderId });
 });
 
 ordersRouter.patch("/order/:orderId/status", (req, res) => {

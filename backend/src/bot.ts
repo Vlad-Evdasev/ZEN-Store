@@ -137,13 +137,17 @@ export interface BroadcastResult {
   failed_count: number;
 }
 
-export async function broadcastToUsers(text: string, imageSources: string[] = []): Promise<BroadcastResult> {
+export async function broadcastToUsers(
+  text: string,
+  imageSources: string[] = [],
+  recipientsList?: string[]
+): Promise<BroadcastResult> {
   const trimmed = (text || "").trim();
   const images = imageSources.filter((s) => typeof s === "string" && s.trim().length > 0).slice(0, MAX_IMAGES);
   const recipients: BroadcastRecipientResult[] = [];
   let sent = 0;
   let failed = 0;
-  const userIds = getBroadcastRecipients();
+  const userIds = recipientsList && recipientsList.length > 0 ? recipientsList : getBroadcastRecipients();
   for (const userId of userIds) {
     const result = await sendOne(userId, trimmed, images);
     if (result.ok) {

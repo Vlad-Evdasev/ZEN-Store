@@ -45,7 +45,9 @@ import {
   createDrop,
   deleteDrop,
   getBotAnalytics,
+  getSegmentCount,
   markOrderPaid,
+  type SegmentKey,
   type Product,
   type Category,
   type Order,
@@ -1756,6 +1758,10 @@ function ChannelTab({ adminSecret, products }: { adminSecret: string; products: 
   const [urlInput, setUrlInput] = useState("");
   const [templateProductId, setTemplateProductId] = useState<string>("");
 
+  // Сегмент-таргетинг рассылки
+  const [segment, setSegment] = useState<SegmentKey>("all");
+  const [segmentCount, setSegmentCount] = useState<number | null>(null);
+
   const [usersCount, setUsersCount] = useState<number | null>(null);
 
   const [history, setHistory] = useState<BroadcastPost[]>([]);
@@ -1779,6 +1785,18 @@ function ChannelTab({ adminSecret, products }: { adminSecret: string; products: 
       .catch(() => setUsersCount(null));
   };
   useEffect(refreshUsersCount, [adminSecret]);
+
+  // При смене сегмента дергаем счётчик через API.
+  useEffect(() => {
+    if (segment === "all") {
+      setSegmentCount(usersCount);
+      return;
+    }
+    setSegmentCount(null);
+    getSegmentCount(segment, adminSecret)
+      .then(setSegmentCount)
+      .catch(() => setSegmentCount(0));
+  }, [segment, adminSecret, usersCount]);
 
   const addImage = (src: string) => {
     setImages((prev) => (prev.length >= MAX_CHANNEL_IMAGES ? prev : [...prev, src]));
@@ -1868,7 +1886,7 @@ function ChannelTab({ adminSecret, products }: { adminSecret: string; products: 
         setHistory((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
         setMessage({ kind: "ok", text: `Обновлено у ${updated.sent_count} подписчик(ов)` });
       } else {
-        const sent = await sendBroadcast({ text, image_urls: images }, adminSecret);
+        const sent = await sendBroadcast({ text, image_urls: images, segment }, adminSecret);
         const failedHint = sent.failed_count > 0 ? ` · ${sent.failed_count} не доставлено (заблокировали бота)` : "";
         setMessage({ kind: "ok", text: `Разослано ${sent.sent_count} подписчик(ам)${failedHint}` });
         loadHistory();
@@ -1909,22 +1927,40 @@ function ChannelTab({ adminSecret, products }: { adminSecret: string; products: 
         </div>
       </div>
 
-      <div style={{ display: "flex", alignItems: "stretch", gap: 0, marginBottom: 22, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
-        <div style={{ flex: 1, padding: "14px 18px", display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
-          <span style={{ fontSize: 11.5, fontWeight: 600, letterSpacing: "0.04em", color: "var(--muted)", textTransform: "uppercase" }}>
-            Подписчики бота
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 22 }}>
+        {/* Подписчики */}
+        <div style={{ padding: "14px 18px", display: "flex", flexDirection: "column", gap: 4, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)" }}>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, fontWeight: 600, letterSpacing: "0.18em", color: "var(--muted)", textTransform: "uppercase" }}>
+            Все подписчики
           </span>
-          <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>
+          <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>
             {usersCount == null ? "—" : usersCount}
           </div>
           <p style={{ ...styles.hint, marginTop: 2, marginBottom: 0, fontSize: 12 }}>
-            Все, кто хоть раз тапнул <code>/start</code>, оформлял заказ, добавлял в корзину или избранное. Заблокировавшие бота исключаются автоматически.
+            Кто тапал <code>/start</code>, заказывал, кладёт в корзину. Заблокированные исключены.
           </p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", padding: "14px 18px", borderLeft: "1px solid var(--border)" }}>
-          <button type="button" onClick={refreshUsersCount} style={styles.smallBtn}>
-            Обновить
-          </button>
+
+        {/* Сегмент-таргетинг */}
+        <div style={{ padding: "14px 18px", display: "flex", flexDirection: "column", gap: 8, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)" }}>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, fontWeight: 600, letterSpacing: "0.18em", color: "var(--muted)", textTransform: "uppercase" }}>
+            Сегмент рассылки
+          </span>
+          <select
+            value={segment}
+            onChange={(e) => setSegment(e.target.value as SegmentKey)}
+            style={{ ...styles.input, height: 36 }}
+          >
+            <option value="all">Все подписчики</option>
+            <option value="vip">VIP — 5+ оплачен. заказов</option>
+            <option value="loyal">Лояльные — 2-4 заказов</option>
+            <option value="new">Новые — без заказов</option>
+            <option value="dormant">Спящие — нет активности 30+ дней</option>
+            <option value="cart_abandoners">Брошенная корзина — &gt;24h</option>
+          </select>
+          <span style={{ fontSize: 12, color: "var(--muted)" }}>
+            Получателей в сегменте: <strong style={{ color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>{segmentCount == null ? "…" : segmentCount}</strong>
+          </span>
         </div>
       </div>
 
