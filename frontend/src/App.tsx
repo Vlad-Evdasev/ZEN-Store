@@ -53,12 +53,38 @@ function saveCache<T>(key: string, value: T): void {
   } catch {}
 }
 
-function readInitialPage(): Page {
-  if (typeof window === "undefined") return "catalog";
+/** Результат разбора deep-link: куда отвести юзера + опционально какой
+ *  пост развернуть в ленте «Вдохновиться». */
+interface InitialNav {
+  page: Page;
+  postId?: number;
+}
+
+function readInitialNav(): InitialNav {
+  if (typeof window === "undefined") return { page: "catalog" };
   const hash = window.location.hash || "";
+
+  // 1) Telegram start_param из mini-app deep-link
+  //    (t.me/<bot>/<short>?startapp=post_42 → start_param === "post_42")
+  const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
+  if (startParam) {
+    const pm = startParam.match(/^post[_-](\d+)$/i);
+    if (pm) return { page: "newArrivals", postId: Number(pm[1]) };
+  }
+
+  // 2) Hash-параметр поста: #post=42 (для веб-фолбэка share-ссылок)
+  const postHash = hash.match(/[#&]post=(\d+)/);
+  if (postHash) {
+    const id = Number(postHash[1]);
+    try {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    } catch {}
+    return { page: "newArrivals", postId: id };
+  }
+
+  // 3) Существующий редирект по #page=<name>
   const m = hash.match(/[#&]page=([a-zA-Z]+)/);
   const target = m?.[1];
-  // Whitelist валидных страниц (исключая внутренние типа product/checkout).
   const valid: Record<string, Page> = {
     catalog: "catalog",
     cart: "cart",
@@ -73,13 +99,12 @@ function readInitialPage(): Page {
     support: "support",
   };
   if (target && valid[target]) {
-    // Чистим хеш чтобы reload не повторял редирект.
     try {
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
     } catch {}
-    return valid[target];
+    return { page: valid[target] };
   }
-  return "catalog";
+  return { page: "catalog" };
 }
 
 const SELLER_LINK = import.meta.env.VITE_SELLER_LINK || "";
@@ -129,7 +154,9 @@ function App() {
   const { userId, userName, firstName, isInTelegram, setBrowserAuth } = useTelegram();
   const { wishlistIds, toggleWishlist, hasInWishlist } = useWishlist(userId);
 
-  const [page, setPage] = useState<Page>(() => readInitialPage());
+  const initialNavRef = useRef<InitialNav>(readInitialNav());
+  const [page, setPage] = useState<Page>(() => initialNavRef.current.page);
+  const [pendingPostId, setPendingPostId] = useState<number | null>(() => initialNavRef.current.postId ?? null);
   const [productId, setProductId] = useState<number | null>(null);
   const [products, setProducts] = useState<Product[]>(() => loadCache<Product[]>("products") ?? []);
   const [stores, setStores] = useState<Store[]>(() => loadCache<Store[]>("stores") ?? []);
@@ -392,6 +419,8 @@ function App() {
           <NewArrivalsPage
             userId={userId || ""}
             onBack={openCatalog}
+            initialPostId={pendingPostId}
+            onInitialPostHandled={() => setPendingPostId(null)}
           />
         )}
         {page === "customOrder" && (

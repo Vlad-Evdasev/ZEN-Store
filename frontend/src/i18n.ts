@@ -196,6 +196,13 @@ const texts: Record<Lang, Record<string, string>> = {
     postsInspireTitle: "Тут можно вдохновиться",
     postsInspireSubtitle: "…если не знаешь, что заказать. Мы собрали то, что нам самим понравилось.",
     postsInspireScrollHint: "Листайте ленту ниже 👇",
+    postsTabAll: "Всё",
+    postsTabLiked: "Лайки",
+    postsLikedEmpty: "Ничего ещё не лайкнул",
+    postsLikedEmptyHint: "Тапни сердце под понравившимся фото — оно появится здесь.",
+    postShare: "Поделиться",
+    postLike: "Нравится",
+    postOpenProduct: "Открыть товар",
   },
   en: {
     search: "Search...",
@@ -392,6 +399,13 @@ const texts: Record<Lang, Record<string, string>> = {
     postsInspireTitle: "Get inspired here",
     postsInspireSubtitle: "…if you're not sure what to order. We picked what we loved ourselves.",
     postsInspireScrollHint: "Scroll the feed below 👇",
+    postsTabAll: "All",
+    postsTabLiked: "Liked",
+    postsLikedEmpty: "Nothing liked yet",
+    postsLikedEmptyHint: "Tap the heart under a photo you love — it'll show up here.",
+    postShare: "Share",
+    postLike: "Like",
+    postOpenProduct: "Open product",
   },
 };
 
