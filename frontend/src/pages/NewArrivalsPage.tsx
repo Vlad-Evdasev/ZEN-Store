@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   getPosts,
   togglePostLike,
@@ -33,26 +33,26 @@ function writePostsCache(posts: Post[]): void {
 
 // ── Иконки ──────────────────────────────────────────────────────────
 
+// Классический канцелярский пушпин — простая чистая форма, узнаваемая.
 function PinIcon({ filled, size = 22 }: { filled: boolean; size?: number }) {
   if (filled) {
     return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2.5l1.5 4.2 4.5 0.6-3.3 3 0.9 4.4L12 12.4 8.4 14.7l0.9-4.4-3.3-3 4.5-0.6z" />
-        <line x1="12" y1="14" x2="12" y2="22" stroke="currentColor" strokeWidth="2" />
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+        <path d="M16 2H8a1 1 0 0 0-.7 1.7L8 4.4V11l-2.3 2.3A1 1 0 0 0 6.4 15H11v6a1 1 0 0 0 2 0v-6h4.6a1 1 0 0 0 .7-1.7L16 11V4.4l.7-.7A1 1 0 0 0 16 2Z" />
       </svg>
     );
   }
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2.5l1.5 4.2 4.5 0.6-3.3 3 0.9 4.4L12 12.4 8.4 14.7l0.9-4.4-3.3-3 4.5-0.6z" />
-      <line x1="12" y1="14" x2="12" y2="22" />
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M16 3H8l1.5 1.5V11l-2 2v1.5h9V13l-2-2V4.5L16 3Z" />
+      <line x1="12" y1="14.5" x2="12" y2="21" />
     </svg>
   );
 }
 
 function ShareIcon({ size = 22 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
       <polyline points="16 6 12 2 8 6" />
       <line x1="12" y1="2" x2="12" y2="15" />
@@ -62,7 +62,7 @@ function ShareIcon({ size = 22 }: { size?: number }) {
 
 function BackArrowIcon({ size = 22 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <line x1="19" y1="12" x2="5" y2="12" />
       <polyline points="12 19 5 12 12 5" />
     </svg>
@@ -76,6 +76,9 @@ function getPostImages(post: Post): string[] {
 }
 
 // ── Pinterest masonry card ───────────────────────────────────────────
+// Чистая плитка: один <img> в normal flow (без position: absolute, иначе
+// обёртка схлопывалась в 0 и пост с >1 фото вообще не показывался).
+// Свайп переключает src — простой и надёжный путь.
 
 interface MasonryCardProps {
   post: Post;
@@ -145,19 +148,13 @@ function MasonryCard({ post, onOpen }: MasonryCardProps) {
       style={cardStyles.card}
     >
       <div style={cardStyles.imageWrap}>
-        {images.map((src, i) => (
-          <img
-            key={i}
-            src={src}
-            alt=""
-            loading={i === 0 ? "eager" : "lazy"}
-            style={{
-              ...cardStyles.image,
-              ...(isMulti ? cardStyles.imageStacked : null),
-              opacity: isMulti ? (i === currentIdx ? 1 : 0) : 1,
-            }}
-          />
-        ))}
+        <img
+          key={currentIdx}
+          src={images[currentIdx]}
+          alt=""
+          loading="lazy"
+          style={cardStyles.image}
+        />
         {isMulti && (
           <div style={cardStyles.dotsRow} aria-hidden>
             {images.map((_, i) => (
@@ -182,10 +179,11 @@ function MasonryCard({ post, onOpen }: MasonryCardProps) {
 }
 
 // ── Expanded fullscreen view ─────────────────────────────────────────
+// Простая надёжная анимация: backdrop fade-in + sheet fade + slide-up.
+// Без морфа из thumb — он давал «дёрганое» открытие на разных размерах.
 
 interface ExpandedViewProps {
   post: Post;
-  startRect: DOMRect | null;
   startSrc: string;
   startIndex: number;
   userId: string;
@@ -195,19 +193,21 @@ interface ExpandedViewProps {
   onShare: (post: Post) => void;
 }
 
-function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onClose, onPinToggle, onShare }: ExpandedViewProps) {
+function ExpandedView({ post, startSrc, startIndex, userId, lang, onClose, onPinToggle, onShare }: ExpandedViewProps) {
   const images = getPostImages(post);
-  const [currentIdx, setCurrentIdx] = useState(Math.min(startIndex, images.length - 1));
+  const [currentIdx, setCurrentIdx] = useState(Math.min(startIndex, Math.max(images.length - 1, 0)));
   const [phase, setPhase] = useState<"opening" | "open" | "closing">("opening");
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const touchMoveDx = useRef(0);
   const touchMoveDy = useRef(0);
   const dragDirection = useRef<"horizontal" | "vertical" | null>(null);
-  const [dragX, setDragX] = useState(0);
   const [dragY, setDragY] = useState(0);
+  const sheetRef = useRef<HTMLDivElement>(null);
 
-  useLayoutEffect(() => {
+  // На следующий кадр после маунта переключаемся в "open" — CSS-transition
+  // плавно покажет sheet через opacity + translateY.
+  useEffect(() => {
     const r = requestAnimationFrame(() => {
       requestAnimationFrame(() => setPhase("open"));
     });
@@ -217,7 +217,7 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
   const requestClose = useCallback(() => {
     if (phase === "closing") return;
     setPhase("closing");
-    setTimeout(() => onClose(), 280);
+    setTimeout(() => onClose(), 240);
   }, [phase, onClose]);
 
   useEffect(() => {
@@ -234,8 +234,7 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
   const handlePin = async () => {
     const wasPinned = post.user_liked;
     const prevCount = post.likes_count;
-    const tg = window.Telegram?.WebApp;
-    tg?.HapticFeedback?.impactOccurred?.("light");
+    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.("light");
     onPinToggle(post.id, !wasPinned, wasPinned ? prevCount - 1 : prevCount + 1);
     try {
       const result = await togglePostLike(post.id, userId);
@@ -250,6 +249,10 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
     onShare(post);
   };
 
+  // Touch: горизонтальный свайп (только если касание началось НЕ во время
+  // вертикального скролла) листает фото; вертикальный вниз > 100px при
+  // sheetRef.scrollTop === 0 закрывает. Направление фиксируем по первым
+  // 8px движения, чтобы не путать.
   const onTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
@@ -266,9 +269,7 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
     if (dragDirection.current === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
       dragDirection.current = Math.abs(dx) > Math.abs(dy) ? "horizontal" : "vertical";
     }
-    if (dragDirection.current === "horizontal" && images.length > 1) {
-      setDragX(dx);
-    } else if (dragDirection.current === "vertical" && dy > 0) {
+    if (dragDirection.current === "vertical" && dy > 0 && (sheetRef.current?.scrollTop ?? 0) <= 0) {
       setDragY(dy);
     }
   };
@@ -281,7 +282,6 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
     touchMoveDx.current = 0;
     touchMoveDy.current = 0;
     dragDirection.current = null;
-    setDragX(0);
 
     if (dir === "horizontal" && Math.abs(dx) > 60 && images.length > 1) {
       setCurrentIdx((prev) => {
@@ -289,36 +289,19 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
         return Math.max(0, prev - 1);
       });
     }
-    if (dir === "vertical") {
-      if (dy > 100) {
-        requestClose();
-      } else {
-        setDragY(0);
-      }
+    if (dir === "vertical" && dy > 100 && (sheetRef.current?.scrollTop ?? 0) <= 0) {
+      requestClose();
     } else {
       setDragY(0);
     }
   };
 
-  const vw = typeof window !== "undefined" ? window.innerWidth : 0;
-  const vh = typeof window !== "undefined" ? window.innerHeight : 0;
-
   const sheetTransform = (() => {
-    if (phase === "open") {
-      return `translate3d(0, ${dragY}px, 0) scale(1)`;
-    }
-    if (!startRect || vw === 0) return "translate3d(0, 100%, 0) scale(0.92)";
-    const targetCx = startRect.left + startRect.width / 2;
-    const targetCy = startRect.top + startRect.height / 2;
-    const sheetCx = vw / 2;
-    const sheetCy = vh / 2;
-    const dx = targetCx - sheetCx;
-    const dy = targetCy - sheetCy;
-    const scale = Math.max(0.18, startRect.width / vw);
-    return `translate3d(${dx}px, ${dy}px, 0) scale(${scale})`;
+    if (phase === "open") return `translate3d(0, ${dragY}px, 0)`;
+    return "translate3d(0, 24px, 0)";
   })();
-
-  const backdropOpacity = phase === "open" ? 1 - Math.min(0.6, dragY / 400) : 0;
+  const sheetOpacity = phase === "open" ? Math.max(0.4, 1 - dragY / 600) : 0;
+  const backdropOpacity = phase === "open" ? Math.max(0.3, 1 - dragY / 500) : 0;
 
   return (
     <div
@@ -326,11 +309,16 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
       aria-modal="true"
       style={{
         ...expandedStyles.root,
-        background: `rgba(var(--bg-rgb), ${0.97 * backdropOpacity})`,
+        background: `rgba(var(--bg-rgb), ${0.98 * backdropOpacity})`,
         pointerEvents: phase === "closing" ? "none" : "auto",
+        opacity: phase === "closing" ? 0 : 1,
+        transition: phase === "closing"
+          ? "opacity 240ms ease, background 240ms ease"
+          : "background 220ms ease",
       }}
     >
       <div
+        ref={sheetRef}
         onClick={(e) => e.stopPropagation()}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
@@ -338,42 +326,33 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
         style={{
           ...expandedStyles.sheet,
           transform: sheetTransform,
-          opacity: phase === "opening" ? 0.4 : 1,
-          transition: "transform 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease",
+          opacity: sheetOpacity,
+          transition: dragY === 0
+            ? "transform 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease"
+            : "none",
         }}
       >
-        <div style={expandedStyles.topBar}>
-          <button
-            type="button"
-            onClick={requestClose}
-            style={expandedStyles.backBtn}
-            aria-label="Назад"
-          >
-            <BackArrowIcon />
-          </button>
-        </div>
+        {/* Floating back button — сверху, поверх фото */}
+        <button
+          type="button"
+          onClick={requestClose}
+          style={expandedStyles.backBtn}
+          aria-label="Назад"
+        >
+          <BackArrowIcon size={20} />
+        </button>
 
+        {/* Hero image — width 100%, высота естественная (без max-height-бутылочного
+            горлышка). Если пост с несколькими фото, рендерим один <img> и
+            свайпом меняем src — никаких absolute-стопок, всё в нормальном flow. */}
         <div style={expandedStyles.imageArea}>
-          <div style={{
-            ...expandedStyles.imageTrack,
-            transform: `translate3d(${-currentIdx * 100 + (dragX / Math.max(vw, 1)) * 100}%, 0, 0)`,
-            transition: dragX === 0 ? "transform 280ms cubic-bezier(0.22, 1, 0.36, 1)" : "none",
-          }}>
-            {images.length > 0 ? images.map((src, i) => (
-              <div key={i} style={expandedStyles.imageSlide}>
-                <img
-                  src={src}
-                  alt=""
-                  style={expandedStyles.image}
-                  draggable={false}
-                />
-              </div>
-            )) : (
-              <div style={expandedStyles.imageSlide}>
-                <img src={startSrc} alt="" style={expandedStyles.image} draggable={false} />
-              </div>
-            )}
-          </div>
+          <img
+            key={currentIdx}
+            src={images[currentIdx] ?? startSrc}
+            alt=""
+            style={expandedStyles.image}
+            draggable={false}
+          />
           {images.length > 1 && (
             <div style={expandedStyles.dotsRow} aria-hidden>
               {images.map((_, i) => (
@@ -389,30 +368,27 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
           )}
         </div>
 
-        {/* Action row: пин слева, шер справа */}
+        {/* Action row: пин слева (только иконка), шер справа */}
         <div style={expandedStyles.actionsRow}>
           <button
             type="button"
             onClick={handlePin}
             style={{
-              ...expandedStyles.actionBtn,
-              ...(post.user_liked ? expandedStyles.actionBtnPinned : null),
+              ...expandedStyles.actionIconBtn,
+              ...(post.user_liked ? expandedStyles.actionIconBtnPinned : null),
             }}
             aria-pressed={post.user_liked}
             aria-label={post.user_liked ? t(lang, "postPinned") : t(lang, "postPin")}
           >
-            <PinIcon filled={post.user_liked} size={24} />
-            <span style={expandedStyles.actionText}>
-              {post.user_liked ? t(lang, "postPinned") : t(lang, "postPin")}
-            </span>
+            <PinIcon filled={post.user_liked} size={22} />
           </button>
           <button
             type="button"
             onClick={handleShare}
-            style={{ ...expandedStyles.actionBtn, marginLeft: "auto" }}
+            style={{ ...expandedStyles.actionIconBtn, marginLeft: "auto" }}
             aria-label={t(lang, "postShare")}
           >
-            <ShareIcon size={24} />
+            <ShareIcon size={22} />
           </button>
         </div>
 
@@ -466,11 +442,9 @@ export function NewArrivalsPage({
   const [posts, setPosts] = useState<Post[]>(() => readPostsCache() ?? []);
   const [loading, setLoading] = useState<boolean>(() => (readPostsCache() ?? []).length === 0);
   const [tab, setTab] = useState<FilterTab>("all");
-  const [expanded, setExpanded] = useState<{ post: Post; rect: DOMRect | null; src: string; index: number } | null>(null);
+  const [expanded, setExpanded] = useState<{ post: Post; src: string; index: number } | null>(null);
 
-  // Память скролла для FAB-переключателя: запоминаем позицию каждого таба
-  // и восстанавливаем её при возврате. Это ключ к плавному toggle — юзер
-  // не теряет место в ленте.
+  // Память скролла — переключение через FAB не теряет позицию в каждом из табов.
   const scrollMemory = useRef<Record<FilterTab, number>>({ all: 0, liked: 0 });
 
   useEffect(() => {
@@ -497,7 +471,7 @@ export function NewArrivalsPage({
     const target = posts.find((p) => p.id === initialPostId);
     if (!target) return;
     const cover = getPostImages(target)[0] ?? "";
-    setExpanded({ post: target, rect: null, src: cover, index: 0 });
+    setExpanded({ post: target, src: cover, index: 0 });
     onInitialPostHandled?.();
   }, [initialPostId, posts, onInitialPostHandled]);
 
@@ -522,12 +496,17 @@ export function NewArrivalsPage({
   const handleShare = useCallback((post: Post) => {
     const tg = window.Telegram?.WebApp;
     const bot = (import.meta.env.VITE_BOT_USERNAME || "").replace(/^@/, "");
-    const shortName = import.meta.env.VITE_WEBAPP_SHORT_NAME || "";
     const startParam = `post_${post.id}`;
 
     let shareUrl: string;
-    if (bot && shortName) {
-      shareUrl = `https://t.me/${bot}/${shortName}?startapp=${encodeURIComponent(startParam)}`;
+    if (bot) {
+      // Старый-добрый t.me/<bot>?start=<param> формат — Telegram у получателя
+      // ОБЯЗАТЕЛЬНО открывает чат с ботом + передаёт payload в /start.
+      // Дальше бот ловит /start post_42 и отдаёт inline-кнопку «Открыть пост»
+      // → юзер один раз тапает → попадает в Mini App на нужном посте.
+      // Это надёжнее, чем t.me/<bot>/<short>?startapp=, который у части
+      // клиентов открывал не Mini App, а просто чат с ботом без payload.
+      shareUrl = `https://t.me/${bot}?start=${encodeURIComponent(startParam)}`;
     } else if (typeof window !== "undefined") {
       shareUrl = `${window.location.origin}${window.location.pathname}#post=${post.id}`;
     } else {
@@ -554,8 +533,6 @@ export function NewArrivalsPage({
 
   const pinnedCount = useMemo(() => posts.filter((p) => p.user_liked).length, [posts]);
 
-  // FAB-переключатель: запоминаем текущую позицию скролла для активного
-  // таба, переключаемся, восстанавливаем сохранённую позицию для нового.
   const switchTab = useCallback((next: FilterTab) => {
     if (next === tab) return;
     if (typeof window !== "undefined") {
@@ -568,49 +545,12 @@ export function NewArrivalsPage({
   }, [tab]);
 
   const toggleViaFab = useCallback(() => {
-    const tg = window.Telegram?.WebApp;
-    tg?.HapticFeedback?.selectionChanged?.();
+    window.Telegram?.WebApp?.HapticFeedback?.selectionChanged?.();
     switchTab(tab === "all" ? "liked" : "all");
   }, [tab, switchTab]);
 
   return (
-    <div style={pageStyles.wrap}>
-      {/* Welcome bubble — компактный, всегда в шапке */}
-      <div style={pageStyles.headerArea}>
-        <div style={pageStyles.bubbleRow}>
-          <div style={pageStyles.avatar}>R</div>
-          <div style={pageStyles.bubbleMain}>
-            <div style={pageStyles.bubbleTitle}>{t(lang, "postsInspireTitle")}</div>
-            <div style={pageStyles.bubbleSubtitle}>{t(lang, "postsInspireSubtitle")}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs: Всё / Пины */}
-      <div style={pageStyles.tabsRow} role="tablist" aria-label="Фильтр постов">
-        {(["all", "liked"] as FilterTab[]).map((key) => {
-          const active = tab === key;
-          return (
-            <button
-              key={key}
-              role="tab"
-              type="button"
-              aria-selected={active}
-              onClick={() => switchTab(key)}
-              style={{
-                ...pageStyles.tabBtn,
-                ...(active ? pageStyles.tabBtnActive : null),
-              }}
-            >
-              {t(lang, key === "all" ? "postsTabAll" : "postsTabLiked")}
-              {key === "liked" && pinnedCount > 0 && (
-                <span style={pageStyles.tabCount}>{pinnedCount}</span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
+    <div style={pageStyles.wrap} className="zen-inspire-page">
       {loading && (
         <div className="zen-pin-grid">
           <SkeletonCard index={0} />
@@ -635,13 +575,13 @@ export function NewArrivalsPage({
             <MasonryCard
               key={post.id}
               post={post}
-              onOpen={(p, rect, src, index) => setExpanded({ post: p, rect, src, index })}
+              onOpen={(p, _rect, src, index) => setExpanded({ post: p, src, index })}
             />
           ))}
         </div>
       )}
 
-      {/* FAB: тoggle между Всё / Закреплённые с памятью скролла */}
+      {/* FAB: переключатель Всё ↔ Закреплённые с памятью скролла */}
       {!loading && posts.length > 0 && (
         <button
           type="button"
@@ -665,7 +605,6 @@ export function NewArrivalsPage({
       {expanded && (
         <ExpandedView
           post={expanded.post}
-          startRect={expanded.rect}
           startSrc={expanded.src}
           startIndex={expanded.index}
           userId={userId}
@@ -683,90 +622,8 @@ export function NewArrivalsPage({
 
 const pageStyles: Record<string, React.CSSProperties> = {
   wrap: {
-    maxWidth: 720,
-    margin: "0 auto",
-    padding: "8px 4px calc(96px + env(safe-area-inset-bottom, 0px))",
-  },
-  headerArea: {
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: 6,
-    marginBottom: 12,
-    padding: "0 6px",
-  },
-  bubbleRow: {
-    display: "flex",
-    alignItems: "flex-end",
-    gap: 8,
-  },
-  avatar: {
-    width: 30,
-    height: 30,
-    borderRadius: "50%",
-    background: "var(--accent)",
-    color: "#fff",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: 12,
-    fontWeight: 800,
-    letterSpacing: "0.06em",
-    flexShrink: 0,
-    marginBottom: 0,
-  },
-  bubbleMain: {
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: "16px 16px 16px 4px",
-    padding: "10px 13px",
-    maxWidth: "86%",
-    boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
-  },
-  bubbleTitle: {
-    fontSize: 14,
-    fontWeight: 600,
-    lineHeight: 1.2,
-    letterSpacing: "-0.01em",
-    color: "var(--text)",
-  },
-  bubbleSubtitle: {
-    fontSize: 12,
-    color: "var(--muted)",
-    marginTop: 3,
-    lineHeight: 1.4,
-  },
-  tabsRow: {
-    display: "flex",
-    gap: 8,
-    marginBottom: 8,
-    padding: "0 6px",
-  },
-  tabBtn: {
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: 999,
-    padding: "8px 18px",
-    fontSize: 13,
-    fontWeight: 600,
-    color: "var(--muted)",
-    cursor: "pointer",
-    fontFamily: "inherit",
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 6,
-    transition: "background 0.15s ease, color 0.15s ease, border-color 0.15s ease",
-    WebkitTapHighlightColor: "transparent",
-  },
-  tabBtnActive: {
-    background: "var(--text)",
-    color: "var(--bg)",
-    borderColor: "var(--text)",
-  },
-  tabCount: {
-    fontSize: 11,
-    fontWeight: 700,
-    fontVariantNumeric: "tabular-nums",
-    opacity: 0.85,
+    width: "100%",
+    padding: "8px 0 calc(96px + env(safe-area-inset-bottom, 0px))",
   },
   empty: {
     textAlign: "center" as const,
@@ -851,13 +708,6 @@ const cardStyles: Record<string, React.CSSProperties> = {
     WebkitUserSelect: "none" as const,
     pointerEvents: "none" as const,
   },
-  imageStacked: {
-    position: "absolute" as const,
-    inset: 0,
-    width: "100%",
-    height: "100%",
-    transition: "opacity 0.25s ease",
-  },
   dotsRow: {
     position: "absolute" as const,
     bottom: 8,
@@ -904,86 +754,60 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "stretch",
     justifyContent: "center",
-    transition: "background 280ms ease",
   },
   sheet: {
     position: "relative" as const,
     width: "100%",
     height: "100%",
     background: "var(--bg)",
-    overflow: "hidden",
-    transformOrigin: "center center",
+    overflowY: "auto" as const,
+    overflowX: "hidden" as const,
+    transformOrigin: "center top",
     willChange: "transform, opacity",
     display: "flex",
     flexDirection: "column" as const,
-  },
-  topBar: {
-    position: "absolute" as const,
-    top: "calc(env(safe-area-inset-top, 0px) + 12px)",
-    left: 12,
-    right: 12,
-    zIndex: 3,
-    display: "flex",
-    alignItems: "center",
+    overscrollBehavior: "contain" as const,
   },
   backBtn: {
-    width: 40,
-    height: 40,
+    position: "fixed" as const,
+    top: "calc(env(safe-area-inset-top, 0px) + 12px)",
+    left: 12,
+    zIndex: 5,
+    width: 38,
+    height: 38,
     borderRadius: "50%",
-    background: "var(--surface-elevated)",
+    background: "rgba(var(--bg-rgb), 0.78)",
     color: "var(--text)",
     border: "1px solid var(--border)",
     cursor: "pointer",
-    backdropFilter: "blur(8px)",
-    WebkitBackdropFilter: "blur(8px)",
+    backdropFilter: "blur(10px)",
+    WebkitBackdropFilter: "blur(10px)",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
     WebkitTapHighlightColor: "transparent",
-    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.18)",
+    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.22)",
   },
-  // Hero-image теперь занимает всю доступную ширину карточки
-  // (без огромных пустых полей сверху и снизу).
+  // Картинка — в нормальном flow, width 100%, высота естественная
+  // (без max-height-бутылочного-горлышка). Длинная пикча просто
+  // даст возможность скроллить sheet вниз — это ок и ожидаемо.
   imageArea: {
     position: "relative" as const,
-    flex: "1 1 auto",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-    minHeight: 0,
-    paddingTop: "calc(env(safe-area-inset-top, 0px) + 64px)",
-  },
-  imageTrack: {
-    display: "flex",
     width: "100%",
-    height: "100%",
-    willChange: "transform",
+    background: "rgba(0,0,0,0.04)",
+    flex: "0 0 auto",
   },
-  imageSlide: {
-    flex: "0 0 100%",
-    width: "100%",
-    height: "100%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "0 4px",
-  },
-  // Картинка тянется по ширине, высота по соотношению. Ограничение
-  // по высоте — чтобы не вылезала за пределы видимой области, но при
-  // этом маленькие квадратные пикчи всё равно выглядят крупно.
   image: {
     width: "100%",
     height: "auto",
-    maxHeight: "100%",
-    objectFit: "contain" as const,
     display: "block",
+    objectFit: "contain" as const,
     userSelect: "none" as const,
     WebkitUserSelect: "none" as const,
   },
   dotsRow: {
     position: "absolute" as const,
-    bottom: 12,
+    bottom: 14,
     left: "50%",
     transform: "translateX(-50%)",
     display: "flex",
@@ -999,7 +823,7 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     width: 6,
     height: 6,
     borderRadius: "50%",
-    background: "rgba(255,255,255,0.5)",
+    background: "rgba(255,255,255,0.55)",
     transition: "background 0.15s ease, width 0.15s ease",
   },
   dotActive: {
@@ -1011,43 +835,35 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     flex: "0 0 auto",
     display: "flex",
     alignItems: "center",
-    gap: 14,
-    padding: "16px 20px 8px",
+    gap: 12,
+    padding: "14px 18px 4px",
   },
-  actionBtn: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 8,
-    padding: "8px 14px",
+  actionIconBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: "50%",
     background: "var(--surface)",
     border: "1px solid var(--border)",
-    borderRadius: 999,
     color: "var(--text)",
     cursor: "pointer",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
     fontFamily: "inherit",
-    fontSize: 14,
-    fontWeight: 600,
-    lineHeight: 1,
     WebkitTapHighlightColor: "transparent",
-    transition: "background 0.15s ease, border-color 0.15s ease, transform 0.08s ease, color 0.15s ease",
+    transition: "background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.08s ease",
   },
-  actionBtnPinned: {
+  actionIconBtnPinned: {
     background: "var(--accent)",
     color: "#fff",
     borderColor: "var(--accent)",
   },
-  actionText: {
-    fontSize: 13,
-    fontWeight: 600,
-  },
   captionWrap: {
     flex: "0 0 auto",
-    padding: "6px 20px 4px",
-    maxHeight: "30dvh",
-    overflowY: "auto" as const,
+    padding: "8px 18px 4px",
   },
   caption: {
-    fontSize: 14,
+    fontSize: 14.5,
     color: "var(--text)",
     lineHeight: 1.5,
     margin: 0,
@@ -1055,7 +871,7 @@ const expandedStyles: Record<string, React.CSSProperties> = {
   },
   productCtaWrap: {
     flex: "0 0 auto",
-    padding: "8px 20px calc(env(safe-area-inset-bottom, 0px) + 16px)",
+    padding: "10px 18px calc(env(safe-area-inset-bottom, 0px) + 18px)",
   },
   productCta: {
     display: "inline-block",

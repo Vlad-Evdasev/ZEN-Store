@@ -649,6 +649,26 @@ bot.command("start", async (ctx) => {
   const userId = ctx.from?.id;
   // /start ref_<USERID> — реферальная ссылка
   const payload = (ctx.match || "").trim();
+
+  // /start post_<N> — фолбэк для шер-ссылки на пост из ленты «Вдохновиться».
+  // Mini App ссылка вида t.me/<bot>/raw?startapp=post_42 у современных
+  // клиентов открывает WebApp напрямую — но если у получателя кеш
+  // Telegram старый или Mini App ещё не закэширован, клик падает в
+  // /start post_42. Здесь мы ловим это и отдаём кнопку «Открыть пост»,
+  // которая ведёт прямо на нужный пост в WebApp через #post=N.
+  const postMatch = payload.match(/^post[_-](\d+)$/i);
+  if (userId && postMatch) {
+    const postId = postMatch[1];
+    await ctx.reply("Пост ждёт тебя в ленте — открой одним тапом.", {
+      reply_markup: {
+        inline_keyboard: [[
+          { text: "Открыть пост", web_app: { url: `${WEB_APP_URL}#post=${postId}` } },
+        ]],
+      },
+    });
+    return;
+  }
+
   let invitedByRef = false;
   if (userId && payload.startsWith("ref_")) {
     const referrer = payload.slice(4);

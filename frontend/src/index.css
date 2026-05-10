@@ -1381,6 +1381,14 @@ html[data-theme="light"] .zen-app .product-card-price {
 }
 
 /* ── Pinterest-style masonry для постов «Вдохновиться» ─────────────── */
+/* Inspire-страница тянется до самых краёв экрана — как каталог.
+   Без этого вокруг карточек висели лишние ~12px воздуха от родителя. */
+.zen-app main.zen-main--inspire {
+  padding-left: max(2px, env(safe-area-inset-left)) !important;
+  padding-right: max(2px, env(safe-area-inset-right)) !important;
+  padding-bottom: 80px !important;
+}
+
 /* Плотная упаковка как в Pinterest: ~2-3px между карточками. */
 .zen-app .zen-pin-grid {
   column-count: 2;

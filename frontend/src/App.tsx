@@ -393,7 +393,7 @@ function App() {
       </header>
       <div style={styles.headerSpacer} aria-hidden />
 
-      <main ref={mainScrollRef} className={page === "catalog" ? "zen-main--catalog" : page === "favorites" ? "zen-main--edge" : undefined} style={page === "support" ? { ...styles.main, paddingBottom: 0 } : styles.main}>
+      <main ref={mainScrollRef} className={page === "catalog" ? "zen-main--catalog" : page === "favorites" ? "zen-main--edge" : page === "newArrivals" ? "zen-main--inspire" : undefined} style={page === "support" ? { ...styles.main, paddingBottom: 0 } : styles.main}>
         <div key={page} className={page === "cart" || page === "favorites" ? "zen-page-enter" : ""} style={page === "newArrivals" ? { ...styles.mainContent, height: "100%" } : styles.mainContent}>
         {page === "catalog" && (
           <>
