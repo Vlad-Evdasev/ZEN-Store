@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { flushSync } from "react-dom";
 import { useTelegram } from "./hooks/useTelegram";
 import { TelegramAuth } from "./components/TelegramAuth";
@@ -8,7 +8,9 @@ import { Catalog } from "./pages/Catalog";
 import { Cart } from "./pages/Cart";
 import { Favorites } from "./pages/Favorites";
 import { ProductPage } from "./pages/ProductPage";
-import { Checkout } from "./pages/Checkout";
+// Checkout грузим лениво — он тянет @ton/core (~600KB). Админ-бандлу
+// и обычному просмотру каталога TON-зависимости вообще не нужны.
+const Checkout = lazy(() => import("./pages/Checkout").then((m) => ({ default: m.Checkout })));
 import { Support } from "./pages/Support";
 import { Reviews } from "./pages/Reviews";
 import { NewArrivalsPage } from "./pages/NewArrivalsPage";
@@ -336,15 +338,17 @@ function App() {
           />
         )}
         {page === "checkout" && (
-          <Checkout
-            userId={userId}
-            userName={userName}
-            onBack={openCart}
-            onDone={openCatalog}
-            onOrderSuccess={refreshCartCount}
-            onCartChange={refreshCartCount}
-            sellerLink={SELLER_LINK}
-          />
+          <Suspense fallback={<div style={{ padding: 32, textAlign: "center", color: "var(--muted)" }}>{t(lang, "loading")}</div>}>
+            <Checkout
+              userId={userId}
+              userName={userName}
+              onBack={openCart}
+              onDone={openCatalog}
+              onOrderSuccess={refreshCartCount}
+              onCartChange={refreshCartCount}
+              sellerLink={SELLER_LINK}
+            />
+          </Suspense>
         )}
         {page === "support" && <Support />}
         {page === "reviews" && (

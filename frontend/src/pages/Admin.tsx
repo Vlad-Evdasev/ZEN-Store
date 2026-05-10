@@ -45,6 +45,7 @@ import {
   createDrop,
   deleteDrop,
   getBotAnalytics,
+  markOrderPaid,
   type Product,
   type Category,
   type Order,
@@ -86,8 +87,10 @@ function StatusPill({ status }: { status: string }) {
   return <span className={`admin-status admin-status--${c.variant}`}>{c.label}</span>;
 }
 
-function NavIcon({ tab }: { tab: "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" | "promo" | "drops" | "analytics" }) {
+function NavIcon({ tab }: { tab: "home" | "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" | "promo" | "drops" | "analytics" }) {
   switch (tab) {
+    case "home":
+      return (<svg viewBox="0 0 24 24" aria-hidden><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="5" rx="1"/><rect x="13" y="10" width="8" height="11" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/></svg>);
     case "products":
       return (<svg viewBox="0 0 24 24" aria-hidden><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>);
     case "categories":
@@ -125,7 +128,37 @@ function telegramChatLink(username?: string | null, userId?: string): string {
   return "#";
 }
 
-type Tab = "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" | "promo" | "drops" | "analytics";
+type Tab = "home" | "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" | "promo" | "drops" | "analytics";
+
+/** Хедер-eyebrow в topbar: показывает раздел в стиле «OPS / ORDERS». */
+function tabEyebrow(tab: Tab): string {
+  switch (tab) {
+    case "home": return "DASHBOARD / HOME";
+    case "analytics": return "DASHBOARD / ANALYTICS";
+    case "orders": return "OPS / ORDERS";
+    case "customOrders": return "OPS / CUSTOM";
+    case "chats": return "OPS / CHATS";
+    case "products": return "CATALOG / PRODUCTS";
+    case "categories": return "CATALOG / CATEGORIES";
+    case "currencyRate": return "CATALOG / FX";
+    case "posts": return "MARKETING / POSTS";
+    case "channel": return "MARKETING / BROADCAST";
+    case "promo": return "MARKETING / PROMO";
+    case "drops": return "MARKETING / DROPS";
+    case "support": return "CONTENT / SUPPORT";
+  }
+}
+
+/** Префиксированный ID — "ORD-0042", "PRO-007", "USR-039". */
+export function formatId(prefix: string, id: number): string {
+  return `${prefix}-${String(id).padStart(4, "0")}`;
+}
+
+/** HH:MM:SS UTC — mono часы в topbar. */
+function formatAdminClock(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())} UTC`;
+}
 
 export function Admin() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -134,7 +167,7 @@ export function Admin() {
   const [authError, setAuthError] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [tab, setTab] = useState<Tab>("products");
+  const [tab, setTab] = useState<Tab>("home");
   const [chatsUnread, setChatsUnread] = useState(0);
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -142,6 +175,13 @@ export function Admin() {
   const [apiStatus, setApiStatus] = useState<{ ok: boolean; url: string; error?: string } | null>(null);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const adminMainRef = useRef<HTMLElement | null>(null);
+
+  // Часы в topbar — обновляются раз в секунду. Mono-формат: HH:MM:SS UTC
+  const [adminClock, setAdminClock] = useState<string>(() => formatAdminClock(new Date()));
+  useEffect(() => {
+    const id = window.setInterval(() => setAdminClock(formatAdminClock(new Date())), 1000);
+    return () => window.clearInterval(id);
+  }, []);
 
   const refresh = () => {
     setRefreshError(null);
@@ -231,28 +271,31 @@ export function Admin() {
   return (
     <div className="zen-admin">
       <div className="admin-layout">
+        <header className="admin-topbar">
+          <span className="admin-topbar-brand">
+            <span className="admin-topbar-brand-mark">R</span>
+            <span>RAW · CONSOLE</span>
+          </span>
+          <span className="admin-topbar-divider" />
+          <span className="admin-topbar-eyebrow">{tabEyebrow(tab)}</span>
+          <span className="admin-topbar-spacer" />
+          <span className="admin-topbar-clock">{adminClock}</span>
+        </header>
         <aside className="admin-sidebar">
-          <div className="admin-sidebar-title">RAW Admin</div>
-          <button type="button" onClick={() => setTabAndReset("products")} className={`admin-nav-btn ${tab === "products" ? "active" : ""}`}>
-            <NavIcon tab="products" /> Товары
+          <div className="admin-nav-section">Overview</div>
+          <button type="button" onClick={() => setTabAndReset("home")} className={`admin-nav-btn ${tab === "home" ? "active" : ""}`}>
+            <NavIcon tab="home" /> Главная
           </button>
-          <button type="button" onClick={() => setTabAndReset("categories")} className={`admin-nav-btn ${tab === "categories" ? "active" : ""}`}>
-            <NavIcon tab="categories" /> Категории
+          <button type="button" onClick={() => setTabAndReset("analytics")} className={`admin-nav-btn ${tab === "analytics" ? "active" : ""}`}>
+            <NavIcon tab="analytics" /> Аналитика
           </button>
+
+          <div className="admin-nav-section">Operations</div>
           <button type="button" onClick={() => setTabAndReset("orders")} className={`admin-nav-btn ${tab === "orders" ? "active" : ""}`}>
             <NavIcon tab="orders" /> Заказы
           </button>
           <button type="button" onClick={() => setTabAndReset("customOrders")} className={`admin-nav-btn ${tab === "customOrders" ? "active" : ""}`}>
             <NavIcon tab="customOrders" /> Заявки не из каталога
-          </button>
-          <button type="button" onClick={() => setTabAndReset("currencyRate")} className={`admin-nav-btn ${tab === "currencyRate" ? "active" : ""}`}>
-            <NavIcon tab="currencyRate" /> Курс валюты
-          </button>
-          <button type="button" onClick={() => setTabAndReset("posts")} className={`admin-nav-btn ${tab === "posts" ? "active" : ""}`}>
-            <NavIcon tab="posts" /> Посты
-          </button>
-          <button type="button" onClick={() => setTabAndReset("channel")} className={`admin-nav-btn ${tab === "channel" ? "active" : ""}`}>
-            <NavIcon tab="channel" /> Рассылка
           </button>
           <button type="button" onClick={() => setTabAndReset("chats")} className={`admin-nav-btn ${tab === "chats" ? "active" : ""}`}>
             <NavIcon tab="chats" />
@@ -263,8 +306,24 @@ export function Admin() {
               </span>
             )}
           </button>
-          <button type="button" onClick={() => setTabAndReset("support")} className={`admin-nav-btn ${tab === "support" ? "active" : ""}`}>
-            <NavIcon tab="support" /> Поддержка
+
+          <div className="admin-nav-section">Catalog</div>
+          <button type="button" onClick={() => setTabAndReset("products")} className={`admin-nav-btn ${tab === "products" ? "active" : ""}`}>
+            <NavIcon tab="products" /> Товары
+          </button>
+          <button type="button" onClick={() => setTabAndReset("categories")} className={`admin-nav-btn ${tab === "categories" ? "active" : ""}`}>
+            <NavIcon tab="categories" /> Категории
+          </button>
+          <button type="button" onClick={() => setTabAndReset("currencyRate")} className={`admin-nav-btn ${tab === "currencyRate" ? "active" : ""}`}>
+            <NavIcon tab="currencyRate" /> Курс валюты
+          </button>
+
+          <div className="admin-nav-section">Marketing</div>
+          <button type="button" onClick={() => setTabAndReset("posts")} className={`admin-nav-btn ${tab === "posts" ? "active" : ""}`}>
+            <NavIcon tab="posts" /> Посты
+          </button>
+          <button type="button" onClick={() => setTabAndReset("channel")} className={`admin-nav-btn ${tab === "channel" ? "active" : ""}`}>
+            <NavIcon tab="channel" /> Рассылка
           </button>
           <button type="button" onClick={() => setTabAndReset("promo")} className={`admin-nav-btn ${tab === "promo" ? "active" : ""}`}>
             <NavIcon tab="promo" /> Промокоды
@@ -272,9 +331,12 @@ export function Admin() {
           <button type="button" onClick={() => setTabAndReset("drops")} className={`admin-nav-btn ${tab === "drops" ? "active" : ""}`}>
             <NavIcon tab="drops" /> Дропы
           </button>
-          <button type="button" onClick={() => setTabAndReset("analytics")} className={`admin-nav-btn ${tab === "analytics" ? "active" : ""}`}>
-            <NavIcon tab="analytics" /> Аналитика
+
+          <div className="admin-nav-section">Content</div>
+          <button type="button" onClick={() => setTabAndReset("support")} className={`admin-nav-btn ${tab === "support" ? "active" : ""}`}>
+            <NavIcon tab="support" /> Поддержка
           </button>
+
           <div style={{ flex: 1 }} />
           <div style={styles.sidebarFooter}>
             <button
@@ -315,6 +377,9 @@ export function Admin() {
           <span style={{ color: "#c62828" }}>{refreshError}</span>
           <button type="button" onClick={refresh} style={styles.submit}>Повторить</button>
         </div>
+      )}
+      {tab === "home" && (
+        <HomeTab adminSecret={adminSecret} onNavigate={(t) => setTabAndReset(t as Tab)} />
       )}
       {tab === "products" && (
         <ProductsTab
@@ -465,6 +530,18 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
     }
   };
 
+  const handleMarkPaid = async (id: number) => {
+    if (!window.confirm(`Отметить заказ #${id} как оплаченный?`)) return;
+    setMessage("");
+    try {
+      await markOrderPaid(id, adminSecret);
+      setMessage("Заказ отмечен оплаченным");
+      load();
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    }
+  };
+
   const filteredOrders = statusFilter === "all" ? orders : orders.filter((o) => o.status === statusFilter);
 
   if (loading) return <p style={styles.hint}>Загрузка заказов...</p>;
@@ -516,6 +593,7 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
                 <th>Клиент</th>
                 <th>Товары</th>
                 <th>Сумма</th>
+                <th>Оплата</th>
                 <th>Статус</th>
                 <th></th>
               </tr>
@@ -529,10 +607,11 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
                 const itemsStr = Array.isArray(orderItems)
                   ? orderItems.map((i) => `${i.name || "Товар"} × ${i.quantity || 1} (${i.size || "—"})`).join(", ")
                   : String(o.items);
+                const payStatus = (o.payment_status || "paid") as "paid" | "unpaid" | "refunded" | "cancelled";
                 return (
-                  <tr key={o.id}>
-                    <td style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>#{o.id}</td>
-                    <td style={{ fontSize: 12.5, color: "var(--muted)", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{new Date(o.created_at).toLocaleString("ru")}</td>
+                  <tr key={o.id} className={`status-${o.status}`}>
+                    <td><span className="admin-id">{formatId("ORD", o.id)}</span></td>
+                    <td className="admin-mono" style={{ fontSize: 11.5, color: "var(--muted)", whiteSpace: "nowrap" }}>{new Date(o.created_at).toLocaleString("ru", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}</td>
                     <td>{o.user_name || <span style={{ color: "var(--muted-soft)" }}>—</span>}</td>
                     <td style={{ maxWidth: 320, fontSize: 13 }}>
                       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -564,7 +643,31 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
                         )}
                       </div>
                     </td>
-                    <td style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{o.total} $</td>
+                    <td className="admin-mono" style={{ fontWeight: 600, whiteSpace: "nowrap" }}>{o.total} $</td>
+                    <td>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start" }}>
+                        <span className={`admin-pay admin-pay--${payStatus}`}>{
+                          payStatus === "paid" ? "Оплачен"
+                          : payStatus === "unpaid" ? "Не оплачен"
+                          : payStatus === "refunded" ? "Возврат"
+                          : "Отменён"
+                        }</span>
+                        {o.payment_method && o.payment_method !== "manual" && (
+                          <span style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, color: "var(--muted)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                            {o.payment_method}
+                          </span>
+                        )}
+                        {payStatus !== "paid" && payStatus !== "refunded" && (
+                          <button
+                            type="button"
+                            onClick={() => handleMarkPaid(o.id)}
+                            style={{ ...styles.smallBtn, height: 22, fontSize: 11, padding: "0 8px" }}
+                          >
+                            Mark paid
+                          </button>
+                        )}
+                      </div>
+                    </td>
                     <td>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <StatusPill status={o.status} />
@@ -2449,6 +2552,115 @@ function PostsTab({ adminSecret }: { adminSecret: string }) {
   );
 }
 
+// ── HOME / DASHBOARD ──────────────────────────────────────────────────
+// Бенто-сетка с hero-метрикой выручки за неделю, мини-карточками
+// (DAU, заказы, абандон-rate) и фидом последних заказов.
+function HomeTab({ adminSecret, onNavigate }: { adminSecret: string; onNavigate: (tab: string) => void }) {
+  const [analytics, setAnalytics] = useState<BotAnalytics | null>(null);
+  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [reviewCount, setReviewCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  const load = () => {
+    setLoading(true);
+    Promise.allSettled([
+      getBotAnalytics(adminSecret),
+      getOrdersAdmin(adminSecret),
+      getCustomOrdersAdmin(adminSecret),
+    ]).then(([a, o, c]) => {
+      if (a.status === "fulfilled") setAnalytics(a.value);
+      if (o.status === "fulfilled") setRecentOrders(o.value.slice(0, 6));
+      if (c.status === "fulfilled") {
+        setReviewCount(c.value.filter((x) => (x.status || "pending") === "review").length);
+      }
+    }).finally(() => setLoading(false));
+  };
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+
+  if (loading || !analytics) {
+    return <p style={styles.hint}>Загрузка дашборда…</p>;
+  }
+
+  return (
+    <div className="admin-dashboard">
+      {/* HERO: главная метрика недели */}
+      <div className="admin-hero">
+        <div>
+          <span className="admin-hero-label">Выручка · 7 дней</span>
+          <h1 className="admin-hero-value">{analytics.revenue_week} <span style={{ fontSize: 36, fontWeight: 600, color: "var(--muted)", letterSpacing: 0 }}>$</span></h1>
+          <p className="admin-hero-sub">
+            {analytics.orders_week} {analytics.orders_week === 1 ? "заказ" : analytics.orders_week < 5 ? "заказа" : "заказов"} · сегодня: {analytics.orders_today}
+          </p>
+        </div>
+        <div className="admin-hero-side">
+          <span>Подписчиков<br /><strong>{analytics.total_subscribers}</strong></span>
+          <span>DAU / WAU<br /><strong>{analytics.dau} / {analytics.wau}</strong></span>
+        </div>
+      </div>
+
+      {/* Алерт-плитка: на модерации */}
+      {reviewCount > 0 && (
+        <div className="admin-tile admin-tile--span-12 admin-tile--alert" onClick={() => onNavigate("customOrders")} style={{ cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <span className="admin-tile-label">Требует внимания</span>
+            <div className="admin-tile-value">{reviewCount}</div>
+            <span className="admin-tile-sub">кастом-заявок на модерации</span>
+          </div>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--accent)", letterSpacing: "0.1em", textTransform: "uppercase" }}>Открыть →</span>
+        </div>
+      )}
+
+      {/* Маленькие метрики */}
+      <div className="admin-tile admin-tile--span-3">
+        <span className="admin-tile-label">DAU</span>
+        <div className="admin-tile-value">{analytics.dau}</div>
+        <span className="admin-tile-sub">за сутки</span>
+      </div>
+      <div className="admin-tile admin-tile--span-3">
+        <span className="admin-tile-label">MAU</span>
+        <div className="admin-tile-value">{analytics.mau}</div>
+        <span className="admin-tile-sub">за месяц</span>
+      </div>
+      <div className="admin-tile admin-tile--span-3">
+        <span className="admin-tile-label">Cart abandon</span>
+        <div className="admin-tile-value">{analytics.cart_abandon_rate}%</div>
+        <span className="admin-tile-sub">кладут, но не оформляют</span>
+      </div>
+      <div className="admin-tile admin-tile--span-3">
+        <span className="admin-tile-label">Заблокировано</span>
+        <div className="admin-tile-value">{analytics.blocked}</div>
+        <span className="admin-tile-sub">забанили бота</span>
+      </div>
+
+      {/* Лента последних заказов */}
+      <div className="admin-tile admin-tile--span-12" style={{ padding: "16px 0 0" }}>
+        <span className="admin-tile-label" style={{ padding: "0 18px 8px" }}>Recent activity</span>
+        <div className="admin-tile-feed" style={{ padding: "0 18px 6px" }}>
+          {recentOrders.length === 0 ? (
+            <p style={{ ...styles.hint, padding: "12px 0" }}>Заказов пока нет</p>
+          ) : recentOrders.map((o) => {
+            let parsed: { name?: string }[] = [];
+            try { parsed = typeof o.items === "string" ? JSON.parse(o.items) : o.items; } catch {}
+            const summary = Array.isArray(parsed) && parsed.length > 0
+              ? `${parsed.length} ${parsed.length === 1 ? "поз" : "поз"} · ${parsed[0]?.name ?? ""}${parsed.length > 1 ? ` +${parsed.length - 1}` : ""}`
+              : "—";
+            return (
+              <div key={o.id} className="admin-tile-feed-row">
+                <time>{new Date(o.created_at).toLocaleString("ru", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })}</time>
+                <div>
+                  <span className="admin-id" style={{ marginRight: 8 }}>{formatId("ORD", o.id)}</span>
+                  <span className="label">{summary}</span>
+                </div>
+                <span className="meta">{o.total} $</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SupportTab({ adminSecret }: { adminSecret: string }) {
   const [entries, setEntries] = useState<SupportEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -3045,7 +3257,7 @@ const styles: Record<string, React.CSSProperties> = {
   title: { fontFamily: "inherit", fontSize: 22, fontWeight: 600, letterSpacing: "-0.02em", marginBottom: 24 },
   label: { fontSize: 12.5, fontWeight: 500, color: "var(--muted)", display: "flex", flexDirection: "column", gap: 6, letterSpacing: 0 },
   input: { padding: "9px 12px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", color: "var(--text)", fontSize: 14, fontFamily: "inherit", lineHeight: 1.4, height: 36, boxSizing: "border-box" },
-  submit: { padding: "0 18px", height: 36, background: "var(--text)", border: "1px solid var(--text)", borderRadius: "var(--radius-sm)", color: "#fff", fontSize: 13.5, fontWeight: 500, cursor: "pointer", letterSpacing: "-0.005em", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 },
+  submit: { padding: "0 18px", height: 36, background: "var(--text)", border: "1px solid var(--text)", borderRadius: "var(--radius-sm)", color: "#fff", fontSize: 11.5, fontWeight: 700, cursor: "pointer", letterSpacing: "0.14em", textTransform: "uppercase", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 },
   sidebarFooter: { paddingTop: 12, borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 6, marginTop: 14 },
   logoutBtn: { padding: "0 12px", height: 32, background: "transparent", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", color: "var(--muted)", fontSize: 12.5, fontWeight: 500, cursor: "pointer", marginTop: 4 },
   checkBtn: { padding: "0 10px", height: 28, background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", color: "var(--text-2)", fontSize: 12, fontWeight: 500, cursor: "pointer" },

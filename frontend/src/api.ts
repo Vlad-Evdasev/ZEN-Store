@@ -562,6 +562,26 @@ export interface Order {
   total: number;
   status: string;
   created_at: string;
+  payment_method?: string | null;
+  payment_status?: string | null;
+  payment_tx_hash?: string | null;
+  payment_verified_at?: string | null;
+}
+
+export async function markOrderPaid(orderId: number, adminSecret: string): Promise<void> {
+  const res = await fetch(`${API_URL}/api/payments/admin/order/${orderId}/mark-paid`, {
+    method: "POST",
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) throw new Error("Failed to mark paid");
+}
+
+export async function markOrderRefunded(orderId: number, adminSecret: string): Promise<void> {
+  const res = await fetch(`${API_URL}/api/payments/admin/order/${orderId}/mark-refunded`, {
+    method: "POST",
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) throw new Error("Failed to mark refunded");
 }
 
 export async function getOrders(userId: string): Promise<Order[]> {

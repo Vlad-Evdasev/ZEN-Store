@@ -130,39 +130,48 @@ a {
   transition: opacity var(--transition-normal), transform var(--transition-normal);
 }
 
-/* ─── Админ-панель v3 — Linear / Vercel-vibe ─────────────────────────────
-   Плотный SaaS-дизайн: тонкие границы вместо теней, монохромная сетка,
-   акцент-цветом помечаются только активные / интерактивные зоны.        */
+/* ════════════════════════════════════════════════════════════════════════
+   RAW · CONSOLE — admin v4
+   Бруталист-эдиториал: monochrome paper-like surface, hairline grids,
+   numerical IDs (ORD-0042), eyebrow caps, status как левая полоска,
+   IBM Plex Mono для дат / денег / кодов. Streetwear-on-brand.
+   ════════════════════════════════════════════════════════════════════════ */
 .zen-admin {
-  --bg: #fafafa;
+  /* Палитра: paper-cream фон, near-black текст, hot-red акцент.
+     Никаких теней — только hairlines (1px). */
+  --bg: #f6f5f0;
   --surface: #ffffff;
-  --surface-2: #f4f4f5;
-  --surface-hover: #f1f1f2;
-  --surface-active: #ebebed;
-  --border: #ececef;
-  --border-strong: #d4d4d8;
-  --text: #09090b;
-  --text-2: #3f3f46;
-  --muted: #71717a;
-  --muted-soft: #a1a1aa;
-  --accent: #c62828;
-  --accent-hover: #b91c1c;
-  --accent-soft: rgba(198, 40, 40, 0.08);
-  --accent-glow: rgba(198, 40, 40, 0.18);
-  --green: #16a34a;
-  --green-soft: rgba(22, 163, 74, 0.10);
-  --amber: #d97706;
-  --amber-soft: rgba(217, 119, 6, 0.12);
-  --blue: #2563eb;
-  --blue-soft: rgba(37, 99, 235, 0.10);
+  --surface-2: #ecebe5;
+  --surface-hover: #e7e5dd;
+  --surface-active: #dfdcd2;
+  --border: #1a1a1a14;
+  --border-strong: #1a1a1a3a;
+  --hairline: #00000010;
+  --text: #0a0a0a;
+  --text-2: #2a2a2a;
+  --muted: #6b6964;
+  --muted-soft: #9b9893;
+  --accent: #c81e1e;
+  --accent-hover: #a61818;
+  --accent-soft: rgba(200, 30, 30, 0.07);
+  --accent-glow: rgba(200, 30, 30, 0.18);
+  --green: #137a3c;
+  --green-soft: rgba(19, 122, 60, 0.10);
+  --amber: #b85c00;
+  --amber-soft: rgba(184, 92, 0, 0.10);
+  --blue: #1e40af;
+  --blue-soft: rgba(30, 64, 175, 0.08);
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.03);
   --shadow-md: 0 6px 18px -6px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 16px 40px -16px rgba(0, 0, 0, 0.16);
   --ring: 0 0 0 3px var(--accent-soft);
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
+  /* Радиусы намеренно маленькие — бруталистский look; полностью
+     прямые углы только у sidebar/header плашек.                    */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --font-mono: "IBM Plex Mono", "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -170,65 +179,140 @@ a {
   font-feature-settings: "ss01", "cv11", "calt";
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* Тонкая dot-grid подложка — едва видимая, добавляет глубины. */
+  background-image: radial-gradient(circle at 1px 1px, rgba(10, 10, 10, 0.04) 1px, transparent 0);
+  background-size: 24px 24px;
 }
 
 .zen-admin .admin-layout {
-  display: flex;
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  grid-template-rows: 56px 1fr;
+  grid-template-areas:
+    "topbar topbar"
+    "sidebar main";
   height: 100vh;
   overflow: hidden;
 }
 
-/* ─── Sidebar ─── */
+/* ─── TOP HEADER BAR ─────────────────────────────────────────────────
+   Чёрная плашка на всю ширину: brand wordmark слева, опциональный
+   global-search в центре, monospace-часы и admin-avatar справа.
+   Делает админку похожей на финансовый терминал / контрольную панель.
+   --------------------------------------------------------------------*/
+.zen-admin .admin-topbar {
+  grid-area: topbar;
+  background: #0a0a0a;
+  color: #fafaf7;
+  display: flex;
+  align-items: center;
+  padding: 0 18px 0 22px;
+  border-bottom: 1px solid #1a1a1a;
+  z-index: 5;
+}
+.zen-admin .admin-topbar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: "Inter", sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.zen-admin .admin-topbar-brand-mark {
+  width: 22px;
+  height: 22px;
+  background: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Inter", sans-serif;
+  font-weight: 900;
+  font-size: 12px;
+  color: #fff;
+  letter-spacing: 0;
+}
+.zen-admin .admin-topbar-divider {
+  display: inline-block;
+  width: 1px;
+  height: 16px;
+  margin: 0 18px;
+  background: #2a2a2a;
+}
+.zen-admin .admin-topbar-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.2em;
+  color: #888581;
+  text-transform: uppercase;
+}
+.zen-admin .admin-topbar-spacer { flex: 1; }
+.zen-admin .admin-topbar-clock {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  color: #c2bfb8;
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.zen-admin .admin-topbar-clock::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  background: var(--green);
+  display: inline-block;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(19, 122, 60, 0.18);
+  animation: rawPulse 1.8s ease-in-out infinite;
+}
+@keyframes rawPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+/* ─── SIDEBAR ─────────────────────────────────────────────────────── */
 .zen-admin .admin-sidebar {
-  width: 248px;
-  flex-shrink: 0;
+  grid-area: sidebar;
   background: var(--surface);
   border-right: 1px solid var(--border);
-  padding: 18px 12px 12px;
+  padding: 18px 0 12px;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 0;
   overflow-y: auto;
 }
 
 .zen-admin .admin-sidebar-title {
-  font-family: "Inter", sans-serif;
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: -0.005em;
-  text-transform: none;
-  color: var(--text);
-  margin: 4px 0 18px;
-  padding: 0 10px;
-  display: flex;
-  align-items: center;
-  gap: 9px;
+  display: none; /* спрятан в админ topbar теперь */
 }
-.zen-admin .admin-sidebar-title::before {
-  content: "";
-  width: 22px;
-  height: 22px;
-  border-radius: 7px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 4px 10px -4px var(--accent-glow);
-  flex-shrink: 0;
-  position: relative;
+
+.zen-admin .admin-nav-section {
+  padding: 14px 18px 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .zen-admin .admin-nav-btn {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  padding: 7px 10px;
+  padding: 8px 18px;
   text-align: left;
   background: none;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   color: var(--text-2);
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 500;
-  letter-spacing: -0.006em;
+  letter-spacing: -0.005em;
   cursor: pointer;
   position: relative;
   transition: background-color 0.12s ease, color 0.12s ease;
@@ -239,10 +323,10 @@ a {
   flex-shrink: 0;
   stroke: currentColor;
   fill: none;
-  stroke-width: 1.7;
+  stroke-width: 1.6;
   stroke-linecap: round;
   stroke-linejoin: round;
-  opacity: 0.65;
+  opacity: 0.6;
   transition: opacity 0.12s ease;
 }
 .zen-admin .admin-nav-btn:hover {
@@ -262,27 +346,40 @@ a {
 .zen-admin .admin-nav-btn.active::before {
   content: "";
   position: absolute;
-  left: -12px;
-  top: 8px;
-  bottom: 8px;
-  width: 2px;
-  border-radius: 2px;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
   background: var(--accent);
 }
 
-/* ─── Main pane ─── */
+/* ─── MAIN PANE ─────────────────────────────────────────────────── */
 .zen-admin .admin-main {
-  flex: 1;
+  grid-area: main;
   min-width: 0;
   min-height: 0;
-  padding: 30px 32px 56px;
+  padding: 32px 36px 64px;
   overflow-x: auto;
   overflow-y: auto;
   background: var(--bg);
+  position: relative;
+}
+.zen-admin .admin-main::before {
+  /* Тонкие риски-засечки в верхних углах — деталь "control room" */
+  content: "";
+  position: absolute;
+  top: 16px;
+  right: 24px;
+  width: 12px;
+  height: 12px;
+  border-top: 1px solid var(--border-strong);
+  border-right: 1px solid var(--border-strong);
+  pointer-events: none;
+  opacity: 0.5;
 }
 
 .zen-admin .admin-content {
-  max-width: 1180px;
+  max-width: 1240px;
   margin: 0 auto;
 }
 
@@ -316,17 +413,69 @@ a {
 
 /* ─── Typography ─── */
 .zen-admin h1, .zen-admin h2, .zen-admin h3 {
-  letter-spacing: -0.022em;
+  letter-spacing: -0.024em;
   color: var(--text);
 }
+.zen-admin h2 {
+  font-weight: 700;
+}
 .zen-admin code {
-  font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
-  font-size: 0.92em;
+  font-family: var(--font-mono);
+  font-size: 0.9em;
   padding: 1px 6px;
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: 3px;
   color: var(--text-2);
+}
+
+/* Numerical ID-бейдж: "ORD-0042", "PRO-007". Mono шрифт + лёгкий
+   фон, чтобы выделялись в потоке текста. */
+.zen-admin .admin-id {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 2px 7px;
+  display: inline-block;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+/* Eyebrow секции: "OPS / ORDERS — 12" над заголовком страницы.
+   Узкий tracked-out caps + monospace счётчик. */
+.zen-admin .admin-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.zen-admin .admin-eyebrow-tick {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+}
+.zen-admin .admin-eyebrow-count {
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Mono для денег / ID / timestamp в таблицах */
+.zen-admin .admin-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
 }
 
 /* ─── Tables ─── */
@@ -342,30 +491,63 @@ a {
 
 .zen-admin .admin-table th,
 .zen-admin .admin-table td {
-  padding: 13px 16px;
+  padding: 14px 18px;
   text-align: left;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--hairline);
   font-size: 13.5px;
   vertical-align: middle;
 }
 
 .zen-admin .admin-table th {
   background: var(--surface-2);
-  font-size: 11px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.18em;
   color: var(--muted);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-strong);
+  padding: 11px 18px;
 }
 
 .zen-admin .admin-table tr:last-child td {
   border-bottom: none;
 }
 
+.zen-admin .admin-table tbody tr {
+  position: relative;
+}
 .zen-admin .admin-table tbody tr:hover {
   background: var(--surface-2);
 }
+
+/* Status-stripe: цветная полоска 3px по левому краю строки.
+   Используется в OrdersTab вместо inline-pill. Сразу видно
+   распределение статусов в портянке заказов. */
+.zen-admin .admin-table tr td:first-child {
+  position: relative;
+}
+.zen-admin .admin-table tr.status-pending td:first-child::before,
+.zen-admin .admin-table tr.status-in_transit td:first-child::before,
+.zen-admin .admin-table tr.status-delivered td:first-child::before,
+.zen-admin .admin-table tr.status-completed td:first-child::before,
+.zen-admin .admin-table tr.status-cancelled td:first-child::before,
+.zen-admin .admin-table tr.status-pending_payment td:first-child::before,
+.zen-admin .admin-table tr.status-review td:first-child::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+}
+.zen-admin .admin-table tr.status-pending td:first-child::before { background: var(--blue); }
+.zen-admin .admin-table tr.status-in_transit td:first-child::before { background: var(--blue); }
+.zen-admin .admin-table tr.status-delivered td:first-child::before { background: var(--green); }
+.zen-admin .admin-table tr.status-completed td:first-child::before { background: var(--muted-soft); }
+.zen-admin .admin-table tr.status-cancelled td:first-child::before { background: #cbcbcb; }
+.zen-admin .admin-table tr.status-pending_payment td:first-child::before { background: var(--amber); }
+.zen-admin .admin-table tr.status-review td:first-child::before { background: var(--amber); }
 
 /* ─── Inputs ─── */
 .zen-admin input,
@@ -452,23 +634,36 @@ a {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 22px;
-  padding-bottom: 18px;
-  border-bottom: 1px solid var(--border);
+  margin-bottom: 26px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--border-strong);
+  position: relative;
+}
+/* Длинная двойная-полоса под заголовком — деталь "specimen sheet" */
+.zen-admin .admin-page-head::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 56px;
+  height: 1px;
+  background: var(--accent);
 }
 .zen-admin .admin-page-head-text { min-width: 0; }
 .zen-admin .admin-page-head h2 {
   margin: 0;
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.022em;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.028em;
+  line-height: 1.1;
   color: var(--text);
 }
 .zen-admin .admin-page-head-sub {
-  margin: 4px 0 0;
+  margin: 8px 0 0;
   font-size: 13px;
   color: var(--muted);
   line-height: 1.55;
+  max-width: 640px;
 }
 .zen-admin .admin-page-head-actions {
   display: inline-flex;
@@ -505,6 +700,7 @@ a {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   overflow: hidden;
+  position: relative;
 }
 .zen-admin .admin-card + .admin-card { margin-top: 16px; }
 .zen-admin .admin-card-head {
@@ -513,20 +709,24 @@ a {
   display: flex;
   align-items: center;
   gap: 10px;
+  background: var(--surface-2);
 }
 .zen-admin .admin-card-head h3 {
   margin: 0;
-  font-size: 13.5px;
-  font-weight: 600;
-  letter-spacing: -0.008em;
-  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-2);
 }
 .zen-admin .admin-card-head-meta {
   margin-left: auto;
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.06em;
 }
 .zen-admin .admin-card-body { padding: 18px; }
 .zen-admin .admin-card-body--flush { padding: 0; }
@@ -729,6 +929,231 @@ a {
   grid-template-columns: 280px 1fr;
   gap: 24px;
   min-height: 400px;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   DASHBOARD / HOME — bento + hero metric
+   ════════════════════════════════════════════════════════════════════ */
+
+.zen-admin .admin-dashboard {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(12, 1fr);
+}
+
+/* Hero-плитка: огромная цифра выручки или DAU. На полную ширину
+   с тонкими корнерами-засечками — фоторамка контрольной панели. */
+.zen-admin .admin-hero {
+  grid-column: span 12;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 36px 38px;
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 24px;
+  align-items: end;
+}
+.zen-admin .admin-hero::before,
+.zen-admin .admin-hero::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-color: var(--accent);
+}
+.zen-admin .admin-hero::before {
+  top: 12px;
+  left: 12px;
+  border-top: 1.5px solid var(--accent);
+  border-left: 1.5px solid var(--accent);
+}
+.zen-admin .admin-hero::after {
+  bottom: 12px;
+  right: 12px;
+  border-bottom: 1.5px solid var(--accent);
+  border-right: 1.5px solid var(--accent);
+}
+.zen-admin .admin-hero-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+  display: block;
+}
+.zen-admin .admin-hero-value {
+  font-family: "Inter", sans-serif;
+  font-size: 76px;
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+.zen-admin .admin-hero-sub {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+.zen-admin .admin-hero-side {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.zen-admin .admin-hero-side strong {
+  font-family: "Inter", sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Bento-плитки. Делим 12-колоночную сетку под карточки разной
+   ширины: span-3, span-4, span-6, span-8, span-12. */
+.zen-admin .admin-tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 18px 18px 16px;
+  position: relative;
+  overflow: hidden;
+}
+.zen-admin .admin-tile--span-3 { grid-column: span 3; }
+.zen-admin .admin-tile--span-4 { grid-column: span 4; }
+.zen-admin .admin-tile--span-6 { grid-column: span 6; }
+.zen-admin .admin-tile--span-8 { grid-column: span 8; }
+.zen-admin .admin-tile--span-12 { grid-column: span 12; }
+@media (max-width: 1100px) {
+  .zen-admin .admin-tile--span-3 { grid-column: span 6; }
+  .zen-admin .admin-tile--span-4 { grid-column: span 6; }
+  .zen-admin .admin-tile--span-8 { grid-column: span 12; }
+}
+@media (max-width: 700px) {
+  .zen-admin .admin-tile--span-3,
+  .zen-admin .admin-tile--span-4,
+  .zen-admin .admin-tile--span-6 { grid-column: span 12; }
+}
+
+.zen-admin .admin-tile-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.zen-admin .admin-tile-label::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  background: currentColor;
+  display: inline-block;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+.zen-admin .admin-tile-value {
+  font-family: "Inter", sans-serif;
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.024em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  margin: 4px 0 4px;
+}
+.zen-admin .admin-tile-sub {
+  font-size: 11.5px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+/* Activity-feed (последние события) */
+.zen-admin .admin-tile-feed {
+  display: flex;
+  flex-direction: column;
+}
+.zen-admin .admin-tile-feed-row {
+  display: grid;
+  grid-template-columns: 80px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--hairline);
+  font-size: 13px;
+}
+.zen-admin .admin-tile-feed-row:last-child { border-bottom: none; }
+.zen-admin .admin-tile-feed-row time {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.zen-admin .admin-tile-feed-row .label {
+  color: var(--text-2);
+}
+.zen-admin .admin-tile-feed-row .meta {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+/* Алерт-плитка (что-то требует внимания) */
+.zen-admin .admin-tile--alert {
+  background: var(--accent-soft);
+  border-color: rgba(200, 30, 30, 0.18);
+}
+.zen-admin .admin-tile--alert .admin-tile-label {
+  color: var(--accent);
+}
+.zen-admin .admin-tile--alert .admin-tile-value {
+  color: var(--accent);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   PAYMENT STATUS — миниатюрный chip для колонки Оплата
+   ════════════════════════════════════════════════════════════════════ */
+.zen-admin .admin-pay {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 8px 3px 7px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.zen-admin .admin-pay--paid { background: var(--green-soft); color: var(--green); }
+.zen-admin .admin-pay--unpaid { background: var(--amber-soft); color: var(--amber); }
+.zen-admin .admin-pay--refunded { background: var(--surface-2); color: var(--muted); }
+.zen-admin .admin-pay--cancelled { background: var(--surface-2); color: var(--muted-soft); }
+.zen-admin .admin-pay::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  background: currentColor;
+  border-radius: 50%;
 }
 
 @media (max-width: 900px) {
