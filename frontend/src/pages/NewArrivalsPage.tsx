@@ -304,7 +304,7 @@ function computeSheetAnim({
       opacity: 1,
       transform: `translate3d(0, ${dragY}px, 0) scale(1)`,
       transition: dragY === 0
-        ? "opacity 320ms cubic-bezier(0.4, 0, 0.2, 1), transform 320ms cubic-bezier(0.22, 1, 0.36, 1)"
+        ? "opacity 380ms cubic-bezier(0.4, 0, 0.2, 1), transform 380ms cubic-bezier(0.22, 1, 0.36, 1)"
         : "none",
     };
   }
@@ -319,13 +319,13 @@ function computeSheetAnim({
     return {
       opacity: 0,
       transform: "translate3d(0, 60px, 0) scale(1)",
-      transition: "opacity 250ms cubic-bezier(0.4, 0, 0.2, 1), transform 250ms cubic-bezier(0.4, 0, 0.2, 1)",
+      transition: "opacity 280ms cubic-bezier(0.4, 0, 0.2, 1), transform 280ms cubic-bezier(0.4, 0, 0.2, 1)",
     };
   }
   return {
     opacity: 0,
     transform: `translate3d(0, ${dragY}px, 0) scale(1)`,
-    transition: "opacity 320ms cubic-bezier(0.4, 0, 0.2, 1)",
+    transition: "opacity 380ms cubic-bezier(0.4, 0, 0.2, 1)",
   };
 }
 
@@ -354,6 +354,23 @@ function ExpandedView({
     return () => { cancelled = true; };
   }, [post.id, userId]);
 
+  // Флаг: успешно ли восстановили scrollTop. После того как related-сетка
+  // загрузилась и DOM рендерит её полную высоту, можно скроллить — иначе
+  // sheet.scrollTop = X обрезается до 0 (нет ещё нужной высоты контента).
+  const scrollRestoredRef = useRef(false);
+  useLayoutEffect(() => {
+    if (scrollRestoredRef.current) return;
+    if (!initialScrollTop || !sheetRef.current) return;
+    const sheet = sheetRef.current;
+    const maxScroll = sheet.scrollHeight - sheet.clientHeight;
+    if (maxScroll >= initialScrollTop) {
+      sheet.scrollTop = initialScrollTop;
+      scrollRestoredRef.current = true;
+    }
+    // Если контент ещё не дорос — useLayoutEffect перезапустится при
+    // следующем изменении related (deps), и попробует снова.
+  }, [related, initialScrollTop]);
+
   const reqVersion = useRef(0);
 
   // FLIP-open: при наличии thumb-rect картинка стартует в его координатах,
@@ -375,7 +392,7 @@ function ExpandedView({
       img.style.transition = "none";
       img.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
       void img.offsetWidth;
-      img.style.transition = "transform 360ms cubic-bezier(0.22, 1, 0.36, 1)";
+      img.style.transition = "transform 380ms cubic-bezier(0.22, 1, 0.36, 1)";
       img.style.transform = "translate3d(0, 0, 0) scale(1, 1)";
       setPhase("open");
     };
@@ -395,13 +412,8 @@ function ExpandedView({
 
   // body-class теперь управляется в parent (NewArrivalsPage) — это
   // позволяет избежать мерцания при back-nav через стек, когда ExpandedView
-  // быстро unmount-mount с новым ключом: parent видит expanded != null
-  // всё время и не снимает класс. Здесь только восстанавливаем scrollTop.
-  useLayoutEffect(() => {
-    if (!initialScrollTop || !sheetRef.current) return;
-    sheetRef.current.scrollTop = initialScrollTop;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // быстро unmount-mount с новым ключом. scrollTop восстанавливаем ниже,
+  // после загрузки related-сетки.
 
   const requestClose = useCallback(() => {
     if (phase === "closing") return;
@@ -417,11 +429,13 @@ function ExpandedView({
       const sx = startRect.width / Math.max(final.width, 1);
       const sy = startRect.height / Math.max(final.height, 1);
       img.style.transformOrigin = "top left";
-      img.style.transition = "transform 320ms cubic-bezier(0.4, 0, 0.2, 1)";
+      img.style.transition = "transform 380ms cubic-bezier(0.4, 0, 0.2, 1)";
       img.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
     }
     setPhase("closing");
-    setTimeout(onClose, fadeOnClose ? 250 : 320);
+    // FLIP-close 380ms, back-nav slide-fade 280ms — синхронизированы с
+    // соответствующими CSS-переходами sheet/page.
+    setTimeout(onClose, fadeOnClose ? 280 : 380);
   }, [phase, onClose, startRect, fadeOnClose]);
 
   useEffect(() => {
@@ -513,7 +527,7 @@ function ExpandedView({
         ...expandedStyles.root,
         background: `rgba(var(--bg-rgb), ${0.98 * backdropOpacity})`,
         pointerEvents: phase === "closing" ? "none" : "auto",
-        transition: "background 320ms cubic-bezier(0.4, 0, 0.2, 1)",
+        transition: "background 380ms cubic-bezier(0.4, 0, 0.2, 1)",
       }}
     >
       <div
