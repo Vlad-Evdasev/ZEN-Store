@@ -503,6 +503,10 @@ try { db.exec("ALTER TABLE posts ADD COLUMN images TEXT"); } catch {}
 try { db.exec("ALTER TABLE posts ADD COLUMN category TEXT"); } catch {}
 try { db.exec("CREATE INDEX IF NOT EXISTS idx_posts_category ON posts(category)"); } catch {}
 
+// Английское название категории. Когда юзер переключает язык в WebApp,
+// мы предпочитаем name_en для en. Если поле NULL — фолбэк на name (RU).
+try { db.exec("ALTER TABLE categories ADD COLUMN name_en TEXT"); } catch {}
+
 // ─── Индексы для горячих запросов ──────────────────────────────────────
 // Используются в GET /orders/:userId, GET /custom-orders/:userId, фид
 // постов, поиск по корзине/wishlist, payment-cron'ах. Без них SQLite

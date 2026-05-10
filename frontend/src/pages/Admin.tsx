@@ -1111,9 +1111,11 @@ function CategoriesTab({
   const [submitting, setSubmitting] = useState(false);
   const [newCode, setNewCode] = useState("");
   const [newName, setNewName] = useState("");
+  const [newNameEn, setNewNameEn] = useState("");
   const [newSortOrder, setNewSortOrder] = useState(0);
   const [editingCode, setEditingCode] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
+  const [editNameEn, setEditNameEn] = useState("");
   const [editSortOrder, setEditSortOrder] = useState(0);
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -1125,10 +1127,19 @@ function CategoriesTab({
     setSubmitting(true);
     setMessage("");
     try {
-      await createCategory({ code: newCode.trim(), name: newName.trim(), sort_order: newSortOrder }, adminSecret);
+      await createCategory(
+        {
+          code: newCode.trim(),
+          name: newName.trim(),
+          name_en: newNameEn.trim() || null,
+          sort_order: newSortOrder,
+        },
+        adminSecret
+      );
       setMessage("Категория добавлена");
       setNewCode("");
       setNewName("");
+      setNewNameEn("");
       setNewSortOrder(categories.length + 1);
       onRefresh();
     } catch (err) {
@@ -1141,6 +1152,7 @@ function CategoriesTab({
   const startEdit = (c: Category) => {
     setEditingCode(c.code);
     setEditName(c.name);
+    setEditNameEn(c.name_en ?? "");
     setEditSortOrder(c.sort_order);
   };
 
@@ -1149,7 +1161,15 @@ function CategoriesTab({
     setSubmitting(true);
     setMessage("");
     try {
-      await updateCategory(editingCode, { name: editName.trim(), sort_order: editSortOrder }, adminSecret);
+      await updateCategory(
+        editingCode,
+        {
+          name: editName.trim(),
+          name_en: editNameEn.trim() || null,
+          sort_order: editSortOrder,
+        },
+        adminSecret
+      );
       setMessage("Категория обновлена");
       setEditingCode(null);
       onRefresh();
@@ -1200,12 +1220,22 @@ function CategoriesTab({
             />
           </label>
           <label className="admin-field">
-            <span className="admin-field-label">Название</span>
+            <span className="admin-field-label">Название (RU)</span>
             <input
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="Худи"
+              style={{ ...styles.input, width: 200 }}
+            />
+          </label>
+          <label className="admin-field">
+            <span className="admin-field-label">Название (EN)</span>
+            <input
+              type="text"
+              value={newNameEn}
+              onChange={(e) => setNewNameEn(e.target.value)}
+              placeholder="Hoodies"
               style={{ ...styles.input, width: 200 }}
             />
           </label>
@@ -1239,7 +1269,8 @@ function CategoriesTab({
             <thead>
               <tr>
                 <th>Код</th>
-                <th>Название</th>
+                <th>RU</th>
+                <th>EN</th>
                 <th>Порядок</th>
                 <th>Действия</th>
               </tr>
@@ -1254,10 +1285,23 @@ function CategoriesTab({
                         type="text"
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
-                        style={{ ...styles.input, width: "100%", maxWidth: 200 }}
+                        style={{ ...styles.input, width: "100%", maxWidth: 180 }}
                       />
                     ) : (
                       c.name
+                    )}
+                  </td>
+                  <td>
+                    {editingCode === c.code ? (
+                      <input
+                        type="text"
+                        value={editNameEn}
+                        onChange={(e) => setEditNameEn(e.target.value)}
+                        placeholder="Hoodies"
+                        style={{ ...styles.input, width: "100%", maxWidth: 180 }}
+                      />
+                    ) : (
+                      c.name_en || <span style={{ color: "var(--muted)", fontStyle: "italic" }}>—</span>
                     )}
                   </td>
                   <td>

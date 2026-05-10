@@ -12,24 +12,26 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
 
 export const categoriesRouter = Router();
 
-export type CategoryRow = { code: string; name: string; sort_order: number };
+export type CategoryRow = { code: string; name: string; name_en: string | null; sort_order: number };
 
 categoriesRouter.get("/", (_req, res) => {
-  const rows = db.prepare("SELECT code, name, sort_order FROM categories ORDER BY sort_order, code").all() as CategoryRow[];
+  const rows = db.prepare("SELECT code, name, name_en, sort_order FROM categories ORDER BY sort_order, code").all() as CategoryRow[];
   res.json(rows);
 });
 
 categoriesRouter.post("/", requireAdmin, (req, res) => {
-  const { code, name, sort_order } = req.body;
+  const { code, name, name_en, sort_order } = req.body;
   if (!code || typeof code !== "string" || !name || typeof name !== "string") {
     return res.status(400).json({ error: "Требуются code и name" });
   }
   const slug = code.trim().toLowerCase().replace(/\s+/g, "_");
   if (!slug) return res.status(400).json({ error: "Недопустимый code" });
   const order = typeof sort_order === "number" ? sort_order : 0;
+  // name_en: пустая строка / null / undefined → null. Иначе trim и сохраняем.
+  const enName = name_en && String(name_en).trim() ? String(name_en).trim() : null;
   try {
-    db.prepare("INSERT INTO categories (code, name, sort_order) VALUES (?, ?, ?)").run(slug, String(name).trim(), order);
-    const row = db.prepare("SELECT code, name, sort_order FROM categories WHERE code = ?").get(slug) as CategoryRow;
+    db.prepare("INSERT INTO categories (code, name, name_en, sort_order) VALUES (?, ?, ?, ?)").run(slug, String(name).trim(), enName, order);
+    const row = db.prepare("SELECT code, name, name_en, sort_order FROM categories WHERE code = ?").get(slug) as CategoryRow;
     return res.status(201).json(row);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "";
@@ -40,13 +42,17 @@ categoriesRouter.post("/", requireAdmin, (req, res) => {
 
 categoriesRouter.patch("/:code", requireAdmin, (req, res) => {
   const code = req.params.code;
-  const { name, sort_order } = req.body;
-  const row = db.prepare("SELECT code, name, sort_order FROM categories WHERE code = ?").get(code) as CategoryRow | undefined;
+  const { name, name_en, sort_order } = req.body;
+  const row = db.prepare("SELECT code, name, name_en, sort_order FROM categories WHERE code = ?").get(code) as CategoryRow | undefined;
   if (!row) return res.status(404).json({ error: "Категория не найдена" });
   const newName = name !== undefined ? String(name).trim() : row.name;
+  // name_en: undefined → не трогаем; null/"" → сбрасываем в NULL.
+  const newNameEn = name_en === undefined
+    ? row.name_en
+    : (name_en === null || String(name_en).trim() === "" ? null : String(name_en).trim());
   const newOrder = sort_order !== undefined ? Number(sort_order) : row.sort_order;
-  db.prepare("UPDATE categories SET name = ?, sort_order = ? WHERE code = ?").run(newName, newOrder, code);
-  const updated = db.prepare("SELECT code, name, sort_order FROM categories WHERE code = ?").get(code) as CategoryRow;
+  db.prepare("UPDATE categories SET name = ?, name_en = ?, sort_order = ? WHERE code = ?").run(newName, newNameEn, newOrder, code);
+  const updated = db.prepare("SELECT code, name, name_en, sort_order FROM categories WHERE code = ?").get(code) as CategoryRow;
   res.json(updated);
 });
 

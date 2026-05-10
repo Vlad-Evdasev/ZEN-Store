@@ -421,10 +421,22 @@ export function t(lang: Lang, key: string): string {
   return texts[lang][key] ?? texts.ru[key] ?? key;
 }
 
-// Лейбл категории с учётом языка: предпочитаем перевод по коду из i18n
-// (tee/hoodie/pants/...) и падаем обратно на name из БД для категорий, которые
-// админ добавил руками и которых нет в словаре.
-export function categoryLabel(lang: Lang, c: { code: string; name: string }): string {
-  const translated = texts[lang]?.[c.code];
-  return translated ?? c.name;
+// Лейбл категории с учётом языка. Приоритеты для en:
+//   1) name_en из БД (то, что админ ввёл вручную) — главный источник
+//   2) перевод по коду из i18n (tee/hoodie/pants/...) — для seed-категорий
+//   3) name (русский из БД) — последний фолбэк
+// Для ru просто используем name. Это даёт админу полный контроль:
+// добавил категорию «Толстовки» с name_en=«Sweatshirts» — переключение
+// языка моментально показывает английский лейбл.
+export function categoryLabel(
+  lang: Lang,
+  c: { code: string; name: string; name_en?: string | null }
+): string {
+  if (lang === "en") {
+    if (c.name_en && c.name_en.trim()) return c.name_en;
+    const translated = texts.en?.[c.code];
+    if (translated) return translated;
+    return c.name;
+  }
+  return c.name;
 }

@@ -102,6 +102,8 @@ export interface Store {
 export interface Category {
   code: string;
   name: string;
+  /** Английский перевод названия. NULL = нет перевода → фолбэк на name. */
+  name_en?: string | null;
   sort_order: number;
 }
 
@@ -112,7 +114,7 @@ export async function getCategories(): Promise<Category[]> {
 }
 
 export async function createCategory(
-  data: { code: string; name: string; sort_order?: number },
+  data: { code: string; name: string; name_en?: string | null; sort_order?: number },
   adminSecret: string
 ): Promise<Category> {
   const res = await fetch(`${API_URL}/api/categories`, {
@@ -129,7 +131,7 @@ export async function createCategory(
 
 export async function updateCategory(
   code: string,
-  data: { name?: string; sort_order?: number },
+  data: { name?: string; name_en?: string | null; sort_order?: number },
   adminSecret: string
 ): Promise<Category> {
   const res = await fetch(`${API_URL}/api/categories/${encodeURIComponent(code)}`, {
