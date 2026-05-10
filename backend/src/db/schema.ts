@@ -469,3 +469,34 @@ try {
     )
   `);
 } catch {}
+
+// ── Payments (TON Connect) ───────────────────────────────────────────
+// Платёжные поля у orders. Старые ордера через DM с админом считаем
+// уже оплаченными (payment_method='manual', payment_status='paid'),
+// чтобы старая история не сломалась.
+try { db.exec("ALTER TABLE orders ADD COLUMN payment_method TEXT DEFAULT 'manual'"); } catch {}
+try { db.exec("ALTER TABLE orders ADD COLUMN payment_status TEXT DEFAULT 'paid'"); } catch {}
+try { db.exec("ALTER TABLE orders ADD COLUMN payment_tx_hash TEXT"); } catch {}
+try { db.exec("ALTER TABLE orders ADD COLUMN payment_amount_nano TEXT"); } catch {}
+try { db.exec("ALTER TABLE orders ADD COLUMN payment_verified_at DATETIME"); } catch {}
+try { db.exec("ALTER TABLE orders ADD COLUMN payment_payload TEXT"); } catch {}
+
+// Платёжный intent — мост между ордером и транзакцией в сети.
+// id (наш payload) уйдёт в комментарий TON-транзакции, потом по нему
+// матчим входящую транзакцию на блокчейне. Курс фиксируется на момент
+// создания intent'а — у юзера есть expires_at минут на оплату.
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS payment_intents (
+      id TEXT PRIMARY KEY,
+      order_id INTEGER NOT NULL,
+      expected_amount_nano TEXT NOT NULL,
+      ton_usd_rate REAL NOT NULL,
+      expires_at DATETIME NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      tx_hash TEXT,
+      verified_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+} catch {}

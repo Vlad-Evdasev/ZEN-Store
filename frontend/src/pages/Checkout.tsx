@@ -1,7 +1,26 @@
-import { useState, useEffect } from "react";
-import { getCart, createOrder, removeFromCart, type CartItem } from "../api";
+import { useState, useEffect, useRef } from "react";
+import { useTonConnectUI } from "@tonconnect/ui-react";
+import { beginCell } from "@ton/core";
+import {
+  getCart,
+  createOrder,
+  removeFromCart,
+  createTonCheckout,
+  verifyTonPayment,
+  cancelTonPayment,
+  type CartItem,
+} from "../api";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
+
+// Кодирует текстовый комментарий в base64-BoC по стандарту TON:
+// op-code 0x00000000 (32 бита) + UTF-8 текст в string-tail (с overflow-
+// рефами если длинный). @ton/core делает это правильно из коробки —
+// никаких ручных BoC-байтов.
+function encodeCommentToBoc(text: string): string {
+  const cell = beginCell().storeUint(0, 32).storeStringTail(text).endCell();
+  return cell.toBoc().toString("base64");
+}
 
 function pluralize(n: number, forms: [string, string, string]) {
   const abs = Math.abs(n) % 100;
@@ -25,6 +44,7 @@ interface CheckoutProps {
 export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onCartChange, sellerLink }: CheckoutProps) {
   const { formatPrice, settings } = useSettings();
   const lang = settings.lang;
+  const [tonConnectUI] = useTonConnectUI();
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -33,6 +53,11 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [itemsExpanded, setItemsExpanded] = useState(false);
   const [removingId, setRemovingId] = useState<number | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"manual" | "ton">("manual");
+  const [paymentStage, setPaymentStage] = useState<"idle" | "creating" | "awaiting_signature" | "verifying" | "success" | "error">("idle");
+  const [paymentError, setPaymentError] = useState<string>("");
+  const [pendingOrderId, setPendingOrderId] = useState<number | null>(null);
+  const verifyTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     getCart(userId).then(setItems).catch(console.error).finally(() => setLoading(false));
@@ -69,6 +94,12 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
     e.preventDefault();
     if (!city.trim()) return;
     if (items.length === 0) return;
+
+    if (paymentMethod === "ton") {
+      await handleTonCheckout();
+      return;
+    }
+
     setSubmitting(true);
     try {
       await createOrder(userId, {
@@ -86,6 +117,97 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
       setSubmitting(false);
     }
   };
+
+  // TON flow:
+  // 1) Создаём ордер на бэке + получаем payment_intent (адрес/сумма/payload).
+  // 2) Через TonConnect UI просим юзера подписать транзакцию (откроется
+  //    Tonkeeper / Wallet bot / любой подключённый кошелёк).
+  // 3) После того как промис sendTransaction резолвится — поллим
+  //    /api/payments/ton/verify до тех пор, пока бэк не увидит транзакцию
+  //    в TonAPI и не пометит ордер paid (макс ~3 минуты).
+  const handleTonCheckout = async () => {
+    setPaymentStage("creating");
+    setPaymentError("");
+    setSubmitting(true);
+    try {
+      const checkout = await createTonCheckout({
+        user_id: userId,
+        user_name: (userName || "").trim() || undefined,
+        user_username: (userName || "").trim() || undefined,
+        user_address: city.trim(),
+        items,
+        total,
+      });
+      setPendingOrderId(checkout.order_id);
+      onCartChange?.();
+      setPaymentStage("awaiting_signature");
+
+      // Кодируем payload как простой text-комментарий. TonConnect примет
+      // его в поле message body, кошелёк покажет юзеру.
+      // Согласно спеке TonConnect — payload это base64-закодированный BoC
+      // ячейки с комментарием. Используем готовую утилиту через btoa и
+      // структуру `OP::comment(text)` (op=0, потом text).
+      const payloadCell = encodeCommentToBoc(checkout.payment_intent.payload);
+
+      await tonConnectUI.sendTransaction({
+        validUntil: Math.floor(Date.now() / 1000) + 600,
+        messages: [
+          {
+            address: checkout.payment_intent.to_address,
+            amount: checkout.payment_intent.amount_nano,
+            payload: payloadCell,
+          },
+        ],
+      });
+
+      // Транзакция подписана и отправлена в сеть. Начинаем поллить
+      // verify-эндпойнт. Сеть TON в среднем подтверждает за 5-15 сек,
+      // даём окно в 3 минуты с шагом 5 сек.
+      setPaymentStage("verifying");
+      let attempts = 0;
+      const maxAttempts = 36; // 36 × 5s = 3 мин
+      const tick = async () => {
+        attempts++;
+        try {
+          const r = await verifyTonPayment(checkout.order_id);
+          if (r.payment_status === "paid") {
+            setPaymentStage("success");
+            setOrderSuccess(true);
+            onOrderSuccess?.();
+            return;
+          }
+        } catch (err) {
+          console.error("verify failed", err);
+        }
+        if (attempts >= maxAttempts) {
+          setPaymentStage("error");
+          setPaymentError(
+            "Не удалось подтвердить оплату за 3 минуты. Если ты подписал транзакцию — она может прийти позже, проверь /track в боте."
+          );
+          return;
+        }
+        verifyTimerRef.current = window.setTimeout(tick, 5000);
+      };
+      tick();
+    } catch (e) {
+      console.error(e);
+      // Если юзер закрыл кошелёк / отменил подпись — отзываем ордер.
+      if (pendingOrderId) {
+        cancelTonPayment(pendingOrderId).catch(() => {});
+      }
+      setPaymentStage("error");
+      setPaymentError(e instanceof Error ? e.message : "Ошибка оплаты");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Cleanup опроса verify при размонтировании
+  useEffect(() => {
+    return () => {
+      if (verifyTimerRef.current) window.clearTimeout(verifyTimerRef.current);
+    };
+  }, []);
 
   const handleWriteSeller = () => {
     const base = sellerLink || "https://t.me/ZenStoreBot";
@@ -536,6 +658,62 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
             </label>
           </div>
         </div>
+
+        {/* Способ оплаты */}
+        <div style={styles.payMethodGroup}>
+          <span style={styles.payMethodLabel}>
+            {lang === "ru" ? "Способ оплаты" : "Payment method"}
+          </span>
+          <div style={styles.payMethodRow}>
+            <button
+              type="button"
+              onClick={() => setPaymentMethod("manual")}
+              style={{
+                ...styles.payMethodCard,
+                ...(paymentMethod === "manual" ? styles.payMethodCardActive : null),
+              }}
+              aria-pressed={paymentMethod === "manual"}
+            >
+              <span style={styles.payMethodIcon} aria-hidden>💬</span>
+              <span style={styles.payMethodTextWrap}>
+                <span style={styles.payMethodTitle}>
+                  {lang === "ru" ? "Через продавца" : "Via seller"}
+                </span>
+                <span style={styles.payMethodHint}>
+                  {lang === "ru" ? "Свяжемся в Telegram" : "We'll DM you"}
+                </span>
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPaymentMethod("ton")}
+              style={{
+                ...styles.payMethodCard,
+                ...(paymentMethod === "ton" ? styles.payMethodCardActive : null),
+              }}
+              aria-pressed={paymentMethod === "ton"}
+            >
+              <span style={styles.payMethodIcon} aria-hidden>💎</span>
+              <span style={styles.payMethodTextWrap}>
+                <span style={styles.payMethodTitle}>TON</span>
+                <span style={styles.payMethodHint}>
+                  {lang === "ru" ? "Криптой через кошелёк" : "Crypto via wallet"}
+                </span>
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {paymentMethod === "ton" && paymentStage !== "idle" && (
+          <div style={styles.tonStatus}>
+            {paymentStage === "creating" && (lang === "ru" ? "Создаём заказ…" : "Creating order…")}
+            {paymentStage === "awaiting_signature" && (lang === "ru" ? "Подпиши транзакцию в кошельке…" : "Sign in your wallet…")}
+            {paymentStage === "verifying" && (lang === "ru" ? "Ждём подтверждение в сети TON (до 3 мин)…" : "Waiting for TON network (up to 3 min)…")}
+            {paymentStage === "error" && (
+              <span style={{ color: "var(--accent)" }}>{paymentError || (lang === "ru" ? "Ошибка оплаты" : "Payment error")}</span>
+            )}
+          </div>
+        )}
       </form>
 
       <div className="zen-bag-summary zen-bag-summary--bottom">
@@ -927,6 +1105,76 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "text",
     transition:
       "border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease",
+  },
+  payMethodGroup: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+    marginTop: 14,
+  },
+  payMethodLabel: {
+    fontSize: 12,
+    fontWeight: 600,
+    color: "var(--muted)",
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
+  },
+  payMethodRow: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 8,
+  },
+  payMethodCard: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    padding: "12px 12px",
+    background: "var(--surface-elevated)",
+    border: "1px solid var(--border)",
+    borderRadius: 14,
+    cursor: "pointer",
+    textAlign: "left",
+    transition: "border-color 0.18s ease, background 0.18s ease",
+  },
+  payMethodCardActive: {
+    borderColor: "var(--text)",
+    boxShadow: "inset 0 0 0 1px var(--text)",
+  },
+  payMethodIcon: {
+    fontSize: 18,
+    flexShrink: 0,
+    width: 28,
+    height: 28,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  payMethodTextWrap: {
+    display: "flex",
+    flexDirection: "column",
+    minWidth: 0,
+    flex: 1,
+  },
+  payMethodTitle: {
+    fontSize: 13.5,
+    fontWeight: 600,
+    color: "var(--text)",
+    letterSpacing: "-0.005em",
+  },
+  payMethodHint: {
+    fontSize: 11.5,
+    color: "var(--muted)",
+    marginTop: 1,
+  },
+  tonStatus: {
+    marginTop: 12,
+    padding: "10px 12px",
+    background: "var(--surface-elevated)",
+    border: "1px solid var(--border)",
+    borderRadius: 10,
+    fontSize: 13,
+    color: "var(--text)",
+    lineHeight: 1.4,
   },
   cityFieldActive: {
     borderColor: "var(--accent)",

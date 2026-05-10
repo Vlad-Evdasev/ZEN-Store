@@ -1130,3 +1130,76 @@ export async function getBotAnalytics(adminSecret: string): Promise<BotAnalytics
   if (!res.ok) throw new Error("Failed to fetch analytics");
   return res.json();
 }
+
+// ─── TON payments ──────────────────────────────────────────────────────
+
+export interface TonPaymentIntent {
+  id: string;
+  to_address: string;
+  amount_nano: string;
+  amount_ton: number;
+  ton_usd_rate: number;
+  payload: string;
+  expires_at: string;
+}
+
+export interface TonCheckoutResponse {
+  ok: true;
+  order_id: number;
+  payment_intent: TonPaymentIntent;
+}
+
+export async function createTonCheckout(data: {
+  user_id: string;
+  user_name?: string;
+  user_phone?: string;
+  user_username?: string;
+  user_address?: string;
+  items: CartItem[];
+  total: number;
+}): Promise<TonCheckoutResponse> {
+  const res = await fetch(`${API_URL}/api/payments/ton/checkout`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+  return res.json();
+}
+
+export interface TonPaymentStatus {
+  payment_status: "unpaid" | "paid" | "refunded" | "cancelled";
+  status: string;
+  tx_hash: string | null;
+  payload: string | null;
+}
+
+export async function getTonPaymentStatus(orderId: number): Promise<TonPaymentStatus> {
+  const res = await fetch(`${API_URL}/api/payments/ton/status/${orderId}`);
+  if (!res.ok) throw new Error("Failed to fetch payment status");
+  return res.json();
+}
+
+export async function verifyTonPayment(
+  orderId: number
+): Promise<{ ok: boolean; payment_status: string; reason?: string; tx_hash?: string }> {
+  const res = await fetch(`${API_URL}/api/payments/ton/verify/${orderId}`, {
+    method: "POST",
+  });
+  // 202 — не ошибка, просто транзакция ещё не пришла
+  if (res.status === 202) {
+    return res.json();
+  }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+  return res.json();
+}
+
+export async function cancelTonPayment(orderId: number): Promise<void> {
+  await fetch(`${API_URL}/api/payments/ton/cancel/${orderId}`, { method: "POST" });
+}

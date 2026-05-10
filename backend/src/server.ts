@@ -17,6 +17,7 @@ import {
   runCartAbandonmentSweep,
   runDropTeaserSweep,
 } from "./routes/engagement.js";
+import { paymentsRouter, runPaymentExpirySweep } from "./routes/payments.js";
 import { db } from "./db/schema.js";
 
 const app = express();
@@ -39,6 +40,7 @@ app.use("/api/categories", categoriesRouter);
 app.use("/api/posts", postsRouter);
 app.use("/api/support", supportRouter);
 app.use("/api/engagement", engagementRouter);
+app.use("/api/payments", paymentsRouter);
 
 app.get("/api/health", (_req, res) => {
   try {
@@ -72,6 +74,11 @@ function startCronJobs() {
       if (r.sent > 0) console.log(`[cron] drop-teaser sweep: sent=${r.sent}`);
     } catch (e) {
       console.error("[cron] drop-teaser failed:", e);
+    }
+    try {
+      runPaymentExpirySweep();
+    } catch (e) {
+      console.error("[cron] payment-expiry failed:", e);
     }
   };
   // Прогон при старте — но через 30 секунд после, чтобы дождаться готовности БД.
