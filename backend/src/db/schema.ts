@@ -498,6 +498,10 @@ try { db.exec("ALTER TABLE orders ADD COLUMN payment_reminder_sent_at DATETIME")
 // Мульти-фото посты во вкладке «Вдохновиться» — JSON-массив URL/data:URL,
 // до 10 элементов. image_url/image_data остаются для обратной совместимости.
 try { db.exec("ALTER TABLE posts ADD COLUMN images TEXT"); } catch {}
+// Категория поста (опционально). Используем существующие коды из categories
+// (tee/hoodie/...). Нужна для блока «похожие посты» в expanded view.
+try { db.exec("ALTER TABLE posts ADD COLUMN category TEXT"); } catch {}
+try { db.exec("CREATE INDEX IF NOT EXISTS idx_posts_category ON posts(category)"); } catch {}
 
 // ─── Индексы для горячих запросов ──────────────────────────────────────
 // Используются в GET /orders/:userId, GET /custom-orders/:userId, фид

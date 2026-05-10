@@ -38,6 +38,7 @@ export interface Post {
   images?: string[];
   product_id: number | null;
   product_url: string | null;
+  category?: string | null;
   created_at: string;
   likes_count?: number;
   comments_count?: number;

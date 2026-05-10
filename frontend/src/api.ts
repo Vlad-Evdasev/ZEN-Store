@@ -804,6 +804,9 @@ export interface Post {
   images: string[];
   product_id: number | null;
   product_url: string | null;
+  /** Категория поста (код из categories: tee/hoodie/...). Для блока
+   *  «похожие» в expanded view. Null если не задана. */
+  category: string | null;
   created_at: string;
   likes_count: number;
   comments_count: number;
@@ -823,6 +826,18 @@ export async function getPosts(userId?: string): Promise<Post[]> {
   const url = userId ? `${API_URL}/api/posts?user_id=${encodeURIComponent(userId)}` : `${API_URL}/api/posts`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("Failed to fetch posts");
+  return res.json();
+}
+
+// Похожие посты — той же категории, рандомизированный порядок, до 24 шт.
+// Используется в expanded view ленты «Вдохновиться» как Pinterest-style
+// «больше как этот».
+export async function getRelatedPosts(postId: number, userId?: string): Promise<Post[]> {
+  const url = userId
+    ? `${API_URL}/api/posts/${postId}/related?user_id=${encodeURIComponent(userId)}`
+    : `${API_URL}/api/posts/${postId}/related`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Failed to fetch related posts");
   return res.json();
 }
 
@@ -853,7 +868,7 @@ export async function addPostComment(postId: number, userId: string, userName: s
 }
 
 export async function createPost(
-  data: { caption?: string | null; image_url?: string | null; image_data?: string | null; images?: string[]; product_id?: number | null; product_url?: string | null },
+  data: { caption?: string | null; image_url?: string | null; image_data?: string | null; images?: string[]; product_id?: number | null; product_url?: string | null; category?: string | null },
   adminSecret: string
 ): Promise<{ id: number; ok: boolean }> {
   const res = await fetch(`${API_URL}/api/posts`, {
@@ -870,7 +885,7 @@ export async function createPost(
 
 export async function updatePost(
   id: number,
-  data: { caption?: string | null; image_url?: string | null; image_data?: string | null; images?: string[]; product_id?: number | null; product_url?: string | null },
+  data: { caption?: string | null; image_url?: string | null; image_data?: string | null; images?: string[]; product_id?: number | null; product_url?: string | null; category?: string | null },
   adminSecret: string
 ): Promise<{ ok: boolean }> {
   const res = await fetch(`${API_URL}/api/posts/${id}`, {

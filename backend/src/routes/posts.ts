@@ -74,6 +74,50 @@ postsRouter.get("/", (req, res) => {
   return res.json(rows.map(expandPost));
 });
 
+// Похожие посты — для блока «больше как этот» в expanded view.
+// Если у текущего поста есть category, фильтруем по ней; иначе — берём
+// общие свежие посты. Случайный порядок (RANDOM()) даёт «открытие чего-то
+// нового» каждый раз. Лимит 24 — достаточно чтобы заполнить экран
+// несколькими прокрутками, но не убить трафик base64-картинками.
+postsRouter.get("/:id/related", (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const userId = req.query.user_id as string | undefined;
+  const post = db
+    .prepare("SELECT id, category FROM posts WHERE id = ?")
+    .get(id) as { id: number; category: string | null } | undefined;
+  if (!post) return res.status(404).json({ error: "Post not found" });
+
+  const rows = post.category
+    ? db.prepare(
+        `SELECT p.*,
+          (SELECT COUNT(*) FROM post_likes WHERE post_id = p.id) AS likes_count,
+          (SELECT COUNT(*) FROM post_comments WHERE post_id = p.id) AS comments_count
+         FROM posts p
+         WHERE p.id != ? AND p.category = ?
+         ORDER BY RANDOM()
+         LIMIT 24`
+      ).all(id, post.category) as (Post & { likes_count: number; comments_count: number; images?: string | null })[]
+    : db.prepare(
+        `SELECT p.*,
+          (SELECT COUNT(*) FROM post_likes WHERE post_id = p.id) AS likes_count,
+          (SELECT COUNT(*) FROM post_comments WHERE post_id = p.id) AS comments_count
+         FROM posts p
+         WHERE p.id != ?
+         ORDER BY RANDOM()
+         LIMIT 24`
+      ).all(id) as (Post & { likes_count: number; comments_count: number; images?: string | null })[];
+
+  if (userId) {
+    const likedSet = new Set<number>();
+    const liked = db
+      .prepare("SELECT post_id FROM post_likes WHERE user_id = ?")
+      .all(userId) as { post_id: number }[];
+    for (const r of liked) likedSet.add(r.post_id);
+    return res.json(rows.map((p) => ({ ...expandPost(p), user_liked: likedSet.has(p.id) })));
+  }
+  return res.json(rows.map(expandPost));
+});
+
 postsRouter.get("/:id", (req, res) => {
   const id = parseInt(req.params.id, 10);
   const userId = req.query.user_id as string | undefined;
@@ -106,7 +150,7 @@ postsRouter.post("/", (req, res) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const { caption, image_url, image_data, product_id, product_url } = req.body;
+  const { caption, image_url, image_data, product_id, product_url, category } = req.body;
   const images = readImagesFromBody(req.body);
   const imagesJson = images && images.length > 0 ? JSON.stringify(images) : null;
   // Когда передан images-массив, в legacy-поля кладём первый элемент,
@@ -122,7 +166,7 @@ postsRouter.post("/", (req, res) => {
   try {
     const result = db
       .prepare(
-        "INSERT INTO posts (caption, image_url, image_data, images, product_id, product_url) VALUES (?, ?, ?, ?, ?, ?)"
+        "INSERT INTO posts (caption, image_url, image_data, images, product_id, product_url, category) VALUES (?, ?, ?, ?, ?, ?, ?)"
       )
       .run(
         caption ?? null,
@@ -130,7 +174,8 @@ postsRouter.post("/", (req, res) => {
         legacyData,
         imagesJson,
         product_id ?? null,
-        product_url ?? null
+        product_url ?? null,
+        category ?? null
       );
     return res.status(201).json({ id: result.lastInsertRowid, ok: true });
   } catch (e) {
@@ -149,13 +194,14 @@ postsRouter.patch("/:id", (req, res) => {
   const existing = db.prepare("SELECT id FROM posts WHERE id = ?").get(id);
   if (!existing) return res.status(404).json({ error: "Post not found" });
 
-  const { caption, image_url, image_data, product_id, product_url } = req.body;
+  const { caption, image_url, image_data, product_id, product_url, category } = req.body;
   const images = readImagesFromBody(req.body);
 
   const updates: string[] = [];
   const values: unknown[] = [];
 
   if (caption !== undefined) { updates.push("caption = ?"); values.push(caption); }
+  if (category !== undefined) { updates.push("category = ?"); values.push(category || null); }
   if (images !== undefined) {
     updates.push("images = ?");
     values.push(images.length > 0 ? JSON.stringify(images) : null);

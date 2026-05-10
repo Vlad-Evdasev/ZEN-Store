@@ -1389,28 +1389,46 @@ html[data-theme="light"] .zen-app .product-card-price {
   padding-bottom: 80px !important;
 }
 
-/* Плотная упаковка как в Pinterest: ~2-3px между карточками. */
+/* Pinterest-style плотная упаковка с одинаковыми вертикальными
+   зазорами вне зависимости от того, есть ли у карточки подпись. */
 .zen-app .zen-pin-grid {
   column-count: 2;
-  column-gap: 3px;
+  column-gap: 4px;
 }
 @media (min-width: 520px) {
-  .zen-app .zen-pin-grid { column-count: 3; column-gap: 4px; }
+  .zen-app .zen-pin-grid { column-count: 3; column-gap: 5px; }
 }
 @media (min-width: 820px) {
-  .zen-app .zen-pin-grid { column-count: 4; column-gap: 4px; }
+  .zen-app .zen-pin-grid { column-count: 4; column-gap: 6px; }
 }
 .zen-app .zen-pin-card {
-  margin: 0 0 3px;
+  /* Одинаковый отступ снизу = ровно одна высота строки подписи (~18px),
+     чтобы между карточками с подписью и без визуально было одно
+     расстояние. Без этого карточки без подписи слипались, а с подписью
+     казались «разрежёнными». */
+  margin: 0 0 18px;
   break-inside: avoid;
   page-break-inside: avoid;
   -webkit-column-break-inside: avoid;
   display: block;
 }
 @media (min-width: 520px) {
-  .zen-app .zen-pin-card { margin-bottom: 4px; }
+  .zen-app .zen-pin-card { margin-bottom: 20px; }
 }
 .zen-app .zen-pin-card:active { transform: scale(0.985); transition: transform 0.1s ease; }
+
+/* Page-scale при открытом expanded view: фон-страница чуть «уезжает»
+   назад — даёт глубину как в Pinterest. Класс ставим на body из ExpandedView. */
+.zen-app .zen-inspire-page {
+  transform-origin: center top;
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
+              filter 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, filter;
+}
+body.zen-inspire-overlay-on .zen-app .zen-inspire-page {
+  transform: scale(0.96);
+  filter: brightness(0.78);
+}
 
 /* FAB-переключатель «Всё / Закреплённые» в правом нижнем углу. */
 .zen-app .zen-pin-fab:active { transform: scale(0.94); }

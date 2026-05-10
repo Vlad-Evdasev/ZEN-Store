@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect } from "react";
 import {
   getPosts,
+  getRelatedPosts,
   togglePostLike,
   type Post,
 } from "../api";
@@ -31,17 +32,22 @@ function writePostsCache(posts: Post[]): void {
 
 // ── Иконки ──────────────────────────────────────────────────────────
 
-// Классический канцелярский пушпин — outline и filled варианты.
-function PinIcon({ filled, size = 26 }: { filled: boolean; size?: number }) {
-  if (filled) {
-    return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-        <path d="M16 2H8a1 1 0 0 0-.7 1.7L8 4.4V11l-2.3 2.3A1 1 0 0 0 6.4 15H11v6a1 1 0 0 0 2 0v-6h4.6a1 1 0 0 0 .7-1.7L16 11V4.4l.7-.7A1 1 0 0 0 16 2Z" />
-      </svg>
-    );
-  }
+// Классический канцелярский пушпин. ВСЕГДА outline — никаких заливок.
+// Активное состояние сигналим только через цвет (currentColor → accent).
+// Strokе чуть толще когда активный, чтобы визуально выделить.
+function PinIcon({ active = false, size = 26 }: { active?: boolean; size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={active ? 2.2 : 1.7}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
       <path d="M16 3H8l1.5 1.5V11l-2 2v1.5h9V13l-2-2V4.5L16 3Z" />
       <line x1="12" y1="14.5" x2="12" y2="21" />
     </svg>
@@ -194,9 +200,10 @@ interface ExpandedViewProps {
   onClose: () => void;
   onPinToggle: (postId: number, newPinned: boolean, newCount: number) => void;
   onShare: (post: Post) => void;
+  onOpenRelated: (post: Post, thumbRect: DOMRect | null, src: string, photoIndex: number) => void;
 }
 
-function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onClose, onPinToggle, onShare }: ExpandedViewProps) {
+function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onClose, onPinToggle, onShare, onOpenRelated }: ExpandedViewProps) {
   const images = getPostImages(post);
   const [currentIdx, setCurrentIdx] = useState(Math.min(startIndex, Math.max(images.length - 1, 0)));
   const [phase, setPhase] = useState<"opening" | "open" | "closing">("opening");
@@ -208,6 +215,18 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
   const [dragY, setDragY] = useState(0);
   const sheetRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
+
+  // «Похожие посты» — подтягиваем по post.id (бэк фильтрует по category)
+  // и рендерим masonry-сетку под caption / cta. Если категории нет —
+  // бэк просто отдаёт случайные посты, лента всё равно живая.
+  const [related, setRelated] = useState<Post[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    getRelatedPosts(post.id, userId).then((r) => {
+      if (!cancelled) setRelated(r);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [post.id, userId]);
 
   // Для optimistic-пина с защитой от race-condition.
   const reqVersion = useRef(0);
@@ -282,9 +301,15 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
     window.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    // Page-scale: чуть «уезжает» назад фон-страница, даёт глубину как
+    // в Pinterest. CSS-переход на .zen-inspire-page → scale(0.96) +
+    // brightness(0.78). Снимаем класс при unmount → плавно
+    // возвращается на 1.0.
+    document.body.classList.add("zen-inspire-overlay-on");
     return () => {
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
+      document.body.classList.remove("zen-inspire-overlay-on");
     };
   }, [requestClose]);
 
@@ -440,7 +465,7 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
             aria-pressed={post.user_liked}
             aria-label={post.user_liked ? t(lang, "postPinned") : t(lang, "postPin")}
           >
-            <PinIcon filled={post.user_liked} size={28} />
+            <PinIcon active={post.user_liked} size={28} />
           </button>
           <button
             type="button"
@@ -468,6 +493,26 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
             >
               {t(lang, "postOpenProduct")} →
             </a>
+          </div>
+        )}
+
+        {/* Похожие посты — Pinterest «больше как этот».
+            Используем тот же масонри-grid, что и на главной странице,
+            чтобы UX был знакомым. */}
+        {related.length > 0 && (
+          <div style={expandedStyles.relatedWrap}>
+            <div style={expandedStyles.relatedHead}>
+              {lang === "ru" ? "Больше как этот" : "More like this"}
+            </div>
+            <div className="zen-pin-grid">
+              {related.map((rp) => (
+                <MasonryCard
+                  key={rp.id}
+                  post={rp}
+                  onOpen={(p, rect, src, idx) => onOpenRelated(p, rect, src, idx)}
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -658,11 +703,14 @@ export function NewArrivalsPage({
           title={tab === "all" ? t(lang, "postsFabPinned") : t(lang, "postsFabAll")}
           style={{
             ...pageStyles.fab,
-            background: tab === "liked" ? "var(--accent)" : "var(--text)",
-            color: tab === "liked" ? "#fff" : "var(--bg)",
+            // Активный режим — обводим accent + цвет иконки accent.
+            // НЕ заливаем — выделение «по контуру», как просил юзер.
+            background: "var(--surface)",
+            color: tab === "liked" ? "var(--accent)" : "var(--text)",
+            borderColor: tab === "liked" ? "var(--accent)" : "var(--border)",
           }}
         >
-          <PinIcon filled={tab === "liked"} size={22} />
+          <PinIcon active={tab === "liked"} size={22} />
           {tab === "liked" && pinnedCount > 0 && (
             <span style={pageStyles.fabBadge}>{pinnedCount}</span>
           )}
@@ -671,6 +719,9 @@ export function NewArrivalsPage({
 
       {expanded && (
         <ExpandedView
+          // key по post.id даёт чистый монт при тапе на «похожий» пост —
+          // чтобы FLIP-анимация и состояние стартовали заново.
+          key={expanded.post.id}
           post={expanded.post}
           startRect={expanded.rect}
           startSrc={expanded.src}
@@ -680,6 +731,12 @@ export function NewArrivalsPage({
           onClose={() => setExpanded(null)}
           onPinToggle={handlePinToggle}
           onShare={handleShare}
+          onOpenRelated={(p, rect, src, index) => {
+            // Скроллим к верху expanded sheet чтобы юзер сразу видел
+            // открытое фото (а не остался в конце ленты «похожих»).
+            requestAnimationFrame(() => window.scrollTo(0, 0));
+            setExpanded({ post: p, rect, src, index });
+          }}
         />
       )}
     </div>
@@ -764,16 +821,16 @@ const pageStyles: Record<string, React.CSSProperties> = {
     width: 52,
     height: 52,
     borderRadius: "50%",
-    border: "none",
+    border: "1.5px solid var(--border)",
     cursor: "pointer",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: "0 8px 24px -8px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.18)",
+    boxShadow: "0 8px 24px -8px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.12)",
     zIndex: 900,
     fontFamily: "inherit",
     WebkitTapHighlightColor: "transparent",
-    transition: "background 0.18s ease, color 0.18s ease, transform 0.1s ease",
+    transition: "background 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.1s ease",
   },
   fabBadge: {
     position: "absolute" as const,
@@ -783,14 +840,14 @@ const pageStyles: Record<string, React.CSSProperties> = {
     height: 20,
     padding: "0 6px",
     borderRadius: 999,
-    background: "#fff",
-    color: "var(--accent)",
+    background: "var(--accent)",
+    color: "#fff",
     fontSize: 11,
     fontWeight: 800,
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    border: "2px solid var(--accent)",
+    border: "2px solid var(--bg)",
     fontVariantNumeric: "tabular-nums",
   },
 };
@@ -990,5 +1047,19 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     borderRadius: 12,
     textDecoration: "none",
     letterSpacing: "0.01em",
+  },
+  relatedWrap: {
+    flex: "0 0 auto",
+    padding: "20px 4px calc(env(safe-area-inset-bottom, 0px) + 24px)",
+    borderTop: "1px solid var(--border)",
+    marginTop: 16,
+  },
+  relatedHead: {
+    fontSize: 13,
+    fontWeight: 700,
+    color: "var(--muted)",
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.08em",
+    padding: "0 12px 12px",
   },
 };

@@ -446,7 +446,7 @@ export function Admin() {
       )}
 
       {tab === "posts" && (
-        <PostsTab adminSecret={adminSecret} />
+        <PostsTab adminSecret={adminSecret} categories={categories} />
       )}
 
       {tab === "channel" && (
@@ -2591,7 +2591,7 @@ function ProductsTab({
   );
 }
 
-function PostsTab({ adminSecret }: { adminSecret: string }) {
+function PostsTab({ adminSecret, categories }: { adminSecret: string; categories: Category[] }) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -2602,8 +2602,11 @@ function PostsTab({ adminSecret }: { adminSecret: string }) {
   const [formCaption, setFormCaption] = useState("");
   const [formImageUrl, setFormImageUrl] = useState("");
   // formImages — единый массив, до 10 элементов: либо URL, либо data:base64.
-  // Single-photo посты = массив из одного. Мульти-посты = до 10.
   const [formImages, setFormImages] = useState<string[]>([]);
+  // formCategory — код категории из categories или "" (не задана). Нужно
+  // для блока «похожие посты» в WebApp: посты той же категории
+  // подтягиваются под открытым постом.
+  const [formCategory, setFormCategory] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const MAX_POST_IMAGES = 10;
 
@@ -2626,6 +2629,7 @@ function PostsTab({ adminSecret }: { adminSecret: string }) {
     setFormCaption("");
     setFormImageUrl("");
     setFormImages([]);
+    setFormCategory("");
     setShowForm(true);
   };
 
@@ -2633,8 +2637,8 @@ function PostsTab({ adminSecret }: { adminSecret: string }) {
     setEditingPost(post);
     setFormCaption(post.caption ?? "");
     setFormImageUrl("");
-    // images массив всегда есть на бэке (legacy → один элемент)
     setFormImages(post.images && post.images.length > 0 ? post.images.slice(0, MAX_POST_IMAGES) : []);
+    setFormCategory((post as Post & { category?: string | null }).category ?? "");
     setShowForm(true);
   };
 
@@ -2712,6 +2716,7 @@ function PostsTab({ adminSecret }: { adminSecret: string }) {
         images: finalImages,
         product_id: null,
         product_url: null,
+        category: formCategory || null,
       };
       if (editingPost) {
         await updatePost(editingPost.id, data, adminSecret);
@@ -2773,6 +2778,23 @@ function PostsTab({ adminSecret }: { adminSecret: string }) {
               rows={3}
               style={{ ...styles.input, minHeight: 72 }}
             />
+          </label>
+
+          <label style={styles.label}>
+            <span>Категория</span>
+            <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 400 }}>
+              Опционально. Используется для блока «похожие посты» в открытом посте — там подтягиваются другие посты той же категории в случайном порядке.
+            </span>
+            <select
+              value={formCategory}
+              onChange={(e) => setFormCategory(e.target.value)}
+              style={styles.input}
+            >
+              <option value="">— Без категории —</option>
+              {categories.map((c) => (
+                <option key={c.code} value={c.code}>{c.name}</option>
+              ))}
+            </select>
           </label>
 
           <label style={styles.label}>
