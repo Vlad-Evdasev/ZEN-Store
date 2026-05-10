@@ -629,6 +629,18 @@ export async function markOrderPaid(orderId: number, adminSecret: string): Promi
   if (!res.ok) throw new Error("Failed to mark paid");
 }
 
+export async function sendOrderInvoice(orderId: number, adminSecret: string): Promise<{ ok: boolean; ton: boolean }> {
+  const res = await fetchWrite(`${API_URL}/api/orders/admin/order/${orderId}/send-invoice`, {
+    method: "POST",
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || "Failed to send invoice");
+  }
+  return res.json();
+}
+
 export async function markOrderRefunded(orderId: number, adminSecret: string): Promise<void> {
   const res = await fetch(`${API_URL}/api/payments/admin/order/${orderId}/mark-refunded`, {
     method: "POST",

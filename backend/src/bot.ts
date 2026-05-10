@@ -460,10 +460,13 @@ export async function notifyTonPaymentVerified(
 }
 
 // ── Order invoice notification ──────────────────────────────────────
-// Сразу после создания ордера юзер получает «карточку инвойса»:
-// альбом из фото товаров + caption с резюме + сообщение с кнопкой
-// «Оплатить» (ton://transfer URI — открывает любой TON-кошелёк уже
-// с подставленным адресом, суммой и комментарием для матчинга).
+// Одно красивое сообщение: фото первого товара + caption с резюме +
+// inline-кнопка «Оплатить» (https://app.tonkeeper.com/transfer/...
+// — универсальная HTTPS-ссылка, работает на desktop и mobile, на
+// устройствах с установленным Tonkeeper deep-link открывает приложение
+// сразу с подставленными адресом, суммой и комментарием).
+
+const ADMIN_HANDLE = process.env.ADMIN_TG_HANDLE || "krot_eno";
 
 export interface OrderItemForInvoice {
   name: string;
@@ -479,6 +482,7 @@ export async function notifyOrderInvoice(
   total: number,
   ton: { receiveAddress: string; amountNano: string; payload: string; amountTon: number; rateUsd: number } | null
 ): Promise<void> {
+  // Собираем тело сообщения
   const lines: string[] = [];
   lines.push(`<b>Заказ #${orderId}</b>`);
   lines.push("");
@@ -489,57 +493,48 @@ export async function notifyOrderInvoice(
   }
   lines.push("");
   lines.push(`<b>К оплате: ${total} $</b>`);
-  if (ton) lines.push(`≈ <b>${ton.amountTon.toFixed(2)} TON</b> · курс $${ton.rateUsd.toFixed(2)}/TON`);
+  if (ton) {
+    lines.push(`≈ <b>${ton.amountTon.toFixed(2)} TON</b> · курс $${ton.rateUsd.toFixed(2)}/TON`);
+    lines.push("");
+    lines.push("Тапни <b>«Оплатить»</b> — кошелёк подставит сумму и адрес автоматически.");
+  }
+  lines.push("");
+  lines.push(`Если что-то пойдёт не так, напиши нам <a href="https://t.me/${ADMIN_HANDLE}">@${ADMIN_HANDLE}</a>.`);
 
   const caption = lines.join("\n");
 
-  // Альбом из фото товаров (если есть) + caption на первом
-  const photoUrls = items
+  // Универсальная Tonkeeper-ссылка вместо ton://. Работает на desktop
+  // и mobile: на устройствах с Tonkeeper установленным — deep-link в
+  // приложение, без — открывается web-flow Tonkeeper.
+  const payUrl = ton
+    ? `https://app.tonkeeper.com/transfer/${ton.receiveAddress}` +
+      `?amount=${ton.amountNano}` +
+      `&text=${encodeURIComponent(ton.payload)}`
+    : null;
+
+  const replyMarkup = payUrl
+    ? { inline_keyboard: [[{ text: "Оплатить", url: payUrl }]] }
+    : undefined;
+
+  // Берём первое фото для главной карточки (sendPhoto поддерживает
+  // и caption, и reply_markup — поэтому одно сообщение).
+  const firstPhoto = items
     .map((i) => i.image_url)
-    .filter((u): u is string => !!u && u.trim().length > 0)
-    .slice(0, MAX_IMAGES);
+    .find((u): u is string => !!u && u.trim().length > 0);
 
   try {
-    if (photoUrls.length === 0) {
+    if (firstPhoto) {
+      await bot.api.sendPhoto(userId, toPhotoSource(firstPhoto), {
+        caption,
+        parse_mode: "HTML",
+        reply_markup: replyMarkup,
+      });
+    } else {
       await bot.api.sendMessage(userId, caption, {
         parse_mode: "HTML",
         link_preview_options: { is_disabled: true },
+        reply_markup: replyMarkup,
       });
-    } else if (photoUrls.length === 1) {
-      await bot.api.sendPhoto(userId, toPhotoSource(photoUrls[0]), {
-        caption,
-        parse_mode: "HTML",
-      });
-    } else {
-      const media: ChannelMediaPhoto[] = photoUrls.map((url, idx) => {
-        const item: ChannelMediaPhoto = { type: "photo", media: toPhotoSource(url) };
-        if (idx === 0) {
-          item.caption = caption;
-          item.parse_mode = "HTML";
-        }
-        return item;
-      });
-      await bot.api.sendMediaGroup(userId, media);
-    }
-
-    // Followup-сообщение с Pay-кнопкой. ton://transfer открывает любой
-    // TON-кошелёк (Tonkeeper / Wallet / MyTonWallet) с предзаполненными
-    // адресом, суммой и комментарием — юзеру остаётся только нажать
-    // «Подтвердить» в кошельке.
-    if (ton) {
-      const tonUri =
-        `ton://transfer/${ton.receiveAddress}` +
-        `?amount=${ton.amountNano}` +
-        `&text=${encodeURIComponent(ton.payload)}`;
-      await bot.api.sendMessage(
-        userId,
-        `Оплата: один тап — кошелёк подставит сумму и адрес автоматически.\n\nЕсли что-то пойдёт не так, напиши нам через /help.`,
-        {
-          reply_markup: {
-            inline_keyboard: [[{ text: "Оплатить", url: tonUri }]],
-          },
-        }
-      );
     }
   } catch (e) {
     const err = e instanceof Error ? e.message : String(e);

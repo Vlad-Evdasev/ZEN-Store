@@ -49,6 +49,7 @@ import {
   getBotAnalytics,
   getSegmentCount,
   markOrderPaid,
+  sendOrderInvoice,
   type SegmentKey,
   type Product,
   type Category,
@@ -577,6 +578,21 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
     }
   };
 
+  const [sendingInvoiceId, setSendingInvoiceId] = useState<number | null>(null);
+  const handleSendInvoice = async (id: number) => {
+    if (!window.confirm(`Отправить клиенту инвойс с реквизитами для заказа #${id}?`)) return;
+    setSendingInvoiceId(id);
+    setMessage("");
+    try {
+      const r = await sendOrderInvoice(id, adminSecret);
+      setMessage(r.ton ? "Инвойс отправлен — клиенту пришла карточка с кнопкой «Оплатить»." : "Инвойс отправлен (без TON-кнопки — TON_RECEIVE_ADDRESS не настроен).");
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    } finally {
+      setSendingInvoiceId(null);
+    }
+  };
+
   const filteredOrders = statusFilter === "all" ? orders : orders.filter((o) => o.status === statusFilter);
 
   if (loading) return <p style={styles.hint}>Загрузка заказов...</p>;
@@ -707,13 +723,24 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
                           </a>
                         )}
                         {payStatus !== "paid" && payStatus !== "refunded" && (
-                          <button
-                            type="button"
-                            onClick={() => handleMarkPaid(o.id)}
-                            style={{ ...styles.smallBtn, height: 22, fontSize: 11, padding: "0 8px" }}
-                          >
-                            Mark paid
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleSendInvoice(o.id)}
+                              disabled={sendingInvoiceId === o.id}
+                              style={{ ...styles.smallBtn, height: 22, fontSize: 11, padding: "0 8px" }}
+                              title="Отправить клиенту в Telegram карточку с фото, суммой и кнопкой «Оплатить»"
+                            >
+                              {sendingInvoiceId === o.id ? "Отправляю…" : "Отправить реквизиты"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleMarkPaid(o.id)}
+                              style={{ ...styles.smallBtn, height: 22, fontSize: 11, padding: "0 8px" }}
+                            >
+                              Mark paid
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>

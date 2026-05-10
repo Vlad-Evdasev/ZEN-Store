@@ -96,49 +96,77 @@ ordersRouter.post("/:userId", async (req, res) => {
 
   const orderId = create();
   res.status(201).json({ ok: true, orderId });
+  // ВАЖНО: автоматический инвойс БОЛЬШЕ не отправляется при создании
+  // ордера. Админ обсуждает детали (доставка, наличие, размер) с
+  // клиентом в чате, потом ручным тапом из OrdersTab триггерит
+  // POST /admin/order/:id/send-invoice — и тогда юзеру улетает
+  // красивая карточка с фото + кнопкой «Оплатить».
+});
 
-  // Отвечаем клиенту сразу, инвойс отправляем в фоне (не блокируем).
-  // Если что-то упадёт (TonAPI / Telegram) — лог в консоль, юзер всё
-  // равно увидит свой ордер в /track.
-  (async () => {
-    try {
-      let parsedItems: { name?: string; size?: string; quantity?: number; image_url?: string | null }[] = [];
-      try {
-        parsedItems = typeof items === "string" ? JSON.parse(items) : items;
-      } catch {}
-      const cleanItems = (Array.isArray(parsedItems) ? parsedItems : []).map((i) => ({
-        name: String(i?.name ?? "Товар"),
-        size: typeof i?.size === "string" ? i.size : undefined,
-        quantity: Number(i?.quantity) || 1,
-        image_url: typeof i?.image_url === "string" ? i.image_url : null,
-      }));
-
-      let tonInfo: Parameters<typeof notifyOrderInvoice>[4] = null;
-      if (TON_RECEIVE_ADDRESS && payload) {
-        const rate = await getTonUsdRateOrNull();
-        if (rate) {
-          const amountTon = Number(total) / rate;
-          const amountNano = BigInt(Math.round(amountTon * 1e9)).toString();
-          // Сохраняем сумму и payload в ордер для последующей верификации
-          // через /api/payments/ton/verify/:orderId.
-          db.prepare(
-            "UPDATE orders SET payment_amount_nano = ? WHERE id = ?"
-          ).run(amountNano, orderId);
-          tonInfo = {
-            receiveAddress: TON_RECEIVE_ADDRESS,
-            amountNano,
-            payload,
-            amountTon,
-            rateUsd: rate,
-          };
-        }
+// ─── Админ: отправить инвойс юзеру вручную ─────────────────────────
+ordersRouter.post("/admin/order/:orderId/send-invoice", async (req, res) => {
+  const ADMIN_SECRET = process.env.ADMIN_SECRET || "";
+  const secret = req.headers["x-admin-secret"] as string | undefined;
+  if (ADMIN_SECRET && secret !== ADMIN_SECRET) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  const orderId = parseInt(req.params.orderId, 10);
+  const order = db
+    .prepare(
+      "SELECT id, user_id, items, total, payment_payload, payment_method, payment_status FROM orders WHERE id = ?"
+    )
+    .get(orderId) as
+    | {
+        id: number;
+        user_id: string;
+        items: string;
+        total: number;
+        payment_payload: string | null;
+        payment_method: string | null;
+        payment_status: string | null;
       }
+    | undefined;
+  if (!order) return res.status(404).json({ error: "Order not found" });
 
-      await notifyOrderInvoice(userId, orderId, cleanItems, Number(total), tonInfo);
-    } catch (e) {
-      console.error("Failed to send order invoice:", e instanceof Error ? e.message : e);
+  let parsedItems: { name?: string; size?: string; quantity?: number; image_url?: string | null }[] = [];
+  try {
+    parsedItems = typeof order.items === "string" ? JSON.parse(order.items) : order.items;
+  } catch {}
+  const cleanItems = (Array.isArray(parsedItems) ? parsedItems : []).map((i) => ({
+    name: String(i?.name ?? "Товар"),
+    size: typeof i?.size === "string" ? i.size : undefined,
+    quantity: Number(i?.quantity) || 1,
+    image_url: typeof i?.image_url === "string" ? i.image_url : null,
+  }));
+
+  // TON-блок собираем только если TON_RECEIVE_ADDRESS настроен и у
+  // ордера ton-метод. Иначе шлём без Pay-кнопки (admin в чате
+  // сам пришлёт реквизиты).
+  let tonInfo: Parameters<typeof notifyOrderInvoice>[4] = null;
+  if (TON_RECEIVE_ADDRESS && order.payment_payload && order.payment_method === "ton") {
+    const rate = await getTonUsdRateOrNull();
+    if (rate) {
+      const amountTon = Number(order.total) / rate;
+      const amountNano = BigInt(Math.round(amountTon * 1e9)).toString();
+      db.prepare(
+        "UPDATE orders SET payment_amount_nano = ? WHERE id = ?"
+      ).run(amountNano, orderId);
+      tonInfo = {
+        receiveAddress: TON_RECEIVE_ADDRESS,
+        amountNano,
+        payload: order.payment_payload,
+        amountTon,
+        rateUsd: rate,
+      };
     }
-  })();
+  }
+
+  try {
+    await notifyOrderInvoice(order.user_id, orderId, cleanItems, Number(order.total), tonInfo);
+    res.json({ ok: true, ton: !!tonInfo });
+  } catch (e) {
+    res.status(502).json({ error: e instanceof Error ? e.message : "Failed to send invoice" });
+  }
 });
 
 ordersRouter.patch("/order/:orderId/status", (req, res) => {
