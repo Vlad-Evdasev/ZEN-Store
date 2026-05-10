@@ -6,6 +6,10 @@ import { Admin } from "./pages/Admin";
 import { SettingsProvider } from "./context/SettingsContext";
 import "./index.css";
 
+// Buffer/process полифиллы инжектятся vite-plugin-node-polyfills
+// в vite.config.ts — нужны для @ton/core, который под капотом
+// использует Node.js APIs.
+
 const isAdmin = typeof window !== "undefined" && window.location.pathname === "/admin";
 
 // Манифест должен быть публично доступен по HTTPS — Vercel отдаёт
