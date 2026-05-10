@@ -681,7 +681,14 @@ export async function addProductReview(
   return res.json();
 }
 
-export async function getCurrencyRateAdmin(adminSecret: string): Promise<{ rate: number }> {
+export interface CurrencyRateMeta {
+  rate: number;
+  auto: boolean;
+  updated_at: string | null;
+  source: string;
+}
+
+export async function getCurrencyRateAdmin(adminSecret: string): Promise<CurrencyRateMeta> {
   const res = await fetch(`${API_URL}/api/admin/currency-rate`, {
     headers: { "X-Admin-Secret": adminSecret },
   });
@@ -689,13 +696,35 @@ export async function getCurrencyRateAdmin(adminSecret: string): Promise<{ rate:
   return res.json();
 }
 
-export async function updateCurrencyRateAdmin(adminSecret: string, rate: number): Promise<{ rate: number }> {
+export async function updateCurrencyRateAdmin(adminSecret: string, rate: number): Promise<CurrencyRateMeta> {
   const res = await fetch(`${API_URL}/api/admin/currency-rate`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
     body: JSON.stringify({ rate }),
   });
   if (!res.ok) throw new Error("Failed to update currency rate");
+  return res.json();
+}
+
+export async function refreshCurrencyRateFromNbrb(adminSecret: string): Promise<CurrencyRateMeta> {
+  const res = await fetch(`${API_URL}/api/admin/currency-rate/refresh`, {
+    method: "POST",
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || "NBRB refresh failed");
+  }
+  return res.json();
+}
+
+export async function setCurrencyRateAuto(enabled: boolean, adminSecret: string): Promise<CurrencyRateMeta> {
+  const res = await fetch(`${API_URL}/api/admin/currency-rate/auto`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
+    body: JSON.stringify({ enabled }),
+  });
+  if (!res.ok) throw new Error("Failed to toggle auto");
   return res.json();
 }
 

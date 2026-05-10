@@ -8,7 +8,7 @@ import { settingsRouter } from "./routes/settings.js";
 import { customOrdersRouter } from "./routes/customOrders.js";
 import { ordersRouter } from "./routes/orders.js";
 import { reviewsRouter } from "./routes/reviews.js";
-import { adminRouter, usersHeartbeatRouter } from "./routes/admin.js";
+import { adminRouter, usersHeartbeatRouter, runCurrencyRateAutoRefresh } from "./routes/admin.js";
 import { categoriesRouter } from "./routes/categories.js";
 import { postsRouter } from "./routes/posts.js";
 import { supportRouter } from "./routes/support.js";
@@ -89,6 +89,12 @@ function startCronJobs() {
       if (r.sent > 0) console.log(`[cron] pending-payment reminders sent=${r.sent}`);
     } catch (e) {
       console.error("[cron] pending-payment reminders failed:", e);
+    }
+    try {
+      const r = await runCurrencyRateAutoRefresh();
+      if (r.refreshed) console.log(`[cron] currency rate refreshed from NBRB: ${r.rate}`);
+    } catch (e) {
+      console.error("[cron] currency-rate refresh failed:", e);
     }
   };
   // Прогон при старте — но через 30 секунд после, чтобы дождаться готовности БД.

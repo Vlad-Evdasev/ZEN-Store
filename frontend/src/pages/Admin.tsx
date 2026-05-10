@@ -20,6 +20,8 @@ import {
   duplicateCustomOrderAdmin,
   getCurrencyRateAdmin,
   updateCurrencyRateAdmin,
+  refreshCurrencyRateFromNbrb,
+  setCurrencyRateAuto,
   sendBroadcast,
   getBroadcasts,
   updateBroadcast,
@@ -1290,13 +1292,24 @@ function CategoriesTab({
 
 function CurrencyRateTab({ adminSecret }: { adminSecret: string }) {
   const [rate, setRate] = useState<string>("");
+  const [meta, setMeta] = useState<{ auto: boolean; updated_at: string | null; source: string }>({
+    auto: false,
+    updated_at: null,
+    source: "manual",
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [message, setMessage] = useState("");
+
+  const applyMeta = (m: { rate: number; auto: boolean; updated_at: string | null; source: string }) => {
+    setRate(String(m.rate));
+    setMeta({ auto: m.auto, updated_at: m.updated_at, source: m.source });
+  };
 
   const loadRate = () => {
     getCurrencyRateAdmin(adminSecret)
-      .then(({ rate: r }) => setRate(String(r)))
+      .then(applyMeta)
       .catch(() => setMessage("Не удалось загрузить курс"))
       .finally(() => setLoading(false));
   };
@@ -1321,15 +1334,45 @@ function CurrencyRateTab({ adminSecret }: { adminSecret: string }) {
     setSaving(true);
     setMessage("");
     updateCurrencyRateAdmin(adminSecret, num)
-      .then(({ rate: r }) => {
-        setRate(String(r));
-        setMessage("Курс сохранён");
+      .then((m) => {
+        applyMeta(m);
+        setMessage("Курс сохранён вручную (авто-обновление выключено)");
       })
       .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")))
       .finally(() => setSaving(false));
   };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    setMessage("");
+    try {
+      const m = await refreshCurrencyRateFromNbrb(adminSecret);
+      applyMeta(m);
+      setMessage(`Курс обновлён с НБ РБ: 1$ = ${m.rate} BYN`);
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleAutoToggle = async () => {
+    setMessage("");
+    try {
+      const m = await setCurrencyRateAuto(!meta.auto, adminSecret);
+      applyMeta(m);
+      setMessage(m.auto ? "Авто-обновление включено: курс будет тянуться с НБ РБ раз в 12 часов." : "Авто-обновление выключено.");
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    }
+  };
+
   if (loading) return <p style={styles.hint}>Загрузка...</p>;
+
+  const updatedLabel = meta.updated_at
+    ? new Date(meta.updated_at).toLocaleString("ru")
+    : "—";
+  const sourceLabel = meta.source === "nbrb" ? "НБ РБ" : "Вручную";
 
   return (
     <>
@@ -1338,11 +1381,21 @@ function CurrencyRateTab({ adminSecret }: { adminSecret: string }) {
           <h2>Курс валюты</h2>
           <p className="admin-page-head-sub">Курс белорусского рубля (BYN) к 1 USD. Используется для отображения цен в приложении.</p>
         </div>
+        <div className="admin-page-head-actions">
+          <button type="button" onClick={handleRefresh} disabled={refreshing} style={styles.smallBtn}>
+            {refreshing ? "Тяну…" : "Обновить с НБ РБ"}
+          </button>
+        </div>
       </div>
       {message && <p style={styles.message}>{message}</p>}
 
-      <section className="admin-card" style={{ maxWidth: 480 }}>
-        <div className="admin-card-head"><h3>Текущий курс</h3></div>
+      <section className="admin-card" style={{ maxWidth: 560 }}>
+        <div className="admin-card-head">
+          <h3>Текущий курс</h3>
+          <span className="admin-card-head-meta">
+            {sourceLabel} · {updatedLabel}
+          </span>
+        </div>
         <form onSubmit={handleSave} className="admin-card-body" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <label className="admin-field">
             <span className="admin-field-label">Курс BYN за 1 $</span>
@@ -1357,14 +1410,40 @@ function CurrencyRateTab({ adminSecret }: { adminSecret: string }) {
               />
               <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: "var(--muted)", letterSpacing: 0.04, pointerEvents: "none" }}>BYN</span>
             </div>
-            <span className="admin-field-hint">Например: 3.2 — значит 1$ = 3.2 BYN</span>
+            <span className="admin-field-hint">Например: 3.2 — значит 1$ = 3.2 BYN. Сохранение через эту форму выключит авто-обновление.</span>
           </label>
           <div style={styles.formActions}>
             <button type="submit" style={styles.submit} disabled={saving}>
-              {saving ? "Сохраняю…" : "Сохранить"}
+              {saving ? "Сохраняю…" : "Сохранить вручную"}
             </button>
           </div>
         </form>
+      </section>
+
+      <section className="admin-card" style={{ maxWidth: 560 }}>
+        <div className="admin-card-head"><h3>Авто-обновление</h3></div>
+        <div className="admin-card-body" style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <label style={{ display: "inline-flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={meta.auto}
+              onChange={handleAutoToggle}
+              style={{ width: 16, height: 16, accentColor: "var(--accent)" }}
+            />
+            <span style={{ fontSize: 13.5, fontWeight: 500 }}>
+              Автоматически тянуть курс с НБ РБ
+            </span>
+          </label>
+          <span style={{ flex: 1 }} />
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 11.5, color: "var(--muted)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+            {meta.auto ? "ON · каждые 12ч" : "OFF"}
+          </span>
+        </div>
+        <div style={{ padding: "0 18px 16px", fontSize: 12, color: "var(--muted)", lineHeight: 1.55 }}>
+          Источник: <a href="https://www.nbrb.by/api/exrates/rates/USD?parammode=2" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>api.nbrb.by</a>.
+          Cron-проверка раз в час: если последнее обновление было больше 12 часов назад — берём свежий курс.
+          Включение опции прямо сейчас тоже триггерит refresh.
+        </div>
       </section>
     </>
   );

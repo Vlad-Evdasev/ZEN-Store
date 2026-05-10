@@ -38,10 +38,64 @@ adminRouter.get("/verify", (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Currency rate (USD/BYN) — manual + auto from NBRB ───────────────
+
+function readSetting(key: string): string | null {
+  const row = db.prepare("SELECT value FROM app_settings WHERE key = ?").get(key) as { value: string } | undefined;
+  return row ? row.value : null;
+}
+function writeSetting(key: string, value: string) {
+  db.prepare("INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(key, value);
+}
+
+function readCurrencyRateMeta() {
+  const rateStr = readSetting("currency_rate_byn") ?? "3.2";
+  const rate = parseFloat(rateStr);
+  return {
+    rate: Number.isFinite(rate) ? rate : 3.2,
+    auto: readSetting("currency_rate_auto") === "1",
+    updated_at: readSetting("currency_rate_updated_at"),
+    source: readSetting("currency_rate_source") ?? "manual",
+  };
+}
+
+// Дёргает официальный курс USD c НБ РБ. Открытый API, без auth.
+// https://api.nbrb.by/exrates/rates/USD?parammode=2 → Cur_OfficialRate
+export async function fetchNbrbUsdRate(): Promise<number> {
+  const r = await fetch("https://api.nbrb.by/exrates/rates/USD?parammode=2");
+  if (!r.ok) throw new Error(`NBRB ${r.status}`);
+  const data = (await r.json()) as { Cur_OfficialRate?: number };
+  const v = Number(data?.Cur_OfficialRate);
+  if (!Number.isFinite(v) || v <= 0) throw new Error("Invalid rate from NBRB");
+  return v;
+}
+
+async function refreshFromNbrb(): Promise<{ rate: number }> {
+  const rate = await fetchNbrbUsdRate();
+  writeSetting("currency_rate_byn", String(rate));
+  writeSetting("currency_rate_updated_at", new Date().toISOString());
+  writeSetting("currency_rate_source", "nbrb");
+  return { rate };
+}
+
+// Cron: если auto включён и обновляли >= 12 часов назад — рефрешим.
+export async function runCurrencyRateAutoRefresh(): Promise<{ refreshed: boolean; rate?: number }> {
+  if (readSetting("currency_rate_auto") !== "1") return { refreshed: false };
+  const ts = readSetting("currency_rate_updated_at");
+  if (ts) {
+    const ageH = (Date.now() - new Date(ts).getTime()) / 3_600_000;
+    if (ageH < 12) return { refreshed: false };
+  }
+  try {
+    const r = await refreshFromNbrb();
+    return { refreshed: true, rate: r.rate };
+  } catch {
+    return { refreshed: false };
+  }
+}
+
 adminRouter.get("/currency-rate", requireAdmin, (_req, res) => {
-  const row = db.prepare("SELECT value FROM app_settings WHERE key = ?").get("currency_rate_byn") as { value: string } | undefined;
-  const rate = row ? parseFloat(row.value) : 3.2;
-  res.json({ rate: Number.isFinite(rate) ? rate : 3.2 });
+  res.json(readCurrencyRateMeta());
 });
 
 adminRouter.patch("/currency-rate", requireAdmin, (req, res) => {
@@ -49,10 +103,32 @@ adminRouter.patch("/currency-rate", requireAdmin, (req, res) => {
   if (!Number.isFinite(rate) || rate <= 0 || rate > 1000) {
     return res.status(400).json({ error: "Invalid rate" });
   }
-  db.prepare("INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run("currency_rate_byn", String(rate));
-  const row = db.prepare("SELECT value FROM app_settings WHERE key = ?").get("currency_rate_byn") as { value: string } | undefined;
-  const savedRate = row ? parseFloat(row.value) : 3.2;
-  res.json({ rate: Number.isFinite(savedRate) ? savedRate : 3.2 });
+  writeSetting("currency_rate_byn", String(rate));
+  writeSetting("currency_rate_updated_at", new Date().toISOString());
+  writeSetting("currency_rate_source", "manual");
+  // Ручной ввод выключает auto, чтобы cron не перезатирал — пусть
+  // админ явно включит обратно тогглом.
+  writeSetting("currency_rate_auto", "0");
+  res.json(readCurrencyRateMeta());
+});
+
+adminRouter.post("/currency-rate/refresh", requireAdmin, async (_req, res) => {
+  try {
+    await refreshFromNbrb();
+    res.json(readCurrencyRateMeta());
+  } catch (e) {
+    res.status(502).json({ error: e instanceof Error ? e.message : "NBRB fetch failed" });
+  }
+});
+
+adminRouter.patch("/currency-rate/auto", requireAdmin, async (req, res) => {
+  const enabled = !!req.body?.enabled;
+  writeSetting("currency_rate_auto", enabled ? "1" : "0");
+  if (enabled) {
+    // Сразу подтягиваем свежий курс при включении автопилота.
+    try { await refreshFromNbrb(); } catch {}
+  }
+  res.json(readCurrencyRateMeta());
 });
 
 type BroadcastRow = {
