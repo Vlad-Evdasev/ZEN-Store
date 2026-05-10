@@ -21,7 +21,6 @@ import {
 import {
   paymentsRouter,
   runPaymentExpirySweep,
-  runPendingPaymentReminderSweep,
 } from "./routes/payments.js";
 import { db } from "./db/schema.js";
 
@@ -85,12 +84,6 @@ function startCronJobs() {
       runPaymentExpirySweep();
     } catch (e) {
       console.error("[cron] payment-expiry failed:", e);
-    }
-    try {
-      const r = await runPendingPaymentReminderSweep();
-      if (r.sent > 0) console.log(`[cron] pending-payment reminders sent=${r.sent}`);
-    } catch (e) {
-      console.error("[cron] pending-payment reminders failed:", e);
     }
     try {
       const r = await runCurrencyRateAutoRefresh();

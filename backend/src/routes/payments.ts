@@ -1,7 +1,7 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
 import { randomBytes } from "crypto";
 import { db } from "../db/schema.js";
-import { notifyOrderStatusChange, notifyTonPaymentVerified, notifyPendingTonPayment, notifyOrderPaid } from "../bot.js";
+import { notifyOrderStatusChange, notifyTonPaymentVerified, notifyOrderPaid } from "../bot.js";
 
 // ─── Конфигурация ─────────────────────────────────────────────────────
 // TON_RECEIVE_ADDRESS — наш приёмный адрес (raw или EQ-формат).
@@ -377,30 +377,6 @@ paymentsRouter.post("/ton/cancel/:orderId", (req, res) => {
   res.json({ ok: true });
 });
 
-// ─── Cron: ─── чистка просроченных intent'ов и unpaid ордеров ────────
-
-// Отдельный sweep: ордера в pending_payment > 1h без напоминания.
-// Шлём пуш «оплата висит, проверь» один раз и помечаем reminder_sent_at.
-export async function runPendingPaymentReminderSweep(): Promise<{ sent: number }> {
-  const candidates = db.prepare(
-    `SELECT id, user_id, total, payment_amount_nano FROM orders
-     WHERE payment_status = 'unpaid' AND status = 'pending_payment'
-     AND payment_reminder_sent_at IS NULL
-     AND datetime(created_at) <= datetime('now', '-1 hour')
-     AND datetime(created_at) >= datetime('now', '-23 hours')`
-  ).all() as { id: number; user_id: string; total: number; payment_amount_nano: string | null }[];
-  let sent = 0;
-  for (const c of candidates) {
-    const amountTon = c.payment_amount_nano ? Number(c.payment_amount_nano) / 1e9 : 0;
-    try {
-      await notifyPendingTonPayment(c.user_id, c.id, amountTon, c.total);
-      db.prepare("UPDATE orders SET payment_reminder_sent_at = CURRENT_TIMESTAMP WHERE id = ?").run(c.id);
-      sent++;
-    } catch {}
-    await new Promise((r) => setTimeout(r, 50));
-  }
-  return { sent };
-}
 
 export function runPaymentExpirySweep(): void {
   // Помечаем intent'ы старше TTL как expired.

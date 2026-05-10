@@ -401,35 +401,6 @@ export async function notifyNewArrival(
   }
 }
 
-// ── Pending TON payment reminder ─────────────────────────────────────
-// Ордер создан, payload получен, юзер не дошёл до оплаты.
-// Шлём пинг через час с deep-link обратно в WebApp.
-
-export async function notifyPendingTonPayment(
-  userId: string | number,
-  orderId: number,
-  amountTon: number,
-  total: number
-): Promise<void> {
-  const text =
-    `⏳ <b>Заказ #${orderId} ожидает оплату</b>\n\n` +
-    `${total} $ ≈ ${amountTon.toFixed(2)} TON\n\n` +
-    `Если ты не закончил оплату — открой WebApp и продолжи. Intent действует 15 минут с момента создания.`;
-  try {
-    await bot.api.sendMessage(userId, text, {
-      parse_mode: "HTML",
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: "🛍 Открыть WebApp", web_app: { url: WEB_APP_URL } }],
-        ],
-      },
-    });
-  } catch (e) {
-    const err = e instanceof Error ? e.message : String(e);
-    if (isUserBlocked(err)) markBotUserBlocked(userId);
-  }
-}
-
 // ── Verified TON payment notification (с TonScan-ссылкой) ────────────
 
 export async function notifyTonPaymentVerified(
