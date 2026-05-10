@@ -36,7 +36,7 @@ export function Settings({ userId }: SettingsProps) {
 
   return (
     <div style={styles.wrap}>
-      <h2 className="zen-page-title" style={styles.title}>{t(lang, "settings")}</h2>
+      <h2 className="zen-page-title" style={styles.title}>{lang === "ru" ? "Профиль" : "Profile"}</h2>
 
       {userId && (
         <>
