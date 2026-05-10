@@ -25,6 +25,41 @@ import { t } from "./i18n";
 
 type Page = "catalog" | "cart" | "product" | "checkout" | "reviews" | "favorites" | "newArrivals" | "customOrder" | "settings" | "history" | "support";
 
+/**
+ * Deep-linking из бота. URL вида `https://app.com/#page=history` ведёт
+ * сразу на нужный раздел. После прочтения хеш чистим, чтобы рефреш
+ * страницы не возвращал юзера обратно. Поддержанные target-разделы
+ * совпадают с inline-кнопками в боте.
+ */
+function readInitialPage(): Page {
+  if (typeof window === "undefined") return "catalog";
+  const hash = window.location.hash || "";
+  const m = hash.match(/[#&]page=([a-zA-Z]+)/);
+  const target = m?.[1];
+  // Whitelist валидных страниц (исключая внутренние типа product/checkout).
+  const valid: Record<string, Page> = {
+    catalog: "catalog",
+    cart: "cart",
+    favorites: "favorites",
+    history: "history",
+    profile: "settings",
+    settings: "settings",
+    inspire: "newArrivals",
+    new: "newArrivals",
+    custom: "customOrder",
+    customOrder: "customOrder",
+    support: "support",
+  };
+  if (target && valid[target]) {
+    // Чистим хеш чтобы reload не повторял редирект.
+    try {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    } catch {}
+    return valid[target];
+  }
+  return "catalog";
+}
+
 const SELLER_LINK = import.meta.env.VITE_SELLER_LINK || "";
 
 const headerIconSize = 26;
@@ -72,7 +107,7 @@ function App() {
   const { userId, userName, firstName, isInTelegram, setBrowserAuth } = useTelegram();
   const { wishlistIds, toggleWishlist, hasInWishlist } = useWishlist(userId);
 
-  const [page, setPage] = useState<Page>("catalog");
+  const [page, setPage] = useState<Page>(() => readInitialPage());
   const [productId, setProductId] = useState<number | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
@@ -306,6 +341,7 @@ function App() {
           <NewArrivalsPage
             userId={userId || ""}
             onBack={openCatalog}
+            onOpenCatalog={openCatalog}
           />
         )}
         {page === "customOrder" && (

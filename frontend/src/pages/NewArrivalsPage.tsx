@@ -7,9 +7,58 @@ import {
 import { useSettings, type Lang } from "../context/SettingsContext";
 import { t } from "../i18n";
 
+interface NewArrivalsPageEmptyProps {
+  lang: Lang;
+  onOpenCatalog?: () => void;
+}
+
+function EmptyInspire({ lang, onOpenCatalog }: NewArrivalsPageEmptyProps) {
+  return (
+    <div style={emptyStyles.wrap}>
+      {/* Большой sparkle-glyph в фирменной эстетике (тот же 4-конечный
+          spark, что в нижней нав-баре). SVG inline — чтобы стилизовался
+          через currentColor и stroke-width. */}
+      <svg
+        width="64"
+        height="64"
+        viewBox="0 0 24 24"
+        fill="none"
+        aria-hidden
+        style={emptyStyles.sparkle}
+      >
+        <path
+          d="M11 3 C11.4 7.7 13.3 9.6 18 10 C13.3 10.4 11.4 12.3 11 17 C10.6 12.3 8.7 10.4 4 10 C8.7 9.6 10.6 7.7 11 3 Z"
+          fill="currentColor"
+        />
+        <path
+          d="M18 16 C18.2 18.1 19 18.9 21 19 C19 19.1 18.2 19.9 18 22 C17.8 19.9 17 19.1 15 19 C17 18.9 17.8 18.1 18 16 Z"
+          fill="currentColor"
+        />
+      </svg>
+      <h2 style={emptyStyles.title}>
+        {lang === "ru" ? "Скоро тут будет огонь" : "Fire coming soon"}
+      </h2>
+      <p style={emptyStyles.body}>
+        {lang === "ru"
+          ? "Готовим лукбук, кадры с примерок и подборки от тех, кто реально носит. Пока — глянь, что уже есть в каталоге."
+          : "Lookbook, fitting shots, hand-picked drops — coming. Meanwhile, check what's already in catalog."}
+      </p>
+      {onOpenCatalog && (
+        <button type="button" onClick={onOpenCatalog} style={emptyStyles.cta}>
+          {lang === "ru" ? "Открыть каталог" : "Open catalog"}
+          <span aria-hidden style={emptyStyles.ctaArrow}>→</span>
+        </button>
+      )}
+      <span style={emptyStyles.divider} aria-hidden />
+      <span style={emptyStyles.eyebrow}>RAW · INSPIRE · 0001</span>
+    </div>
+  );
+}
+
 interface NewArrivalsPageProps {
   userId: string;
   onBack: () => void;
+  onOpenCatalog?: () => void;
 }
 
 function HeartIcon({ filled }: { filled: boolean }) {
@@ -246,6 +295,7 @@ function SkeletonCard({ index = 0 }: { index?: number }) {
 
 export function NewArrivalsPage({
   userId,
+  onOpenCatalog,
 }: Omit<NewArrivalsPageProps, "onBack"> & { onBack?: NewArrivalsPageProps["onBack"] }) {
   const { settings } = useSettings();
   const lang = settings.lang;
@@ -309,9 +359,7 @@ export function NewArrivalsPage({
       )}
 
       {!loading && posts.length === 0 && (
-        <div style={pageStyles.empty}>
-          <span style={pageStyles.emptyText}>{t(lang, "postsEmpty")}</span>
-        </div>
+        <EmptyInspire lang={lang} onOpenCatalog={onOpenCatalog} />
       )}
 
       {!loading && posts.length > 0 && (
@@ -441,6 +489,77 @@ const pageStyles: Record<string, React.CSSProperties> = {
     fontSize: 15,
     color: "var(--muted)",
     fontWeight: 500,
+  },
+};
+
+const emptyStyles: Record<string, React.CSSProperties> = {
+  wrap: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    textAlign: "center",
+    padding: "48px 28px 56px",
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: 22,
+    margin: "8px 0",
+    position: "relative",
+    overflow: "hidden",
+  },
+  sparkle: {
+    color: "var(--accent)",
+    marginBottom: 22,
+    opacity: 0.92,
+  },
+  title: {
+    fontFamily: "Proxima Nova, -apple-system, system-ui, sans-serif",
+    fontSize: 22,
+    fontWeight: 700,
+    letterSpacing: "-0.018em",
+    color: "var(--text)",
+    margin: "0 0 8px",
+  },
+  body: {
+    fontSize: 13.5,
+    lineHeight: 1.55,
+    color: "var(--muted)",
+    margin: "0 0 22px",
+    maxWidth: 280,
+  },
+  cta: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    padding: "12px 22px",
+    background: "var(--text)",
+    color: "var(--bg)",
+    border: "none",
+    borderRadius: 999,
+    fontFamily: "inherit",
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: "pointer",
+    letterSpacing: "-0.005em",
+  },
+  ctaArrow: {
+    fontSize: 16,
+    fontWeight: 600,
+    transform: "translateY(-1px)",
+  },
+  divider: {
+    width: 32,
+    height: 1,
+    background: "var(--border)",
+    marginTop: 28,
+    marginBottom: 12,
+  },
+  eyebrow: {
+    fontFamily: 'ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace',
+    fontSize: 10.5,
+    fontWeight: 600,
+    letterSpacing: "0.18em",
+    color: "var(--muted-soft, var(--muted))",
+    textTransform: "uppercase",
   },
 };
 
