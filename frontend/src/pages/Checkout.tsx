@@ -145,7 +145,9 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
   };
 
   const handleWriteSeller = () => {
-    const base = sellerLink || "https://t.me/ZenStoreBot";
+    // Фолбэк ведём НЕ на бота (юзер уже в боте), а на живого админа.
+    // Иначе кнопка молча открывала чат с самим ботом — выглядело как баг.
+    const base = sellerLink || "https://t.me/krot_eno";
     const parts = items.map((i) => {
       const line = [i.name].concat(i.size ? [`размер ${i.size}`] : []).join(", ");
       const img = i.image_url || "";
@@ -154,7 +156,17 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
     const text = parts.join("\n\n");
     const sep = base.includes("?") ? "&" : "?";
     const url = text ? `${base}${sep}text=${encodeURIComponent(text)}` : base;
-    window.open(url, "_blank");
+    // Внутри Telegram WebApp обычный window.open для t.me/* блокируется
+    // и кнопка просто ничего не делает. Правильный путь — попросить
+    // Telegram-клиент открыть этот чат через openTelegramLink.
+    const tg = typeof window !== "undefined" ? window.Telegram?.WebApp : undefined;
+    if (tg?.openTelegramLink && /^https:\/\/t\.me\//i.test(url)) {
+      tg.openTelegramLink(url);
+    } else if (tg?.openLink) {
+      tg.openLink(url);
+    } else {
+      window.open(url, "_blank");
+    }
     onDone();
   };
 

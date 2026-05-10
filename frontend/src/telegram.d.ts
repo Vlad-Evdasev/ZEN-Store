@@ -9,6 +9,8 @@ declare global {
         close: () => void;
         disableVerticalSwipes?: () => void;
         themeParams: { bg_color?: string; text_color?: string };
+        openLink?: (url: string, options?: { try_instant_view?: boolean }) => void;
+        openTelegramLink?: (url: string) => void;
       };
     };
   }
