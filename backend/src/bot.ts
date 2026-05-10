@@ -570,22 +570,29 @@ bot.command("start", async (ctx) => {
   lines.push("Без посредников. Только то, что носим сами.");
   if (invitedByRef) {
     lines.push("");
-    lines.push("🎁 <b>Тебя пригласил друг</b> — после первого заказа оба получите по 10 баллов.");
+    lines.push("◆ <b>Тебя пригласил друг</b> — после первого заказа оба получите по 10 баллов.");
   }
 
   await ctx.reply(lines.join("\n"), {
     parse_mode: "HTML",
     link_preview_options: { is_disabled: true },
     reply_markup: {
+      // Минималистичные Unicode-глифы вместо эмодзи — в стилистике
+      // RAW Console: геометрия, без цвета, monoshape.
+      // ▣ — каталог (плотная сетка ячеек как deck-icon в нав-баре)
+      // ◇ — новинки (outline-diamond, fresh)
+      // ▤ — заказы (горизонтали = строки журнала)
+      // ◆ — бонусы (filled-diamond, value)
+      // ↗ — пригласить (outbound-стрелка, share)
       inline_keyboard: [
-        [{ text: "🛍 Открыть каталог", web_app: { url: WEB_APP_URL } }],
+        [{ text: "▣  Открыть каталог", web_app: { url: WEB_APP_URL } }],
         [
-          { text: "✨ Новинки", web_app: { url: WEB_APP_URL } },
-          { text: "📜 Заказы", web_app: { url: WEB_APP_URL } },
+          { text: "◇  Новинки", web_app: { url: WEB_APP_URL } },
+          { text: "▤  Заказы", web_app: { url: WEB_APP_URL } },
         ],
         [
-          { text: "💎 Бонусы", web_app: { url: WEB_APP_URL } },
-          { text: "🎁 Пригласить", web_app: { url: WEB_APP_URL } },
+          { text: "◆  Бонусы", web_app: { url: WEB_APP_URL } },
+          { text: "↗  Пригласить", web_app: { url: WEB_APP_URL } },
         ],
       ],
     },
@@ -617,10 +624,10 @@ function humanAgo(iso: string): string {
 }
 
 bot.command("shop", async (ctx) => {
-  await ctx.reply("Открыть магазин:", {
+  await ctx.reply("Каталог открывается одной кнопкой:", {
     reply_markup: {
       inline_keyboard: [
-        [{ text: "🛍 Перейти в RAW", web_app: { url: WEB_APP_URL } }],
+        [{ text: "▣  Перейти в RAW", web_app: { url: WEB_APP_URL } }],
       ],
     },
   });
