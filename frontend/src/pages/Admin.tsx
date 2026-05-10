@@ -185,6 +185,17 @@ export function Admin() {
     return () => window.clearInterval(id);
   }, []);
 
+  // Тема админки. Хранится в localStorage отдельно от клиентской темы,
+  // чтобы у юзера и админа были независимые предпочтения.
+  const [adminTheme, setAdminTheme] = useState<"light" | "dark">(() => {
+    if (typeof window === "undefined") return "light";
+    return (localStorage.getItem("admin-theme") as "light" | "dark") || "light";
+  });
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("admin-theme", adminTheme);
+  }, [adminTheme]);
+  const toggleTheme = () => setAdminTheme((p) => (p === "light" ? "dark" : "light"));
+
   const refresh = () => {
     setRefreshError(null);
     Promise.allSettled([
@@ -271,7 +282,7 @@ export function Admin() {
   };
 
   return (
-    <div className="zen-admin">
+    <div className="zen-admin" data-theme={adminTheme}>
       <div className="admin-layout">
         <header className="admin-topbar">
           <span className="admin-topbar-brand">
@@ -281,6 +292,26 @@ export function Admin() {
           <span className="admin-topbar-divider" />
           <span className="admin-topbar-eyebrow">{tabEyebrow(tab)}</span>
           <span className="admin-topbar-spacer" />
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="admin-topbar-theme-btn"
+            title={adminTheme === "light" ? "Тёмная тема" : "Светлая тема"}
+            aria-label={adminTheme === "light" ? "Switch to dark theme" : "Switch to light theme"}
+          >
+            {adminTheme === "light" ? (
+              // Moon icon — кликом включаем dark
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+              </svg>
+            ) : (
+              // Sun icon — кликом включаем light
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <circle cx="12" cy="12" r="4" />
+                <path d="M12 2v2m0 16v2M2 12h2m16 0h2M5.64 5.64l1.41 1.41m11.32 11.32l1.41 1.41M5.64 18.36l1.41-1.41m11.32-11.32l1.41-1.41" />
+              </svg>
+            )}
+          </button>
           <span className="admin-topbar-clock">{adminClock}</span>
         </header>
         <aside className="admin-sidebar">
