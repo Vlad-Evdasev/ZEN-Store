@@ -582,7 +582,7 @@ bot.command("start", async (ctx) => {
       inline_keyboard: [
         [{ text: "Открыть каталог", web_app: { url: `${WEB_APP_URL}#page=catalog` } }],
         [
-          { text: "Новинки", web_app: { url: `${WEB_APP_URL}#page=inspire` } },
+          { text: "Вдохновиться", web_app: { url: `${WEB_APP_URL}#page=inspire` } },
           { text: "Заказы", web_app: { url: `${WEB_APP_URL}#page=history` } },
         ],
         [

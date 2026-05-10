@@ -341,7 +341,6 @@ function App() {
           <NewArrivalsPage
             userId={userId || ""}
             onBack={openCatalog}
-            onOpenCatalog={openCatalog}
           />
         )}
         {page === "customOrder" && (
