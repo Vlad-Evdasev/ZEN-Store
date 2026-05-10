@@ -314,7 +314,7 @@ function computeSheetAnim({
       opacity: 1,
       transform: `translate3d(0, ${dragY}px, 0) scale(1)`,
       transition: dragY === 0
-        ? "opacity 380ms cubic-bezier(0.4, 0, 0.2, 1), transform 380ms cubic-bezier(0.22, 1, 0.36, 1)"
+        ? "opacity 360ms cubic-bezier(0.4, 0, 0.2, 1), transform 360ms cubic-bezier(0.22, 1, 0.36, 1)"
         : "none",
     };
   }
@@ -335,7 +335,7 @@ function computeSheetAnim({
   return {
     opacity: 0,
     transform: `translate3d(0, ${dragY}px, 0) scale(1)`,
-    transition: "opacity 380ms cubic-bezier(0.4, 0, 0.2, 1)",
+    transition: "opacity 360ms cubic-bezier(0.4, 0, 0.2, 1)",
   };
 }
 
@@ -394,7 +394,7 @@ function ExpandedView({
       img.style.transition = "none";
       img.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
       void img.offsetWidth;
-      img.style.transition = "transform 380ms cubic-bezier(0.22, 1, 0.36, 1)";
+      img.style.transition = "transform 360ms cubic-bezier(0.22, 1, 0.36, 1)";
       img.style.transform = "translate3d(0, 0, 0) scale(1, 1)";
       setPhase("open");
     };
@@ -435,13 +435,13 @@ function ExpandedView({
       const sx = startRect.width / Math.max(final.width, 1);
       const sy = startRect.height / Math.max(final.height, 1);
       img.style.transformOrigin = "top left";
-      img.style.transition = "transform 380ms cubic-bezier(0.4, 0, 0.2, 1)";
+      img.style.transition = "transform 360ms cubic-bezier(0.4, 0, 0.2, 1)";
       img.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
     }
     setPhase("closing");
-    // FLIP-close 380ms, back-nav slide-fade 280ms — синхронизированы с
+    // FLIP-close 360ms, back-nav slide-fade 280ms — синхронизированы с
     // соответствующими CSS-переходами sheet/page.
-    setTimeout(onClose, fadeOnClose ? 280 : 380);
+    setTimeout(onClose, fadeOnClose ? 260 : 360);
   }, [phase, onClose, onStartClose, startRect, fadeOnClose]);
 
   useEffect(() => {
@@ -533,7 +533,7 @@ function ExpandedView({
         ...expandedStyles.root,
         background: `rgba(var(--bg-rgb), ${0.98 * backdropOpacity})`,
         pointerEvents: phase === "closing" ? "none" : "auto",
-        transition: "background 380ms cubic-bezier(0.4, 0, 0.2, 1)",
+        transition: "background 360ms cubic-bezier(0.4, 0, 0.2, 1)",
       }}
     >
       <div

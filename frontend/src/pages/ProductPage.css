@@ -175,6 +175,55 @@
    акцент только в логичных местах (CTA), никаких декоративных подложек.   */
 .product-v2__header {
   margin-bottom: 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+/* Heart-кнопка рядом с названием: outline-сердце, accent при активе. */
+.product-v2__title-heart {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 2px -8px 0 0;
+  transition: color 0.15s ease, transform 0.08s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.product-v2__title-heart.is-active {
+  color: var(--accent);
+}
+.product-v2__title-heart:active {
+  transform: scale(0.92);
+}
+
+/* Back-arrow над фото. С воздухом сверху + 12px слева. НЕ glued к
+   корнеру — болтается отдельным элементом перед hero. */
+.product-v2__back-arrow {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--surface-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  margin: calc(env(safe-area-inset-top, 0px) + 14px) 0 6px 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  -webkit-tap-highlight-color: transparent;
+}
+.product-v2__back-arrow:active {
+  transform: scale(0.94);
 }
 
 .product-v2__eyebrow {
@@ -402,14 +451,13 @@
   display: flex;
   flex-direction: column;
   padding-bottom: 8px;
+  /* Дополнительный воздух сверху, чтобы блок размеров не липнул к
+     описанию (juser-feedback). */
+  margin-top: 10px;
 }
-/* На узких устройствах (Telegram WebApp на iOS) добавляем небольшой
-   отступ перед блоком размеров — чтобы при открытии карточки size-
-   кружки уже не торчали из-под CTA-пилюли. На ноутбуке отступ не
-   применяется — там без него всё помещается красиво. */
 @media (max-width: 600px) {
   .product-v2__size-block {
-    margin-top: 30px;
+    margin-top: 40px;
   }
 }
 .product-v2__sizes {
