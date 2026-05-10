@@ -10,7 +10,9 @@ import {
   cancelTonPayment,
   applyPromoCode,
   getLoyaltyBalance,
+  getTonRate,
   type CartItem,
+  type TonRate,
 } from "../api";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
@@ -69,11 +71,55 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
   const [loyaltyBalance, setLoyaltyBalance] = useState<number>(0);
   const [pointsToRedeem, setPointsToRedeem] = useState<number>(0);
 
+  // TON курс (live preview перед оплатой)
+  const [tonRate, setTonRate] = useState<TonRate | null>(null);
+
+  // Countdown оплаты — устанавливается после createTonCheckout
+  const [intentExpiresAt, setIntentExpiresAt] = useState<string | null>(null);
+  const [intentSecondsLeft, setIntentSecondsLeft] = useState<number>(0);
+
   useEffect(() => {
     getLoyaltyBalance(userId)
       .then((r) => setLoyaltyBalance(r.balance))
       .catch(() => setLoyaltyBalance(0));
   }, [userId]);
+
+  // Когда выбран TON-метод — тащим курс с бэка и обновляем каждые 30 сек,
+  // чтобы юзер видел актуальную сумму. Очищаем таймер при размонтировании
+  // или смене метода.
+  useEffect(() => {
+    if (paymentMethod !== "ton") {
+      setTonRate(null);
+      return;
+    }
+    let cancelled = false;
+    const tick = () => {
+      getTonRate()
+        .then((r) => { if (!cancelled) setTonRate(r); })
+        .catch(() => {});
+    };
+    tick();
+    const id = window.setInterval(tick, 30_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [paymentMethod]);
+
+  // Countdown секунды до expires_at — обновляется раз в секунду.
+  useEffect(() => {
+    if (!intentExpiresAt) {
+      setIntentSecondsLeft(0);
+      return;
+    }
+    const update = () => {
+      const left = Math.max(0, Math.floor((new Date(intentExpiresAt).getTime() - Date.now()) / 1000));
+      setIntentSecondsLeft(left);
+    };
+    update();
+    const id = window.setInterval(update, 1000);
+    return () => window.clearInterval(id);
+  }, [intentExpiresAt]);
 
   useEffect(() => {
     getCart(userId).then(setItems).catch(console.error).finally(() => setLoading(false));
@@ -190,6 +236,7 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
         points_redeemed: effectivePoints || undefined,
       });
       setPendingOrderId(checkout.order_id);
+      setIntentExpiresAt(checkout.payment_intent.expires_at);
       onCartChange?.();
       setPaymentStage("awaiting_signature");
 
@@ -259,6 +306,22 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
       if (verifyTimerRef.current) window.clearTimeout(verifyTimerRef.current);
     };
   }, []);
+
+  // Юзер отменяет ожидание оплаты (закрыл кошелёк, передумал, etc).
+  // Шлём cancel на бэк → баллы и промо возвращаются (refundOrderArtifacts).
+  const handleCancelTonPending = async () => {
+    if (!pendingOrderId) return;
+    if (!window.confirm(lang === "ru" ? "Отменить оплату? Бонусы и промокод вернутся." : "Cancel payment? Points and promo will be refunded.")) return;
+    if (verifyTimerRef.current) window.clearTimeout(verifyTimerRef.current);
+    try {
+      await cancelTonPayment(pendingOrderId);
+    } catch {}
+    setPaymentStage("idle");
+    setPendingOrderId(null);
+    setIntentExpiresAt(null);
+    setPaymentError("");
+    onBack();
+  };
 
   const handleWriteSeller = () => {
     const base = sellerLink || "https://t.me/ZenStoreBot";
@@ -818,6 +881,22 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
           </div>
         </div>
 
+        {/* Live preview суммы в TON ДО подписи */}
+        {paymentMethod === "ton" && paymentStage === "idle" && tonRate && total > 0 && (
+          <div style={styles.tonPreview}>
+            <div style={styles.tonPreviewRow}>
+              <span style={styles.tonPreviewLabel}>{lang === "ru" ? "К оплате в TON" : "Pay in TON"}</span>
+              <span style={styles.tonPreviewAmount}>≈ {(total / tonRate.rate_usd).toFixed(2)} TON</span>
+            </div>
+            <div style={styles.tonPreviewMeta}>
+              {lang === "ru" ? "Курс: " : "Rate: "}
+              <strong style={{ color: "var(--text)" }}>${tonRate.rate_usd.toFixed(2)}/TON</strong>
+              {" · "}
+              {lang === "ru" ? "обновляется каждые 30с" : "refreshed every 30s"}
+            </div>
+          </div>
+        )}
+
         {paymentMethod === "ton" && paymentStage !== "idle" && (
           <div style={styles.tonStatus}>
             {paymentStage === "creating" && (lang === "ru" ? "Создаём заказ…" : "Creating order…")}
@@ -825,6 +904,21 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
             {paymentStage === "verifying" && (lang === "ru" ? "Ждём подтверждение в сети TON (до 3 мин)…" : "Waiting for TON network (up to 3 min)…")}
             {paymentStage === "error" && (
               <span style={{ color: "var(--accent)" }}>{paymentError || (lang === "ru" ? "Ошибка оплаты" : "Payment error")}</span>
+            )}
+            {/* Countdown intent'а: 15 минут */}
+            {intentExpiresAt && intentSecondsLeft > 0 && paymentStage !== "error" && (
+              <div style={styles.tonCountdown}>
+                {lang === "ru" ? "Истекает через " : "Expires in "}
+                <strong style={{ fontVariantNumeric: "tabular-nums" }}>
+                  {Math.floor(intentSecondsLeft / 60)}:{String(intentSecondsLeft % 60).padStart(2, "0")}
+                </strong>
+              </div>
+            )}
+            {/* Кнопка отмены — пока ждём, можно слинять */}
+            {pendingOrderId && (paymentStage === "awaiting_signature" || paymentStage === "verifying" || paymentStage === "error") && (
+              <button type="button" onClick={handleCancelTonPending} style={styles.tonCancelBtn}>
+                {lang === "ru" ? "Отменить и вернуть бонусы" : "Cancel & refund points"}
+              </button>
             )}
           </div>
         )}
@@ -1289,6 +1383,57 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 13,
     color: "var(--text)",
     lineHeight: 1.4,
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+  },
+  tonCountdown: {
+    fontSize: 12,
+    color: "var(--muted)",
+    letterSpacing: "0.02em",
+  },
+  tonCancelBtn: {
+    alignSelf: "flex-start",
+    height: 30,
+    padding: "0 12px",
+    background: "transparent",
+    border: "1px solid var(--border)",
+    borderRadius: 8,
+    fontSize: 12,
+    fontWeight: 600,
+    color: "var(--accent)",
+    cursor: "pointer",
+  },
+  tonPreview: {
+    marginTop: 12,
+    padding: "12px 14px",
+    background: "color-mix(in srgb, var(--accent) 6%, var(--surface-elevated))",
+    border: "1px solid color-mix(in srgb, var(--accent) 16%, var(--border))",
+    borderRadius: 12,
+  },
+  tonPreviewRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+  },
+  tonPreviewLabel: {
+    fontSize: 12,
+    fontWeight: 600,
+    color: "var(--muted)",
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
+  },
+  tonPreviewAmount: {
+    fontFamily: 'ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace',
+    fontSize: 17,
+    fontWeight: 700,
+    color: "var(--text)",
+    fontVariantNumeric: "tabular-nums",
+  },
+  tonPreviewMeta: {
+    marginTop: 4,
+    fontSize: 11.5,
+    color: "var(--muted)",
   },
   discountGroup: {
     display: "flex",

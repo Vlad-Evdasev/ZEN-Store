@@ -1234,3 +1234,19 @@ export async function verifyTonPayment(
 export async function cancelTonPayment(orderId: number): Promise<void> {
   await fetch(`${API_URL}/api/payments/ton/cancel/${orderId}`, { method: "POST" });
 }
+
+export interface TonRate {
+  rate_usd: number;
+  ton_for_usd: number | null;
+  receive_address: string | null;
+  ttl_min: number;
+  fetched_at: string;
+}
+
+export async function getTonRate(usd?: number): Promise<TonRate> {
+  const url = new URL(`${API_URL}/api/payments/ton/rate`);
+  if (usd != null) url.searchParams.set("usd", String(usd));
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error("Failed to fetch TON rate");
+  return res.json();
+}

@@ -484,6 +484,7 @@ try { db.exec("ALTER TABLE orders ADD COLUMN payment_payload TEXT"); } catch {}
 // Промо/баллы — записываются прямо в ордер для аудита.
 try { db.exec("ALTER TABLE orders ADD COLUMN promo_code TEXT"); } catch {}
 try { db.exec("ALTER TABLE orders ADD COLUMN points_redeemed INTEGER DEFAULT 0"); } catch {}
+try { db.exec("ALTER TABLE orders ADD COLUMN payment_reminder_sent_at DATETIME"); } catch {}
 
 // Платёжный intent — мост между ордером и транзакцией в сети.
 // id (наш payload) уйдёт в комментарий TON-транзакции, потом по нему

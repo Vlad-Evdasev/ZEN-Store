@@ -17,7 +17,11 @@ import {
   runCartAbandonmentSweep,
   runDropTeaserSweep,
 } from "./routes/engagement.js";
-import { paymentsRouter, runPaymentExpirySweep } from "./routes/payments.js";
+import {
+  paymentsRouter,
+  runPaymentExpirySweep,
+  runPendingPaymentReminderSweep,
+} from "./routes/payments.js";
 import { db } from "./db/schema.js";
 
 const app = express();
@@ -79,6 +83,12 @@ function startCronJobs() {
       runPaymentExpirySweep();
     } catch (e) {
       console.error("[cron] payment-expiry failed:", e);
+    }
+    try {
+      const r = await runPendingPaymentReminderSweep();
+      if (r.sent > 0) console.log(`[cron] pending-payment reminders sent=${r.sent}`);
+    } catch (e) {
+      console.error("[cron] pending-payment reminders failed:", e);
     }
   };
   // Прогон при старте — но через 30 секунд после, чтобы дождаться готовности БД.

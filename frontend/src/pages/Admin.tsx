@@ -648,7 +648,10 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
                     <td className="admin-mono" style={{ fontWeight: 600, whiteSpace: "nowrap" }}>{o.total} $</td>
                     <td>
                       <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start" }}>
-                        <span className={`admin-pay admin-pay--${payStatus}`}>{
+                        <span
+                          className={`admin-pay admin-pay--${payStatus}`}
+                          title={o.payment_verified_at ? `Подтверждено: ${new Date(o.payment_verified_at).toLocaleString("ru")}` : undefined}
+                        >{
                           payStatus === "paid" ? "Оплачен"
                           : payStatus === "unpaid" ? "Не оплачен"
                           : payStatus === "refunded" ? "Возврат"
@@ -658,6 +661,17 @@ function OrdersTab({ adminSecret }: { adminSecret: string }) {
                           <span style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, color: "var(--muted)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
                             {o.payment_method}
                           </span>
+                        )}
+                        {o.payment_method === "ton" && o.payment_tx_hash && (
+                          <a
+                            href={`https://tonscan.org/tx/${o.payment_tx_hash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, color: "var(--blue)", letterSpacing: "0.04em", textDecoration: "none", whiteSpace: "nowrap" }}
+                            title={o.payment_tx_hash}
+                          >
+                            ↗ {o.payment_tx_hash.slice(0, 6)}…{o.payment_tx_hash.slice(-4)}
+                          </a>
                         )}
                         {payStatus !== "paid" && payStatus !== "refunded" && (
                           <button

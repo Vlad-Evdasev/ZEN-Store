@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { getOrders, getMyCustomOrders, type Order, type MyCustomOrder, type Product } from "../api";
+import { getOrders, getMyCustomOrders, cancelTonPayment, type Order, type MyCustomOrder, type Product } from "../api";
 import { useSettings } from "../context/SettingsContext";
 import type { Lang } from "../context/SettingsContext";
 import { t } from "../i18n";
@@ -71,10 +71,9 @@ export function History({
   }, [userId]);
 
   const activeEntries = useMemo<HistoryEntry[]>(() => {
-    // Скрываем только окончательно завершённые заказы (status='completed')
-    // и удалённые. 'delivered' оставляем — пользователю важно видеть «Доставлено»
-    // в истории, пока ты не закроешь заказ окончательно.
-    const isActive = (status: string) => status !== "completed";
+    // Скрываем completed и cancelled. Оставляем delivered (юзеру важно видеть)
+    // и pending_payment (TON-ордер ждёт оплату — нужны действия Cancel/Retry).
+    const isActive = (status: string) => status !== "completed" && status !== "cancelled";
     const list: HistoryEntry[] = [];
     for (const o of orders) {
       if (!isActive(o.status)) continue;
@@ -111,6 +110,19 @@ export function History({
 
   const isEmpty = activeEntries.length === 0;
 
+  // Юзер отменяет неоплаченный TON-ордер. Бэк вернёт баллы/промо и
+  // переведёт ордер в cancelled. Перезагружаем список.
+  const handleCancelPending = async (orderId: number) => {
+    if (!window.confirm(lang === "ru" ? "Отменить заказ? Бонусы и промокод вернутся." : "Cancel order? Points & promo will be refunded.")) return;
+    try {
+      await cancelTonPayment(orderId);
+      const fresh = await getOrders(userId);
+      setOrders(fresh);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   return (
     <div style={styles.wrap} className="zen-page-enter">
       <header style={styles.header}>
@@ -127,6 +139,7 @@ export function History({
             {activeEntries.map((entry) => entry.kind === "catalog-item" ? (
               <CatalogItemCard
                 key={entry.key}
+                onCancelPending={handleCancelPending}
                 order={entry.order}
                 item={entry.item}
                 formatPrice={formatPrice}
@@ -160,12 +173,15 @@ function CatalogItemCard({
   item,
   formatPrice,
   lang,
+  onCancelPending,
 }: {
   order: Order;
   item: OrderItem;
   formatPrice: (n: number) => string;
   lang: Lang;
+  onCancelPending?: (orderId: number) => void;
 }) {
+  const isPendingPayment = order.status === "pending_payment";
   const stepIndex = getStepIndex(order.status);
 
   const steps: { key: StepKey; labelKey: string }[] = [
@@ -179,6 +195,29 @@ function CatalogItemCard({
 
   return (
     <article style={styles.activeCard}>
+      {isPendingPayment && (
+        <div style={styles.pendingPaymentBanner}>
+          <div style={styles.pendingPaymentText}>
+            <span style={styles.pendingPaymentTitle}>
+              {lang === "ru" ? "⏳ Ожидает оплату" : "⏳ Awaiting payment"}
+            </span>
+            <span style={styles.pendingPaymentHint}>
+              {lang === "ru"
+                ? "TON-транзакция не подтверждена. Если ты передумал — отмени, бонусы вернутся."
+                : "TON transaction not confirmed. Cancel to refund points & promo."}
+            </span>
+          </div>
+          {onCancelPending && (
+            <button
+              type="button"
+              onClick={() => onCancelPending(order.id)}
+              style={styles.pendingPaymentCancel}
+            >
+              {lang === "ru" ? "Отменить" : "Cancel"}
+            </button>
+          )}
+        </div>
+      )}
       <div style={styles.activeCardHeader}>
         <div>
           <span style={styles.activeOrderDate}>
@@ -499,6 +538,45 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: 16,
+  },
+  pendingPaymentBanner: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    padding: "10px 14px",
+    margin: "-2px -2px 12px",
+    background: "color-mix(in srgb, var(--accent) 8%, var(--surface))",
+    border: "1px solid color-mix(in srgb, var(--accent) 24%, var(--border))",
+    borderRadius: 12,
+  },
+  pendingPaymentText: {
+    flex: 1,
+    minWidth: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: 2,
+  },
+  pendingPaymentTitle: {
+    fontSize: 13,
+    fontWeight: 600,
+    color: "var(--text)",
+    letterSpacing: "-0.005em",
+  },
+  pendingPaymentHint: {
+    fontSize: 11.5,
+    color: "var(--muted)",
+    lineHeight: 1.4,
+  },
+  pendingPaymentCancel: {
+    padding: "6px 12px",
+    background: "transparent",
+    border: "1px solid var(--accent)",
+    borderRadius: 8,
+    color: "var(--accent)",
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
+    flexShrink: 0,
   },
   activeCardHeader: {
     display: "flex",

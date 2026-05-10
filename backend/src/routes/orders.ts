@@ -31,7 +31,7 @@ ordersRouter.post("/:userId", async (req, res) => {
 
   const create = db.transaction(() => {
     const result = db.prepare(
-      "INSERT INTO orders (user_id, user_name, user_phone, user_username, user_address, items, total, status, promo_code, points_redeemed) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)"
+      "INSERT INTO orders (user_id, user_name, user_phone, user_username, user_address, items, total, status, promo_code, points_redeemed, payment_method, payment_status) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, 'manual', 'paid')"
     ).run(userId, user_name || null, user_phone || null, user_username || null, user_address || null, itemsStr, total, promoStr, points);
     const orderId = Number(result.lastInsertRowid);
 

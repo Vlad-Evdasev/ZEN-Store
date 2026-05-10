@@ -1,7 +1,7 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
 import { randomBytes } from "crypto";
 import { db } from "../db/schema.js";
-import { notifyOrderStatusChange } from "../bot.js";
+import { notifyOrderStatusChange, notifyTonPaymentVerified, notifyPendingTonPayment } from "../bot.js";
 
 // ─── Конфигурация ─────────────────────────────────────────────────────
 // TON_RECEIVE_ADDRESS — наш приёмный адрес (raw или EQ-формат).
@@ -23,11 +23,81 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
 
 export const paymentsRouter = Router();
 
-// ─── Кеш курса TON/USD (60 сек) ──────────────────────────────────────
+// Публичный endpoint для preview курса в чекауте.
+paymentsRouter.get("/ton/rate", async (req, res) => {
+  try {
+    const rate = await getTonUsdRate();
+    const usd = Number(req.query.usd);
+    const ton = Number.isFinite(usd) && usd > 0 ? usd / rate : null;
+    res.json({
+      rate_usd: rate,
+      ton_for_usd: ton,
+      receive_address: TON_RECEIVE_ADDRESS || null,
+      ttl_min: INTENT_TTL_MIN,
+      fetched_at: new Date().toISOString(),
+    });
+  } catch (e) {
+    res.status(502).json({ error: e instanceof Error ? e.message : "Failed to fetch TON rate" });
+  }
+});
+
+// ─── Refund баллов / промо при отмене ────────────────────────────────
+// Вызывается при auto-cancel (cron expiry sweep) и ручной отмене,
+// и admin mark-refunded. Идемпотентно: проверяем флаг refunded_at
+// в payment_intents.
+
+function refundOrderArtifacts(orderId: number): void {
+  const order = db.prepare(
+    "SELECT user_id, promo_code, points_redeemed FROM orders WHERE id = ?"
+  ).get(orderId) as { user_id: string; promo_code: string | null; points_redeemed: number } | undefined;
+  if (!order) return;
+
+  // Проверяем не возвращали ли уже
+  const intent = db.prepare(
+    "SELECT id, status FROM payment_intents WHERE order_id = ? ORDER BY id DESC LIMIT 1"
+  ).get(orderId) as { id: string; status: string } | undefined;
+  if (intent?.status === "refunded") return;
+
+  db.transaction(() => {
+    // Возврат баллов
+    if (order.points_redeemed > 0) {
+      db.prepare(
+        `INSERT INTO loyalty_points (user_id, balance, lifetime_spent)
+         VALUES (?, ?, 0)
+         ON CONFLICT(user_id) DO UPDATE SET
+           balance = balance + excluded.balance,
+           lifetime_spent = MAX(0, lifetime_spent - excluded.balance),
+           updated_at = CURRENT_TIMESTAMP`
+      ).run(order.user_id, order.points_redeemed);
+      db.prepare(
+        "INSERT INTO loyalty_log (user_id, delta, reason, ref_id) VALUES (?, ?, 'order_refund', ?)"
+      ).run(order.user_id, order.points_redeemed, orderId);
+    }
+    // Откат промокода
+    if (order.promo_code) {
+      db.prepare(
+        "DELETE FROM promo_redemptions WHERE order_id = ? AND code = ?"
+      ).run(orderId, order.promo_code);
+      db.prepare(
+        "UPDATE promo_codes SET used_count = MAX(0, used_count - 1) WHERE code = ?"
+      ).run(order.promo_code);
+    }
+    // Помечаем intent как refunded чтобы не возвращать дважды
+    if (intent) {
+      db.prepare("UPDATE payment_intents SET status = 'refunded' WHERE id = ?").run(intent.id);
+    }
+  })();
+}
+
+// ─── Курс TON/USD ────────────────────────────────────────────────────
+// Кеш минимальный (3 секунды) — только чтобы не спамить TonAPI при
+// одновременном preview + checkout с одной страницы. Юзер всегда
+// видит актуальный курс.
 let cachedRate: { rate: number; at: number } | null = null;
+const RATE_CACHE_MS = 3_000;
 
 async function getTonUsdRate(): Promise<number> {
-  if (cachedRate && Date.now() - cachedRate.at < 60_000) return cachedRate.rate;
+  if (cachedRate && Date.now() - cachedRate.at < RATE_CACHE_MS) return cachedRate.rate;
   const res = await fetch(`${TON_API_BASE}/rates?tokens=ton&currencies=usd`, {
     headers: TON_API_TOKEN ? { Authorization: `Bearer ${TON_API_TOKEN}` } : {},
   });
@@ -275,7 +345,9 @@ paymentsRouter.post("/ton/verify/:orderId", async (req, res) => {
     ).run(found!.hash, order.payment_payload!);
   })();
 
-  // Уведомляем юзера: «заказ оформлен» (т.е. оплата принята → он в очереди).
+  // Уведомляем юзера: пуш с TonScan-ссылкой (с amount), плюс стандартный
+  // pending-нотиф «заказ оформлен».
+  notifyTonPaymentVerified(order.user_id, id, found.hash, Number(found.amount_nano) / 1e9).catch(() => {});
   notifyOrderStatusChange(order.user_id, id, "pending").catch(() => {});
 
   res.json({ ok: true, payment_status: "paid", tx_hash: found.hash });
@@ -300,22 +372,54 @@ paymentsRouter.post("/ton/cancel/:orderId", (req, res) => {
       db.prepare("UPDATE payment_intents SET status = 'cancelled' WHERE id = ?").run(order.payment_payload);
     }
   })();
+  // Возвращаем потраченные баллы и откатываем промокод
+  refundOrderArtifacts(id);
   res.json({ ok: true });
 });
 
 // ─── Cron: ─── чистка просроченных intent'ов и unpaid ордеров ────────
+
+// Отдельный sweep: ордера в pending_payment > 1h без напоминания.
+// Шлём пуш «оплата висит, проверь» один раз и помечаем reminder_sent_at.
+export async function runPendingPaymentReminderSweep(): Promise<{ sent: number }> {
+  const candidates = db.prepare(
+    `SELECT id, user_id, total, payment_amount_nano FROM orders
+     WHERE payment_status = 'unpaid' AND status = 'pending_payment'
+     AND payment_reminder_sent_at IS NULL
+     AND datetime(created_at) <= datetime('now', '-1 hour')
+     AND datetime(created_at) >= datetime('now', '-23 hours')`
+  ).all() as { id: number; user_id: string; total: number; payment_amount_nano: string | null }[];
+  let sent = 0;
+  for (const c of candidates) {
+    const amountTon = c.payment_amount_nano ? Number(c.payment_amount_nano) / 1e9 : 0;
+    try {
+      await notifyPendingTonPayment(c.user_id, c.id, amountTon, c.total);
+      db.prepare("UPDATE orders SET payment_reminder_sent_at = CURRENT_TIMESTAMP WHERE id = ?").run(c.id);
+      sent++;
+    } catch {}
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  return { sent };
+}
 
 export function runPaymentExpirySweep(): void {
   // Помечаем intent'ы старше TTL как expired.
   db.prepare(
     "UPDATE payment_intents SET status = 'expired' WHERE status = 'pending' AND datetime(expires_at) < CURRENT_TIMESTAMP"
   ).run();
-  // unpaid ордера старше 24h — тоже помечаем как cancelled.
-  db.prepare(
-    `UPDATE orders SET status = 'cancelled', payment_status = 'cancelled'
+  // Находим unpaid ордера старше 24h и возвращаем баллы/промо для каждого,
+  // потом отменяем ордер.
+  const stale = db.prepare(
+    `SELECT id FROM orders
      WHERE payment_status = 'unpaid' AND status = 'pending_payment'
      AND datetime(created_at) < datetime('now', '-24 hours')`
-  ).run();
+  ).all() as { id: number }[];
+  for (const { id } of stale) {
+    refundOrderArtifacts(id);
+    db.prepare(
+      "UPDATE orders SET status = 'cancelled', payment_status = 'cancelled' WHERE id = ?"
+    ).run(id);
+  }
 }
 
 // ─── Admin: вручную пометить оплачено / refund ───────────────────────
@@ -334,5 +438,7 @@ paymentsRouter.post("/admin/order/:id/mark-paid", requireAdmin, (req, res) => {
 paymentsRouter.post("/admin/order/:id/mark-refunded", requireAdmin, (req, res) => {
   const id = Number(req.params.id);
   db.prepare("UPDATE orders SET payment_status = 'refunded' WHERE id = ?").run(id);
+  // Возврат баллов / промо при ручном refund (если ещё не делали)
+  refundOrderArtifacts(id);
   res.json({ ok: true });
 });
