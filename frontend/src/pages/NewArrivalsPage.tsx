@@ -12,6 +12,23 @@ interface NewArrivalsPageProps {
   onBack: () => void;
 }
 
+// Микрокэш постов в localStorage — показываем последний снимок мгновенно,
+// потом тихо обновляем с бэка. Скелетон видят только новые юзеры.
+const POSTS_CACHE_KEY = "raw_cache_v1:posts";
+function readPostsCache(): Post[] | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(POSTS_CACHE_KEY);
+    return raw ? (JSON.parse(raw) as Post[]) : null;
+  } catch {
+    return null;
+  }
+}
+function writePostsCache(posts: Post[]): void {
+  if (typeof window === "undefined") return;
+  try { window.localStorage.setItem(POSTS_CACHE_KEY, JSON.stringify(posts)); } catch {}
+}
+
 function HeartIcon({ filled }: { filled: boolean }) {
   if (filled) {
     return (
@@ -249,8 +266,10 @@ export function NewArrivalsPage({
 }: Omit<NewArrivalsPageProps, "onBack"> & { onBack?: NewArrivalsPageProps["onBack"] }) {
   const { settings } = useSettings();
   const lang = settings.lang;
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [posts, setPosts] = useState<Post[]>(() => readPostsCache() ?? []);
+  // Скелетон рисуем только при холодном старте (кэша нет). С кэшем
+  // юзер видит ленту мгновенно, фон-обновление невидимо.
+  const [loading, setLoading] = useState<boolean>(() => (readPostsCache() ?? []).length === 0);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -259,10 +278,11 @@ export function NewArrivalsPage({
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     getPosts(userId)
       .then((data) => {
-        if (!cancelled) setPosts(data);
+        if (cancelled) return;
+        setPosts(data);
+        writePostsCache(data);
       })
       .catch(console.error)
       .finally(() => {

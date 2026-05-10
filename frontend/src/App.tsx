@@ -31,6 +31,28 @@ type Page = "catalog" | "cart" | "product" | "checkout" | "reviews" | "favorites
  * страницы не возвращал юзера обратно. Поддержанные target-разделы
  * совпадают с inline-кнопками в боте.
  */
+// Лёгкий localStorage-кэш для каталога. Гидрируем стейт из кэша мгновенно
+// при загрузке, потом тихо обновляем с бэка. Без этого первая отрисовка
+// видела пустой массив и Catalog мигал «ничего не найдено», пока летел
+// HTTP-запрос. С кэшем возвращающийся юзер видит товары моментально.
+const CACHE_PREFIX = "raw_cache_v1:";
+function loadCache<T>(key: string): T | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(CACHE_PREFIX + key);
+    if (!raw) return null;
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+function saveCache<T>(key: string, value: T): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(value));
+  } catch {}
+}
+
 function readInitialPage(): Page {
   if (typeof window === "undefined") return "catalog";
   const hash = window.location.hash || "";
@@ -109,9 +131,12 @@ function App() {
 
   const [page, setPage] = useState<Page>(() => readInitialPage());
   const [productId, setProductId] = useState<number | null>(null);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [stores, setStores] = useState<Store[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [products, setProducts] = useState<Product[]>(() => loadCache<Product[]>("products") ?? []);
+  const [stores, setStores] = useState<Store[]>(() => loadCache<Store[]>("stores") ?? []);
+  const [categories, setCategories] = useState<Category[]>(() => loadCache<Category[]>("categories") ?? []);
+  // Loading=true только пока кэша нет И первый запрос ещё в полёте.
+  // Если кэш сработал — рисуем товары сразу, фон-обновление не показываем.
+  const [productsLoading, setProductsLoading] = useState<boolean>(() => (loadCache<Product[]>("products") ?? []).length === 0);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const cartCount = cartItems.reduce((a, i) => a + i.quantity, 0);
   // Кол-во избранного — только те id, что соответствуют реально
@@ -133,17 +158,38 @@ function App() {
 
   useEffect(() => {
     let cancelled = false;
-    getProducts().then((p) => { if (!cancelled) setProducts(p); }).catch(console.error);
-    getStores().then((s) => { if (!cancelled) setStores(s); }).catch(console.error);
+    getProducts()
+      .then((p) => {
+        if (cancelled) return;
+        setProducts(p);
+        saveCache("products", p);
+      })
+      .catch(console.error)
+      .finally(() => { if (!cancelled) setProductsLoading(false); });
+    getStores()
+      .then((s) => {
+        if (cancelled) return;
+        setStores(s);
+        saveCache("stores", s);
+      })
+      .catch(console.error);
     const loadCategories = () => {
       getCategories()
-        .then((cats) => { if (!cancelled) setCategories(cats); })
+        .then((cats) => {
+          if (cancelled) return;
+          setCategories(cats);
+          saveCache("categories", cats);
+        })
         .catch((e) => {
           console.error("Categories load failed:", e);
           if (cancelled) return;
           setTimeout(() => {
             getCategories()
-              .then((cats) => { if (!cancelled) setCategories(cats); })
+              .then((cats) => {
+                if (cancelled) return;
+                setCategories(cats);
+                saveCache("categories", cats);
+              })
               .catch(() => {});
           }, 2000);
         });
@@ -327,6 +373,7 @@ function App() {
             <section className="zen-catalog-section" aria-label={t(lang, "catalogPreviewTitle")}>
               <Catalog
                 products={products}
+                productsLoading={productsLoading}
                 stores={stores}
                 categories={categories}
                 selectedCategories={catalogSelectedCategories}
@@ -411,6 +458,7 @@ function App() {
         {page === "favorites" && (
           <Favorites
             products={products}
+            productsLoading={productsLoading}
             wishlistIds={wishlistIds}
             onProductClick={(id) => openProduct(id, "favorites")}
             onToggleWishlist={toggleWishlist}

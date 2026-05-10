@@ -15,6 +15,10 @@ const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1521572163474-6864f9cf1
 
 interface CatalogProps {
   products: Product[];
+  /** Идёт первая загрузка товаров (нет ни кэша, ни ответа с бэка). Если true и
+   *  товаров нет — рисуем скелетон сетки вместо «ничего не найдено», чтобы
+   *  на холодном старте не мигало ошибочное empty-state. */
+  productsLoading?: boolean;
   stores: Store[];
   categories?: Category[];
   /** Выбранные категории (если заданы — каталог в режиме controlled, выбор сохраняется при уходе на товар и назад) */
@@ -42,6 +46,7 @@ const FALLBACK_BY_CODE: Record<string, { image: string; desc: string }> = {
 
 export function Catalog({
   products,
+  productsLoading = false,
   stores,
   categories = [],
   selectedCategories: selectedCategoriesProp,
@@ -512,9 +517,17 @@ export function Catalog({
       </div>
 
       {displayList.length === 0 ? (
-        <div className="zen-empty-state" style={styles.empty}>
-          <strong>{t(lang, "nothingFound")}</strong>
-        </div>
+        productsLoading && products.length === 0 ? (
+          <div className="catalog-grid catalog-grid--tight" style={styles.grid} aria-busy="true" aria-label="Загружаем каталог">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="zen-product-skeleton" aria-hidden />
+            ))}
+          </div>
+        ) : (
+          <div className="zen-empty-state" style={styles.empty}>
+            <strong>{t(lang, "nothingFound")}</strong>
+          </div>
+        )
       ) : (
         <div className="catalog-grid catalog-grid--tight" style={styles.grid}>
           {displayList.map((p) => (

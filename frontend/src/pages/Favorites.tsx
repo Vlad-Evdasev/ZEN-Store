@@ -6,6 +6,7 @@ import { t } from "../i18n";
 
 interface FavoritesProps {
   products: Product[];
+  productsLoading?: boolean;
   wishlistIds: Set<number>;
   onProductClick: (id: number) => void;
   onToggleWishlist: (id: number) => void;
@@ -14,6 +15,7 @@ interface FavoritesProps {
 
 export function Favorites({
   products,
+  productsLoading = false,
   wishlistIds,
   onProductClick,
   onToggleWishlist,
@@ -27,6 +29,20 @@ export function Favorites({
   );
 
   if (favorites.length === 0) {
+    // Пока товары грузятся в первый раз и в wishlist что-то лежит — не пугаем
+    // юзера «избранное пусто», просто рисуем скелетоны. После загрузки, если
+    // реально ничего нет, покажем корректный empty-state.
+    if (productsLoading && products.length === 0 && wishlistIds.size > 0) {
+      return (
+        <div className="zen-wishlist-wrap zen-page-enter">
+          <div className="catalog-grid catalog-grid--tight zen-wishlist-grid" aria-busy="true" aria-label="Загружаем избранное">
+            {Array.from({ length: Math.min(wishlistIds.size, 4) }).map((_, i) => (
+              <div key={i} className="zen-product-skeleton" aria-hidden />
+            ))}
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="zen-wishlist-empty zen-page-enter">
         <h2 className="zen-wishlist-empty-title">{t(lang, "favoritesEmpty")}</h2>
