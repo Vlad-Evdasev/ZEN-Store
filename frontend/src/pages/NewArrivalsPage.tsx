@@ -273,6 +273,13 @@ interface ExpandedViewProps {
    *  Тогда incoming-анимация — zoom-in fade, без FLIP. */
   isBackNav: boolean;
   initialScrollTop?: number;
+  /** Если true — компонент монтируется в phase=open (мгновенно видимый,
+   *  без opening-анимации) и затем СРАЗУ начинает close-анимацию.
+   *  Используется для outgoing-слоя при back-nav: предыдущий пост уже
+   *  смонтирован «под низом» в open-state, а текущий рендерится сверху
+   *  с автоматическим закрытием → юзер видит выезд current и СРАЗУ
+   *  готовый previous под ним, без задержки. */
+  forceClose?: boolean;
   /** related-посты приходят от parent (с кэшем по postId). Если уже
    *  закэшированы (back-nav), приходят сразу при mount — высота sheet-а
    *  корректная, scrollTop успешно восстанавливается без мигания
@@ -352,12 +359,20 @@ function computeSheetAnim({
 
 function ExpandedView({
   post, startRect, startSrc, startIndex, userId, lang,
-  fadeOnClose, isBackNav, initialScrollTop, related,
+  fadeOnClose, isBackNav, initialScrollTop, forceClose, related,
   onStartClose, onClose, onPinToggle, onShare, onOpenRelated,
 }: ExpandedViewProps) {
   const images = getPostImages(post);
   const [currentIdx, setCurrentIdx] = useState(Math.min(startIndex, Math.max(images.length - 1, 0)));
-  const [phase, setPhase] = useState<"opening" | "open" | "closing">("opening");
+  // Initial phase:
+  //  - forceClose: mounts visible (open), затем useEffect ниже сразу
+  //    переключает на closing — outgoing-слой при back-nav.
+  //  - isBackNav: мгновенно видимый (open), без opening-fade — previous
+  //    уже отрендерен под текущим, ждёт пока outgoing уедет.
+  //  - default: opening (fade-in / FLIP до open).
+  const [phase, setPhase] = useState<"opening" | "open" | "closing">(
+    forceClose || isBackNav ? "open" : "opening"
+  );
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const touchMoveDx = useRef(0);
@@ -386,14 +401,26 @@ function ExpandedView({
 
   const reqVersion = useRef(0);
 
+  // forceClose: outgoing-слой при back-nav. Mounts visible (open), затем
+  // через 1 RAF триггерит close — CSS-transition уносит sheet вниз +
+  // фейдит. Через 220мс компонент вызывает onClose и parent его
+  // размонтирует. Под выезжающим уже виден previous post.
+  useEffect(() => {
+    if (!forceClose) return;
+    const r = requestAnimationFrame(() => setPhase("closing"));
+    const t = setTimeout(() => onClose(), 240);
+    return () => { cancelAnimationFrame(r); clearTimeout(t); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // FLIP-open: при наличии thumb-rect картинка стартует в его координатах,
   // CSS-transition плавно переносит её в финальные размеры.
+  // Пропускаем эту логику если phase уже стартует в "open" (isBackNav
+  // или forceClose) — там никакой opening-анимации не нужно.
   useLayoutEffect(() => {
+    if (forceClose || isBackNav) return; // mount уже в phase=open
     const img = imageRef.current;
     if (!img || !startRect) {
-      // Один RAF: рендер с phase=opening успевает paint, потом сразу
-      // меняем на open и CSS-transition стартует. Два RAF добавляли
-      // ~16мс задержки, которая для back-nav была ощутима как «лаг».
       requestAnimationFrame(() => setPhase("open"));
       return;
     }
@@ -719,6 +746,11 @@ export function NewArrivalsPage({
   // ПОПАЕТ предыдущий, иначе закрывает всё.
   const [expanded, setExpanded] = useState<ExpandedItem | null>(null);
   const [stack, setStack] = useState<ExpandedItem[]>([]);
+  // Outgoing layer для back-nav: текущий пост рендерится поверх
+  // previous-а (который уже мгновенно виден в phase=open), анимируется
+  // close, потом размонтируется. Это убирает «задержку» появления
+  // предыдущего поста — он виден с первого кадра, под выезжающим.
+  const [outgoingItem, setOutgoingItem] = useState<ExpandedItem | null>(null);
   // Кэш related-постов по id поста. Когда юзер закрывает related-пост и
   // возвращается к предыдущему через стек — related для него уже здесь
   // (фетчили при первом открытии), и ExpandedView мгновенно рендерится
@@ -871,16 +903,17 @@ export function NewArrivalsPage({
         setExpanded(null);
         return prev;
       }
-      // Back-nav — попаем последний.
+      // Back-nav: текущий expanded уезжает в outgoing-слой (рендерится
+      // поверх, ловит close-анимацию), previous становится новым
+      // expanded ПРЯМО СЕЙЧАС — мгновенно видим под outgoing.
       const next = prev.slice(0, -1);
       const last = prev[prev.length - 1];
-      // rect=null чтобы новый expanded НЕ пытался сделать FLIP из
-      // мёртвого related-thumb-а. isBackNav=true → красивая zoom-in
-      // анимация sheet-а. scrollTop сохранён в push-момент.
+      setOutgoingItem(expanded);
       setExpanded({ ...last, rect: null, isBackNav: true });
+      // Outgoing размонтируется сам через onClose (forceClose useEffect).
       return next;
     });
-  }, []);
+  }, [expanded]);
 
   const visiblePosts = useMemo(() => {
     if (tab === "liked") return posts.filter((p) => p.user_liked);
@@ -990,6 +1023,34 @@ export function NewArrivalsPage({
           onShare={handleShare}
           onOpenRelated={openRelated}
         />,
+        portalTarget
+      )}
+
+      {/* Outgoing layer: outgoing-пост рендерится поверх expanded (zIndex
+          выше). Forced close — сразу анимируется наружу. Под ним уже
+          виден previous в phase=open, никакой задержки. */}
+      {portalTarget && outgoingItem && createPortal(
+        <div style={{ position: "fixed", inset: 0, zIndex: 1200, pointerEvents: "none" }}>
+          <ExpandedView
+            key={`outgoing:${outgoingItem.post.id}`}
+            post={outgoingItem.post}
+            startRect={null}
+            startSrc={outgoingItem.src}
+            startIndex={outgoingItem.index}
+            userId={userId}
+            lang={lang}
+            fadeOnClose={true}
+            isBackNav={false}
+            forceClose={true}
+            related={relatedMap[outgoingItem.post.id] ?? []}
+            onStartClose={() => {}}
+            initialScrollTop={outgoingItem.scrollTop}
+            onClose={() => setOutgoingItem(null)}
+            onPinToggle={() => {}}
+            onShare={() => {}}
+            onOpenRelated={() => {}}
+          />
+        </div>,
         portalTarget
       )}
     </div>
