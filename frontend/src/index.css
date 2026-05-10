@@ -1422,8 +1422,10 @@ html[data-theme="light"] .zen-app .product-card-price {
   position: fixed;
   inset: 0;
   z-index: 9999;
-  background: #07060a;
-  color: #f1eee9;
+  /* Тот же тёмный фон что в основном приложении (var(--bg) в тёмной теме).
+     Хардкодим значение чтобы экран был чёрным даже если юзер на светлой теме. */
+  background: #0f0e0e;
+  color: #f0efec;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1435,17 +1437,18 @@ html[data-theme="light"] .zen-app .product-card-price {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  /* Очень тонкие радиальные блики — чтобы фон не был полностью плоским,
+     но сохранял общий чёрный тон. Сами orbs тоже сделаны деликатнее. */
   background:
-    radial-gradient(1200px 800px at 20% 20%, rgba(198, 40, 40, 0.18) 0%, transparent 60%),
-    radial-gradient(1000px 700px at 80% 90%, rgba(50, 50, 90, 0.20) 0%, transparent 60%),
-    linear-gradient(180deg, #07060a 0%, #0a0a12 100%);
+    radial-gradient(900px 600px at 50% 35%, rgba(198, 40, 40, 0.08) 0%, transparent 65%),
+    radial-gradient(700px 500px at 50% 85%, rgba(80, 80, 80, 0.06) 0%, transparent 70%);
   overflow: hidden;
 }
 .zen-maintenance__orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(60px);
-  opacity: 0.55;
+  filter: blur(80px);
+  opacity: 0.22;
   mix-blend-mode: screen;
   will-change: transform;
 }
@@ -1457,13 +1460,13 @@ html[data-theme="light"] .zen-app .product-card-price {
 }
 .zen-maintenance__orb--b {
   width: 520px; height: 520px;
-  background: radial-gradient(circle, #4a4ad6 0%, transparent 65%);
+  background: radial-gradient(circle, #2a2a2a 0%, transparent 65%);
   right: -160px; bottom: -160px;
   animation: zen-maint-orb-b 28s ease-in-out infinite alternate;
 }
 .zen-maintenance__orb--c {
   width: 360px; height: 360px;
-  background: radial-gradient(circle, #d6a14a 0%, transparent 65%);
+  background: radial-gradient(circle, #1a1a1a 0%, transparent 65%);
   left: 40%; top: 60%;
   animation: zen-maint-orb-c 24s ease-in-out infinite alternate;
 }
@@ -1538,13 +1541,17 @@ html[data-theme="light"] .zen-app .product-card-price {
   0%   { width: 36px; height: 36px; opacity: 0.65; border-color: rgba(245, 241, 234, 0.45); }
   100% { width: 130px; height: 130px; opacity: 0; border-color: rgba(245, 241, 234, 0); }
 }
+/* RAW-логотип в той же типографике и цвете, что и заголовок ниже.
+   Раньше было приглушённое серое с большим letter-spacing — теперь
+   совпадает с «Подкручиваем гайки» по визуальному весу. */
 .zen-maintenance__brand {
   font-family: "Unbounded", "Inter", sans-serif;
-  font-weight: 800;
-  font-size: 22px;
-  letter-spacing: 0.32em;
-  color: rgba(245, 241, 234, 0.55);
-  margin-bottom: 24px;
+  font-weight: 600;
+  font-size: 26px;
+  line-height: 1.18;
+  letter-spacing: -0.01em;
+  color: #f5f1ea;
+  margin-bottom: 18px;
 }
 .zen-maintenance__title {
   font-family: "Unbounded", "Inter", sans-serif;
@@ -1587,15 +1594,16 @@ html[data-theme="light"] .zen-app .product-card-price {
 .zen-maintenance__pulse > span {
   position: absolute;
   inset: 0;
-  background: #6ad28b;
+  /* Бренд-accent: красный, как у бота/каталога */
+  background: #c62828;
   border-radius: 50%;
-  box-shadow: 0 0 0 0 rgba(106, 210, 139, 0.65);
+  box-shadow: 0 0 0 0 rgba(198, 40, 40, 0.65);
   animation: zen-maint-pulse 1.8s ease-out infinite;
 }
 @keyframes zen-maint-pulse {
-  0%   { box-shadow: 0 0 0 0 rgba(106, 210, 139, 0.65); }
-  70%  { box-shadow: 0 0 0 12px rgba(106, 210, 139, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(106, 210, 139, 0); }
+  0%   { box-shadow: 0 0 0 0 rgba(198, 40, 40, 0.65); }
+  70%  { box-shadow: 0 0 0 12px rgba(198, 40, 40, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(198, 40, 40, 0); }
 }
 .zen-maintenance__metaText {
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
