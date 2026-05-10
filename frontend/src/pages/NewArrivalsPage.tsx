@@ -309,51 +309,33 @@ interface ExpandedViewProps {
 //   - fadeOnClose (back-nav out): sheet «уезжает вниз» translateY(60) +
 //     opacity 0. Снизу появляется уже распакованный предыдущий expanded.
 function computeSheetAnim({
-  phase, dragY, fadeOnClose, enterAnim,
+  phase, dragY,
 }: {
   phase: "opening" | "open" | "closing";
   dragY: number;
-  fadeOnClose: boolean;
-  enterAnim: "flip" | "zoom" | "fade";
 }): React.CSSProperties {
-  // Тайминги. Main open/close = 460ms (плавно).
-  // Back-nav: close 220ms с заметным scale-down + slide (выглядит как
-  // «фотография уезжает в стопку»), open 180ms быстрый fade-in.
-  // Суммарно back-nav ≈400ms — субъективно snappy.
+  // Тайминги. Main open/close = 520ms ease-in-out (плавный
+  // gradual grow/shrink). Back-nav close = CSS keyframe (260ms),
+  // back-nav open instant (phase=open сразу). Здесь обрабатываются
+  // только non-forceClose рендеры.
   if (phase === "open") {
-    const isZoom = enterAnim === "zoom";
-    const dur = isZoom ? 180 : 460;
     return {
       opacity: 1,
       transform: `translate3d(0, ${dragY}px, 0) scale(1)`,
       transition: dragY === 0
-        ? `opacity ${dur}ms cubic-bezier(0.22, 1, 0.36, 1), transform ${dur}ms cubic-bezier(0.22, 1, 0.36, 1)`
+        ? `opacity 520ms cubic-bezier(0.45, 0, 0.55, 1), transform 520ms cubic-bezier(0.45, 0, 0.55, 1)`
         : "none",
     };
   }
   if (phase === "opening") {
-    // Back-nav incoming: scale 0.96 «всплыв» снизу — эстетически
-    // зеркалит squeeze close (scale 0.88 уезжает → scale 0.96 приходит).
-    if (enterAnim === "zoom") {
-      return { opacity: 0, transform: "translate3d(0, 0, 0) scale(0.96)", transition: "none" };
-    }
     return { opacity: 0, transform: "translate3d(0, 0, 0) scale(1)", transition: "none" };
   }
-  // phase = closing
-  if (fadeOnClose) {
-    // Back-nav close — выраженный «squeeze»: scale 0.88 + translateY 60
-    // + opacity 0. Картинка заметно сжимается и уезжает вниз —
-    // визуально «красиво» и явно отделено от просто fade-out.
-    return {
-      opacity: 0,
-      transform: "translate3d(0, 60px, 0) scale(0.88)",
-      transition: "opacity 220ms cubic-bezier(0.22, 1, 0.36, 1), transform 220ms cubic-bezier(0.22, 1, 0.36, 1)",
-    };
-  }
+  // phase = closing (main close, не back-nav — back-nav обрабатывается
+  // CSS-классом zen-sheet-force-close на outgoing-слое)
   return {
     opacity: 0,
     transform: `translate3d(0, ${dragY}px, 0) scale(1)`,
-    transition: "opacity 460ms cubic-bezier(0.22, 1, 0.36, 1)",
+    transition: "opacity 520ms cubic-bezier(0.45, 0, 0.55, 1)",
   };
 }
 
@@ -401,15 +383,14 @@ function ExpandedView({
 
   const reqVersion = useRef(0);
 
-  // forceClose: outgoing-слой при back-nav. Mounts visible (open), затем
-  // через 1 RAF триггерит close — CSS-transition уносит sheet вниз +
-  // фейдит. Через 220мс компонент вызывает onClose и parent его
-  // размонтирует. Под выезжающим уже виден previous post.
+  // forceClose: outgoing-слой при back-nav. CSS-класс
+  // zen-sheet-force-close применяет keyframe-анимацию ИНСТАНТНО при
+  // mount (без RAF-задержки). Компонент просто ждёт 260мс и зовёт
+  // onClose — parent размонтирует. Под выезжающим уже виден previous.
   useEffect(() => {
     if (!forceClose) return;
-    const r = requestAnimationFrame(() => setPhase("closing"));
-    const t = setTimeout(() => onClose(), 240);
-    return () => { cancelAnimationFrame(r); clearTimeout(t); };
+    const t = setTimeout(() => onClose(), 260);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -435,7 +416,9 @@ function ExpandedView({
       img.style.transition = "none";
       img.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
       void img.offsetWidth;
-      img.style.transition = "transform 460ms cubic-bezier(0.22, 1, 0.36, 1)";
+      // ease-in-out 520ms — картинка плавно ускоряется в начале и
+      // мягко тормозит в конце, как настоящий «приближение».
+      img.style.transition = "transform 520ms cubic-bezier(0.45, 0, 0.55, 1)";
       img.style.transform = "translate3d(0, 0, 0) scale(1, 1)";
       setPhase("open");
     };
@@ -476,12 +459,14 @@ function ExpandedView({
       const sx = startRect.width / Math.max(final.width, 1);
       const sy = startRect.height / Math.max(final.height, 1);
       img.style.transformOrigin = "top left";
-      img.style.transition = "transform 460ms cubic-bezier(0.4, 0, 0.2, 1)";
+      // Симметрично open: 520ms ease-in-out. Картинка плавно
+      // сжимается обратно в thumb-rect.
+      img.style.transition = "transform 520ms cubic-bezier(0.45, 0, 0.55, 1)";
       img.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
     }
     setPhase("closing");
-    // Main FLIP-close 460ms, back-nav squeeze 220ms.
-    setTimeout(onClose, fadeOnClose ? 220 : 460);
+    // Main FLIP-close 520ms, back-nav squeeze 220ms.
+    setTimeout(onClose, fadeOnClose ? 220 : 520);
   }, [phase, onClose, onStartClose, startRect, fadeOnClose]);
 
   useEffect(() => {
@@ -563,7 +548,13 @@ function ExpandedView({
     }
   };
 
-  const backdropOpacity = phase === "closing" ? 0 : (phase === "open" ? Math.max(0.3, 1 - dragY / 500) : 0);
+  // Backdrop opaque сразу при mount (даже в phase=opening). Это
+  // решает баг «хедер просвечивает контент»: дайлог покрывает экран
+  // ИНСТАНТНО, header (z-index 10) за ним полностью скрыт пока
+  // body-class транзитит. На closing — fade-out 460мс, синхронно с
+  // FLIP-close image и main page un-scale; pull-to-close драг-фейд
+  // также продолжает работать.
+  const backdropOpacity = phase === "closing" ? 0 : Math.max(0.3, 1 - dragY / 500);
 
   return (
     <div
@@ -573,7 +564,11 @@ function ExpandedView({
         ...expandedStyles.root,
         background: `rgba(var(--bg-rgb), ${0.98 * backdropOpacity})`,
         pointerEvents: phase === "closing" ? "none" : "auto",
-        transition: "background 460ms cubic-bezier(0.4, 0, 0.2, 1)",
+        // Только close-фаза анимируется (open инстант). При первом
+        // рендере значение уже opaque → transition не запускается.
+        transition: phase === "closing"
+          ? "background 520ms cubic-bezier(0.45, 0, 0.55, 1)"
+          : "none",
       }}
     >
       <div
@@ -582,10 +577,15 @@ function ExpandedView({
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
-        style={{
-          ...expandedStyles.sheet,
-          ...computeSheetAnim({ phase, dragY, fadeOnClose, enterAnim: startRect ? "flip" : (isBackNav ? "zoom" : "fade") }),
-        }}
+        // forceClose: вместо inline transition применяем CSS keyframe-
+        // анимацию через класс. Стартует мгновенно (без RAF-задержки),
+        // что убирает «дёрг» previous поста перед его появлением.
+        className={forceClose ? "zen-sheet-force-close" : undefined}
+        style={
+          forceClose
+            ? expandedStyles.sheet
+            : { ...expandedStyles.sheet, ...computeSheetAnim({ phase, dragY }) }
+        }
       >
         <button
           type="button"

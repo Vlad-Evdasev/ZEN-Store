@@ -1647,8 +1647,10 @@ html[data-theme="light"] .zen-app .product-card-price {
    движение, но fixed-позиционирование не ломается. */
 .zen-app > main {
   transform-origin: center center;
-  transition: transform 460ms cubic-bezier(0.22, 1, 0.36, 1),
-              opacity 460ms cubic-bezier(0.22, 1, 0.36, 1);
+  /* ease-in-out 520ms — синхронно с FLIP image transition. Картинка
+     и фон-страница меняются в одном темпе. */
+  transition: transform 520ms cubic-bezier(0.45, 0, 0.55, 1),
+              opacity 520ms cubic-bezier(0.45, 0, 0.55, 1);
 }
 body.zen-inspire-overlay-on .zen-app > main {
   transform: scale(1.08);
@@ -1675,10 +1677,7 @@ body.zen-inspire-overlay-on .zen-app > nav {
   transform: translateY(110%);
 }
 
-/* FAB-пин-кнопка тоже скрывается во время overlay. Она portaled
-   в body — не дочерний элемент .zen-app, потому ловится отдельным
-   правилом. Без этого она проскакивала видимой долю секунды между
-   фейдом dialog-backdrop и unmount-ом. */
+/* FAB-пин-кнопка тоже скрывается во время overlay. */
 .zen-pin-fab {
   transition: opacity 220ms cubic-bezier(0.22, 1, 0.36, 1),
               transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -1687,6 +1686,24 @@ body.zen-inspire-overlay-on .zen-pin-fab {
   opacity: 0;
   transform: translateY(20px) scale(0.92);
   pointer-events: none;
+}
+
+/* Outgoing sheet анимация при back-nav. CSS keyframes вместо
+   transition+RAF — keyframes стартуют МГНОВЕННО при маунте,
+   нет задержки на rerender + RAF (~16мс), которая раньше
+   ощущалась как «дёрг» предыдущего поста перед его появлением. */
+.zen-sheet-force-close {
+  animation: zen-sheet-out 260ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+@keyframes zen-sheet-out {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(0, 60px, 0) scale(0.88);
+  }
 }
 
 /* FAB-переключатель «Всё / Закреплённые» в правом нижнем углу. */
