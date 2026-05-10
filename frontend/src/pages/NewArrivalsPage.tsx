@@ -309,39 +309,45 @@ function computeSheetAnim({
   fadeOnClose: boolean;
   enterAnim: "flip" | "zoom" | "fade";
 }): React.CSSProperties {
-  // Тайминги: main open/close — 460ms (плавно, как раскрытие карточки
-  // товара в каталоге). Back-nav — 280ms (быстрее, snappy переключение
-  // между связанными постами) с одинаковой easing-кривой и без scale,
-  // чтобы две половины (close+open) воспринимались как одна
-  // непрерывная анимация перехода, а не двухстадийный stutter.
+  // Тайминги. Main open/close = 460ms (плавно, как раскрытие карточки
+  // товара). Back-nav (close+open суммарно ≈460ms): close 260ms с
+  // приятным scale-down 0.96, open 200ms простой fade.
+  // Одна easing-кривая везде, чтобы две фазы back-nav сливались в
+  // один непрерывный переход.
   if (phase === "open") {
     const isZoom = enterAnim === "zoom";
-    const dur = isZoom ? 280 : 460;
+    const dur = isZoom ? 200 : 460;
     return {
       opacity: 1,
-      transform: `translate3d(0, ${dragY}px, 0)`,
+      transform: `translate3d(0, ${dragY}px, 0) scale(1)`,
       transition: dragY === 0
         ? `opacity ${dur}ms cubic-bezier(0.22, 1, 0.36, 1), transform ${dur}ms cubic-bezier(0.22, 1, 0.36, 1)`
         : "none",
     };
   }
   if (phase === "opening") {
-    // Back-nav (zoom) тоже стартует с opacity 0, БЕЗ scale — простой
-    // fade сравним по ощущению с зеркальным fade-out close. Юзер
-    // воспринимает «бесшовный переход», а не стадии.
-    return { opacity: 0, transform: "translate3d(0, 0, 0)", transition: "none" };
+    // Back-nav (zoom) стартует opacity 0 + лёгкий scale 0.98 — это
+    // даёт ощущение «всплыва» предыдущего поста, плавно вырастающего
+    // на место текущего. main-режим стартует без scale (обычный fade).
+    if (enterAnim === "zoom") {
+      return { opacity: 0, transform: "translate3d(0, 0, 0) scale(0.98)", transition: "none" };
+    }
+    return { opacity: 0, transform: "translate3d(0, 0, 0) scale(1)", transition: "none" };
   }
   // phase = closing
   if (fadeOnClose) {
+    // Back-nav close — приятный «squeeze»: scale 0.96 + translateY 24px
+    // + opacity 0. Картинка плавно сжимается и уезжает вниз —
+    // выглядит «красиво и плавно».
     return {
       opacity: 0,
-      transform: "translate3d(0, 30px, 0)",
-      transition: "opacity 280ms cubic-bezier(0.22, 1, 0.36, 1), transform 280ms cubic-bezier(0.22, 1, 0.36, 1)",
+      transform: "translate3d(0, 24px, 0) scale(0.96)",
+      transition: "opacity 260ms cubic-bezier(0.22, 1, 0.36, 1), transform 260ms cubic-bezier(0.22, 1, 0.36, 1)",
     };
   }
   return {
     opacity: 0,
-    transform: `translate3d(0, ${dragY}px, 0)`,
+    transform: `translate3d(0, ${dragY}px, 0) scale(1)`,
     transition: "opacity 460ms cubic-bezier(0.22, 1, 0.36, 1)",
   };
 }
@@ -446,10 +452,9 @@ function ExpandedView({
       img.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
     }
     setPhase("closing");
-    // Main FLIP-close 460ms, back-nav slide-fade 280ms — оба используют
-    // одну easing-кривую, общая длительность back-nav close+open ~560ms
-    // ощущается как непрерывный переход, а не два этапа.
-    setTimeout(onClose, fadeOnClose ? 280 : 460);
+    // Main FLIP-close 460ms, back-nav scale-down+slide 260ms — суммарно
+    // back-nav close (260) + open (200) ≈ 460ms, как main close.
+    setTimeout(onClose, fadeOnClose ? 260 : 460);
   }, [phase, onClose, onStartClose, startRect, fadeOnClose]);
 
   useEffect(() => {
@@ -635,18 +640,34 @@ function ExpandedView({
         {/* Related grid: тот же масонри-сетка что и на главной, без заголовка. */}
         {related.length > 0 && (
           <div style={expandedStyles.relatedWrap}>
-            <div className="zen-pin-grid">
-              {related.map((rp) => (
+            <PinMasonry
+              items={related.map((rp) => (
                 <MasonryCard
                   key={rp.id}
                   post={rp}
                   onOpen={(p, rect, src, idx) => onOpenRelated(p, rect, src, idx, sheetRef.current?.scrollTop ?? 0)}
                 />
               ))}
-            </div>
+            />
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// 2-колоночный масонри-grid. Распределяем элементы по индексам:
+// чётные → левая колонка, нечётные → правая. Это даёт ВЫРОВНЕННЫЙ
+// первый ряд (карточки 0 и 1 на одной Y-линии), что не гарантировал
+// предыдущий CSS-columns layout.
+function PinMasonry({ items }: { items: React.ReactNode[] }) {
+  const left: React.ReactNode[] = [];
+  const right: React.ReactNode[] = [];
+  items.forEach((it, i) => (i % 2 === 0 ? left : right).push(it));
+  return (
+    <div className="zen-pin-grid">
+      <div className="zen-pin-col">{left}</div>
+      <div className="zen-pin-col">{right}</div>
     </div>
   );
 }
@@ -924,14 +945,9 @@ export function NewArrivalsPage({
       </div>
 
       {loading && (
-        <div className="zen-pin-grid">
-          <SkeletonCard index={0} />
-          <SkeletonCard index={1} />
-          <SkeletonCard index={2} />
-          <SkeletonCard index={3} />
-          <SkeletonCard index={4} />
-          <SkeletonCard index={5} />
-        </div>
+        <PinMasonry
+          items={[0, 1, 2, 3, 4, 5].map((i) => <SkeletonCard key={i} index={i} />)}
+        />
       )}
 
       {!loading && tab === "liked" && visiblePosts.length === 0 && (
@@ -942,15 +958,15 @@ export function NewArrivalsPage({
       )}
 
       {!loading && visiblePosts.length > 0 && (
-        <div className="zen-pin-grid">
-          {visiblePosts.map((post) => (
+        <PinMasonry
+          items={visiblePosts.map((post) => (
             <MasonryCard
               key={post.id}
               post={post}
               onOpen={openInitial}
             />
           ))}
-        </div>
+        />
       )}
 
       {portalTarget && fabNode && createPortal(fabNode, portalTarget)}
