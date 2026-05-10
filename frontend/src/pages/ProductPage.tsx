@@ -265,8 +265,6 @@ export function ProductPage({
           </div>
         )}
 
-        <div className="product-v2__divider" />
-
         <div className="product-v2__size-block">
           <div className="product-v2__section-head">
             <h3 className="product-v2__section-title">

@@ -273,6 +273,16 @@ interface ExpandedViewProps {
    *  Тогда incoming-анимация — zoom-in fade, без FLIP. */
   isBackNav: boolean;
   initialScrollTop?: number;
+  /** related-посты приходят от parent (с кэшем по postId). Если уже
+   *  закэшированы (back-nav), приходят сразу при mount — высота sheet-а
+   *  корректная, scrollTop успешно восстанавливается без мигания
+   *  «сверху → правильное место». */
+  related: Post[];
+  /** Вызывается СРАЗУ когда юзер тапает close — раньше чем стартует
+   *  FLIP-close. Parent в ответ снимает body-class (если это финальное
+   *  закрытие), чтобы фоновая страница начала un-zoom-иться параллельно
+   *  с закрытием диалога, а не после. */
+  onStartClose: () => void;
   onClose: () => void;
   onPinToggle: (postId: number, newPinned: boolean, newCount: number) => void;
   onShare: (post: Post) => void;
@@ -331,7 +341,8 @@ function computeSheetAnim({
 
 function ExpandedView({
   post, startRect, startSrc, startIndex, userId, lang,
-  fadeOnClose, isBackNav, initialScrollTop, onClose, onPinToggle, onShare, onOpenRelated,
+  fadeOnClose, isBackNav, initialScrollTop, related,
+  onStartClose, onClose, onPinToggle, onShare, onOpenRelated,
 }: ExpandedViewProps) {
   const images = getPostImages(post);
   const [currentIdx, setCurrentIdx] = useState(Math.min(startIndex, Math.max(images.length - 1, 0)));
@@ -344,15 +355,6 @@ function ExpandedView({
   const [dragY, setDragY] = useState(0);
   const sheetRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
-
-  const [related, setRelated] = useState<Post[]>([]);
-  useEffect(() => {
-    let cancelled = false;
-    getRelatedPosts(post.id, userId).then((r) => {
-      if (!cancelled) setRelated(r);
-    }).catch(() => {});
-    return () => { cancelled = true; };
-  }, [post.id, userId]);
 
   // Флаг: успешно ли восстановили scrollTop. После того как related-сетка
   // загрузилась и DOM рендерит её полную высоту, можно скроллить — иначе
@@ -417,6 +419,10 @@ function ExpandedView({
 
   const requestClose = useCallback(() => {
     if (phase === "closing") return;
+    // Сигналим parent-у: parent при финальном закрытии (стек пуст) снимет
+    // body-class СРАЗУ → фон-страница начнёт расправляться параллельно с
+    // FLIP-close, а не после.
+    onStartClose();
 
     const img = imageRef.current;
     if (img && startRect && !fadeOnClose) {
@@ -436,7 +442,7 @@ function ExpandedView({
     // FLIP-close 380ms, back-nav slide-fade 280ms — синхронизированы с
     // соответствующими CSS-переходами sheet/page.
     setTimeout(onClose, fadeOnClose ? 280 : 380);
-  }, [phase, onClose, startRect, fadeOnClose]);
+  }, [phase, onClose, onStartClose, startRect, fadeOnClose]);
 
   useEffect(() => {
     // body.overflow управляется в parent (NewArrivalsPage) — здесь только
@@ -684,8 +690,26 @@ export function NewArrivalsPage({
   // ПОПАЕТ предыдущий, иначе закрывает всё.
   const [expanded, setExpanded] = useState<ExpandedItem | null>(null);
   const [stack, setStack] = useState<ExpandedItem[]>([]);
+  // Кэш related-постов по id поста. Когда юзер закрывает related-пост и
+  // возвращается к предыдущему через стек — related для него уже здесь
+  // (фетчили при первом открытии), и ExpandedView мгновенно рендерится
+  // с правильной высотой → scrollTop восстанавливается без мигания
+  // «сверху → правильное место».
+  const [relatedMap, setRelatedMap] = useState<Record<number, Post[]>>({});
 
   const scrollMemory = useRef<Record<FilterTab, number>>({ all: 0, liked: 0 });
+
+  // Префетч related для текущего expanded (если ещё не в кэше).
+  useEffect(() => {
+    if (!expanded) return;
+    if (relatedMap[expanded.post.id]) return;
+    let cancelled = false;
+    getRelatedPosts(expanded.post.id, userId).then((r) => {
+      if (cancelled) return;
+      setRelatedMap((m) => ({ ...m, [expanded.post.id]: r }));
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [expanded, userId, relatedMap]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -799,6 +823,17 @@ export function NewArrivalsPage({
     setStack((prev) => (expanded ? [...prev, { ...expanded, scrollTop: currentScrollTop }] : prev));
     setExpanded({ post, rect, src, index });
   }, [expanded]);
+
+  // Callback из ExpandedView в момент тапа close — раньше чем стартует
+  // FLIP-close-анимация. Снимаем body-class СРАЗУ при финальном закрытии
+  // (стек пуст), чтобы фон-страница начала расправляться параллельно с
+  // диалогом. Для back-nav (стек не пуст) ничего не делаем — класс
+  // должен оставаться, потому что предыдущий expanded сейчас покажется.
+  const handleStartClose = useCallback(() => {
+    if (stack.length === 0) {
+      document.body.classList.remove("zen-inspire-overlay-on");
+    }
+  }, [stack.length]);
 
   const closeExpanded = useCallback(() => {
     setStack((prev) => {
@@ -923,6 +958,8 @@ export function NewArrivalsPage({
           lang={lang}
           fadeOnClose={stack.length > 0}
           isBackNav={!!expanded.isBackNav}
+          related={relatedMap[expanded.post.id] ?? []}
+          onStartClose={handleStartClose}
           initialScrollTop={expanded.scrollTop}
           onClose={closeExpanded}
           onPinToggle={handlePinToggle}
@@ -1253,8 +1290,7 @@ const expandedStyles: Record<string, React.CSSProperties> = {
   // не упирались в край экрана. + бордер сверху для визуального разделения.
   relatedWrap: {
     flex: "0 0 auto",
-    padding: "20px 4px calc(env(safe-area-inset-bottom, 0px) + 80px)",
-    borderTop: "1px solid var(--border)",
-    marginTop: 12,
+    padding: "24px 4px calc(env(safe-area-inset-bottom, 0px) + 80px)",
+    marginTop: 8,
   },
 };
