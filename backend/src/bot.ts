@@ -577,10 +577,13 @@ bot.command("start", async (ctx) => {
     parse_mode: "HTML",
     link_preview_options: { is_disabled: true },
     reply_markup: {
-      // Чистый текст без декоративных глифов. Deep-link на конкретный
-      // раздел через URL hash — App.tsx читает #page=... на старте.
-      inline_keyboard: [
-        [{ text: "Открыть каталог", web_app: { url: `${WEB_APP_URL}#page=catalog` } }],
+      // Persistent reply-keyboard вместо inline-кнопок в сообщении.
+      // Эта клавиатура «прицеплена» к полю ввода — юзер тапает иконку
+      // переключения между OS-keyboard и нашей custom keyboard, чтобы
+      // показать/спрятать. Доступна в любой момент чата.
+      // Каталог открывается отдельной кнопкой Shop (menu_button), так
+      // что в этой клавиатуре только вторичная навигация.
+      keyboard: [
         [
           { text: "Вдохновиться", web_app: { url: `${WEB_APP_URL}#page=inspire` } },
           { text: "Заказы", web_app: { url: `${WEB_APP_URL}#page=history` } },
@@ -590,6 +593,8 @@ bot.command("start", async (ctx) => {
           { text: "Поддержка", web_app: { url: `${WEB_APP_URL}#page=support` } },
         ],
       ],
+      is_persistent: true,
+      resize_keyboard: true,
     },
   });
 });
@@ -817,7 +822,7 @@ async function configureBotMenu(): Promise<void> {
     await bot.api.setChatMenuButton({
       menu_button: {
         type: "web_app",
-        text: "Открыть RAW",
+        text: "Shop",
         web_app: { url: `${WEB_APP_URL}#page=catalog` },
       },
     });
