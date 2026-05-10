@@ -319,7 +319,7 @@ async function sendStatusNotification(
       parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: [
-          [{ text: "📜 Открыть историю", web_app: { url: WEB_APP_URL } }],
+          [{ text: "Открыть историю", web_app: { url: WEB_APP_URL } }],
         ],
       },
     });
@@ -449,7 +449,7 @@ export async function notifyTonPaymentVerified(
       link_preview_options: { is_disabled: true },
       reply_markup: {
         inline_keyboard: [
-          [{ text: "📜 Открыть историю", web_app: { url: WEB_APP_URL } }],
+          [{ text: "Открыть историю", web_app: { url: WEB_APP_URL } }],
         ],
       },
     });
@@ -499,15 +499,15 @@ export async function notifyOrderInvoice(
   }
   lines.push("");
   if (ton) {
-    lines.push(`<b>${total} $</b>  ·  ≈ ${ton.amountTon.toFixed(2)} TON`);
-    lines.push(`<i>курс ${ton.rateUsd.toFixed(2)} $/TON</i>`);
+    lines.push(`<b>${total} $</b>  ≈ ${ton.amountTon.toFixed(2)} TON`);
+    lines.push(`Курс ${ton.rateUsd.toFixed(2)} $`);
     lines.push("");
     lines.push("Жми <b>«Оплатить»</b> — кошелёк откроется с готовой суммой и адресом, останется только подтвердить транзакцию.");
   } else {
     lines.push(`<b>${total} $</b>`);
   }
   lines.push("");
-  lines.push(`<a href="https://t.me/${ADMIN_HANDLE}">@${ADMIN_HANDLE}</a>  ·  #${orderId}`);
+  lines.push(`<a href="https://t.me/${ADMIN_HANDLE}">@${ADMIN_HANDLE}</a>`);
 
   const caption = lines.join("\n");
 
@@ -568,7 +568,7 @@ export async function notifyOrderPaid(
   lines.push("");
   lines.push("Заказ ушёл в сборку. Когда отправим — пришлём трек-номер.");
   lines.push("");
-  lines.push(`<a href="https://t.me/${ADMIN_HANDLE}">@${ADMIN_HANDLE}</a>  ·  #${orderId}`);
+  lines.push(`<a href="https://t.me/${ADMIN_HANDLE}">@${ADMIN_HANDLE}</a>`);
   const text = lines.join("\n");
   try {
     await bot.api.sendMessage(userId, text, {
@@ -576,7 +576,7 @@ export async function notifyOrderPaid(
       link_preview_options: { is_disabled: true },
       reply_markup: {
         inline_keyboard: [
-          [{ text: "📜 Открыть историю", web_app: { url: WEB_APP_URL } }],
+          [{ text: "Открыть историю", web_app: { url: WEB_APP_URL } }],
         ],
       },
     });
