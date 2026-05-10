@@ -15,7 +15,10 @@ settingsRouter.get("/:userId", (req, res) => {
     | { lang: string; theme: string; currency: string }
     | undefined;
   if (!row) return res.json(null);
-  res.json({ lang: row.lang || "ru", theme: row.theme || "light", currency: row.currency || "USD" });
+  // Дефолт темы — dark. Фронт стартует на dark; если бэк возвращал
+  // "light", при синхронизации он перетирал локальный dark и юзер
+  // на первом входе получал светлую тему.
+  res.json({ lang: row.lang || "ru", theme: row.theme || "dark", currency: row.currency || "USD" });
 });
 
 settingsRouter.patch("/:userId", (req, res) => {
@@ -27,10 +30,10 @@ settingsRouter.patch("/:userId", (req, res) => {
   ).run(
     userId,
     lang ?? "ru",
-    theme ?? "light",
+    theme ?? "dark",
     currency ?? "USD",
     lang ?? "ru",
-    theme ?? "light",
+    theme ?? "dark",
     currency ?? "USD"
   );
   res.json({ ok: true });
