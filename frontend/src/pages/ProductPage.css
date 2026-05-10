@@ -180,11 +180,12 @@
   gap: 12px;
 }
 
-/* Heart-кнопка рядом с названием: outline-сердце, accent при активе. */
+/* Heart-кнопка рядом с названием. SVG 30px ≈ font-size заголовка,
+   ёмкая зона тапа 44×44 за счёт padding (по recommended hit-target). */
 .product-v2__title-heart {
   flex-shrink: 0;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border: none;
   background: transparent;
   color: var(--text);
@@ -193,7 +194,7 @@
   align-items: center;
   justify-content: center;
   padding: 0;
-  margin: 2px -8px 0 0;
+  margin: 4px -6px 0 0;
   transition: color 0.15s ease, transform 0.08s ease;
   -webkit-tap-highlight-color: transparent;
 }
@@ -204,22 +205,25 @@
   transform: scale(0.92);
 }
 
-/* Back-arrow над фото. С воздухом сверху + 12px слева. НЕ glued к
-   корнеру — болтается отдельным элементом перед hero. */
+/* Back-arrow над фото. Точно такой же стиль, как в expanded view постов
+   (NewArrivalsPage.tsx → expandedStyles.backBtn): 38×38 полупрозрачный
+   круг цвета фона с тонкой обводкой, blur подложка, мягкая тень. */
 .product-v2__back-arrow {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
-  background: var(--surface-elevated);
+  background: rgba(var(--bg-rgb), 0.78);
   color: var(--text);
   border: 1px solid var(--border);
   cursor: pointer;
   margin: calc(env(safe-area-inset-top, 0px) + 14px) 0 6px 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
   -webkit-tap-highlight-color: transparent;
 }
 .product-v2__back-arrow:active {

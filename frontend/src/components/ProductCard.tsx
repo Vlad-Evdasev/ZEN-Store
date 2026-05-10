@@ -184,13 +184,15 @@ const styles: Record<string, React.CSSProperties> = {
     minHeight: 0,
   },
   // Wishlist-кнопка теперь живёт в строке name (inline), не overlay
-  // на фото. Без бэкграунда / тени — просто иконка, как у пина в постах.
+  // на фото. Без бэкграунда / тени — просто иконка. marginRight bleeds
+  // в правый padding descWrap, чтобы сердце было ближе к краю карточки.
   wishlistBtn: {
     flexShrink: 0,
-    width: 28,
-    height: 28,
+    width: 32,
+    height: 32,
     padding: 0,
-    marginLeft: 4,
+    marginLeft: 8,
+    marginRight: -6,
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
@@ -202,8 +204,9 @@ const styles: Record<string, React.CSSProperties> = {
     WebkitTapHighlightColor: "transparent",
   },
   wishlistBtnCompact: {
-    width: 24,
-    height: 24,
+    width: 28,
+    height: 28,
+    marginRight: -4,
   },
   descWrap: {
     position: "relative",
