@@ -1,7 +1,16 @@
 import Database from "better-sqlite3";
-import { join } from "path";
+import { mkdirSync } from "fs";
+import { dirname, join } from "path";
 
-const dbPath = join(process.cwd(), "zen.db");
+// Путь к БД настраивается через DB_PATH. На Railway указывайте путь внутри
+// смонтированного Volume (например, /data/zen.db) — иначе при каждом деплое
+// эфемерный контейнер пересоздаётся и весь zen.db со всеми товарами/постами
+// исчезает. Локально без переменной берём ./zen.db.
+const dbPath = process.env.DB_PATH || join(process.cwd(), "zen.db");
+try {
+  mkdirSync(dirname(dbPath), { recursive: true });
+} catch {}
+console.log(`[db] using SQLite at ${dbPath}`);
 export const db = new Database(dbPath);
 
 // Улучшение работы при одновременном доступе: WAL и ожидание при занятости БД
