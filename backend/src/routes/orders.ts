@@ -1,6 +1,27 @@
 import { Router } from "express";
+import { randomBytes } from "crypto";
 import { db } from "../db/schema.js";
-import { notifyOrderStatusChange } from "../bot.js";
+import { notifyOrderStatusChange, notifyOrderInvoice } from "../bot.js";
+
+const TON_RECEIVE_ADDRESS = process.env.TON_RECEIVE_ADDRESS || "";
+const TON_API_TOKEN = process.env.TON_API_TOKEN || "";
+
+// Лёгкий fetcher курса TON/USD — без кеша (вызывается раз при создании
+// ордера, не критично). Падаем мягко: возвращаем null, чтобы инвойс всё
+// равно ушёл (без TON-кнопки).
+async function getTonUsdRateOrNull(): Promise<number | null> {
+  try {
+    const r = await fetch("https://tonapi.io/v2/rates?tokens=ton&currencies=usd", {
+      headers: TON_API_TOKEN ? { Authorization: `Bearer ${TON_API_TOKEN}` } : {},
+    });
+    if (!r.ok) return null;
+    const data = (await r.json()) as { rates?: { TON?: { prices?: { USD?: number } } } };
+    const rate = data.rates?.TON?.prices?.USD;
+    return typeof rate === "number" && Number.isFinite(rate) && rate > 0 ? rate : null;
+  } catch {
+    return null;
+  }
+}
 
 export const ordersRouter = Router();
 
@@ -29,13 +50,21 @@ ordersRouter.post("/:userId", async (req, res) => {
   const promoStr = typeof promo_code === "string" && promo_code.trim() ? promo_code.trim().toUpperCase() : null;
   const points = Math.max(0, Math.floor(Number(points_redeemed) || 0));
 
+  // Генерим payload для TON-комментария заранее (если адрес настроен).
+  // Используется и в БД (payment_payload), и в DM-инвойсе, и для матчинга
+  // транзакции при ручной отметке/верификации.
+  const payload = TON_RECEIVE_ADDRESS
+    ? `RAW-${Date.now().toString(36)}-${randomBytes(3).toString("hex")}`
+    : null;
+
   const create = db.transaction(() => {
+    // Все ордера через WebApp теперь идут в pending_payment + unpaid.
+    // Оплата приходит в боте через ton:// deep-link.
     const result = db.prepare(
-      "INSERT INTO orders (user_id, user_name, user_phone, user_username, user_address, items, total, status, promo_code, points_redeemed, payment_method, payment_status) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, 'manual', 'paid')"
-    ).run(userId, user_name || null, user_phone || null, user_username || null, user_address || null, itemsStr, total, promoStr, points);
+      "INSERT INTO orders (user_id, user_name, user_phone, user_username, user_address, items, total, status, promo_code, points_redeemed, payment_method, payment_status, payment_payload) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending_payment', ?, ?, 'ton', 'unpaid', ?)"
+    ).run(userId, user_name || null, user_phone || null, user_username || null, user_address || null, itemsStr, total, promoStr, points, payload);
     const orderId = Number(result.lastInsertRowid);
 
-    // Записываем применение промокода (если был) — UNIQUE(code, user_id)
     if (promoStr) {
       try {
         db.prepare(
@@ -44,10 +73,9 @@ ordersRouter.post("/:userId", async (req, res) => {
         db.prepare(
           "UPDATE promo_codes SET used_count = used_count + 1 WHERE code = ?"
         ).run(promoStr);
-      } catch {} // повторное применение тем же юзером — игнор
+      } catch {}
     }
 
-    // Списание баллов
     if (points > 0) {
       const balRow = db.prepare("SELECT balance FROM loyalty_points WHERE user_id = ?").get(userId) as { balance: number } | undefined;
       const balance = balRow?.balance ?? 0;
@@ -68,6 +96,49 @@ ordersRouter.post("/:userId", async (req, res) => {
 
   const orderId = create();
   res.status(201).json({ ok: true, orderId });
+
+  // Отвечаем клиенту сразу, инвойс отправляем в фоне (не блокируем).
+  // Если что-то упадёт (TonAPI / Telegram) — лог в консоль, юзер всё
+  // равно увидит свой ордер в /track.
+  (async () => {
+    try {
+      let parsedItems: { name?: string; size?: string; quantity?: number; image_url?: string | null }[] = [];
+      try {
+        parsedItems = typeof items === "string" ? JSON.parse(items) : items;
+      } catch {}
+      const cleanItems = (Array.isArray(parsedItems) ? parsedItems : []).map((i) => ({
+        name: String(i?.name ?? "Товар"),
+        size: typeof i?.size === "string" ? i.size : undefined,
+        quantity: Number(i?.quantity) || 1,
+        image_url: typeof i?.image_url === "string" ? i.image_url : null,
+      }));
+
+      let tonInfo: Parameters<typeof notifyOrderInvoice>[4] = null;
+      if (TON_RECEIVE_ADDRESS && payload) {
+        const rate = await getTonUsdRateOrNull();
+        if (rate) {
+          const amountTon = Number(total) / rate;
+          const amountNano = BigInt(Math.round(amountTon * 1e9)).toString();
+          // Сохраняем сумму и payload в ордер для последующей верификации
+          // через /api/payments/ton/verify/:orderId.
+          db.prepare(
+            "UPDATE orders SET payment_amount_nano = ? WHERE id = ?"
+          ).run(amountNano, orderId);
+          tonInfo = {
+            receiveAddress: TON_RECEIVE_ADDRESS,
+            amountNano,
+            payload,
+            amountTon,
+            rateUsd: rate,
+          };
+        }
+      }
+
+      await notifyOrderInvoice(userId, orderId, cleanItems, Number(total), tonInfo);
+    } catch (e) {
+      console.error("Failed to send order invoice:", e instanceof Error ? e.message : e);
+    }
+  })();
 });
 
 ordersRouter.patch("/order/:orderId/status", (req, res) => {

@@ -459,6 +459,95 @@ export async function notifyTonPaymentVerified(
   }
 }
 
+// ── Order invoice notification ──────────────────────────────────────
+// Сразу после создания ордера юзер получает «карточку инвойса»:
+// альбом из фото товаров + caption с резюме + сообщение с кнопкой
+// «Оплатить» (ton://transfer URI — открывает любой TON-кошелёк уже
+// с подставленным адресом, суммой и комментарием для матчинга).
+
+export interface OrderItemForInvoice {
+  name: string;
+  size?: string;
+  quantity?: number;
+  image_url?: string | null;
+}
+
+export async function notifyOrderInvoice(
+  userId: string | number,
+  orderId: number,
+  items: OrderItemForInvoice[],
+  total: number,
+  ton: { receiveAddress: string; amountNano: string; payload: string; amountTon: number; rateUsd: number } | null
+): Promise<void> {
+  const lines: string[] = [];
+  lines.push(`<b>Заказ #${orderId}</b>`);
+  lines.push("");
+  for (const it of items) {
+    const qty = (it.quantity ?? 1) > 1 ? ` × ${it.quantity}` : "";
+    const sz = it.size ? ` · ${escapeHtml(it.size)}` : "";
+    lines.push(`— ${escapeHtml(it.name || "Товар")}${sz}${qty}`);
+  }
+  lines.push("");
+  lines.push(`<b>К оплате: ${total} $</b>`);
+  if (ton) lines.push(`≈ <b>${ton.amountTon.toFixed(2)} TON</b> · курс $${ton.rateUsd.toFixed(2)}/TON`);
+
+  const caption = lines.join("\n");
+
+  // Альбом из фото товаров (если есть) + caption на первом
+  const photoUrls = items
+    .map((i) => i.image_url)
+    .filter((u): u is string => !!u && u.trim().length > 0)
+    .slice(0, MAX_IMAGES);
+
+  try {
+    if (photoUrls.length === 0) {
+      await bot.api.sendMessage(userId, caption, {
+        parse_mode: "HTML",
+        link_preview_options: { is_disabled: true },
+      });
+    } else if (photoUrls.length === 1) {
+      await bot.api.sendPhoto(userId, toPhotoSource(photoUrls[0]), {
+        caption,
+        parse_mode: "HTML",
+      });
+    } else {
+      const media: ChannelMediaPhoto[] = photoUrls.map((url, idx) => {
+        const item: ChannelMediaPhoto = { type: "photo", media: toPhotoSource(url) };
+        if (idx === 0) {
+          item.caption = caption;
+          item.parse_mode = "HTML";
+        }
+        return item;
+      });
+      await bot.api.sendMediaGroup(userId, media);
+    }
+
+    // Followup-сообщение с Pay-кнопкой. ton://transfer открывает любой
+    // TON-кошелёк (Tonkeeper / Wallet / MyTonWallet) с предзаполненными
+    // адресом, суммой и комментарием — юзеру остаётся только нажать
+    // «Подтвердить» в кошельке.
+    if (ton) {
+      const tonUri =
+        `ton://transfer/${ton.receiveAddress}` +
+        `?amount=${ton.amountNano}` +
+        `&text=${encodeURIComponent(ton.payload)}`;
+      await bot.api.sendMessage(
+        userId,
+        `Оплата: один тап — кошелёк подставит сумму и адрес автоматически.\n\nЕсли что-то пойдёт не так, напиши нам через /help.`,
+        {
+          reply_markup: {
+            inline_keyboard: [[{ text: "Оплатить", url: tonUri }]],
+          },
+        }
+      );
+    }
+  } catch (e) {
+    const err = e instanceof Error ? e.message : String(e);
+    if (isUserBlocked(err)) markBotUserBlocked(userId);
+    console.error("notifyOrderInvoice failed:", err);
+  }
+}
+
 // ── Drop teaser ──────────────────────────────────────────────────────
 
 export async function notifyDrop(

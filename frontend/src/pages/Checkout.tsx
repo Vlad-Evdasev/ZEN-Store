@@ -1,30 +1,14 @@
-import { useState, useEffect, useRef } from "react";
-import { useTonConnectUI } from "@tonconnect/ui-react";
-import { beginCell } from "@ton/core";
+import { useState, useEffect } from "react";
 import {
   getCart,
   createOrder,
   removeFromCart,
-  createTonCheckout,
-  verifyTonPayment,
-  cancelTonPayment,
   applyPromoCode,
   getLoyaltyBalance,
-  getTonRate,
   type CartItem,
-  type TonRate,
 } from "../api";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
-
-// Кодирует текстовый комментарий в base64-BoC по стандарту TON:
-// op-code 0x00000000 (32 бита) + UTF-8 текст в string-tail (с overflow-
-// рефами если длинный). @ton/core делает это правильно из коробки —
-// никаких ручных BoC-байтов.
-function encodeCommentToBoc(text: string): string {
-  const cell = beginCell().storeUint(0, 32).storeStringTail(text).endCell();
-  return cell.toBoc().toString("base64");
-}
 
 function pluralize(n: number, forms: [string, string, string]) {
   const abs = Math.abs(n) % 100;
@@ -48,7 +32,6 @@ interface CheckoutProps {
 export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onCartChange, sellerLink }: CheckoutProps) {
   const { formatPrice, settings } = useSettings();
   const lang = settings.lang;
-  const [tonConnectUI] = useTonConnectUI();
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -57,11 +40,6 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [itemsExpanded, setItemsExpanded] = useState(false);
   const [removingId, setRemovingId] = useState<number | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<"manual" | "ton">("manual");
-  const [paymentStage, setPaymentStage] = useState<"idle" | "creating" | "awaiting_signature" | "verifying" | "success" | "error">("idle");
-  const [paymentError, setPaymentError] = useState<string>("");
-  const [pendingOrderId, setPendingOrderId] = useState<number | null>(null);
-  const verifyTimerRef = useRef<number | null>(null);
 
   // Промокод и лояльность
   const [promoInput, setPromoInput] = useState<string>("");
@@ -71,55 +49,11 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
   const [loyaltyBalance, setLoyaltyBalance] = useState<number>(0);
   const [pointsToRedeem, setPointsToRedeem] = useState<number>(0);
 
-  // TON курс (live preview перед оплатой)
-  const [tonRate, setTonRate] = useState<TonRate | null>(null);
-
-  // Countdown оплаты — устанавливается после createTonCheckout
-  const [intentExpiresAt, setIntentExpiresAt] = useState<string | null>(null);
-  const [intentSecondsLeft, setIntentSecondsLeft] = useState<number>(0);
-
   useEffect(() => {
     getLoyaltyBalance(userId)
       .then((r) => setLoyaltyBalance(r.balance))
       .catch(() => setLoyaltyBalance(0));
   }, [userId]);
-
-  // Когда выбран TON-метод — тащим курс с бэка и обновляем каждые 30 сек,
-  // чтобы юзер видел актуальную сумму. Очищаем таймер при размонтировании
-  // или смене метода.
-  useEffect(() => {
-    if (paymentMethod !== "ton") {
-      setTonRate(null);
-      return;
-    }
-    let cancelled = false;
-    const tick = () => {
-      getTonRate()
-        .then((r) => { if (!cancelled) setTonRate(r); })
-        .catch(() => {});
-    };
-    tick();
-    const id = window.setInterval(tick, 30_000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(id);
-    };
-  }, [paymentMethod]);
-
-  // Countdown секунды до expires_at — обновляется раз в секунду.
-  useEffect(() => {
-    if (!intentExpiresAt) {
-      setIntentSecondsLeft(0);
-      return;
-    }
-    const update = () => {
-      const left = Math.max(0, Math.floor((new Date(intentExpiresAt).getTime() - Date.now()) / 1000));
-      setIntentSecondsLeft(left);
-    };
-    update();
-    const id = window.setInterval(update, 1000);
-    return () => window.clearInterval(id);
-  }, [intentExpiresAt]);
 
   useEffect(() => {
     getCart(userId).then(setItems).catch(console.error).finally(() => setLoading(false));
@@ -188,13 +122,10 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
     if (!city.trim()) return;
     if (items.length === 0) return;
 
-    if (paymentMethod === "ton") {
-      await handleTonCheckout();
-      return;
-    }
-
     setSubmitting(true);
     try {
+      // Один flow: создаём заказ, бэк сам триггерит DM с инвойсом и
+      // ton:// кнопкой. Юзер видит success-экран и идёт в Telegram.
       await createOrder(userId, {
         user_name: (userName || "").trim() || undefined,
         user_username: (userName || "").trim() || undefined,
@@ -211,116 +142,6 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
     } finally {
       setSubmitting(false);
     }
-  };
-
-  // TON flow:
-  // 1) Создаём ордер на бэке + получаем payment_intent (адрес/сумма/payload).
-  // 2) Через TonConnect UI просим юзера подписать транзакцию (откроется
-  //    Tonkeeper / Wallet bot / любой подключённый кошелёк).
-  // 3) После того как промис sendTransaction резолвится — поллим
-  //    /api/payments/ton/verify до тех пор, пока бэк не увидит транзакцию
-  //    в TonAPI и не пометит ордер paid (макс ~3 минуты).
-  const handleTonCheckout = async () => {
-    setPaymentStage("creating");
-    setPaymentError("");
-    setSubmitting(true);
-    try {
-      const checkout = await createTonCheckout({
-        user_id: userId,
-        user_name: (userName || "").trim() || undefined,
-        user_username: (userName || "").trim() || undefined,
-        user_address: city.trim(),
-        items,
-        total,
-        promo_code: promoApplied?.code,
-        points_redeemed: effectivePoints || undefined,
-      });
-      setPendingOrderId(checkout.order_id);
-      setIntentExpiresAt(checkout.payment_intent.expires_at);
-      onCartChange?.();
-      setPaymentStage("awaiting_signature");
-
-      // Кодируем payload как простой text-комментарий. TonConnect примет
-      // его в поле message body, кошелёк покажет юзеру.
-      // Согласно спеке TonConnect — payload это base64-закодированный BoC
-      // ячейки с комментарием. Используем готовую утилиту через btoa и
-      // структуру `OP::comment(text)` (op=0, потом text).
-      const payloadCell = encodeCommentToBoc(checkout.payment_intent.payload);
-
-      await tonConnectUI.sendTransaction({
-        validUntil: Math.floor(Date.now() / 1000) + 600,
-        messages: [
-          {
-            address: checkout.payment_intent.to_address,
-            amount: checkout.payment_intent.amount_nano,
-            payload: payloadCell,
-          },
-        ],
-      });
-
-      // Транзакция подписана и отправлена в сеть. Начинаем поллить
-      // verify-эндпойнт. Сеть TON в среднем подтверждает за 5-15 сек,
-      // даём окно в 3 минуты с шагом 5 сек.
-      setPaymentStage("verifying");
-      let attempts = 0;
-      const maxAttempts = 36; // 36 × 5s = 3 мин
-      const tick = async () => {
-        attempts++;
-        try {
-          const r = await verifyTonPayment(checkout.order_id);
-          if (r.payment_status === "paid") {
-            setPaymentStage("success");
-            setOrderSuccess(true);
-            onOrderSuccess?.();
-            return;
-          }
-        } catch (err) {
-          console.error("verify failed", err);
-        }
-        if (attempts >= maxAttempts) {
-          setPaymentStage("error");
-          setPaymentError(
-            "Не удалось подтвердить оплату за 3 минуты. Если ты подписал транзакцию — она может прийти позже, проверь /track в боте."
-          );
-          return;
-        }
-        verifyTimerRef.current = window.setTimeout(tick, 5000);
-      };
-      tick();
-    } catch (e) {
-      console.error(e);
-      // Если юзер закрыл кошелёк / отменил подпись — отзываем ордер.
-      if (pendingOrderId) {
-        cancelTonPayment(pendingOrderId).catch(() => {});
-      }
-      setPaymentStage("error");
-      setPaymentError(e instanceof Error ? e.message : "Ошибка оплаты");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // Cleanup опроса verify при размонтировании
-  useEffect(() => {
-    return () => {
-      if (verifyTimerRef.current) window.clearTimeout(verifyTimerRef.current);
-    };
-  }, []);
-
-  // Юзер отменяет ожидание оплаты (закрыл кошелёк, передумал, etc).
-  // Шлём cancel на бэк → баллы и промо возвращаются (refundOrderArtifacts).
-  const handleCancelTonPending = async () => {
-    if (!pendingOrderId) return;
-    if (!window.confirm(lang === "ru" ? "Отменить оплату? Бонусы и промокод вернутся." : "Cancel payment? Points and promo will be refunded.")) return;
-    if (verifyTimerRef.current) window.clearTimeout(verifyTimerRef.current);
-    try {
-      await cancelTonPayment(pendingOrderId);
-    } catch {}
-    setPaymentStage("idle");
-    setPendingOrderId(null);
-    setIntentExpiresAt(null);
-    setPaymentError("");
-    onBack();
   };
 
   const handleWriteSeller = () => {
@@ -836,92 +657,12 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
           </div>
         )}
 
-        {/* Способ оплаты */}
-        <div style={styles.payMethodGroup}>
-          <span style={styles.payMethodLabel}>
-            {lang === "ru" ? "Способ оплаты" : "Payment method"}
-          </span>
-          <div style={styles.payMethodRow}>
-            <button
-              type="button"
-              onClick={() => setPaymentMethod("manual")}
-              style={{
-                ...styles.payMethodCard,
-                ...(paymentMethod === "manual" ? styles.payMethodCardActive : null),
-              }}
-              aria-pressed={paymentMethod === "manual"}
-            >
-              <span style={styles.payMethodIcon} aria-hidden>💬</span>
-              <span style={styles.payMethodTextWrap}>
-                <span style={styles.payMethodTitle}>
-                  {lang === "ru" ? "Через продавца" : "Via seller"}
-                </span>
-                <span style={styles.payMethodHint}>
-                  {lang === "ru" ? "Свяжемся в Telegram" : "We'll DM you"}
-                </span>
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setPaymentMethod("ton")}
-              style={{
-                ...styles.payMethodCard,
-                ...(paymentMethod === "ton" ? styles.payMethodCardActive : null),
-              }}
-              aria-pressed={paymentMethod === "ton"}
-            >
-              <span style={styles.payMethodIcon} aria-hidden>💎</span>
-              <span style={styles.payMethodTextWrap}>
-                <span style={styles.payMethodTitle}>TON</span>
-                <span style={styles.payMethodHint}>
-                  {lang === "ru" ? "Криптой через кошелёк" : "Crypto via wallet"}
-                </span>
-              </span>
-            </button>
-          </div>
+        {/* Информация о следующем шаге — оплата приходит в бота */}
+        <div style={styles.nextStepCard}>
+          {lang === "ru"
+            ? "После подтверждения в Telegram придёт сообщение с реквизитами и кнопкой «Оплатить» — всё уже посчитано, нужно только подтвердить в кошельке."
+            : "After confirming, you'll get a Telegram message with payment details and a Pay button — everything's prefilled, just confirm in your wallet."}
         </div>
-
-        {/* Live preview суммы в TON ДО подписи */}
-        {paymentMethod === "ton" && paymentStage === "idle" && tonRate && total > 0 && (
-          <div style={styles.tonPreview}>
-            <div style={styles.tonPreviewRow}>
-              <span style={styles.tonPreviewLabel}>{lang === "ru" ? "К оплате в TON" : "Pay in TON"}</span>
-              <span style={styles.tonPreviewAmount}>≈ {(total / tonRate.rate_usd).toFixed(2)} TON</span>
-            </div>
-            <div style={styles.tonPreviewMeta}>
-              {lang === "ru" ? "Курс: " : "Rate: "}
-              <strong style={{ color: "var(--text)" }}>${tonRate.rate_usd.toFixed(2)}/TON</strong>
-              {" · "}
-              {lang === "ru" ? "обновляется каждые 30с" : "refreshed every 30s"}
-            </div>
-          </div>
-        )}
-
-        {paymentMethod === "ton" && paymentStage !== "idle" && (
-          <div style={styles.tonStatus}>
-            {paymentStage === "creating" && (lang === "ru" ? "Создаём заказ…" : "Creating order…")}
-            {paymentStage === "awaiting_signature" && (lang === "ru" ? "Подпиши транзакцию в кошельке…" : "Sign in your wallet…")}
-            {paymentStage === "verifying" && (lang === "ru" ? "Ждём подтверждение в сети TON (до 3 мин)…" : "Waiting for TON network (up to 3 min)…")}
-            {paymentStage === "error" && (
-              <span style={{ color: "var(--accent)" }}>{paymentError || (lang === "ru" ? "Ошибка оплаты" : "Payment error")}</span>
-            )}
-            {/* Countdown intent'а: 15 минут */}
-            {intentExpiresAt && intentSecondsLeft > 0 && paymentStage !== "error" && (
-              <div style={styles.tonCountdown}>
-                {lang === "ru" ? "Истекает через " : "Expires in "}
-                <strong style={{ fontVariantNumeric: "tabular-nums" }}>
-                  {Math.floor(intentSecondsLeft / 60)}:{String(intentSecondsLeft % 60).padStart(2, "0")}
-                </strong>
-              </div>
-            )}
-            {/* Кнопка отмены — пока ждём, можно слинять */}
-            {pendingOrderId && (paymentStage === "awaiting_signature" || paymentStage === "verifying" || paymentStage === "error") && (
-              <button type="button" onClick={handleCancelTonPending} style={styles.tonCancelBtn}>
-                {lang === "ru" ? "Отменить и вернуть бонусы" : "Cancel & refund points"}
-              </button>
-            )}
-          </div>
-        )}
       </form>
 
       <div className="zen-bag-summary zen-bag-summary--bottom">
@@ -1441,12 +1182,17 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 8,
     marginTop: 14,
   },
+  // Лейбл «ПРОМОКОД» матчит cityFieldCaption — Proxima Nova caps-track-out.
   discountLabel: {
-    fontSize: 12,
-    fontWeight: 600,
-    color: "var(--muted)",
-    letterSpacing: "0.04em",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 3,
+    padding: "0 4px",
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: "0.14em",
     textTransform: "uppercase",
+    color: "var(--muted)",
   },
   discountLabelRow: {
     display: "flex",
@@ -1462,27 +1208,32 @@ const styles: Record<string, React.CSSProperties> = {
     gridTemplateColumns: "1fr auto",
     gap: 8,
   },
+  // Инпут промокода матчит cityField (height 56, скруглённый, мягкий fill)
+  // плюс типографика как в cityFieldInput.
   promoInput: {
-    padding: "12px 14px",
-    height: 44,
+    height: 56,
+    padding: "0 18px",
     background: "var(--surface-elevated)",
     border: "1px solid var(--border)",
-    borderRadius: 12,
-    fontSize: 14,
-    fontWeight: 600,
-    letterSpacing: "0.04em",
-    fontFamily: "inherit",
+    borderRadius: 16,
+    fontFamily: '"Proxima Nova", -apple-system, system-ui, sans-serif',
+    fontSize: 15,
+    fontWeight: 500,
+    letterSpacing: "-0.005em",
     boxSizing: "border-box",
     color: "var(--text)",
+    outline: "none",
+    lineHeight: 1.2,
   },
   promoApplyBtn: {
-    height: 44,
-    padding: "0 18px",
-    background: "var(--text)",
+    height: 56,
+    padding: "0 22px",
+    background: "var(--accent)",
     color: "#fff",
     border: "none",
-    borderRadius: 12,
-    fontSize: 13,
+    borderRadius: 16,
+    fontFamily: '"Proxima Nova", -apple-system, system-ui, sans-serif',
+    fontSize: 14,
     fontWeight: 600,
     cursor: "pointer",
     letterSpacing: "-0.005em",
@@ -1541,6 +1292,16 @@ const styles: Record<string, React.CSSProperties> = {
     fontVariantNumeric: "tabular-nums",
     minWidth: 64,
     textAlign: "right",
+  },
+  nextStepCard: {
+    marginTop: 14,
+    padding: "12px 16px",
+    background: "var(--surface-elevated)",
+    border: "1px solid var(--border)",
+    borderRadius: 14,
+    fontSize: 13,
+    color: "var(--muted)",
+    lineHeight: 1.5,
   },
   cityFieldActive: {
     borderColor: "var(--accent)",

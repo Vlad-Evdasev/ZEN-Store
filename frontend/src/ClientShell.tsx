@@ -1,19 +1,9 @@
-import { TonConnectUIProvider } from "@tonconnect/ui-react";
 import App from "./App";
 
-// Манифест публично доступен на vercel — фронт отдаёт
-// public/tonconnect-manifest.json по корню.
-const tonConnectManifestUrl =
-  typeof window !== "undefined"
-    ? `${window.location.origin}/tonconnect-manifest.json`
-    : "/tonconnect-manifest.json";
-
-// Customer-shell: TonConnectUIProvider + App. Грузится лениво из main.tsx,
-// чтобы /admin не тащил @tonconnect/ui-react и @ton/core (~600KB).
+// Customer-shell: только App. Раньше тут был TonConnectUIProvider —
+// убрали после перехода на bot-flow оплаты (ton:// инвойс приходит
+// в Telegram-бот, кошелёк юзер открывает оттуда). @tonconnect/ui-react
+// и @ton/core больше не входят в bundle вообще.
 export default function ClientShell() {
-  return (
-    <TonConnectUIProvider manifestUrl={tonConnectManifestUrl}>
-      <App />
-    </TonConnectUIProvider>
-  );
+  return <App />;
 }
