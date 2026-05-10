@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   getPosts,
   getRelatedPosts,
@@ -15,6 +16,7 @@ interface NewArrivalsPageProps {
   onInitialPostHandled?: () => void;
 }
 
+// Микрокэш постов в localStorage.
 const POSTS_CACHE_KEY = "raw_cache_v1:posts";
 function readPostsCache(): Post[] | null {
   if (typeof window === "undefined") return null;
@@ -30,11 +32,47 @@ function writePostsCache(posts: Post[]): void {
   try { window.localStorage.setItem(POSTS_CACHE_KEY, JSON.stringify(posts)); } catch {}
 }
 
+// Кэш aspect-ratio по URL картинки — нужно чтобы при первом рендере
+// плитки сразу знали свою высоту, и масонри-сетка не «дёргала» соседей
+// когда фото подгружаются. Запоминаем в localStorage, чтобы при втором
+// заходе вообще не было shift-а.
+const ASPECT_CACHE_KEY = "raw_cache_v1:post_aspects";
+type AspectCache = Record<string, number>;
+let aspectCacheMem: AspectCache | null = null;
+function loadAspectCache(): AspectCache {
+  if (aspectCacheMem) return aspectCacheMem;
+  if (typeof window === "undefined") { aspectCacheMem = {}; return aspectCacheMem; }
+  try {
+    const raw = window.localStorage.getItem(ASPECT_CACHE_KEY);
+    aspectCacheMem = raw ? (JSON.parse(raw) as AspectCache) : {};
+  } catch {
+    aspectCacheMem = {};
+  }
+  return aspectCacheMem!;
+}
+function persistAspectCache() {
+  if (typeof window === "undefined" || !aspectCacheMem) return;
+  try { window.localStorage.setItem(ASPECT_CACHE_KEY, JSON.stringify(aspectCacheMem)); } catch {}
+}
+function rememberAspect(url: string, ratio: number) {
+  const c = loadAspectCache();
+  c[url] = ratio;
+  // Дебаунс записи через тики — чтобы не лупить localStorage на каждом
+  // onLoad. Простой setTimeout-долбёжки достаточно.
+  persistAspectScheduled();
+}
+let persistTimer: number | null = null;
+function persistAspectScheduled() {
+  if (typeof window === "undefined") return;
+  if (persistTimer !== null) return;
+  persistTimer = window.setTimeout(() => {
+    persistAspectCache();
+    persistTimer = null;
+  }, 500);
+}
+
 // ── Иконки ──────────────────────────────────────────────────────────
 
-// Классический канцелярский пушпин. ВСЕГДА outline — никаких заливок.
-// Активное состояние сигналим только через цвет (currentColor → accent).
-// Strokе чуть толще когда активный, чтобы визуально выделить.
 function PinIcon({ active = false, size = 26 }: { active?: boolean; size?: number }) {
   return (
     <svg
@@ -54,7 +92,7 @@ function PinIcon({ active = false, size = 26 }: { active?: boolean; size?: numbe
   );
 }
 
-function ShareIcon({ size = 26 }: { size?: number }) {
+function ShareIcon({ size = 22 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
@@ -95,11 +133,28 @@ function MasonryCard({ post, onOpen }: MasonryCardProps) {
   const touchStartX = useRef<number | null>(null);
   const touchMoveDx = useRef(0);
 
+  // Берём cached aspect-ratio для текущей картинки, чтобы placeholder
+  // имел правильную высоту с первого рендера. Если кэша нет — дефолт 3:4.
+  const cachedAspect = (() => {
+    const cur = images[currentIdx];
+    if (!cur) return null;
+    const c = loadAspectCache();
+    return c[cur] ?? null;
+  })();
+  const [liveAspect, setLiveAspect] = useState<number | null>(cachedAspect);
+
+  // При смене currentIdx (мульти-фото) обновляем aspect из кэша.
+  useEffect(() => {
+    const cur = images[currentIdx];
+    if (!cur) return;
+    const c = loadAspectCache();
+    if (c[cur] && c[cur] !== liveAspect) setLiveAspect(c[cur]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIdx]);
+
   if (images.length === 0) return null;
 
   const handleClick = () => {
-    // Берём rect самой картинки (не всей карточки) — анимация морфит
-    // именно изображение, а не carrier-блок.
     const rect = imgRef.current?.getBoundingClientRect()
       ?? ref.current?.getBoundingClientRect()
       ?? null;
@@ -140,6 +195,20 @@ function MasonryCard({ post, onOpen }: MasonryCardProps) {
     handleClick();
   };
 
+  const handleImgLoad = () => {
+    const img = imgRef.current;
+    if (!img || !img.naturalWidth || !img.naturalHeight) return;
+    const ratio = img.naturalWidth / img.naturalHeight;
+    rememberAspect(images[currentIdx], ratio);
+    if (Math.abs((liveAspect ?? 0) - ratio) > 0.01) {
+      setLiveAspect(ratio);
+    }
+  };
+
+  // Поставлю aspect-ratio через CSS — браузер сам резервирует высоту
+  // под картинку до её загрузки, и сетка не дёргается.
+  const aspectStyle = liveAspect ? { aspectRatio: `${liveAspect}` } : { aspectRatio: "3 / 4" };
+
   return (
     <div
       ref={ref}
@@ -153,13 +222,14 @@ function MasonryCard({ post, onOpen }: MasonryCardProps) {
       className="zen-pin-card"
       style={cardStyles.card}
     >
-      <div style={cardStyles.imageWrap}>
+      <div style={{ ...cardStyles.imageWrap, ...aspectStyle }}>
         <img
           ref={imgRef}
           key={currentIdx}
           src={images[currentIdx]}
           alt=""
           loading="lazy"
+          onLoad={handleImgLoad}
           style={cardStyles.image}
         />
         {isMulti && (
@@ -185,10 +255,7 @@ function MasonryCard({ post, onOpen }: MasonryCardProps) {
   );
 }
 
-// ── Expanded fullscreen view ─────────────────────────────────────────
-// FLIP-анимация: при открытии картинка стартует в координатах thumb-а
-// (через инверсный transform), затем плавно «расправляется» до своих
-// финальных размеров на экране. На закрытии — обратная анимация.
+// ── Expanded fullscreen view (FLIP, scrollable, synced animations) ──
 
 interface ExpandedViewProps {
   post: Post;
@@ -197,13 +264,20 @@ interface ExpandedViewProps {
   startIndex: number;
   userId: string;
   lang: Lang;
+  /** Если true — на закрытии используем простой fade без FLIP (для back-nav
+   *  в стеке: открыли related → возвращаемся к предыдущему посту, у которого
+   *  thumb уже не виден на экране). */
+  fadeOnClose: boolean;
   onClose: () => void;
   onPinToggle: (postId: number, newPinned: boolean, newCount: number) => void;
   onShare: (post: Post) => void;
   onOpenRelated: (post: Post, thumbRect: DOMRect | null, src: string, photoIndex: number) => void;
 }
 
-function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onClose, onPinToggle, onShare, onOpenRelated }: ExpandedViewProps) {
+function ExpandedView({
+  post, startRect, startSrc, startIndex, userId, lang,
+  fadeOnClose, onClose, onPinToggle, onShare, onOpenRelated,
+}: ExpandedViewProps) {
   const images = getPostImages(post);
   const [currentIdx, setCurrentIdx] = useState(Math.min(startIndex, Math.max(images.length - 1, 0)));
   const [phase, setPhase] = useState<"opening" | "open" | "closing">("opening");
@@ -216,9 +290,6 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
   const sheetRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
 
-  // «Похожие посты» — подтягиваем по post.id (бэк фильтрует по category)
-  // и рендерим masonry-сетку под caption / cta. Если категории нет —
-  // бэк просто отдаёт случайные посты, лента всё равно живая.
   const [related, setRelated] = useState<Post[]>([]);
   useEffect(() => {
     let cancelled = false;
@@ -228,16 +299,13 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
     return () => { cancelled = true; };
   }, [post.id, userId]);
 
-  // Для optimistic-пина с защитой от race-condition.
   const reqVersion = useRef(0);
 
-  // FLIP: измеряем где картинка ХОЧЕТ оказаться, считаем дельту до
-  // thumb-а, накладываем её через transform мгновенно, потом отпускаем
-  // — CSS-transition сам анимирует transform → identity.
+  // FLIP-open: при наличии thumb-rect картинка стартует в его координатах,
+  // CSS-transition плавно переносит её в финальные размеры.
   useLayoutEffect(() => {
     const img = imageRef.current;
     if (!img || !startRect) {
-      // Если rect-а нет (deep-link, без thumb-а) — просто фейдим.
       requestAnimationFrame(() => requestAnimationFrame(() => setPhase("open")));
       return;
     }
@@ -251,73 +319,70 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
       img.style.transformOrigin = "top left";
       img.style.transition = "none";
       img.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
-      // Force reflow перед очисткой transition + transform = identity.
       void img.offsetWidth;
-      img.style.transition = "transform 320ms cubic-bezier(0.22, 1, 0.36, 1)";
+      img.style.transition = "transform 360ms cubic-bezier(0.22, 1, 0.36, 1)";
       img.style.transform = "translate3d(0, 0, 0) scale(1, 1)";
-      requestAnimationFrame(() => setPhase("open"));
+      setPhase("open");
     };
     if (img.complete && img.naturalWidth > 0) {
       apply();
     } else {
-      // Картинка ещё грузится — ждём, иначе getBoundingClientRect даст
-      // 0×0 и анимация сорвётся.
       const onLoad = () => {
         img.removeEventListener("load", onLoad);
         apply();
       };
       img.addEventListener("load", onLoad);
-      // Запасной таймаут на случай, если картинка кешированная и
-      // load уже отстрелил между маунтом и addEventListener.
-      const t = setTimeout(apply, 50);
+      const t = setTimeout(apply, 60);
       return () => { img.removeEventListener("load", onLoad); clearTimeout(t); };
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Body class «zen-inspire-overlay-on» добавляем при маунте,
+  // СНИМАЕМ синхронно в requestClose (а не на unmount), чтобы фоновая
+  // страница начинала расправляться одновременно с закрытием диалога,
+  // а не после него — иначе чувствуется «прыжок».
+  useEffect(() => {
+    document.body.classList.add("zen-inspire-overlay-on");
+    return () => {
+      document.body.classList.remove("zen-inspire-overlay-on");
+    };
+  }, []);
+
   const requestClose = useCallback(() => {
     if (phase === "closing") return;
+    // Снимаем body-class СРАЗУ — фон-страница начинает плавно
+    // возвращаться к нормальному масштабу одновременно с FLIP-close.
+    document.body.classList.remove("zen-inspire-overlay-on");
+
     const img = imageRef.current;
-    if (!img || !startRect) {
-      setPhase("closing");
-      setTimeout(onClose, 240);
-      return;
+    if (img && startRect && !fadeOnClose) {
+      const final = img.getBoundingClientRect();
+      const dx = startRect.left - final.left;
+      const dy = startRect.top - final.top;
+      const sx = startRect.width / Math.max(final.width, 1);
+      const sy = startRect.height / Math.max(final.height, 1);
+      img.style.transformOrigin = "top left";
+      img.style.transition = "transform 320ms cubic-bezier(0.4, 0, 0.2, 1)";
+      img.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
     }
-    // Обратная FLIP: считаем текущую позицию картинки, целевая — thumb.
-    const final = img.getBoundingClientRect();
-    const dx = startRect.left - final.left;
-    const dy = startRect.top - final.top;
-    const sx = startRect.width / Math.max(final.width, 1);
-    const sy = startRect.height / Math.max(final.height, 1);
-    img.style.transformOrigin = "top left";
-    img.style.transition = "transform 280ms cubic-bezier(0.4, 0, 0.2, 1)";
-    img.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
     setPhase("closing");
-    setTimeout(onClose, 280);
-  }, [phase, onClose, startRect]);
+    setTimeout(onClose, fadeOnClose ? 220 : 320);
+  }, [phase, onClose, startRect, fadeOnClose]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") requestClose(); };
     window.addEventListener("keydown", onKey);
+    // Body overflow:hidden + сохраняем текущую позицию скролла, чтобы
+    // после закрытия диалога юзер оказался на том же месте в инспайре.
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    // Page-scale: чуть «уезжает» назад фон-страница, даёт глубину как
-    // в Pinterest. CSS-переход на .zen-inspire-page → scale(0.96) +
-    // brightness(0.78). Снимаем класс при unmount → плавно
-    // возвращается на 1.0.
-    document.body.classList.add("zen-inspire-overlay-on");
     return () => {
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
-      document.body.classList.remove("zen-inspire-overlay-on");
     };
   }, [requestClose]);
 
-  // Пин с защитой от race condition. Каждый вызов получает новую версию;
-  // при возврате с сети применяем ответ, только если версия не устарела.
-  // Это решает баг «при быстрых нажатиях пин ломается» — даже если
-  // ответы приходят не в том порядке, оптимистичный стейт остаётся
-  // консистентным.
   const handlePin = async () => {
     const myVersion = ++reqVersion.current;
     const wasPinned = post.user_liked;
@@ -387,7 +452,6 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
     }
   };
 
-  // Для closing — sheet/backdrop тоже фейдятся вместе с обратной FLIP.
   const backdropOpacity = phase === "closing" ? 0 : (phase === "open" ? Math.max(0.3, 1 - dragY / 500) : 0);
 
   return (
@@ -398,7 +462,7 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
         ...expandedStyles.root,
         background: `rgba(var(--bg-rgb), ${0.98 * backdropOpacity})`,
         pointerEvents: phase === "closing" ? "none" : "auto",
-        transition: "background 280ms cubic-bezier(0.4, 0, 0.2, 1)",
+        transition: "background 320ms cubic-bezier(0.4, 0, 0.2, 1)",
       }}
     >
       <div
@@ -410,13 +474,10 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
         style={{
           ...expandedStyles.sheet,
           transform: `translate3d(0, ${dragY}px, 0)`,
-          opacity: phase === "closing" ? 0 : (phase === "open" ? 1 : 0),
-          transition: phase === "open"
-            ? (dragY === 0 ? "opacity 320ms ease, transform 260ms cubic-bezier(0.22, 1, 0.36, 1)" : "none")
-            : "opacity 280ms cubic-bezier(0.4, 0, 0.2, 1)",
-          // На фазе opening/closing UI-элементы (кроме картинки) скрыты,
-          // чтобы не перекрывать FLIP-анимацию.
-          visibility: phase === "opening" ? "hidden" : "visible",
+          opacity: phase === "open" ? 1 : 0,
+          transition: dragY === 0
+            ? "opacity 320ms cubic-bezier(0.4, 0, 0.2, 1), transform 260ms cubic-bezier(0.22, 1, 0.36, 1)"
+            : "none",
         }}
       >
         <button
@@ -452,8 +513,6 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
           )}
         </div>
 
-        {/* Action row: голые иконки, без круглых кнопок-бэкграундов.
-            Пин в активном состоянии — заполненный в accent. */}
         <div style={expandedStyles.actionsRow}>
           <button
             type="button"
@@ -496,14 +555,9 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
           </div>
         )}
 
-        {/* Похожие посты — Pinterest «больше как этот».
-            Используем тот же масонри-grid, что и на главной странице,
-            чтобы UX был знакомым. */}
+        {/* Related grid: тот же масонри-сетка что и на главной, без заголовка. */}
         {related.length > 0 && (
           <div style={expandedStyles.relatedWrap}>
-            <div style={expandedStyles.relatedHead}>
-              {lang === "ru" ? "Больше как этот" : "More like this"}
-            </div>
             <div className="zen-pin-grid">
               {related.map((rp) => (
                 <MasonryCard
@@ -516,10 +570,6 @@ function ExpandedView({ post, startRect, startSrc, startIndex, userId, lang, onC
           </div>
         )}
       </div>
-
-      {/* Floating image для FLIP — вынесен поверх sheet, чтобы анимация
-          не перекрывалась загрузкой / paint-ом sheet содержимого.
-          Видим только во время opening/closing — потом скрыт. */}
     </div>
   );
 }
@@ -541,6 +591,13 @@ function SkeletonCard({ index = 0 }: { index?: number }) {
 
 type FilterTab = "all" | "liked";
 
+interface ExpandedItem {
+  post: Post;
+  rect: DOMRect | null;
+  src: string;
+  index: number;
+}
+
 export function NewArrivalsPage({
   userId,
   initialPostId,
@@ -551,7 +608,13 @@ export function NewArrivalsPage({
   const [posts, setPosts] = useState<Post[]>(() => readPostsCache() ?? []);
   const [loading, setLoading] = useState<boolean>(() => (readPostsCache() ?? []).length === 0);
   const [tab, setTab] = useState<FilterTab>("all");
-  const [expanded, setExpanded] = useState<{ post: Post; rect: DOMRect | null; src: string; index: number } | null>(null);
+
+  // Текущий открытый пост + стек предыдущих (для back-навигации по
+  // related-цепочке). Тап на related ПИХАЕТ текущий в стек и заменяет
+  // expanded на новый. Тап на close из expanded: если стек не пуст —
+  // ПОПАЕТ предыдущий, иначе закрывает всё.
+  const [expanded, setExpanded] = useState<ExpandedItem | null>(null);
+  const [stack, setStack] = useState<ExpandedItem[]>([]);
 
   const scrollMemory = useRef<Record<FilterTab, number>>({ all: 0, liked: 0 });
 
@@ -580,6 +643,7 @@ export function NewArrivalsPage({
     if (!target) return;
     const cover = getPostImages(target)[0] ?? "";
     setExpanded({ post: target, rect: null, src: cover, index: 0 });
+    setStack([]);
     onInitialPostHandled?.();
   }, [initialPostId, posts, onInitialPostHandled]);
 
@@ -596,6 +660,15 @@ export function NewArrivalsPage({
         prev && prev.post.id === postId
           ? { ...prev, post: { ...prev.post, user_liked: newPinned, likes_count: newCount } }
           : prev
+      );
+      // И в стеке тоже синхронизируем — на случай, если юзер вернётся
+      // к предыдущему посту, чтобы он отражал актуальное состояние пина.
+      setStack((prev) =>
+        prev.map((it) =>
+          it.post.id === postId
+            ? { ...it, post: { ...it.post, user_liked: newPinned, likes_count: newCount } }
+            : it
+        )
       );
     },
     []
@@ -628,6 +701,35 @@ export function NewArrivalsPage({
     }
   }, []);
 
+  const openInitial = useCallback((post: Post, rect: DOMRect | null, src: string, index: number) => {
+    // Чистый «первый» open — стек обнуляем.
+    setStack([]);
+    setExpanded({ post, rect, src, index });
+  }, []);
+
+  const openRelated = useCallback((post: Post, rect: DOMRect | null, src: string, index: number) => {
+    // Текущий expanded уходит в стек, новый становится верхним.
+    setStack((prev) => (expanded ? [...prev, expanded] : prev));
+    setExpanded({ post, rect, src, index });
+  }, [expanded]);
+
+  const closeExpanded = useCallback(() => {
+    setStack((prev) => {
+      if (prev.length === 0) {
+        // Финальное закрытие — снимаем expanded.
+        setExpanded(null);
+        return prev;
+      }
+      // Back-nav — попаем последний.
+      const next = prev.slice(0, -1);
+      const last = prev[prev.length - 1];
+      // rect=null чтобы новый expanded НЕ пытался сделать FLIP из
+      // мёртвого related-thumb-а — просто фейдится.
+      setExpanded({ ...last, rect: null });
+      return next;
+    });
+  }, []);
+
   const visiblePosts = useMemo(() => {
     if (tab === "liked") return posts.filter((p) => p.user_liked);
     return posts;
@@ -651,9 +753,35 @@ export function NewArrivalsPage({
     switchTab(tab === "all" ? "liked" : "all");
   }, [tab, switchTab]);
 
+  // FAB и ExpandedView — портируем в document.body, чтобы они не были
+  // потомками .zen-inspire-page (на котором transform-родитель создаёт
+  // containing-block для position: fixed). Без этого FAB прилипал к
+  // странице, а sheet внутри expanded ловил неправильную scrollTop.
+  const portalTarget = typeof document !== "undefined" ? document.body : null;
+
+  const fabNode = (!loading && posts.length > 0) ? (
+    <button
+      type="button"
+      onClick={toggleViaFab}
+      className="zen-pin-fab"
+      aria-label={tab === "all" ? t(lang, "postsFabPinned") : t(lang, "postsFabAll")}
+      title={tab === "all" ? t(lang, "postsFabPinned") : t(lang, "postsFabAll")}
+      style={{
+        ...pageStyles.fab,
+        background: "var(--surface)",
+        color: tab === "liked" ? "var(--accent)" : "var(--text)",
+        borderColor: tab === "liked" ? "var(--accent)" : "var(--border)",
+      }}
+    >
+      <PinIcon active={tab === "liked"} size={22} />
+      {tab === "liked" && pinnedCount > 0 && (
+        <span style={pageStyles.fabBadge}>{pinnedCount}</span>
+      )}
+    </button>
+  ) : null;
+
   return (
     <div style={pageStyles.wrap} className="zen-inspire-page">
-      {/* Welcome bubble — компактный, всегда сверху */}
       <div style={pageStyles.headerArea}>
         <div style={pageStyles.bubbleRow}>
           <div style={pageStyles.avatar}>R</div>
@@ -688,56 +816,30 @@ export function NewArrivalsPage({
             <MasonryCard
               key={post.id}
               post={post}
-              onOpen={(p, rect, src, index) => setExpanded({ post: p, rect, src, index })}
+              onOpen={openInitial}
             />
           ))}
         </div>
       )}
 
-      {!loading && posts.length > 0 && (
-        <button
-          type="button"
-          onClick={toggleViaFab}
-          className="zen-pin-fab"
-          aria-label={tab === "all" ? t(lang, "postsFabPinned") : t(lang, "postsFabAll")}
-          title={tab === "all" ? t(lang, "postsFabPinned") : t(lang, "postsFabAll")}
-          style={{
-            ...pageStyles.fab,
-            // Активный режим — обводим accent + цвет иконки accent.
-            // НЕ заливаем — выделение «по контуру», как просил юзер.
-            background: "var(--surface)",
-            color: tab === "liked" ? "var(--accent)" : "var(--text)",
-            borderColor: tab === "liked" ? "var(--accent)" : "var(--border)",
-          }}
-        >
-          <PinIcon active={tab === "liked"} size={22} />
-          {tab === "liked" && pinnedCount > 0 && (
-            <span style={pageStyles.fabBadge}>{pinnedCount}</span>
-          )}
-        </button>
-      )}
+      {portalTarget && fabNode && createPortal(fabNode, portalTarget)}
 
-      {expanded && (
+      {portalTarget && expanded && createPortal(
         <ExpandedView
-          // key по post.id даёт чистый монт при тапе на «похожий» пост —
-          // чтобы FLIP-анимация и состояние стартовали заново.
-          key={expanded.post.id}
+          key={expanded.post.id + ":" + stack.length}
           post={expanded.post}
           startRect={expanded.rect}
           startSrc={expanded.src}
           startIndex={expanded.index}
           userId={userId}
           lang={lang}
-          onClose={() => setExpanded(null)}
+          fadeOnClose={stack.length > 0}
+          onClose={closeExpanded}
           onPinToggle={handlePinToggle}
           onShare={handleShare}
-          onOpenRelated={(p, rect, src, index) => {
-            // Скроллим к верху expanded sheet чтобы юзер сразу видел
-            // открытое фото (а не остался в конце ленты «похожих»).
-            requestAnimationFrame(() => window.scrollTo(0, 0));
-            setExpanded({ post: p, rect, src, index });
-          }}
-        />
+          onOpenRelated={openRelated}
+        />,
+        portalTarget
       )}
     </div>
   );
@@ -864,6 +966,8 @@ const cardStyles: Record<string, React.CSSProperties> = {
     WebkitTapHighlightColor: "transparent",
     transition: "transform 0.15s ease",
   },
+  // ВАЖНО: aspect-ratio задаётся inline в MasonryCard через aspectStyle,
+  // тут только базовые свойства.
   imageWrap: {
     position: "relative" as const,
     width: "100%",
@@ -871,9 +975,11 @@ const cardStyles: Record<string, React.CSSProperties> = {
     borderRadius: 12,
     background: "rgba(0,0,0,0.04)",
   },
+  // Картинка тянется на весь wrap; так как у wrap зафиксирован
+  // aspect-ratio, высота резервируется до загрузки картинки.
   image: {
     width: "100%",
-    height: "auto",
+    height: "100%",
     display: "block",
     objectFit: "cover" as const,
     userSelect: "none" as const,
@@ -934,7 +1040,6 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     background: "var(--bg)",
     overflowY: "auto" as const,
     overflowX: "hidden" as const,
-    willChange: "transform, opacity",
     display: "flex",
     flexDirection: "column" as const,
     overscrollBehavior: "contain" as const,
@@ -972,7 +1077,6 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     objectFit: "contain" as const,
     userSelect: "none" as const,
     WebkitUserSelect: "none" as const,
-    willChange: "transform",
   },
   dotsRow: {
     position: "absolute" as const,
@@ -1000,7 +1104,6 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     width: 18,
     borderRadius: 3,
   },
-  // Action row: голые иконки без круглых кнопок-фонов.
   actionsRow: {
     flex: "0 0 auto",
     display: "flex",
@@ -1035,7 +1138,7 @@ const expandedStyles: Record<string, React.CSSProperties> = {
   },
   productCtaWrap: {
     flex: "0 0 auto",
-    padding: "10px 20px calc(env(safe-area-inset-bottom, 0px) + 18px)",
+    padding: "10px 20px 18px",
   },
   productCta: {
     display: "inline-block",
@@ -1048,18 +1151,12 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     textDecoration: "none",
     letterSpacing: "0.01em",
   },
+  // Related-сетка снизу: padding-bottom большой, чтобы последние плитки
+  // не упирались в край экрана. + бордер сверху для визуального разделения.
   relatedWrap: {
     flex: "0 0 auto",
-    padding: "20px 4px calc(env(safe-area-inset-bottom, 0px) + 24px)",
+    padding: "20px 4px calc(env(safe-area-inset-bottom, 0px) + 80px)",
     borderTop: "1px solid var(--border)",
-    marginTop: 16,
-  },
-  relatedHead: {
-    fontSize: 13,
-    fontWeight: 700,
-    color: "var(--muted)",
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.08em",
-    padding: "0 12px 12px",
+    marginTop: 12,
   },
 };
