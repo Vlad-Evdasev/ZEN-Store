@@ -1637,6 +1637,10 @@ html[data-theme="light"] .zen-app .product-card-price {
 body.zen-inspire-overlay-on .zen-app {
   transform: scale(1.08);
   opacity: 0;
+  /* GPU-композитный hint только во время overlay-анимации — иначе будет
+     сидеть на отдельном слое всегда (хуже для памяти). Это убирает
+     «дёрганое» исчезновение хедера при открытии expanded view. */
+  will-change: transform, opacity;
 }
 
 /* FAB-переключатель «Всё / Закреплённые» в правом нижнем углу. */

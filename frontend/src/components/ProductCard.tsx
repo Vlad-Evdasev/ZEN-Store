@@ -183,9 +183,12 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 0,
     minHeight: 0,
   },
-  // Wishlist-кнопка теперь живёт в строке name (inline), не overlay
-  // на фото. Без бэкграунда / тени — просто иконка. marginRight bleeds
-  // в правый padding descWrap, чтобы сердце было ближе к краю карточки.
+  // Wishlist-кнопка живёт в строке name (inline). marginRight: -6
+  // bleeds в правый padding descWrap (heart ближе к краю карточки).
+  // marginTop: -4 — оптический «подъём» вверх: визуальный центр сердечка
+  // лежит ниже его bounding-box-центра из-за формы (тонкий хвостик
+  // снизу), поэтому при чистом center-align оно кажется ниже названия.
+  // Микроподъём на 4px возвращает баланс.
   wishlistBtn: {
     flexShrink: 0,
     width: 32,
@@ -193,6 +196,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 0,
     marginLeft: 8,
     marginRight: -6,
+    marginTop: -4,
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
@@ -207,6 +211,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: 28,
     height: 28,
     marginRight: -4,
+    marginTop: -3,
   },
   descWrap: {
     position: "relative",

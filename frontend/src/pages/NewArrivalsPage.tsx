@@ -309,38 +309,40 @@ function computeSheetAnim({
   fadeOnClose: boolean;
   enterAnim: "flip" | "zoom" | "fade";
 }): React.CSSProperties {
-  // Тайминги: main open/close — плавнее и спокойнее (460ms),
-  // back-nav (zoom-in / slide-out) — быстрее (220ms) чтобы навигация
-  // между связанными постами чувствовалась мгновенной, без задержки.
+  // Тайминги: main open/close — 460ms (плавно, как раскрытие карточки
+  // товара в каталоге). Back-nav — 280ms (быстрее, snappy переключение
+  // между связанными постами) с одинаковой easing-кривой и без scale,
+  // чтобы две половины (close+open) воспринимались как одна
+  // непрерывная анимация перехода, а не двухстадийный stutter.
   if (phase === "open") {
     const isZoom = enterAnim === "zoom";
-    const dur = isZoom ? 240 : 460;
+    const dur = isZoom ? 280 : 460;
     return {
       opacity: 1,
-      transform: `translate3d(0, ${dragY}px, 0) scale(1)`,
+      transform: `translate3d(0, ${dragY}px, 0)`,
       transition: dragY === 0
-        ? `opacity ${dur}ms cubic-bezier(0.4, 0, 0.2, 1), transform ${dur}ms cubic-bezier(0.22, 1, 0.36, 1)`
+        ? `opacity ${dur}ms cubic-bezier(0.22, 1, 0.36, 1), transform ${dur}ms cubic-bezier(0.22, 1, 0.36, 1)`
         : "none",
     };
   }
   if (phase === "opening") {
-    if (enterAnim === "zoom") {
-      return { opacity: 0, transform: "translate3d(0, 0, 0) scale(1.04)", transition: "none" };
-    }
-    return { opacity: 0, transform: "translate3d(0, 0, 0) scale(1)", transition: "none" };
+    // Back-nav (zoom) тоже стартует с opacity 0, БЕЗ scale — простой
+    // fade сравним по ощущению с зеркальным fade-out close. Юзер
+    // воспринимает «бесшовный переход», а не стадии.
+    return { opacity: 0, transform: "translate3d(0, 0, 0)", transition: "none" };
   }
   // phase = closing
   if (fadeOnClose) {
     return {
       opacity: 0,
-      transform: "translate3d(0, 50px, 0) scale(1)",
-      transition: "opacity 220ms cubic-bezier(0.4, 0, 0.2, 1), transform 220ms cubic-bezier(0.4, 0, 0.2, 1)",
+      transform: "translate3d(0, 30px, 0)",
+      transition: "opacity 280ms cubic-bezier(0.22, 1, 0.36, 1), transform 280ms cubic-bezier(0.22, 1, 0.36, 1)",
     };
   }
   return {
     opacity: 0,
-    transform: `translate3d(0, ${dragY}px, 0) scale(1)`,
-    transition: "opacity 460ms cubic-bezier(0.4, 0, 0.2, 1)",
+    transform: `translate3d(0, ${dragY}px, 0)`,
+    transition: "opacity 460ms cubic-bezier(0.22, 1, 0.36, 1)",
   };
 }
 
@@ -444,8 +446,10 @@ function ExpandedView({
       img.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
     }
     setPhase("closing");
-    // Main FLIP-close 460ms (плавно), back-nav slide-fade 220ms (snappy).
-    setTimeout(onClose, fadeOnClose ? 220 : 460);
+    // Main FLIP-close 460ms, back-nav slide-fade 280ms — оба используют
+    // одну easing-кривую, общая длительность back-nav close+open ~560ms
+    // ощущается как непрерывный переход, а не два этапа.
+    setTimeout(onClose, fadeOnClose ? 280 : 460);
   }, [phase, onClose, onStartClose, startRect, fadeOnClose]);
 
   useEffect(() => {
@@ -1211,10 +1215,14 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     display: "block",
     objectFit: "contain" as const,
     borderRadius: 18,
-    boxShadow: "0 12px 32px -12px rgba(0, 0, 0, 0.35)",
     userSelect: "none" as const,
     WebkitUserSelect: "none" as const,
-    // Подсказка браузеру держать максимальное качество при ресемплинге.
+    // box-shadow убран — он вызывал per-frame repaint при FLIP-трансформации
+    // и анимация дёргалась. Image-only с border-radius уже выглядит как
+    // полноценная карточка, тень избыточна.
+    // will-change подсказывает браузеру композитить картинку на GPU-слое
+    // → плавная анимация transform без перерасчётов на CPU.
+    willChange: "transform",
     imageRendering: "auto" as const,
   },
   dotsRow: {
