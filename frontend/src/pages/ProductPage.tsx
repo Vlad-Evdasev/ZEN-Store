@@ -101,12 +101,24 @@ export function ProductPage({
     };
   }, []);
 
-  // FLIP-open: hero-CONTAINER стартует в координатах thumbRect, затем
-  // transform-анимируется в свою фуллскрин-позицию. ВАЖНО: используем
-  // UNIFORM scale (одинаковый по X и Y), чтобы сохранить aspect-ratio
-  // картинки. Если scale-X != scale-Y, image внутри визуально squish-
-  // ится при анимации — это «прыжок aspect ratio» в баге пользователя.
-  // Container центрируется внутри thumbRect для плавного входа.
+  // FLIP-open: seamless thumb → hero. Это сложно потому что aspect-ratio
+  // thumb (1:1 в каталоге) ≠ aspect hero (4:5). Object-fit:cover в каждом
+  // показывает РАЗНЫЕ crop одной и той же картинки → если просто FLIP-нуть
+  // image, content в момент перехода «прыгает».
+  //
+  // Решение: MAX-scale + clip-path inset на image внутри hero-контейнера.
+  //
+  //  1) Container scales using MAX(thumbW/finalW, thumbH/finalH) — он
+  //     ВЫСТУПАЕТ за пределы thumb в одной dimension. Centered on thumb.
+  //  2) Clip-path на image инсайд cuts excess пиксели до visible-area
+  //     равной thumb position+size. И insetY/insetX точно совпадают с
+  //     thumb's object-fit:cover crop.
+  //  3) На FLIP container scale ↑ к 1 + clip-path inset ↓ к 0 →
+  //     контейнер растёт, image content постепенно ОТКРЫВАЕТСЯ
+  //     (un-crops к full hero view).
+  //
+  // Visible content ВСЕГДА совпадает между thumb и FLIP-start. Никакого
+  // прыжка aspect/content.
   useLayoutEffect(() => {
     const hero = heroRef.current;
     if (!hero || !thumbRect) {
@@ -116,23 +128,39 @@ export function ProductPage({
     const apply = () => {
       const final = hero.getBoundingClientRect();
       if (final.width === 0 || final.height === 0) return;
-      // Uniform scale — берём минимальный, чтобы container полностью
-      // умещался внутри thumbRect (без выхода за края).
-      const scale = Math.min(
+      // MAX scale — container выступает за thumb (не вмещается внутрь).
+      const scale = Math.max(
         thumbRect.width / final.width,
         thumbRect.height / final.height,
       );
       const scaledW = final.width * scale;
       const scaledH = final.height * scale;
-      // Центрируем уменьшенный container внутри thumbRect.
-      const dx = thumbRect.left + (thumbRect.width - scaledW) / 2 - final.left;
-      const dy = thumbRect.top + (thumbRect.height - scaledH) / 2 - final.top;
+      const excessW = scaledW - thumbRect.width;
+      const excessH = scaledH - thumbRect.height;
+      // Container centered on thumb (extends beyond in one dim).
+      const dx = (thumbRect.left - excessW / 2) - final.left;
+      const dy = (thumbRect.top - excessH / 2) - final.top;
+      // Clip-path percentages — каждая сторона imeget crop = excess/2/scaledDim.
+      const insetY = (excessH / (2 * scaledH)) * 100;
+      const insetX = (excessW / (2 * scaledW)) * 100;
+
       hero.style.transformOrigin = "top left";
       hero.style.transition = "none";
       hero.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${scale})`;
+      const imgs = hero.querySelectorAll("img");
+      imgs.forEach((img) => {
+        img.style.transition = "none";
+        img.style.clipPath = `inset(${insetY}% ${insetX}%)`;
+      });
+
       void hero.offsetWidth;
+
       hero.style.transition = `transform ${ANIM_DURATION}ms cubic-bezier(0.45, 0, 0.55, 1)`;
       hero.style.transform = "translate3d(0, 0, 0) scale(1)";
+      imgs.forEach((img) => {
+        img.style.transition = `clip-path ${ANIM_DURATION}ms cubic-bezier(0.45, 0, 0.55, 1)`;
+        img.style.clipPath = "inset(0)";
+      });
       setPhase("open");
     };
     apply();
@@ -191,11 +219,10 @@ export function ProductPage({
     }, 400);
   };
 
-  // requestClose: на тап back-кнопки. Снимаем dim-класс (main
-  // расправляется параллельно), FLIP-back hero-container в thumbRect,
-  // через 520ms зовём onBack для размонтирования.
-  // Uniform scale (как при open) — чтобы aspect картинки не «прыгал»
-  // во время сворачивания.
+  // requestClose: зеркало open — container FLIP-back в thumb position +
+  // image clip-path расширяется обратно для seamless content match с
+  // thumb's crop. Visible image при анимации closes ВСЕГДА матчит
+  // thumb content — image не прыгает в момент unmount-а оверлея.
   const requestClose = useCallback(() => {
     if (phase === "closing") return;
     document.body.classList.remove("zen-product-overlay-on");
@@ -203,17 +230,27 @@ export function ProductPage({
     const hero = heroRef.current;
     if (hero && thumbRect) {
       const final = hero.getBoundingClientRect();
-      const scale = Math.min(
+      const scale = Math.max(
         thumbRect.width / Math.max(final.width, 1),
         thumbRect.height / Math.max(final.height, 1),
       );
       const scaledW = final.width * scale;
       const scaledH = final.height * scale;
-      const dx = thumbRect.left + (thumbRect.width - scaledW) / 2 - final.left;
-      const dy = thumbRect.top + (thumbRect.height - scaledH) / 2 - final.top;
+      const excessW = scaledW - thumbRect.width;
+      const excessH = scaledH - thumbRect.height;
+      const dx = (thumbRect.left - excessW / 2) - final.left;
+      const dy = (thumbRect.top - excessH / 2) - final.top;
+      const insetY = (excessH / (2 * scaledH)) * 100;
+      const insetX = (excessW / (2 * scaledW)) * 100;
+
       hero.style.transformOrigin = "top left";
       hero.style.transition = `transform ${ANIM_DURATION}ms cubic-bezier(0.45, 0, 0.55, 1)`;
       hero.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${scale})`;
+      const imgs = hero.querySelectorAll("img");
+      imgs.forEach((img) => {
+        img.style.transition = `clip-path ${ANIM_DURATION}ms cubic-bezier(0.45, 0, 0.55, 1)`;
+        img.style.clipPath = `inset(${insetY}% ${insetX}%)`;
+      });
     }
     setPhase("closing");
     setTimeout(onBack, ANIM_DURATION);

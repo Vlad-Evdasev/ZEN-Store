@@ -1694,21 +1694,36 @@ body.zen-product-header-up .zen-app > header {
   z-index: 1300;
 }
 
-/* Search-row на каталоге это position:fixed, но из-за transform на
-   родительском .zen-app > main она при overlay scale(1.08) визуально
-   «прыгает» (containing block становится transformed-родителем). Скрываем
-   её во время оверлея — выглядит чище чем шифт + scale. */
+/* Search-row на каталоге это position:fixed top:68px. При overlay
+   карточки main scale(1.08) делает transformed-родителя — pill визуально
+   «уезжает» и масштабируется некрасиво. Решение: уезжаем search-row
+   ВВЕРХ (translateY -120%) с fade, чтобы он логично «уходил» под хедер
+   быстрее чем разворачивается main. Современно, плавно, без рывков.
+   На close: возвращается обратно тем же путём (delay 200ms чтобы
+   main успел опуститься первым). */
+.zen-app .zen-catalog-search-row,
+.zen-app .zen-catalog-search-shelf {
+  transition:
+    opacity 320ms cubic-bezier(0.4, 0, 0.2, 1) 200ms,
+    transform 320ms cubic-bezier(0.4, 0, 0.2, 1) 200ms;
+}
 body.zen-inspire-overlay-on .zen-app .zen-catalog-search-row,
-body.zen-product-overlay-on .zen-app .zen-catalog-search-row,
+body.zen-product-overlay-on .zen-app .zen-catalog-search-row {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-120%);
+  transition:
+    opacity 280ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 320ms cubic-bezier(0.4, 0, 1, 1);
+  pointer-events: none;
+}
 body.zen-inspire-overlay-on .zen-app .zen-catalog-search-shelf,
 body.zen-product-overlay-on .zen-app .zen-catalog-search-shelf {
   opacity: 0;
-  transition: opacity 240ms cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateY(-100%);
+  transition:
+    opacity 280ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 320ms cubic-bezier(0.4, 0, 1, 1);
   pointer-events: none;
-}
-.zen-app .zen-catalog-search-row,
-.zen-app .zen-catalog-search-shelf {
-  transition: opacity 240ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 body.zen-inspire-overlay-on .zen-app > header,
 body.zen-product-overlay-on .zen-app > header {

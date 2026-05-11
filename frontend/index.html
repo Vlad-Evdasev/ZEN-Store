@@ -9,7 +9,13 @@
       } catch (e) { document.documentElement.setAttribute('data-theme', 'light'); }
     </script>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
+    <!-- interactive-widget=overlays-content: при появлении мобильной
+         клавиатуры она ПОВЕРХ контента (без сжимания/шифта). Без этого
+         iOS репозиционирует position:fixed элементы над клавиатурой
+         (bottom-nav «всплывает», под ним вылазит body bg сквозь
+         прозрачную Telegram-клавиатуру). С overlays-content весь
+         layout остаётся на своём месте, клавиатура просто плывёт сверху. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=overlays-content" />
     <meta name="theme-color" content="#0a0a0a" />
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <title>RAW — Магазин одежды</title>
