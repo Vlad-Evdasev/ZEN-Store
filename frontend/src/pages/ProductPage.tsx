@@ -101,24 +101,18 @@ export function ProductPage({
     };
   }, []);
 
-  // FLIP-open: seamless thumb → hero. Это сложно потому что aspect-ratio
-  // thumb (1:1 в каталоге) ≠ aspect hero (4:5). Object-fit:cover в каждом
-  // показывает РАЗНЫЕ crop одной и той же картинки → если просто FLIP-нуть
-  // image, content в момент перехода «прыгает».
+  // FLIP-open: seamless thumb → hero с сохранением:
+  //  1) content crop (object-fit:cover показал бы РАЗНЫЕ области image
+  //     в thumb 1:1 vs hero 4:5),
+  //  2) rounded corners (thumb имеет 12px, hero — 18px; чистый scale
+  //     transform на container даёт визуально square углы при scale<1).
   //
-  // Решение: MAX-scale + clip-path inset на image внутри hero-контейнера.
-  //
-  //  1) Container scales using MAX(thumbW/finalW, thumbH/finalH) — он
-  //     ВЫСТУПАЕТ за пределы thumb в одной dimension. Centered on thumb.
-  //  2) Clip-path на image инсайд cuts excess пиксели до visible-area
-  //     равной thumb position+size. И insetY/insetX точно совпадают с
-  //     thumb's object-fit:cover crop.
-  //  3) На FLIP container scale ↑ к 1 + clip-path inset ↓ к 0 →
-  //     контейнер растёт, image content постепенно ОТКРЫВАЕТСЯ
-  //     (un-crops к full hero view).
-  //
-  // Visible content ВСЕГДА совпадает между thumb и FLIP-start. Никакого
-  // прыжка aspect/content.
+  // Реализация:
+  //  - Container scales using MAX(thumbW/finalW, thumbH/finalH).
+  //  - Clip-path inset на image cuts excess до visible thumb-area.
+  //  - Clip-path round задаёт visible border-radius. Round COMPENSATED
+  //    за scale: round = visible_radius / scale → visible_radius constant.
+  //    На FLIP-start: round = 12/scale (= 12px visible), на end: 18 (full).
   useLayoutEffect(() => {
     const hero = heroRef.current;
     if (!hero || !thumbRect) {
@@ -128,7 +122,6 @@ export function ProductPage({
     const apply = () => {
       const final = hero.getBoundingClientRect();
       if (final.width === 0 || final.height === 0) return;
-      // MAX scale — container выступает за thumb (не вмещается внутрь).
       const scale = Math.max(
         thumbRect.width / final.width,
         thumbRect.height / final.height,
@@ -137,12 +130,15 @@ export function ProductPage({
       const scaledH = final.height * scale;
       const excessW = scaledW - thumbRect.width;
       const excessH = scaledH - thumbRect.height;
-      // Container centered on thumb (extends beyond in one dim).
       const dx = (thumbRect.left - excessW / 2) - final.left;
       const dy = (thumbRect.top - excessH / 2) - final.top;
-      // Clip-path percentages — каждая сторона imeget crop = excess/2/scaledDim.
       const insetY = (excessH / (2 * scaledH)) * 100;
       const insetX = (excessW / (2 * scaledW)) * 100;
+      const RADIUS_THUMB = 12;
+      const RADIUS_HERO = 18;
+      // round в image-coords. При scale<1 image rendered меньше → visible
+      // round = round * scale. Нам нужен visible 12px при scale=N → round = 12/N.
+      const roundStart = RADIUS_THUMB / scale;
 
       hero.style.transformOrigin = "top left";
       hero.style.transition = "none";
@@ -150,7 +146,7 @@ export function ProductPage({
       const imgs = hero.querySelectorAll("img");
       imgs.forEach((img) => {
         img.style.transition = "none";
-        img.style.clipPath = `inset(${insetY}% ${insetX}%)`;
+        img.style.clipPath = `inset(${insetY}% ${insetX}% round ${roundStart}px)`;
       });
 
       void hero.offsetWidth;
@@ -159,7 +155,7 @@ export function ProductPage({
       hero.style.transform = "translate3d(0, 0, 0) scale(1)";
       imgs.forEach((img) => {
         img.style.transition = `clip-path ${ANIM_DURATION}ms cubic-bezier(0.45, 0, 0.55, 1)`;
-        img.style.clipPath = "inset(0)";
+        img.style.clipPath = `inset(0 round ${RADIUS_HERO}px)`;
       });
       setPhase("open");
     };
@@ -220,9 +216,8 @@ export function ProductPage({
   };
 
   // requestClose: зеркало open — container FLIP-back в thumb position +
-  // image clip-path расширяется обратно для seamless content match с
-  // thumb's crop. Visible image при анимации closes ВСЕГДА матчит
-  // thumb content — image не прыгает в момент unmount-а оверлея.
+  // image clip-path возвращается к thumb-crop с rounded thumb-corners.
+  // Visible image+corners при close ВСЕГДА матчат thumb.
   const requestClose = useCallback(() => {
     if (phase === "closing") return;
     document.body.classList.remove("zen-product-overlay-on");
@@ -242,6 +237,8 @@ export function ProductPage({
       const dy = (thumbRect.top - excessH / 2) - final.top;
       const insetY = (excessH / (2 * scaledH)) * 100;
       const insetX = (excessW / (2 * scaledW)) * 100;
+      const RADIUS_THUMB = 12;
+      const roundEnd = RADIUS_THUMB / scale;
 
       hero.style.transformOrigin = "top left";
       hero.style.transition = `transform ${ANIM_DURATION}ms cubic-bezier(0.45, 0, 0.55, 1)`;
@@ -249,7 +246,7 @@ export function ProductPage({
       const imgs = hero.querySelectorAll("img");
       imgs.forEach((img) => {
         img.style.transition = `clip-path ${ANIM_DURATION}ms cubic-bezier(0.45, 0, 0.55, 1)`;
-        img.style.clipPath = `inset(${insetY}% ${insetX}%)`;
+        img.style.clipPath = `inset(${insetY}% ${insetX}% round ${roundEnd}px)`;
       });
     }
     setPhase("closing");
