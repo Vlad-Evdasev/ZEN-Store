@@ -9,11 +9,12 @@ const PREVIEW_COUNT = 4;
 
 interface CatalogPreviewSectionProps {
   products: Product[];
-  onProductClick: (id: number) => void;
+  onProductClick: (id: number, thumbRect: DOMRect | null) => void;
   onViewAll: () => void;
   wishlistIds: Set<number>;
   onToggleWishlist: (id: number) => void;
   reviewStats?: Record<number, { count: number; avg: number }>;
+  hiddenProductId?: number | null;
 }
 
 export function CatalogPreviewSection({
@@ -23,6 +24,7 @@ export function CatalogPreviewSection({
   wishlistIds,
   onToggleWishlist,
   reviewStats: reviewStatsProp = {},
+  hiddenProductId = null,
 }: CatalogPreviewSectionProps) {
   const { settings } = useSettings();
   const lang = settings.lang;
@@ -47,7 +49,8 @@ export function CatalogPreviewSection({
           fillHeight
           descBlockMinHeight={DESC_BLOCK_MIN_HEIGHT}
           smallDescBlock
-          onClick={() => onProductClick(p.id)}
+          isHidden={hiddenProductId === p.id}
+          onClick={(rect) => onProductClick(p.id, rect)}
           inWishlist={wishlistIds.has(p.id)}
           onWishlistClick={(e) => {
             e.stopPropagation();

@@ -24,13 +24,17 @@ interface CatalogProps {
   /** Выбранные категории (если заданы — каталог в режиме controlled, выбор сохраняется при уходе на товар и назад) */
   selectedCategories?: Set<string>;
   onSelectedCategoriesChange?: React.Dispatch<React.SetStateAction<Set<string>>>;
-  onProductClick: (id: number) => void;
+  onProductClick: (id: number, thumbRect: DOMRect | null) => void;
   onStoreClick: (store: { id: number; name: string } | { category: string; name: string }) => void;
   wishlistIds: Set<number>;
   onToggleWishlist: (id: number) => void;
   hideStores?: boolean;
   /** Показывать фильтр по цене (для страницы полного каталога) */
   showPriceFilter?: boolean;
+  /** id товара, чей thumb сейчас скрыт (открыт в overlay / анимируется
+   *  обратно). На время анимации thumb рендерится с visibility:hidden,
+   *  чтобы не было «двойника» рядом с летящей картинкой. */
+  hiddenProductId?: number | null;
 }
 
 /** Теги категорий в каталоге: «Всё» + категории из API (синхронизированы с админкой) */
@@ -57,6 +61,7 @@ export function Catalog({
   onToggleWishlist,
   hideStores = false,
   showPriceFilter = false,
+  hiddenProductId = null,
 }: CatalogProps) {
   const { settings } = useSettings();
   const lang = settings.lang;
@@ -536,7 +541,8 @@ export function Catalog({
               product={p}
               compact
               sizeVariant="default"
-              onClick={() => onProductClick(p.id)}
+              isHidden={hiddenProductId === p.id}
+              onClick={(rect) => onProductClick(p.id, rect)}
               inWishlist={wishlistIds.has(p.id)}
               onWishlistClick={(e) => {
                 e.stopPropagation();

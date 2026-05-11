@@ -1,9 +1,12 @@
+import { useRef } from "react";
 import { useSettings } from "../context/SettingsContext";
 import type { Product } from "../api";
 
 interface ProductCardProps {
   product: Product;
-  onClick: () => void;
+  /** Принимает rect картинки-thumbnail в момент клика — используется
+   *  для FLIP-анимации открытия ProductPage. */
+  onClick: (thumbRect: DOMRect | null) => void;
   inWishlist?: boolean;
   onWishlistClick?: (e: React.MouseEvent) => void;
   compact?: boolean;
@@ -17,10 +20,18 @@ interface ProductCardProps {
   smallDescBlock?: boolean;
   /** Вариант соотношения сторон для masonry: по умолчанию 1:1, tall = 4:5 */
   sizeVariant?: "default" | "tall";
+  /** Скрыть thumb (когда товар сейчас в полёте — открыт в ProductPage
+   *  или анимируется обратно в thumb). Сохраняет место в сетке. */
+  isHidden?: boolean;
 }
 
-export function ProductCard({ product, onClick, inWishlist, onWishlistClick, compact, reviewCount, reviewAvg, fillHeight, descBlockMinHeight, smallDescBlock, sizeVariant = "default" }: ProductCardProps) {
+export function ProductCard({ product, onClick, inWishlist, onWishlistClick, compact, reviewCount, reviewAvg, fillHeight, descBlockMinHeight, smallDescBlock, sizeVariant = "default", isHidden = false }: ProductCardProps) {
   const { formatPrice } = useSettings();
+  const imgWrapRef = useRef<HTMLDivElement>(null);
+  const handleClick = () => {
+    const rect = imgWrapRef.current?.getBoundingClientRect() ?? null;
+    onClick(rect);
+  };
   const cardStyle = compact
     ? { ...styles.card, ...styles.cardCompact, ...(fillHeight ? styles.cardFillHeight : {}) }
     : { ...styles.card, ...(fillHeight ? styles.cardFillHeight : {}) };
@@ -51,7 +62,7 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      onClick();
+      handleClick();
     }
   };
   return (
@@ -59,15 +70,15 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
       className="product-card product-card--text-below"
       role="button"
       tabIndex={0}
-      onClick={onClick}
+      onClick={handleClick}
       onKeyDown={handleKeyDown}
       style={cardStyle}
     >
-      <div className="product-card__image-wrap" style={imageWrapStyle}>
+      <div ref={imgWrapRef} className="product-card__image-wrap" style={imageWrapStyle}>
         <img
           src={(product.image_urls && product.image_urls[0]) || product.image_url || "https://via.placeholder.com/200"}
           alt={product.name}
-          style={styles.image}
+          style={{ ...styles.image, visibility: isHidden ? "hidden" : "visible" }}
         />
       </div>
       <div className="product-card-desc" style={descWrapStyle}>

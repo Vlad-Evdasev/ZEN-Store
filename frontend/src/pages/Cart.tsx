@@ -8,7 +8,7 @@ interface CartProps {
   onBack?: () => void;
   onCheckout: () => void;
   onCartChange?: () => void;
-  onProductClick?: (productId: number) => void;
+  onProductClick?: (productId: number, thumbRect: DOMRect | null) => void;
 }
 
 export function Cart({
@@ -105,7 +105,11 @@ export function Cart({
                 opacity: isRemoving ? 0 : 1,
                 transform: isRemoving ? "translateX(12px)" : "translateX(0)",
               }}
-              onClick={clickable ? () => onProductClick!(item.product_id) : undefined}
+              onClick={clickable ? (e) => {
+                const wrap = e.currentTarget.querySelector(".zen-bag-thumb-wrap");
+                const rect = wrap?.getBoundingClientRect() ?? null;
+                onProductClick!(item.product_id, rect);
+              } : undefined}
               role={clickable ? "button" : undefined}
               tabIndex={clickable ? 0 : undefined}
               onKeyDown={
@@ -113,7 +117,7 @@ export function Cart({
                   ? (e) => {
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
-                        onProductClick!(item.product_id);
+                        onProductClick!(item.product_id, null);
                       }
                     }
                   : undefined

@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
-import { flushSync } from "react-dom";
 import { useTelegram } from "./hooks/useTelegram";
 import { TelegramAuth } from "./components/TelegramAuth";
 import { useWishlist } from "./hooks/useWishlist";
@@ -158,7 +157,16 @@ function App() {
   const initialNavRef = useRef<InitialNav>(readInitialNav());
   const [page, setPage] = useState<Page>(() => initialNavRef.current.page);
   const [pendingPostId, setPendingPostId] = useState<number | null>(() => initialNavRef.current.postId ?? null);
-  const [productId, setProductId] = useState<number | null>(null);
+  // productId был отдельным state для conditional render ProductPage.
+  // Теперь оверлей сам хранит id внутри productOverlay — отдельное
+  // состояние не нужно.
+  // ProductPage теперь рендерится как ОВЕРЛЕЙ (портал в body) поверх
+  // текущей страницы (catalog/favorites/cart/etc.). Каталог НЕ
+  // unmount-ится — он остаётся «внизу» и плавно затемняется. FLIP-
+  // анимация переносит thumb-картинку в полноразмерное hero.
+  // Симметрично expanded post: thumbRect — координаты тамбнейла в
+  // момент клика, нужны для FLIP-open и FLIP-close-back.
+  const [productOverlay, setProductOverlay] = useState<{ id: number; thumbRect: DOMRect | null } | null>(null);
   const [products, setProducts] = useState<Product[]>(() => loadCache<Product[]>("products") ?? []);
   const [stores, setStores] = useState<Store[]>(() => loadCache<Store[]>("stores") ?? []);
   const [categories, setCategories] = useState<Category[]>(() => loadCache<Category[]>("categories") ?? []);
@@ -173,7 +181,8 @@ function App() {
   const favoritesCount = products.filter((p) => wishlistIds.has(p.id)).length;
   const [menuOpen, setMenuOpen] = useState(false);
   const hamburgerRef = useRef<HTMLButtonElement | null>(null);
-  const [productReturnTo, setProductReturnTo] = useState<Page | null>(null);
+  // productReturnTo больше НЕ нужен — оверлейная ProductPage не меняет
+  // page, поэтому возврат «к предыдущему» — это просто закрытие оверлея.
   const [catalogSelectedCategories, setCatalogSelectedCategories] = useState<Set<string>>(() => new Set(["all"]));
   const mainScrollRef = useRef<HTMLElement | null>(null);
   const savedScrollTopRef = useRef(0);
@@ -309,28 +318,20 @@ function App() {
     };
   }, [page]);
 
-  const openProduct = (id: number, from?: Page) => {
-    const returnTo = from ?? page;
-    if (scrollableCatalogPages.includes(returnTo)) {
-      savedScrollTopRef.current = window.scrollY ?? document.documentElement?.scrollTop ?? document.body?.scrollTop ?? 0;
-    }
-    setProductId(id);
-    setProductReturnTo(returnTo);
-    setPage("product");
-    flushSync(() => {});
-    mainScrollRef.current?.scrollTo(0, 0);
-    requestAnimationFrame(() => {
-      mainScrollRef.current?.scrollTo(0, 0);
-    });
+  const openProduct = (id: number, _from?: Page, thumbRect: DOMRect | null = null) => {
+    // ProductPage теперь рендерится как ОВЕРЛЕЙ — НЕ переключаем page.
+    // Текущая страница (catalog/favorites/cart) остаётся mounted и
+    // плавно затемняется через body-class. thumbRect — координаты
+    // тамбнейла для FLIP-анимации.
+    setProductOverlay({ id, thumbRect });
   };
 
   const goBackFromProduct = () => {
-    if (productReturnTo) {
-      setPage(productReturnTo);
-      setProductReturnTo(null);
-    } else {
-      setPage("catalog");
-    }
+    // Закрытие оверлея: ProductPage сама запускает FLIP-close-анимацию
+    // и потом зовёт onBack → closeProductOverlay. setPage НЕ трогаем
+    // — пользователь возвращается к той же странице, на которой
+    // открыл товар (catalog/favorites/cart с сохранённым скроллом).
+    setProductOverlay(null);
   };
 
   const openCart = () => {
@@ -365,7 +366,7 @@ function App() {
   };
   const openCatalog = () => {
     setPage("catalog");
-    setProductId(null);
+    setProductOverlay(null);
   };
 
   const openCheckout = () => setPage("checkout");
@@ -450,12 +451,13 @@ function App() {
                 categories={categories}
                 selectedCategories={catalogSelectedCategories}
                 onSelectedCategoriesChange={setCatalogSelectedCategories}
-                onProductClick={(id) => openProduct(id, "catalog")}
+                onProductClick={(id, rect) => openProduct(id, "catalog", rect)}
                 onStoreClick={() => {}}
                 wishlistIds={wishlistIds}
                 onToggleWishlist={toggleWishlist}
                 hideStores
                 showPriceFilter
+                hiddenProductId={productOverlay?.id ?? null}
               />
             </section>
           </>
@@ -476,25 +478,18 @@ function App() {
             onBack={openCatalog}
           />
         )}
-        {page === "product" && productId && (
-          <ProductPage
-            product={products.find((p) => p.id === productId)}
-            cartItems={cartItems}
-            onBack={goBackFromProduct}
-            onCart={openCart}
-            onAddedToCart={refreshCartCount}
-            userId={userId}
-            inWishlist={hasInWishlist(productId)}
-            onToggleWishlist={() => toggleWishlist(productId)}
-          />
-        )}
+        {/* ProductPage больше НЕ рендерится здесь как conditional page —
+            теперь это оверлей-портал, который рендерится В САМОМ КОНЦЕ
+            (см. блок ниже после <BottomNavBar>), поверх любой текущей
+            страницы. Текущая страница (catalog/favorites/cart) остаётся
+            mounted, плавно затемняется через body-class. */}
         {page === "cart" && (
           <Cart
             userId={userId}
             onBack={openCatalog}
             onCheckout={openCheckout}
             onCartChange={refreshCartCount}
-            onProductClick={(id) => openProduct(id, "cart")}
+            onProductClick={(id, rect) => openProduct(id, "cart", rect)}
           />
         )}
         {page === "checkout" && (
@@ -534,9 +529,10 @@ function App() {
             products={products}
             productsLoading={productsLoading}
             wishlistIds={wishlistIds}
-            onProductClick={(id) => openProduct(id, "favorites")}
+            onProductClick={(id, rect) => openProduct(id, "favorites", rect)}
             onToggleWishlist={toggleWishlist}
             onBack={openCatalog}
+            hiddenProductId={productOverlay?.id ?? null}
           />
         )}
         </div>
@@ -559,6 +555,24 @@ function App() {
         />
       )}
     </div>
+    {/* ProductPage как оверлей-портал: рендерится поверх любой текущей
+        страницы (catalog/favorites/cart). FLIP-анимация открытия из
+        thumb-rect, body-class затемняет main-страницу, fixed back-кнопка
+        выше хедера. Сама ProductPage внутри управляет порталом. */}
+    {productOverlay && (
+      <ProductPage
+        key={productOverlay.id}
+        product={products.find((p) => p.id === productOverlay.id)}
+        cartItems={cartItems}
+        thumbRect={productOverlay.thumbRect}
+        onBack={goBackFromProduct}
+        onCart={openCart}
+        onAddedToCart={refreshCartCount}
+        userId={userId}
+        inWishlist={hasInWishlist(productOverlay.id)}
+        onToggleWishlist={() => toggleWishlist(productOverlay.id)}
+      />
+    )}
     </div>
   );
 }

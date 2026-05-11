@@ -11,10 +11,11 @@ interface StoreCatalogProps {
   store: { id: number; name: string } | { category: string; name: string };
   products: Product[];
   categoryLabels?: Record<string, string>;
-  onProductClick: (id: number) => void;
+  onProductClick: (id: number, thumbRect: DOMRect | null) => void;
   onBack: () => void;
   wishlistIds: Set<number>;
   onToggleWishlist: (id: number) => void;
+  hiddenProductId?: number | null;
 }
 
 export function StoreCatalog({
@@ -25,6 +26,7 @@ export function StoreCatalog({
   onBack,
   wishlistIds,
   onToggleWishlist,
+  hiddenProductId = null,
 }: StoreCatalogProps) {
   const { settings } = useSettings();
   const lang = settings.lang;
@@ -81,7 +83,8 @@ export function StoreCatalog({
               product={p}
               compact
               sizeVariant={idx % 3 === 0 ? "tall" : "default"}
-              onClick={() => onProductClick(p.id)}
+              isHidden={hiddenProductId === p.id}
+              onClick={(rect) => onProductClick(p.id, rect)}
               inWishlist={wishlistIds.has(p.id)}
               onWishlistClick={(e) => {
                 e.stopPropagation();

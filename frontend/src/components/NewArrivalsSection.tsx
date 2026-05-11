@@ -7,13 +7,14 @@ const PREVIEW_COUNT = 3;
 
 interface NewArrivalsSectionProps {
   products: Product[];
-  onProductClick: (id: number) => void;
+  onProductClick: (id: number, thumbRect: DOMRect | null) => void;
   onViewAll: () => void;
   wishlistIds: Set<number>;
   onToggleWishlist: (id: number) => void;
   reviewStats?: Record<number, { count: number; avg: number }>;
   /** Заполнять доступную высоту (каталог: от верха до карточек магазина) */
   fillAvailableSpace?: boolean;
+  hiddenProductId?: number | null;
 }
 
 export function NewArrivalsSection({
@@ -24,6 +25,7 @@ export function NewArrivalsSection({
   onToggleWishlist,
   reviewStats = {},
   fillAvailableSpace = false,
+  hiddenProductId = null,
 }: NewArrivalsSectionProps) {
   const { settings } = useSettings();
   const lang = settings.lang;
@@ -41,7 +43,8 @@ export function NewArrivalsSection({
         fillHeight
         descBlockMinHeight={DESC_BLOCK_MIN_HEIGHT}
         smallDescBlock
-        onClick={() => onProductClick(p.id)}
+        isHidden={hiddenProductId === p.id}
+        onClick={(rect) => onProductClick(p.id, rect)}
         inWishlist={wishlistIds.has(p.id)}
         onWishlistClick={(e) => {
           e.stopPropagation();

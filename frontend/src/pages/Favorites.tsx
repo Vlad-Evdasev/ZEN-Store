@@ -8,9 +8,10 @@ interface FavoritesProps {
   products: Product[];
   productsLoading?: boolean;
   wishlistIds: Set<number>;
-  onProductClick: (id: number) => void;
+  onProductClick: (id: number, thumbRect: DOMRect | null) => void;
   onToggleWishlist: (id: number) => void;
   onBack?: () => void;
+  hiddenProductId?: number | null;
 }
 
 export function Favorites({
@@ -20,6 +21,7 @@ export function Favorites({
   onProductClick,
   onToggleWishlist,
   onBack,
+  hiddenProductId = null,
 }: FavoritesProps) {
   const { settings } = useSettings();
   const lang = settings.lang;
@@ -87,7 +89,8 @@ export function Favorites({
               product={p}
               compact
               sizeVariant="default"
-              onClick={() => onProductClick(p.id)}
+              isHidden={hiddenProductId === p.id}
+              onClick={(rect) => onProductClick(p.id, rect)}
               inWishlist={true}
             />
           </div>
