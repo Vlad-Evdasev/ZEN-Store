@@ -13,6 +13,12 @@ declare global {
         expand: () => void;
         close: () => void;
         disableVerticalSwipes?: () => void;
+        /** Цвет фона WebView container (то что под нашим HTML). По дефолту
+         *  Telegram использует свой theme bg — на iOS при slide-up
+         *  клавиатуры это виден как «прозрачный» переход к нашему #000.
+         *  Выставляем сразу в #000 чтобы все слои совпадали. */
+        setBackgroundColor?: (color: string) => void;
+        setHeaderColor?: (color: string) => void;
         themeParams: { bg_color?: string; text_color?: string };
         openLink?: (url: string, options?: { try_instant_view?: boolean }) => void;
         openTelegramLink?: (url: string) => void;

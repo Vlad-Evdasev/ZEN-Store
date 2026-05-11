@@ -42,6 +42,12 @@ export function useTelegram() {
     tg.ready();
     tg.expand();
     tg.disableVerticalSwipes?.();
+    // Telegram WebView container bg по дефолту берёт цвет theme юзера —
+    // на iOS при slide-up клавиатуры это viable как «прозрачный» переход
+    // (Telegram bg выглядит чуть светлее нашего OLED-#000). Принудительно
+    // выставляем чёрный чтобы все слои совпадали и не было flash'а.
+    tg.setBackgroundColor?.("#000000");
+    tg.setHeaderColor?.("#000000");
   }
 
   return { tg, userId, userName, firstName, isInTelegram, setBrowserAuth };
