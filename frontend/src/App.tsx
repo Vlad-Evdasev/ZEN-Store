@@ -229,24 +229,45 @@ function App() {
     }
   }, []);
 
-  // Global focus-tracker: запоминаем когда input/textarea ПОТЕРЯЛ фокус.
-  // ProductCard и MasonryCard используют это чтобы НЕ открывать карточку
-  // сразу после blur input-а — на iOS Safari клик «сквозь» blur срабатывает,
-  // и handleClick видит activeElement=body (фокус уже снят), поэтому
-  // проверка `instanceof HTMLInputElement` не сработала. Timestamp-проверка
-  // через window-переменную надёжна.
+  // Global focus-tracker:
+  //  1) запоминаем когда input/textarea ПОТЕРЯЛ фокус (для __zenLastInputBlur);
+  //  2) добавляем body.zen-input-focused класс на focusin — для МГНОВЕННОГО
+  //     скрытия BottomNavBar (без задержки на vv.resize event), иначе
+  //     iOS успевает «всплыть» nav над клавиатурой на миллисекунду
+  //     (flicker).
   useEffect(() => {
-    const onFocusOut = (e: FocusEvent) => {
-      const t = e.target as HTMLElement | null;
-      if (!t) return;
-      const isInput = (t.tagName === "INPUT" && (t as HTMLInputElement).type !== "checkbox" && (t as HTMLInputElement).type !== "radio")
-        || t.tagName === "TEXTAREA";
-      if (isInput) {
-        (window as unknown as { __zenLastInputBlur?: number }).__zenLastInputBlur = Date.now();
+    const isInputEl = (t: EventTarget | null): boolean => {
+      if (!t) return false;
+      const el = t as HTMLElement;
+      if (el.tagName === "INPUT") {
+        const inp = el as HTMLInputElement;
+        return inp.type !== "checkbox" && inp.type !== "radio";
+      }
+      return el.tagName === "TEXTAREA";
+    };
+    const onFocusIn = (e: FocusEvent) => {
+      if (isInputEl(e.target)) {
+        document.body.classList.add("zen-input-focused");
       }
     };
+    const onFocusOut = (e: FocusEvent) => {
+      if (isInputEl(e.target)) {
+        (window as unknown as { __zenLastInputBlur?: number }).__zenLastInputBlur = Date.now();
+        // 50ms задержка чтобы не мигать при переключении между inputs.
+        setTimeout(() => {
+          const a = document.activeElement;
+          if (!isInputEl(a)) {
+            document.body.classList.remove("zen-input-focused");
+          }
+        }, 50);
+      }
+    };
+    document.addEventListener("focusin", onFocusIn, true);
     document.addEventListener("focusout", onFocusOut, true);
-    return () => document.removeEventListener("focusout", onFocusOut, true);
+    return () => {
+      document.removeEventListener("focusin", onFocusIn, true);
+      document.removeEventListener("focusout", onFocusOut, true);
+    };
   }, []);
 
   // VisualViewport-based keyboard compensation.

@@ -1646,17 +1646,18 @@ html[data-theme="light"] .zen-app .product-card-price {
    синхронизированы по таймингу и easing — выглядит как единое
    движение, но fixed-позиционирование не ломается. */
 .zen-app > main {
-  transform-origin: center center;
-  /* ease-in-out 520ms — синхронно с FLIP image transition. Картинка
-     и фон-страница меняются в одном темпе. */
-  transition: transform 520ms cubic-bezier(0.45, 0, 0.55, 1),
-              opacity 520ms cubic-bezier(0.45, 0, 0.55, 1);
+  /* ease-in-out 520ms — синхронно с FLIP image transition. */
+  transition: opacity 520ms cubic-bezier(0.45, 0, 0.55, 1);
 }
+/* Только opacity, БЕЗ transform: scale. Раньше transform на main
+   создавал containing-block для position:fixed детей (search-row).
+   Это вызывало position jump search-row при overlay-on/off — она
+   «прыгала» некрасиво. Теперь main только fades, search-row остаётся
+   на viewport-relative позиции, плавно угасает вместе с main. */
 body.zen-inspire-overlay-on .zen-app > main,
 body.zen-product-overlay-on .zen-app > main {
-  transform: scale(1.08);
   opacity: 0;
-  will-change: transform, opacity;
+  will-change: opacity;
 }
 /* Хедер и нав-бар УЕЗЖАЮТ за пределы экрана вместо фейда.
    Если фейдить — на полупрозрачной фазе сквозь хедер видно контент
@@ -1694,29 +1695,15 @@ body.zen-product-header-up .zen-app > header {
   z-index: 1300;
 }
 
-/* Search-row sync с main page dim — анимируется ТОЧНО как .zen-app > main
-   (scale 1.08 + opacity 0) с тем же easing и duration 520ms. Так search-
-   row не «прыгает» отдельно, а dim-ается ВМЕСТЕ с остальной страницей,
-   единым консистентным движением. Это решает «некрасиво прячется»:
-   pill теперь логически часть страницы которая уходит, а не отдельный
-   плавающий элемент с собственной странной анимацией. */
-.zen-app .zen-catalog-search-row,
-.zen-app .zen-catalog-search-shelf {
-  transition:
-    opacity 520ms cubic-bezier(0.45, 0, 0.55, 1),
-    transform 520ms cubic-bezier(0.45, 0, 0.55, 1);
-  transform-origin: center center;
-}
+/* Search-row на overlay-on: pointer-events disable чтобы клики не
+   проходили во время open. Opacity-fade наследуется естественно от
+   main → opacity 0 (main fades, search-row visible-в main fades с ним).
+   Никаких отдельных transform/transition — это вызывало рассинхрон
+   и визуальный «прыжок». */
 body.zen-inspire-overlay-on .zen-app .zen-catalog-search-row,
-body.zen-product-overlay-on .zen-app .zen-catalog-search-row {
-  opacity: 0;
-  transform: translateX(-50%) scale(1.08);
-  pointer-events: none;
-}
+body.zen-product-overlay-on .zen-app .zen-catalog-search-row,
 body.zen-inspire-overlay-on .zen-app .zen-catalog-search-shelf,
 body.zen-product-overlay-on .zen-app .zen-catalog-search-shelf {
-  opacity: 0;
-  transform: scale(1.08);
   pointer-events: none;
 }
 body.zen-inspire-overlay-on .zen-app > header,
@@ -1737,11 +1724,21 @@ body.zen-inspire-overlay-on .zen-pin-fab {
   pointer-events: none;
 }
 
-/* Keyboard-compensation: переменная --zen-kb-offset = высота клавиатуры,
-   обновляется в JS через visualViewport API (см. App.tsx). Translate-им
-   BottomNavBar ВНИЗ на эту высоту → nav уходит за пределы visible
-   viewport, под клавиатурой. Зрителю кажется что layout не сдвинулся
-   и клавиатура просто легла поверх. */
+/* Keyboard handling — двухуровневая защита:
+   1) МГНОВЕННО: focusin на input → body.zen-input-focused → nav
+      visibility:hidden + main padding-bottom:0. Перехватывает событие
+      ДО того как iOS успеет «всплыть» nav над клавиатурой (flicker).
+      Также убирает black bg где раньше был nav-padding.
+   2) ВТОРИЧНО: visualViewport.resize → --zen-kb-offset → translateY
+      на nav. На случай если visibility:hidden недостаточно. */
+body.zen-input-focused .zen-bottom-nav {
+  visibility: hidden;
+}
+body.zen-input-focused .zen-app main.zen-main--catalog,
+body.zen-input-focused .zen-app main.zen-main--edge,
+body.zen-input-focused .zen-app main.zen-main--inspire {
+  padding-bottom: 0 !important;
+}
 .zen-bottom-nav {
   transform: translateY(var(--zen-kb-offset, 0px));
   transition: transform 120ms cubic-bezier(0.4, 0, 0.2, 1);
