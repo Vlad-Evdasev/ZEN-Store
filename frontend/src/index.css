@@ -1673,17 +1673,21 @@ body.zen-inspire-overlay-on .zen-app > main {
    2) Хедер остаётся на месте при открытии/закрытии — не выезжает,
       не фейдится. Только меняется его bg-стиль.
    3) Современный premium-look (как Apple Photos, App Store, Mail). */
-body.zen-inspire-overlay-on .zen-app > header {
-  z-index: 1200;
-  background: rgba(var(--bg-rgb), 0.62);
-  backdrop-filter: blur(24px) saturate(160%);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
+/* Базовый z-index хедера задаётся отсюда (а НЕ inline в App.tsx),
+   чтобы overlay-override ниже мог поднять его без !important. */
+.zen-app > header {
+  z-index: 10;
   transition: background 460ms cubic-bezier(0.45, 0, 0.55, 1),
               backdrop-filter 460ms cubic-bezier(0.45, 0, 0.55, 1);
 }
-.zen-app > header {
-  transition: background 460ms cubic-bezier(0.45, 0, 0.55, 1),
-              backdrop-filter 460ms cubic-bezier(0.45, 0, 0.55, 1);
+/* При активном overlay: header выше outgoing-слоя (1200) и expanded-
+   слоя (1100), а также имеет frosted-glass подложку. Так image при
+   FLIP-открытии/закрытии проходит ПОД хедером (без наслаивания). */
+body.zen-inspire-overlay-on .zen-app > header {
+  z-index: 1300;
+  background: rgba(var(--bg-rgb), 0.62);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
 }
 
 /* FAB-пин-кнопка тоже скрывается во время overlay. */
@@ -1697,28 +1701,17 @@ body.zen-inspire-overlay-on .zen-pin-fab {
   pointer-events: none;
 }
 
-/* Outgoing back-nav: ТОЛЬКО image анимируется (transform), а sheet bg
-   градуально fades to transparent. Не-image content (back btn, actions,
-   description, related grid) уже скрыт через contentReady=false.
-   Юзер видит: «фото-карточка плавно сжимается и уходит» — всё что
-   вокруг неё либо моментально скрыто, либо проявляется previous post. */
+/* Outgoing back-nav: sheet bg градуально fades to transparent через
+   keyframe (применяется через .zen-sheet-force-close). А image внутри
+   sheet анимируется JS-FLIP-ом в свой startRect (см. forceClose
+   useLayoutEffect в ExpandedView) — возвращается ровно в thumb-rect
+   предыдущего поста, в related-сетке которого его открыли. */
 .zen-sheet-force-close {
   animation: zen-sheet-bg-out 520ms cubic-bezier(0.45, 0, 0.55, 1) forwards;
 }
 @keyframes zen-sheet-bg-out {
   from { background-color: rgba(var(--bg-rgb), 1); }
   to   { background-color: rgba(var(--bg-rgb), 0); }
-}
-/* Image внутри outgoing-sheet получает свой keyframe-transform для
-   squeeze-down эффекта. Применяется через класс zen-image-force-close
-   на самом <img>. */
-.zen-image-force-close {
-  animation: zen-image-out 520ms cubic-bezier(0.45, 0, 0.55, 1) forwards;
-  transform-origin: center center;
-}
-@keyframes zen-image-out {
-  from { transform: translate3d(0, 0, 0) scale(1); }
-  to   { transform: translate3d(0, 80px, 0) scale(0.78); }
 }
 
 /* FAB-переключатель «Всё / Закреплённые» в правом нижнем углу. */

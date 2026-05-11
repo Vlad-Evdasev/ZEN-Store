@@ -122,9 +122,15 @@ function getPostImages(post: Post): string[] {
 interface MasonryCardProps {
   post: Post;
   onOpen: (post: Post, thumbRect: DOMRect | null, src: string, photoIndex: number) => void;
+  /** Если true — thumb-картинка прячется через visibility (но место в
+   *  сетке остаётся). Используется когда этот пост сейчас в полёте:
+   *  открыт в ExpandedView, либо в outgoing-слое (FLIP-возврат в thumb).
+   *  Без этого зритель видит «двойник» — летящую картинку И статичный
+   *  thumb на её месте. */
+  isHidden?: boolean;
 }
 
-function MasonryCard({ post, onOpen }: MasonryCardProps) {
+function MasonryCard({ post, onOpen, isHidden = false }: MasonryCardProps) {
   const images = getPostImages(post);
   const isMulti = images.length > 1;
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -230,7 +236,7 @@ function MasonryCard({ post, onOpen }: MasonryCardProps) {
           alt=""
           loading="lazy"
           onLoad={handleImgLoad}
-          style={cardStyles.image}
+          style={{ ...cardStyles.image, visibility: isHidden ? "hidden" : "visible" }}
         />
         {isMulti && (
           <div style={cardStyles.dotsRow} aria-hidden>
@@ -285,6 +291,11 @@ interface ExpandedViewProps {
    *  корректная, scrollTop успешно восстанавливается без мигания
    *  «сверху → правильное место». */
   related: Post[];
+  /** id постов, чьи thumb-картинки должны быть скрыты в related-сетке
+   *  (потому что они сейчас в полёте: открыты в ExpandedView или
+   *  анимируются обратно в outgoing-слое). Без этого зритель видит
+   *  «двойник» — летящую карточку И thumb под ней. */
+  hiddenIds?: Set<number>;
   /** Вызывается СРАЗУ когда юзер тапает close — раньше чем стартует
    *  FLIP-close. Parent в ответ снимает body-class (если это финальное
    *  закрытие), чтобы фоновая страница начала un-zoom-иться параллельно
@@ -347,7 +358,7 @@ function computeSheetAnim({
 
 function ExpandedView({
   post, startRect, startSrc, startIndex, userId, lang,
-  fadeOnClose, isBackNav, initialScrollTop, forceClose, related,
+  fadeOnClose, isBackNav, initialScrollTop, forceClose, related, hiddenIds,
   onStartClose, onClose, onPinToggle, onShare, onOpenRelated,
 }: ExpandedViewProps) {
   const images = getPostImages(post);
@@ -411,12 +422,34 @@ function ExpandedView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // forceClose: outgoing-слой при back-nav. CSS-класс
-  // zen-sheet-force-close применяет keyframe-анимацию ИНСТАНТНО при
-  // mount (без RAF-задержки). Компонент просто ждёт 260мс и зовёт
-  // onClose — parent размонтирует. Под выезжающим уже виден previous.
-  useEffect(() => {
+  // forceClose: outgoing-слой при back-nav. Image FLIP-возвращается в
+  // startRect (thumb в related-сетке предыдущего поста), параллельно
+  // sheet bg плавно fades to transparent (через CSS class
+  // zen-sheet-force-close). По завершении 520ms onClose() размонтирует.
+  // Под выезжающим уже виден previous expanded в phase=open.
+  useLayoutEffect(() => {
     if (!forceClose) return;
+    const img = imageRef.current;
+    if (img && startRect) {
+      const apply = () => {
+        const final = img.getBoundingClientRect();
+        if (final.width === 0 || final.height === 0) return;
+        const dx = startRect.left - final.left;
+        const dy = startRect.top - final.top;
+        const sx = startRect.width / Math.max(final.width, 1);
+        const sy = startRect.height / Math.max(final.height, 1);
+        img.style.transformOrigin = "top left";
+        img.style.transition = "transform 520ms cubic-bezier(0.45, 0, 0.55, 1)";
+        img.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
+      };
+      if (img.complete && img.naturalWidth > 0) {
+        apply();
+      } else {
+        const onLoad = () => { img.removeEventListener("load", onLoad); apply(); };
+        img.addEventListener("load", onLoad);
+        setTimeout(apply, 60);
+      }
+    }
     const t = setTimeout(() => onClose(), 520);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -651,7 +684,6 @@ function ExpandedView({
                   alt=""
                   loading="eager"
                   decoding="sync"
-                  className={forceClose ? "zen-image-force-close" : undefined}
                   style={expandedStyles.image}
                   draggable={false}
                 />
@@ -719,6 +751,7 @@ function ExpandedView({
                       <MasonryCard
                         key={rp.id}
                         post={rp}
+                        isHidden={hiddenIds?.has(rp.id) ?? false}
                         onOpen={(p, rect, src, idx) => onOpenRelated(p, rect, src, idx, sheetRef.current?.scrollTop ?? 0)}
                       />
                     ))}
@@ -970,6 +1003,16 @@ export function NewArrivalsPage({
     return posts;
   }, [posts, tab]);
 
+  // Set id-ов постов, которые сейчас в полёте (открытые / уезжающие).
+  // Их thumb-картинки в сетках (main + related) скрываются на время
+  // анимации, чтобы не было «двойника» рядом с летящей картинкой.
+  const hiddenPostIds = useMemo(() => {
+    const s = new Set<number>();
+    if (expanded) s.add(expanded.post.id);
+    if (outgoingItem) s.add(outgoingItem.post.id);
+    return s;
+  }, [expanded, outgoingItem]);
+
   const pinnedCount = useMemo(() => posts.filter((p) => p.user_liked).length, [posts]);
 
   const switchTab = useCallback((next: FilterTab) => {
@@ -1046,6 +1089,7 @@ export function NewArrivalsPage({
             <MasonryCard
               key={post.id}
               post={post}
+              isHidden={hiddenPostIds.has(post.id)}
               onOpen={openInitial}
             />
           ))}
@@ -1066,6 +1110,7 @@ export function NewArrivalsPage({
           fadeOnClose={stack.length > 0}
           isBackNav={!!expanded.isBackNav}
           related={relatedMap[expanded.post.id] ?? []}
+          hiddenIds={hiddenPostIds}
           onStartClose={handleStartClose}
           initialScrollTop={expanded.scrollTop}
           onClose={closeExpanded}
@@ -1077,14 +1122,15 @@ export function NewArrivalsPage({
       )}
 
       {/* Outgoing layer: outgoing-пост рендерится поверх expanded (zIndex
-          выше). Forced close — сразу анимируется наружу. Под ним уже
-          виден previous в phase=open, никакой задержки. */}
+          выше). Forced close — image FLIP-возвращается в свой thumb-rect
+          (тот же, с которого он открывался в related-сетке). Под ним
+          уже виден previous в phase=open, никакой задержки. */}
       {portalTarget && outgoingItem && createPortal(
         <div style={{ position: "fixed", inset: 0, zIndex: 1200, pointerEvents: "none" }}>
           <ExpandedView
             key={`outgoing:${outgoingItem.post.id}`}
             post={outgoingItem.post}
-            startRect={null}
+            startRect={outgoingItem.rect}
             startSrc={outgoingItem.src}
             startIndex={outgoingItem.index}
             userId={userId}
@@ -1093,6 +1139,7 @@ export function NewArrivalsPage({
             isBackNav={false}
             forceClose={true}
             related={relatedMap[outgoingItem.post.id] ?? []}
+            hiddenIds={hiddenPostIds}
             onStartClose={() => {}}
             initialScrollTop={outgoingItem.scrollTop}
             onClose={() => setOutgoingItem(null)}

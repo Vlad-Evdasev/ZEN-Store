@@ -603,7 +603,9 @@ const styles: Record<string, React.CSSProperties> = {
     paddingLeft: "max(12px, env(safe-area-inset-left))",
     paddingRight: "max(12px, env(safe-area-inset-right))",
     background: "var(--header-bg)",
-    zIndex: 10,
+    // z-index управляется через CSS (.zen-app > header) — это позволяет
+    // body.zen-inspire-overlay-on поднять header выше overlay-слоёв
+    // (1300). Inline-стиль здесь бы перебил CSS override.
     gap: 8,
   },
   headerSpacer: {
