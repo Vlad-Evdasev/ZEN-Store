@@ -23,6 +23,7 @@ import {
   paymentsRouter,
   runPaymentExpirySweep,
 } from "./routes/payments.js";
+import { messagesRouter } from "./routes/messages.js";
 import { db } from "./db/schema.js";
 
 const app = express();
@@ -48,6 +49,7 @@ app.use("/api/posts", postsRouter);
 app.use("/api/support", supportRouter);
 app.use("/api/engagement", engagementRouter);
 app.use("/api/payments", paymentsRouter);
+app.use("/api/messages", messagesRouter);
 
 app.get("/api/health", (_req, res) => {
   try {

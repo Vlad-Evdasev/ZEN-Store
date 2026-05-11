@@ -567,3 +567,87 @@ try {
     )
   `);
 } catch {}
+
+// Группировка custom_orders для unified invoice. Когда юзер заказывает
+// несколько вещей не из каталога, админ может разбить заявку на
+// несколько карточек (по одной на каждый item). Все карточки этого
+// заказа имеют общий group_id, total ставится на уровне группы,
+// invoice один для всей группы.
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS custom_order_groups (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      total INTEGER,
+      payment_status TEXT DEFAULT 'unpaid',
+      payment_method TEXT,
+      payment_payload TEXT,
+      invoice_sent_at DATETIME,
+      paid_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+} catch {}
+try { db.exec("ALTER TABLE custom_orders ADD COLUMN group_id TEXT"); } catch {}
+
+// Backfill: каждый existing custom_order без group_id получает свою
+// уникальную группу (single-item group). Это для legacy data — новые
+// заказы получают group_id at insert time.
+try {
+  const orphans = db.prepare(
+    "SELECT id, user_id FROM custom_orders WHERE group_id IS NULL OR group_id = ''"
+  ).all() as Array<{ id: number; user_id: string }>;
+  for (const row of orphans) {
+    const groupId = `cg_${row.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    db.prepare("INSERT OR IGNORE INTO custom_order_groups (id, user_id) VALUES (?, ?)").run(groupId, row.user_id);
+    db.prepare("UPDATE custom_orders SET group_id = ? WHERE id = ?").run(groupId, row.id);
+  }
+} catch (e) { console.error("[custom_order_groups backfill]", e); }
+
+// Bot message templates — редактируемые шаблоны автоматических сообщений
+// бота (welcome, order status, payment, drop teasers и т.д.). Админ
+// может менять текст без redeploy. Если template отсутствует или
+// is_active=0 — bot.ts использует hardcoded default.
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS bot_message_templates (
+      template_id TEXT PRIMARY KEY,
+      category TEXT NOT NULL,
+      title TEXT,
+      emoji TEXT,
+      body TEXT NOT NULL,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+} catch {}
+
+// Seed default templates (только при первом создании таблицы)
+const tplCount = db.prepare("SELECT COUNT(*) as c FROM bot_message_templates").get() as { c: number };
+if (tplCount.c === 0) {
+  const insertTpl = db.prepare(
+    "INSERT INTO bot_message_templates (template_id, category, title, emoji, body) VALUES (?, ?, ?, ?, ?)"
+  );
+  // Variables in {placeholders}: {id}, {hi}, {name}, {amount}, {item}, {category}, etc.
+  const defaults: Array<[string, string, string, string, string]> = [
+    ["welcome", "start", "Приветствие /start", "", "{hi}, ты в <b>RAW</b>.\n\nБез посредников. Только то, что носим сами."],
+    ["welcome_invited", "start", "Приветствие — приглашён другом", "🎁", "Тебя пригласил друг — после первого заказа оба получите по 10 баллов."],
+    ["order_pending", "order_status", "Заказ оформлен", "✅", "Заказ #{id} оформлен\n\nМы получили запрос — скоро свяжемся для уточнения деталей."],
+    ["order_in_transit", "order_status", "Заказ в пути", "🚚", "Заказ #{id} в пути\n\nУже едет к тебе. Отслеживай статус в /track."],
+    ["order_delivered", "order_status", "Заказ доставлен", "📦", "Заказ #{id} доставлен\n\nЗабирай! Если что-то не так — пиши, поможем."],
+    ["order_completed", "order_status", "Заказ завершён", "💚", "Заказ #{id} завершён\n\nСпасибо за покупку! Будем рады видеть тебя снова 🤍"],
+    ["custom_pending", "custom_status", "Кастом одобрен", "✅", "Кастом-заявка #{id} одобрена\n\nПринята в работу. Свяжемся для уточнений."],
+    ["custom_in_transit", "custom_status", "Кастом в пути", "🚚", "Кастом-заявка #{id} в пути\n\nУже едет к тебе."],
+    ["custom_delivered", "custom_status", "Кастом доставлен", "📦", "Кастом-заявка #{id} доставлена\n\nЗабирай!"],
+    ["custom_completed", "custom_status", "Кастом завершён", "💚", "Кастом-заявка #{id} завершена\n\nСпасибо!"],
+    ["payment_received", "payment", "Оплата подтверждена", "💚", "Оплата подтверждена\n{item}\n\nЗаказ ушёл в сборку. Когда отправим — пришлём трек-номер."],
+    ["payment_ton_verified", "payment", "TON оплата принята", "✅", "Оплата заказа #{id} принята\n\nПолучили <b>{amount} TON</b>. Спасибо!"],
+    ["cart_abandoned", "engagement", "Корзина ждёт", "🛒", "Твоя корзина ждёт\n\n{count} {noun} на сумму <b>{total} $</b>. Готов оформить?"],
+    ["new_arrival", "engagement", "Новинка в категории", "🔥", "Новинка в категории «{category}»\n\n{name} — только что добавили в каталог. Залетай первым."],
+    ["drop_24h", "drop", "Drop через 24 часа", "🔥", "Drop через 24 часа: {title}\n\n{description}"],
+    ["drop_1h", "drop", "Drop через 1 час", "⏰", "Drop через 1 час: {title}\n\n{description}"],
+    ["drop_5min", "drop", "5 минут до дропа", "🚨", "5 минут до дропа: {title}\n\n{description}"],
+    ["drop_live", "drop", "Drop LIVE", "⚡", "{title} — LIVE сейчас\n\n{description}"],
+  ];
+  for (const tpl of defaults) insertTpl.run(...tpl);
+}

@@ -465,6 +465,11 @@ export interface CustomOrderAdmin {
   image_data: string | null;
   status: string;
   created_at: string;
+  group_id: string | null;
+  group_total: number | null;
+  group_payment_status: string | null;
+  group_invoice_sent_at: string | null;
+  group_paid_at: string | null;
 }
 
 export async function getCustomOrdersAdmin(adminSecret: string): Promise<CustomOrderAdmin[]> {
@@ -515,7 +520,7 @@ export async function deleteCustomOrderAdmin(id: number, adminSecret: string) {
   return res.json();
 }
 
-export async function duplicateCustomOrderAdmin(id: number, adminSecret: string): Promise<{ ok: true; id: number }> {
+export async function duplicateCustomOrderAdmin(id: number, adminSecret: string): Promise<{ ok: true; id: number; group_id: string }> {
   const res = await fetch(`${API_URL}/api/custom-orders/admin/order/${id}/duplicate`, {
     method: "POST",
     headers: { "X-Admin-Secret": adminSecret },
@@ -525,6 +530,81 @@ export async function duplicateCustomOrderAdmin(id: number, adminSecret: string)
     throw new Error((err as { error?: string }).error || res.statusText);
   }
   return res.json();
+}
+
+export async function setCustomGroupTotalAdmin(groupId: string, total: number, adminSecret: string) {
+  const res = await fetch(`${API_URL}/api/custom-orders/admin/group/${encodeURIComponent(groupId)}/total`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
+    body: JSON.stringify({ total }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+  return res.json();
+}
+
+export async function sendCustomGroupInvoiceAdmin(groupId: string, adminSecret: string) {
+  const res = await fetch(`${API_URL}/api/custom-orders/admin/group/${encodeURIComponent(groupId)}/send-invoice`, {
+    method: "POST",
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+  return res.json();
+}
+
+export async function markCustomGroupPaidAdmin(groupId: string, adminSecret: string) {
+  const res = await fetch(`${API_URL}/api/custom-orders/admin/group/${encodeURIComponent(groupId)}/mark-paid`, {
+    method: "PATCH",
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+  return res.json();
+}
+
+// ── Bot message templates (для вкладки "Пуш") ────────────────────────────
+export type BotMessageTemplate = {
+  template_id: string;
+  category: string;
+  title: string | null;
+  emoji: string | null;
+  body: string;
+  is_active: number;
+  updated_at: string;
+};
+
+export async function getBotMessageTemplates(adminSecret: string): Promise<BotMessageTemplate[]> {
+  const res = await fetch(`${API_URL}/api/messages/templates`, {
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+  return res.json();
+}
+
+export async function updateBotMessageTemplate(
+  templateId: string,
+  patch: { title?: string; emoji?: string; body?: string; is_active?: boolean },
+  adminSecret: string
+): Promise<void> {
+  const res = await fetch(`${API_URL}/api/messages/templates/${encodeURIComponent(templateId)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
 }
 
 export async function submitCustomOrder(

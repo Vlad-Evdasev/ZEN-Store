@@ -18,6 +18,12 @@ import {
   updateCustomOrderContentAdmin,
   deleteCustomOrderAdmin,
   duplicateCustomOrderAdmin,
+  setCustomGroupTotalAdmin,
+  sendCustomGroupInvoiceAdmin,
+  markCustomGroupPaidAdmin,
+  getBotMessageTemplates,
+  updateBotMessageTemplate,
+  type BotMessageTemplate,
   getCurrencyRateAdmin,
   updateCurrencyRateAdmin,
   refreshCurrencyRateFromNbrb,
@@ -95,7 +101,7 @@ function StatusPill({ status }: { status: string }) {
   return <span className={`admin-status admin-status--${c.variant}`}>{c.label}</span>;
 }
 
-function NavIcon({ tab }: { tab: "home" | "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" | "promo" | "analytics" | "maintenance" }) {
+function NavIcon({ tab }: { tab: "home" | "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" | "promo" | "analytics" | "maintenance" | "messages" }) {
   switch (tab) {
     case "home":
       return (<svg viewBox="0 0 24 24" aria-hidden><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="5" rx="1"/><rect x="13" y="10" width="8" height="11" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/></svg>);
@@ -121,6 +127,8 @@ function NavIcon({ tab }: { tab: "home" | "products" | "categories" | "orders" |
       return (<svg viewBox="0 0 24 24" aria-hidden><path d="M20.6 11.4 12.7 3.5a1.5 1.5 0 0 0-1-.5H5a2 2 0 0 0-2 2v6.7a1.5 1.5 0 0 0 .4 1l8 8a2 2 0 0 0 2.8 0l6.4-6.4a2 2 0 0 0 0-2.9Z"/><circle cx="7.5" cy="7.5" r="1" fill="currentColor"/></svg>);
     case "analytics":
       return (<svg viewBox="0 0 24 24" aria-hidden><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-7"/></svg>);
+    case "messages":
+      return (<svg viewBox="0 0 24 24" aria-hidden><path d="M4 4h16a2 2 0 012 2v10a2 2 0 01-2 2H8l-4 4V6a2 2 0 012-2z"/><path d="M8 9h8M8 13h5"/></svg>);
     case "maintenance":
       return (<svg viewBox="0 0 24 24" aria-hidden><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>);
   }
@@ -136,7 +144,7 @@ function telegramChatLink(username?: string | null, userId?: string): string {
   return "#";
 }
 
-type Tab = "home" | "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" | "promo" | "analytics" | "maintenance";
+type Tab = "home" | "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" | "promo" | "analytics" | "maintenance" | "messages";
 
 /** Хедер-eyebrow в topbar: показывает раздел в стиле «OPS / ORDERS». */
 function tabEyebrow(tab: Tab): string {
@@ -154,6 +162,7 @@ function tabEyebrow(tab: Tab): string {
     case "promo": return "MARKETING / PROMO";
     case "support": return "CONTENT / SUPPORT";
     case "maintenance": return "SYSTEM / MAINTENANCE";
+    case "messages": return "MARKETING / PUSH";
   }
 }
 
@@ -367,6 +376,9 @@ export function Admin() {
           <button type="button" onClick={() => setTabAndReset("promo")} className={`admin-nav-btn ${tab === "promo" ? "active" : ""}`}>
             <NavIcon tab="promo" /> Промокоды
           </button>
+          <button type="button" onClick={() => setTabAndReset("messages")} className={`admin-nav-btn ${tab === "messages" ? "active" : ""}`}>
+            <NavIcon tab="messages" /> Пуш-сообщения
+          </button>
 
           <div className="admin-nav-section">Content</div>
           <button type="button" onClick={() => setTabAndReset("support")} className={`admin-nav-btn ${tab === "support" ? "active" : ""}`}>
@@ -478,6 +490,10 @@ export function Admin() {
 
       {tab === "promo" && (
         <PromoTab adminSecret={adminSecret} />
+      )}
+
+      {tab === "messages" && (
+        <MessagesTab adminSecret={adminSecret} />
       )}
 
       {tab === "maintenance" && (
@@ -804,6 +820,11 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
   const [editImage, setEditImage] = useState<string | null>(null);
   const editFileRef = useRef<HTMLInputElement | null>(null);
 
+  // Group total editing state — выше, чтобы все hooks были на верху функции.
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+  const [editingTotalValue, setEditingTotalValue] = useState<string>("");
+  const [groupBusyId, setGroupBusyId] = useState<string | null>(null);
+
   const load = () => {
     setLoading(true);
     getCustomOrdersAdmin(adminSecret)
@@ -904,6 +925,85 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
   const filteredList = statusFilter === "all" ? list : list.filter((c) => (c.status || "pending") === statusFilter);
   const reviewCount = list.filter((c) => (c.status || "pending") === "review").length;
 
+  // Group cards по group_id. Каждая группа — это один заказ (возможно
+  // с несколькими позициями). Админ ставит ОДНУ цену на группу и
+  // отправляет ОДИН invoice (как для catalog-order с multi items).
+  type Group = {
+    groupId: string;
+    items: typeof filteredList;
+    total: number | null;
+    paymentStatus: string | null;
+    invoiceSentAt: string | null;
+    paidAt: string | null;
+  };
+  const groups: Group[] = (() => {
+    const map = new Map<string, Group>();
+    for (const c of filteredList) {
+      const gid = c.group_id || `solo_${c.id}`;
+      let g = map.get(gid);
+      if (!g) {
+        g = {
+          groupId: gid,
+          items: [],
+          total: c.group_total,
+          paymentStatus: c.group_payment_status,
+          invoiceSentAt: c.group_invoice_sent_at,
+          paidAt: c.group_paid_at,
+        };
+        map.set(gid, g);
+      }
+      g.items.push(c);
+    }
+    return Array.from(map.values());
+  })();
+
+  const handleSetGroupTotal = async (groupId: string) => {
+    const total = Number(editingTotalValue);
+    if (!Number.isFinite(total) || total < 0) {
+      setMessage("Цена должна быть числом");
+      return;
+    }
+    setGroupBusyId(groupId);
+    try {
+      await setCustomGroupTotalAdmin(groupId, total, adminSecret);
+      setMessage("Цена сохранена");
+      setEditingGroupId(null);
+      load();
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    } finally {
+      setGroupBusyId(null);
+    }
+  };
+
+  const handleSendGroupInvoice = async (groupId: string) => {
+    if (!window.confirm("Отправить клиенту инвойс с этим заказом?")) return;
+    setGroupBusyId(groupId);
+    try {
+      await sendCustomGroupInvoiceAdmin(groupId, adminSecret);
+      setMessage("Инвойс отправлен");
+      load();
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    } finally {
+      setGroupBusyId(null);
+    }
+  };
+
+  const handleMarkGroupPaid = async (groupId: string) => {
+    if (!window.confirm("Отметить заказ как оплаченный?")) return;
+    setGroupBusyId(groupId);
+    try {
+      await markCustomGroupPaidAdmin(groupId, adminSecret);
+      setMessage("Заказ помечен как оплаченный");
+      load();
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    } finally {
+      setGroupBusyId(null);
+    }
+  };
+
   if (loading) return <p style={styles.hint}>Загрузка заявок...</p>;
 
   return (
@@ -954,7 +1054,115 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
         </div>
       ) : (
         <div>
-          {filteredList.map((c) => {
+          {groups.map((group) => {
+            const isMultiItem = group.items.length > 1;
+            const groupHeader = (group.groupId.startsWith("solo_") || !isMultiItem) ? null : (
+              <div style={{
+                display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10,
+                padding: "10px 14px", marginBottom: 8,
+                background: "var(--surface-2)", border: "1px solid var(--border)",
+                borderRadius: "var(--radius-sm)", fontSize: 13,
+              }}>
+                <strong style={{ fontWeight: 600 }}>Заказ из {group.items.length} позиц.</strong>
+                {group.paymentStatus === "paid" ? (
+                  <span style={{ color: "var(--accent)", fontWeight: 600 }}>● Оплачено</span>
+                ) : group.invoiceSentAt ? (
+                  <span style={{ color: "var(--muted)" }}>Инвойс отправлен</span>
+                ) : null}
+                <span style={{ flex: 1 }} />
+                {editingGroupId === group.groupId ? (
+                  <>
+                    <input
+                      type="number"
+                      value={editingTotalValue}
+                      onChange={(e) => setEditingTotalValue(e.target.value)}
+                      placeholder="Цена $"
+                      style={{ ...styles.input, width: 100 }}
+                      autoFocus
+                    />
+                    <button type="button" onClick={() => handleSetGroupTotal(group.groupId)} disabled={groupBusyId === group.groupId} style={styles.smallBtn}>
+                      Сохранить
+                    </button>
+                    <button type="button" onClick={() => setEditingGroupId(null)} style={styles.cancelBtn}>Отмена</button>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ fontWeight: 600 }}>{group.total ? `${group.total} $` : "цена не задана"}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingGroupId(group.groupId);
+                        setEditingTotalValue(group.total ? String(group.total) : "");
+                      }}
+                      style={styles.smallBtn}
+                    >
+                      {group.total ? "Изменить цену" : "Задать цену"}
+                    </button>
+                    {group.total && group.total > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => handleSendGroupInvoice(group.groupId)}
+                        disabled={groupBusyId === group.groupId}
+                        style={styles.submit}
+                      >
+                        {groupBusyId === group.groupId ? "..." : "Отправить инвойс"}
+                      </button>
+                    )}
+                    {group.paymentStatus !== "paid" && group.invoiceSentAt && (
+                      <button
+                        type="button"
+                        onClick={() => handleMarkGroupPaid(group.groupId)}
+                        disabled={groupBusyId === group.groupId}
+                        style={styles.smallBtn}
+                      >
+                        Отметить оплаченным
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+            return (
+              <div key={group.groupId} style={isMultiItem ? { padding: "0 0 8px", marginBottom: 16, border: "1px dashed var(--border)", borderRadius: "var(--radius-md)", background: "var(--surface)", paddingTop: 8, paddingLeft: 8, paddingRight: 8 } : undefined}>
+                {groupHeader}
+                {/* Single-item solo group: still show group header (даёт UI для price/invoice) */}
+                {!isMultiItem && !group.groupId.startsWith("solo_") && (
+                  <div style={{
+                    display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10,
+                    padding: "8px 12px", marginBottom: 8,
+                    background: "var(--surface-2)", border: "1px solid var(--border)",
+                    borderRadius: "var(--radius-sm)", fontSize: 13,
+                  }}>
+                    {group.paymentStatus === "paid" && <span style={{ color: "var(--accent)", fontWeight: 600 }}>● Оплачено</span>}
+                    {group.invoiceSentAt && group.paymentStatus !== "paid" && <span style={{ color: "var(--muted)" }}>Инвойс отправлен</span>}
+                    <span style={{ flex: 1 }} />
+                    {editingGroupId === group.groupId ? (
+                      <>
+                        <input type="number" value={editingTotalValue} onChange={(e) => setEditingTotalValue(e.target.value)} placeholder="Цена $" style={{ ...styles.input, width: 100 }} autoFocus />
+                        <button type="button" onClick={() => handleSetGroupTotal(group.groupId)} disabled={groupBusyId === group.groupId} style={styles.smallBtn}>Сохранить</button>
+                        <button type="button" onClick={() => setEditingGroupId(null)} style={styles.cancelBtn}>Отмена</button>
+                      </>
+                    ) : (
+                      <>
+                        <span style={{ fontWeight: 600 }}>{group.total ? `${group.total} $` : "цена не задана"}</span>
+                        <button type="button" onClick={() => { setEditingGroupId(group.groupId); setEditingTotalValue(group.total ? String(group.total) : ""); }} style={styles.smallBtn}>
+                          {group.total ? "Изменить" : "Задать цену"}
+                        </button>
+                        {group.total && group.total > 0 && (
+                          <button type="button" onClick={() => handleSendGroupInvoice(group.groupId)} disabled={groupBusyId === group.groupId} style={styles.submit}>
+                            {groupBusyId === group.groupId ? "..." : "Отправить инвойс"}
+                          </button>
+                        )}
+                        {group.paymentStatus !== "paid" && group.invoiceSentAt && (
+                          <button type="button" onClick={() => handleMarkGroupPaid(group.groupId)} disabled={groupBusyId === group.groupId} style={styles.smallBtn}>
+                            Отметить оплаченным
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+                {group.items.map((c) => {
             const status = c.status || "pending";
             const isReview = status === "review";
             const isEditing = editingId === c.id;
@@ -1107,6 +1315,9 @@ function CustomOrdersTab({ adminSecret }: { adminSecret: string }) {
                     Написать в Telegram
                   </a>
                 </div>
+              </div>
+            );
+          })}
               </div>
             );
           })}
@@ -3343,6 +3554,225 @@ function SupportTab({ adminSecret }: { adminSecret: string }) {
           )}
         </div>
       </section>
+    </>
+  );
+}
+
+// ── Push messages (bot message templates) ─────────────────────────────
+// Список авто-сообщений бота (welcome, order_pending, drop teasers ...).
+// Админ может править title/emoji/body и включать/выключать каждое.
+// Внутри body доступны плейсхолдеры — {id}, {name}, {amount} и т.д.,
+// которые подставляются в bot.ts при отправке.
+
+const MESSAGES_CATEGORY_LABEL: Record<string, string> = {
+  start: "Старт / приветствие",
+  order_status: "Статус заказа",
+  custom_status: "Статус кастом-заявки",
+  payment: "Оплата",
+  engagement: "Вовлечение",
+  drop: "Дропы",
+};
+
+function MessagesTab({ adminSecret }: { adminSecret: string }) {
+  const [list, setList] = useState<BotMessageTemplate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editEmoji, setEditEmoji] = useState("");
+  const [editBody, setEditBody] = useState("");
+  const [savingId, setSavingId] = useState<string | null>(null);
+
+  const load = () => {
+    setLoading(true);
+    getBotMessageTemplates(adminSecret)
+      .then(setList)
+      .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    if (adminSecret) load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adminSecret]);
+
+  const startEdit = (tpl: BotMessageTemplate) => {
+    setEditingId(tpl.template_id);
+    setEditTitle(tpl.title || "");
+    setEditEmoji(tpl.emoji || "");
+    setEditBody(tpl.body || "");
+    setMessage("");
+  };
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditTitle("");
+    setEditEmoji("");
+    setEditBody("");
+  };
+  const saveEdit = async (templateId: string) => {
+    setSavingId(templateId);
+    setMessage("");
+    try {
+      await updateBotMessageTemplate(
+        templateId,
+        { title: editTitle, emoji: editEmoji, body: editBody },
+        adminSecret
+      );
+      setMessage("Сохранено");
+      cancelEdit();
+      load();
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    } finally {
+      setSavingId(null);
+    }
+  };
+  const toggleActive = async (tpl: BotMessageTemplate) => {
+    setSavingId(tpl.template_id);
+    try {
+      await updateBotMessageTemplate(tpl.template_id, { is_active: !tpl.is_active }, adminSecret);
+      load();
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  // Group templates by category — UI делает один section на каждую.
+  const byCategory = list.reduce<Record<string, BotMessageTemplate[]>>((acc, tpl) => {
+    (acc[tpl.category] ||= []).push(tpl);
+    return acc;
+  }, {});
+  const categoryOrder = ["start", "order_status", "custom_status", "payment", "engagement", "drop"];
+  const categories = categoryOrder.filter((c) => byCategory[c]).concat(
+    Object.keys(byCategory).filter((c) => !categoryOrder.includes(c))
+  );
+
+  if (loading) return <p style={styles.hint}>Загрузка шаблонов…</p>;
+
+  return (
+    <>
+      <div className="admin-page-head">
+        <div className="admin-page-head-text">
+          <h2>Пуш-сообщения</h2>
+          <p className="admin-page-head-sub">
+            Шаблоны автоматических сообщений бота — приветствие, смены статуса заказа, оплата, дропы. Изменения применяются сразу, без редеплоя. Плейсхолдеры в фигурных скобках (например, <code>{"{id}"}</code>, <code>{"{name}"}</code>) подставляются автоматически.
+          </p>
+        </div>
+      </div>
+      {message && <p style={styles.message}>{message}</p>}
+
+      {categories.map((cat) => (
+        <section key={cat} className="admin-card">
+          <div className="admin-card-head">
+            <h3>{MESSAGES_CATEGORY_LABEL[cat] || cat}</h3>
+            <span className="admin-card-head-meta">{byCategory[cat].length}</span>
+          </div>
+          <div className="admin-card-body" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {byCategory[cat].map((tpl) => {
+              const isEditing = editingId === tpl.template_id;
+              const isSaving = savingId === tpl.template_id;
+              return (
+                <div
+                  key={tpl.template_id}
+                  style={{
+                    padding: 14,
+                    borderRadius: "var(--radius-sm)",
+                    border: "1px solid var(--border)",
+                    background: tpl.is_active ? "var(--surface)" : "var(--surface-2)",
+                    opacity: tpl.is_active ? 1 : 0.7,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                    <code style={{ fontSize: 11, color: "var(--muted)", background: "var(--surface-2)", padding: "2px 6px", borderRadius: 4 }}>
+                      {tpl.template_id}
+                    </code>
+                    <strong style={{ fontWeight: 600 }}>{tpl.emoji ? `${tpl.emoji} ` : ""}{tpl.title || "—"}</strong>
+                    <span style={{ flex: 1 }} />
+                    <button
+                      type="button"
+                      onClick={() => toggleActive(tpl)}
+                      disabled={isSaving}
+                      style={{
+                        ...styles.smallBtn,
+                        color: tpl.is_active ? "var(--green)" : "var(--muted)",
+                      }}
+                      title={tpl.is_active ? "Сейчас включено — отключи чтобы бот использовал hardcoded дефолт" : "Сейчас выключено — включи чтобы бот использовал этот текст"}
+                    >
+                      {tpl.is_active ? "● Активно" : "○ Выключено"}
+                    </button>
+                  </div>
+
+                  {isEditing ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                        <label className="admin-field" style={{ flex: "0 0 100px" }}>
+                          <span className="admin-field-label">Emoji</span>
+                          <input
+                            type="text"
+                            value={editEmoji}
+                            onChange={(e) => setEditEmoji(e.target.value)}
+                            style={styles.input}
+                            placeholder="🔥"
+                          />
+                        </label>
+                        <label className="admin-field" style={{ flex: 1, minWidth: 200 }}>
+                          <span className="admin-field-label">Заголовок (внутреннее имя для админки)</span>
+                          <input
+                            type="text"
+                            value={editTitle}
+                            onChange={(e) => setEditTitle(e.target.value)}
+                            style={styles.input}
+                            placeholder="Заказ оформлен"
+                          />
+                        </label>
+                      </div>
+                      <label className="admin-field">
+                        <span className="admin-field-label">Текст сообщения (первая строка — заголовок, далее — основной текст)</span>
+                        <textarea
+                          value={editBody}
+                          onChange={(e) => setEditBody(e.target.value)}
+                          rows={6}
+                          style={{ ...styles.input, minHeight: 120, height: "auto", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 13 }}
+                          placeholder="Заказ #{id} оформлен&#10;&#10;Мы получили запрос — скоро свяжемся."
+                        />
+                      </label>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button type="button" onClick={() => saveEdit(tpl.template_id)} disabled={isSaving} style={styles.submit}>
+                          {isSaving ? "Сохраняю…" : "Сохранить"}
+                        </button>
+                        <button type="button" onClick={cancelEdit} style={styles.cancelBtn}>Отмена</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <pre style={{
+                        margin: 0,
+                        padding: 10,
+                        background: "var(--surface-2)",
+                        borderRadius: 6,
+                        fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+                        fontSize: 12.5,
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                        color: "var(--text)",
+                      }}>
+                        {tpl.body}
+                      </pre>
+                      <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                        <button type="button" onClick={() => startEdit(tpl)} style={styles.smallBtn}>
+                          Редактировать
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ))}
     </>
   );
 }

@@ -294,6 +294,7 @@ export async function replyAsBot(
 // Бот пишет юзеру в личку, когда админ меняет статус заказа.
 // Тихо игнорируем 403 / blocked-by-user (помечаем юзера как blocked).
 
+// Hardcoded defaults — fallback если template отсутствует/is_active=0 в БД.
 const ORDER_STATUS_TEXT: Record<string, { emoji: string; title: string; sub?: string }> = {
   pending: { emoji: "✅", title: "Заказ #{id} оформлен", sub: "Мы получили запрос — скоро свяжемся для уточнения деталей." },
   in_transit: { emoji: "🚚", title: "Заказ #{id} в пути", sub: "Уже едет к тебе. Отслеживай статус в /track." },
@@ -308,12 +309,39 @@ const CUSTOM_STATUS_TEXT: Record<string, { emoji: string; title: string; sub?: s
   completed: { emoji: "💚", title: "Кастом-заявка #{id} завершена", sub: "Спасибо!" },
 };
 
+// Загружает шаблон из bot_message_templates, либо возвращает fallback.
+// fallback.title уже может содержать {id}/{name} плейсхолдеры — оставляем
+// без подстановки, caller сам делает .replace().
+function loadTemplate(
+  templateId: string,
+  fallback: { emoji: string; title: string; sub?: string }
+): { emoji: string; title: string; sub?: string } {
+  try {
+    const row = db.prepare(
+      "SELECT emoji, body, is_active FROM bot_message_templates WHERE template_id = ?"
+    ).get(templateId) as { emoji: string | null; body: string; is_active: number } | undefined;
+    if (!row || !row.is_active) return fallback;
+    // body хранится как одна строка: первая строка — title, остальные — sub.
+    const idx = row.body.indexOf("\n\n");
+    if (idx === -1) {
+      return { emoji: row.emoji || fallback.emoji, title: row.body, sub: undefined };
+    }
+    return {
+      emoji: row.emoji || fallback.emoji,
+      title: row.body.slice(0, idx),
+      sub: row.body.slice(idx + 2),
+    };
+  } catch {
+    return fallback;
+  }
+}
+
 async function sendStatusNotification(
   userId: string | number,
   cfg: { emoji: string; title: string; sub?: string },
   id: number
 ): Promise<void> {
-  const text = `${cfg.emoji} <b>${cfg.title.replace("{id}", String(id))}</b>${cfg.sub ? `\n\n${cfg.sub}` : ""}`;
+  const text = `${cfg.emoji} <b>${cfg.title.replace("{id}", String(id))}</b>${cfg.sub ? `\n\n${cfg.sub.replace("{id}", String(id))}` : ""}`;
   try {
     await bot.api.sendMessage(userId, text, {
       parse_mode: "HTML",
@@ -331,14 +359,16 @@ async function sendStatusNotification(
 }
 
 export async function notifyOrderStatusChange(userId: string | number, orderId: number, status: string): Promise<void> {
-  const cfg = ORDER_STATUS_TEXT[status];
-  if (!cfg) return;
+  const fallback = ORDER_STATUS_TEXT[status];
+  if (!fallback) return;
+  const cfg = loadTemplate(`order_${status}`, fallback);
   await sendStatusNotification(userId, cfg, orderId);
 }
 
 export async function notifyCustomOrderStatusChange(userId: string | number, customOrderId: number, status: string): Promise<void> {
-  const cfg = CUSTOM_STATUS_TEXT[status];
-  if (!cfg) return;
+  const fallback = CUSTOM_STATUS_TEXT[status];
+  if (!fallback) return;
+  const cfg = loadTemplate(`custom_${status}`, fallback);
   await sendStatusNotification(userId, cfg, customOrderId);
 }
 
@@ -519,6 +549,59 @@ export async function notifyOrderInvoice(
     const err = e instanceof Error ? e.message : String(e);
     if (isUserBlocked(err)) markBotUserBlocked(userId);
     console.error("notifyOrderInvoice failed:", err);
+  }
+}
+
+// Invoice для custom_order группы — multi-item заказ, который не из
+// каталога. Группа содержит список cards (description/size/image),
+// total ставится на уровне группы. Format похож на notifyOrderInvoice
+// для catalog: первый item с фото-якорем, остальные «+ Item N».
+export async function notifyCustomOrderInvoice(
+  userId: string | number,
+  groupId: string,
+  items: Array<{ id: number; description: string | null; size: string | null; image_data: string | null }>,
+  total: number
+): Promise<void> {
+  const lines: string[] = [];
+  const [first, ...rest] = items;
+  if (first) {
+    const desc = (first.description || "").trim() || "Заявка не из каталога";
+    const sz = first.size ? `  ·  ${escapeHtml(first.size)}` : "";
+    lines.push(`<b>${escapeHtml(desc)}</b>${sz}`);
+  }
+  for (const it of rest) {
+    const desc = (it.description || "").trim() || "Доп. позиция";
+    const sz = it.size ? `  ·  ${escapeHtml(it.size)}` : "";
+    lines.push(`+ ${escapeHtml(desc)}${sz}`);
+  }
+  lines.push("");
+  lines.push(`<b>${total} $</b>`);
+  lines.push("");
+  lines.push(`<a href="https://t.me/${ADMIN_HANDLE}">@${ADMIN_HANDLE}</a>`);
+
+  const caption = lines.join("\n");
+
+  // Берём первое фото из группы (image_data hex/data: URL).
+  const firstPhoto = items
+    .map((i) => i.image_data)
+    .find((u): u is string => !!u && u.trim().length > 0);
+
+  try {
+    if (firstPhoto) {
+      await bot.api.sendPhoto(userId, toPhotoSource(firstPhoto), {
+        caption,
+        parse_mode: "HTML",
+      });
+    } else {
+      await bot.api.sendMessage(userId, caption, {
+        parse_mode: "HTML",
+        link_preview_options: { is_disabled: true },
+      });
+    }
+  } catch (e) {
+    const err = e instanceof Error ? e.message : String(e);
+    if (isUserBlocked(err)) markBotUserBlocked(userId);
+    console.error("notifyCustomOrderInvoice failed:", err);
   }
 }
 
