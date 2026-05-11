@@ -712,7 +712,9 @@ bot.command("start", async (ctx) => {
     }
   }
 
-  // Live-статы для приветствия — делают сообщение «живым», а не статичным.
+  // Live-статы для приветствия — оставлены для fallback-режима (если
+  // template 'welcome' выключен / удалён). Когда template активен, его
+  // текст идёт as-is, без живых stats.
   let productCount = 0;
   let latestProductAgo: string | null = null;
   try {
@@ -727,23 +729,50 @@ bot.command("start", async (ctx) => {
   const firstName = (ctx.from?.first_name || "").trim();
   const hi = firstName ? escapeHtml(firstName) : "yo";
 
-  // Сборка тела с разными вариантами в зависимости от наличия товаров
-  // и был ли юзер приглашён рефералом.
+  // Читаем template из bot_message_templates (админка может его править).
+  // Если template активен — используем его body, подставляя {hi}. Если
+  // выключен / удалён — fallback на дефолтное hardcoded-сообщение со
+  // статами (productCount / latestProductAgo).
+  const welcomeTpl = (() => {
+    try {
+      return db.prepare(
+        "SELECT body, is_active FROM bot_message_templates WHERE template_id = 'welcome'"
+      ).get() as { body: string; is_active: number } | undefined;
+    } catch { return undefined; }
+  })();
+  const invitedTpl = (() => {
+    try {
+      return db.prepare(
+        "SELECT body, is_active FROM bot_message_templates WHERE template_id = 'welcome_invited'"
+      ).get() as { body: string; is_active: number } | undefined;
+    } catch { return undefined; }
+  })();
+
   const lines: string[] = [];
-  lines.push(`<b>${hi}</b>, ты в <b>RAW</b>.`);
-  lines.push("");
-  if (productCount > 0) {
-    const noun = pluralRu(productCount, ["вещь", "вещи", "вещей"]);
-    const drop = latestProductAgo ? `Последний дроп — <i>${latestProductAgo}</i>.` : "";
-    lines.push(`Сейчас в каталоге <b>${productCount} ${noun}</b>. ${drop}`.trim());
+  if (welcomeTpl && welcomeTpl.is_active) {
+    // Template из админки — используем его как есть, подставляя {hi}.
+    lines.push(welcomeTpl.body.replace(/\{hi\}/g, hi));
   } else {
-    lines.push(`Каталог собирается. Будь первым, кто увидит дроп.`);
+    // Fallback: захардкоженная версия с live-статами.
+    lines.push(`<b>${hi}</b>, ты в <b>RAW</b>.`);
+    lines.push("");
+    if (productCount > 0) {
+      const noun = pluralRu(productCount, ["вещь", "вещи", "вещей"]);
+      const drop = latestProductAgo ? `Последний дроп — <i>${latestProductAgo}</i>.` : "";
+      lines.push(`Сейчас в каталоге <b>${productCount} ${noun}</b>. ${drop}`.trim());
+    } else {
+      lines.push(`Каталог собирается. Будь первым, кто увидит дроп.`);
+    }
+    lines.push("");
+    lines.push("Без посредников. Только то, что носим сами.");
   }
-  lines.push("");
-  lines.push("Без посредников. Только то, что носим сами.");
   if (invitedByRef) {
     lines.push("");
-    lines.push("<b>Тебя пригласил друг</b> — после первого заказа оба получите по 10 баллов.");
+    if (invitedTpl && invitedTpl.is_active) {
+      lines.push(invitedTpl.body.replace(/\{hi\}/g, hi));
+    } else {
+      lines.push("<b>Тебя пригласил друг</b> — после первого заказа оба получите по 10 баллов.");
+    }
   }
 
   await ctx.reply(lines.join("\n"), {
