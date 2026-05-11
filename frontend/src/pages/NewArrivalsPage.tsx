@@ -184,6 +184,8 @@ function MasonryCard({ post, onOpen, isHidden = false }: MasonryCardProps) {
     if (!isMulti || touchStartX.current === null) return;
     touchMoveDx.current = e.touches[0].clientX - touchStartX.current;
   };
+  // Круговое переключение.
+  const cycle = (delta: 1 | -1) => (safeIdx + delta + images.length) % images.length;
   const onTouchEnd = () => {
     if (!isMulti || touchStartX.current === null) {
       touchStartX.current = null;
@@ -192,10 +194,7 @@ function MasonryCard({ post, onOpen, isHidden = false }: MasonryCardProps) {
     const dx = touchMoveDx.current;
     touchStartX.current = null;
     if (Math.abs(dx) > 40) {
-      const next = dx < 0
-        ? Math.min(images.length - 1, safeIdx + 1)
-        : Math.max(0, safeIdx - 1);
-      setPostImageIdx(post.id, next);
+      setPostImageIdx(post.id, cycle(dx < 0 ? 1 : -1));
     }
   };
   // Horizontal trackpad swipe (на ноутбуках). Lock 400ms.
@@ -206,10 +205,7 @@ function MasonryCard({ post, onOpen, isHidden = false }: MasonryCardProps) {
     const ax = Math.abs(e.deltaX);
     const ay = Math.abs(e.deltaY);
     if (ax <= ay || ax < 18) return;
-    const next = e.deltaX > 0
-      ? Math.min(images.length - 1, safeIdx + 1)
-      : Math.max(0, safeIdx - 1);
-    if (next !== safeIdx) setPostImageIdx(post.id, next);
+    setPostImageIdx(post.id, cycle(e.deltaX > 0 ? 1 : -1));
     wheelLockedRef.current = true;
     window.setTimeout(() => { wheelLockedRef.current = false; }, 400);
   };
@@ -695,11 +691,9 @@ function ExpandedView({
 
     // Только horizontal-swipe для переключения фоток в multi-image посте.
     // Vertical больше не закрывает диалог (см. onTouchMove выше).
+    // Круговое переключение: с последней → первая, с первой → последняя.
     if (dir === "horizontal" && Math.abs(dx) > 60 && images.length > 1) {
-      setCurrentIdx((prev) => {
-        if (dx < 0) return Math.min(images.length - 1, prev + 1);
-        return Math.max(0, prev - 1);
-      });
+      setCurrentIdx((prev) => (prev + (dx < 0 ? 1 : -1) + images.length) % images.length);
     }
   };
   // Horizontal trackpad swipe для desktop. Lock 400ms между переключениями.
@@ -710,10 +704,7 @@ function ExpandedView({
     const ax = Math.abs(e.deltaX);
     const ay = Math.abs(e.deltaY);
     if (ax <= ay || ax < 18) return;
-    setCurrentIdx((prev) => {
-      if (e.deltaX > 0) return Math.min(images.length - 1, prev + 1);
-      return Math.max(0, prev - 1);
-    });
+    setCurrentIdx((prev) => (prev + (e.deltaX > 0 ? 1 : -1) + images.length) % images.length);
     wheelLockedRef.current = true;
     window.setTimeout(() => { wheelLockedRef.current = false; }, 400);
   };

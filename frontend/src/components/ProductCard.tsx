@@ -71,6 +71,9 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
     if (!isMulti || touchStartX.current === null) return;
     touchMoveDx.current = e.touches[0].clientX - touchStartX.current;
   };
+  // Круговое переключение: с последней → первая, с первой → последняя.
+  // Симметрично ProductPage (раскрытая карточка) — ожидаемое UX.
+  const cycle = (delta: 1 | -1) => (safeIdx + delta + imageUrls.length) % imageUrls.length;
   const onTouchEnd = () => {
     if (!isMulti || touchStartX.current === null) {
       touchStartX.current = null;
@@ -79,10 +82,7 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
     const dx = touchMoveDx.current;
     touchStartX.current = null;
     if (Math.abs(dx) > 40) {
-      const next = dx < 0
-        ? Math.min(imageUrls.length - 1, safeIdx + 1)
-        : Math.max(0, safeIdx - 1);
-      setProductImageIdx(product.id, next);
+      setProductImageIdx(product.id, cycle(dx < 0 ? 1 : -1));
     }
   };
   // Horizontal trackpad swipe (на ноутбуках) — wheel-event с deltaX.
@@ -94,10 +94,7 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
     const ax = Math.abs(e.deltaX);
     const ay = Math.abs(e.deltaY);
     if (ax <= ay || ax < 18) return;
-    const next = e.deltaX > 0
-      ? Math.min(imageUrls.length - 1, safeIdx + 1)
-      : Math.max(0, safeIdx - 1);
-    if (next !== safeIdx) setProductImageIdx(product.id, next);
+    setProductImageIdx(product.id, cycle(e.deltaX > 0 ? 1 : -1));
     wheelLockedRef.current = true;
     window.setTimeout(() => { wheelLockedRef.current = false; }, 400);
   };
