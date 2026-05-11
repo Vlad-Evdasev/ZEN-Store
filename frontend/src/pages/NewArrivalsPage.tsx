@@ -198,6 +198,21 @@ function MasonryCard({ post, onOpen, isHidden = false }: MasonryCardProps) {
       setPostImageIdx(post.id, next);
     }
   };
+  // Horizontal trackpad swipe (на ноутбуках). Lock 400ms.
+  const wheelLockedRef = useRef(false);
+  const onWheel = (e: React.WheelEvent) => {
+    if (!isMulti) return;
+    if (wheelLockedRef.current) return;
+    const ax = Math.abs(e.deltaX);
+    const ay = Math.abs(e.deltaY);
+    if (ax <= ay || ax < 18) return;
+    const next = e.deltaX > 0
+      ? Math.min(images.length - 1, safeIdx + 1)
+      : Math.max(0, safeIdx - 1);
+    if (next !== safeIdx) setPostImageIdx(post.id, next);
+    wheelLockedRef.current = true;
+    window.setTimeout(() => { wheelLockedRef.current = false; }, 400);
+  };
 
   const handleClickGuarded = (e: React.MouseEvent) => {
     if (Math.abs(touchMoveDx.current) > 10) {
@@ -235,6 +250,7 @@ function MasonryCard({ post, onOpen, isHidden = false }: MasonryCardProps) {
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
+      onWheel={onWheel}
       className="zen-pin-card"
       style={cardStyles.card}
     >
@@ -686,6 +702,21 @@ function ExpandedView({
       });
     }
   };
+  // Horizontal trackpad swipe для desktop. Lock 400ms между переключениями.
+  const wheelLockedRef = useRef(false);
+  const onWheel = (e: React.WheelEvent) => {
+    if (images.length <= 1) return;
+    if (wheelLockedRef.current) return;
+    const ax = Math.abs(e.deltaX);
+    const ay = Math.abs(e.deltaY);
+    if (ax <= ay || ax < 18) return;
+    setCurrentIdx((prev) => {
+      if (e.deltaX > 0) return Math.min(images.length - 1, prev + 1);
+      return Math.max(0, prev - 1);
+    });
+    wheelLockedRef.current = true;
+    window.setTimeout(() => { wheelLockedRef.current = false; }, 400);
+  };
 
   // Backdrop теперь НЕ используется как дим-слой (это делает sheet bg).
   // Pull-to-close убран — backdrop просто 0 при opening/closing/forceClose,
@@ -757,7 +788,10 @@ function ExpandedView({
                   попадала в стек ExpandedView (z-index 1100) и не
                   оказалась под хедером (z-index 1300 при overlay). */}
 
-              <div style={expandedStyles.imageArea}>
+              <div
+                style={expandedStyles.imageArea}
+                onWheel={onWheel}
+              >
                 <img
                   ref={imageRef}
                   key={currentIdx}

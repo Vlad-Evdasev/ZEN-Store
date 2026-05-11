@@ -85,6 +85,22 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
       setProductImageIdx(product.id, next);
     }
   };
+  // Horizontal trackpad swipe (на ноутбуках) — wheel-event с deltaX.
+  // Lock на 400ms чтобы continuous swipe не switch'нул сразу через все.
+  const wheelLockedRef = useRef(false);
+  const onWheel = (e: React.WheelEvent) => {
+    if (!isMulti) return;
+    if (wheelLockedRef.current) return;
+    const ax = Math.abs(e.deltaX);
+    const ay = Math.abs(e.deltaY);
+    if (ax <= ay || ax < 18) return;
+    const next = e.deltaX > 0
+      ? Math.min(imageUrls.length - 1, safeIdx + 1)
+      : Math.max(0, safeIdx - 1);
+    if (next !== safeIdx) setProductImageIdx(product.id, next);
+    wheelLockedRef.current = true;
+    window.setTimeout(() => { wheelLockedRef.current = false; }, 400);
+  };
   const cardStyle = compact
     ? { ...styles.card, ...styles.cardCompact, ...(fillHeight ? styles.cardFillHeight : {}) }
     : { ...styles.card, ...(fillHeight ? styles.cardFillHeight : {}) };
@@ -134,6 +150,7 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
+        onWheel={onWheel}
       >
         <img
           key={safeIdx}
