@@ -272,11 +272,13 @@ function App() {
     };
     const unlockBody = () => {
       const scroll = savedScrollY;
-      // ORDER MATTERS чтобы избежать flicker хедера и футера:
-      //  1) Remove body position:fixed + восстановить scroll В ОДНОМ
-      //     synchronous блоке — браузер batch-ит reflow.
-      //  2) Class removal (footer становится visible) ОТЛОЖЕНА в rAF,
-      //     даём layout settled перед unhiding nav.
+      // Sequence для no-flicker unlock:
+      //  1) sync: убрать body fixed + восстановить scroll
+      //  2) double rAF — даём браузеру 2 кадра чтобы СТРОГО painted
+      //     unlock state до удаления body class. Один rAF может не
+      //     успеть (некоторые браузеры paint позже).
+      //  3) class removal → nav visibility вернётся, но layout уже
+      //     settled — nav «появляется на своём месте», не flicker-ит.
       document.body.style.position = "";
       document.body.style.top = "";
       document.body.style.left = "";
@@ -284,19 +286,18 @@ function App() {
       document.body.style.width = "";
       document.documentElement.style.overflow = "";
       window.scrollTo(0, scroll);
-      // Telegram WebApp: re-enable swipes after blur.
       try {
         const tg = window.Telegram?.WebApp as { enableVerticalSwipes?: () => void } | undefined;
         tg?.enableVerticalSwipes?.();
       } catch {}
-      // Class removal в rAF — header/footer reveal происходит после
-      // того как layout settled от style removal + scrollTo. Без rAF
-      // class removal + style removal могут конкурировать → flicker.
+      // Double rAF — гарантируем что layout fully painted before класс
+      // удалён. Nav «вернётся» на своё место instant без visible jump.
       requestAnimationFrame(() => {
-        document.body.classList.remove("zen-input-focused");
+        requestAnimationFrame(() => {
+          document.body.classList.remove("zen-input-focused");
+        });
       });
-      // iOS Safari может auto-scroll-нуть страницу после blur input-а.
-      // Override его в interval-е первые 500ms.
+      // iOS auto-scroll override interval.
       let attempts = 0;
       const restoreInterval = window.setInterval(() => {
         if (window.scrollY !== scroll) {
