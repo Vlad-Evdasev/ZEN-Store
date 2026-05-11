@@ -259,7 +259,16 @@ function App() {
       document.body.style.left = "0";
       document.body.style.right = "0";
       document.body.style.width = "100%";
+      document.documentElement.style.overflow = "hidden";
       document.body.classList.add("zen-input-focused");
+      // Telegram WebApp: expand чтобы layout оставался full size
+      // когда клавиатура открывается. Без expand iOS WebView shift-ит
+      // layout вверх → footer над клавиатурой + black bg.
+      try {
+        const tg = window.Telegram?.WebApp as { expand?: () => void; disableVerticalSwipes?: () => void } | undefined;
+        tg?.expand?.();
+        tg?.disableVerticalSwipes?.();
+      } catch {}
     };
     const unlockBody = () => {
       const scroll = savedScrollY;
@@ -268,8 +277,14 @@ function App() {
       document.body.style.left = "";
       document.body.style.right = "";
       document.body.style.width = "";
+      document.documentElement.style.overflow = "";
       document.body.classList.remove("zen-input-focused");
       window.scrollTo(0, scroll);
+      // Telegram WebApp: re-enable swipes after blur.
+      try {
+        const tg = window.Telegram?.WebApp as { enableVerticalSwipes?: () => void } | undefined;
+        tg?.enableVerticalSwipes?.();
+      } catch {}
       // iOS Safari может auto-scroll-нуть страницу после blur input-а.
       // Override его caretно в interval-е первые 500ms — header не
       // «прыгает» когда юзер снимает выбор с поля поиска.

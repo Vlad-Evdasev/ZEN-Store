@@ -1725,13 +1725,12 @@ body.zen-product-overlay-on .zen-app .zen-catalog-search-shelf {
 }
 body.zen-inspire-overlay-on .zen-app > header,
 body.zen-product-overlay-on .zen-app > header {
-  /* Solid opaque header during overlay — критично для того чтобы
-     search-row shadow (rgba alpha 0.28) при slide-up за хедер не
-     казалась более прозрачной чем pill (opaque). С backdrop-filter
-     blur полупрозрачная тень получала extra fade → визуально
-     «исчезала быстрее» pill. Solid bg cleanly hides everything behind
-     одинаково. */
-  background: var(--bg);
+  /* Solid opaque header during overlay. !important нужен потому что
+     App.tsx header style имеет inline background: var(--header-bg) —
+     inline style без !important перебивал бы внешний CSS. С
+     !important external wins. Solid bg одинаково покрывает и pill,
+     и shadow когда они slide-ятся ЗА header (no asymmetric blur fade). */
+  background: var(--bg) !important;
 }
 
 /* FAB-пин-кнопка тоже скрывается во время overlay. */
@@ -1746,11 +1745,29 @@ body.zen-inspire-overlay-on .zen-pin-fab {
 }
 
 /* Keyboard handling: body становится position:fixed на focusin (см.
-   App.tsx onFocusIn) — layout не shift-ится, nav остаётся в viewport-е
-   на своём месте (просто закрыт клавиатурой когда она открыта).
-   visibility:hidden и padding-bottom:0 убраны — они скрывали nav когда
-   пользователь не ожидал. Теперь nav остаётся видимым и просто
-   находится за клавиатурой когда она поверх. */
+   App.tsx onFocusIn). Также:
+   1) .zen-bottom-nav visibility:hidden — иначе iOS auto-shift делает
+      nav над клавиатурой. User: «футер не должен появляться над
+      клавиатурой».
+   2) main padding-bottom: 0 — убираем «дыру» где раньше был nav,
+      catalog content extends к bottom.
+   3) body background: transparent — user видит TELEGRAM'S BG через
+      transparent клавиатуру (или OS chrome), не наш black var(--bg).
+      «Хочу прозрачный фон под клавиатурой».                          */
+body.zen-input-focused .zen-bottom-nav {
+  visibility: hidden;
+}
+body.zen-input-focused .zen-app main.zen-main--catalog,
+body.zen-input-focused .zen-app main.zen-main--edge,
+body.zen-input-focused .zen-app main.zen-main--inspire {
+  padding-bottom: 0 !important;
+}
+body.zen-input-focused {
+  background: transparent !important;
+}
+body.zen-input-focused .zen-app {
+  background: transparent !important;
+}
 
 
 /* Outgoing back-nav: sheet bg градуально fades to transparent через
