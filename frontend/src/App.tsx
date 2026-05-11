@@ -131,12 +131,13 @@ function HeaderIconFavorites() {
 }
 
 function HeaderIconCart() {
-  // Минималистичный paper-tote: трапеция корпуса + прямой угловой ручка.
-  // Боле editorial / luxury-retail чем «общая» сумка со smile-линией.
+  // Architectural shopper: structured square-edge корпус + одиночная
+  // полуокружность handle. Stroke 1.4 для refined / editorial look.
+  // Никаких "smile"-линий, paper-fold или curly-handle clichés.
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
-      <path d="M5 8.5h14l-1.1 11.1a1.5 1.5 0 0 1-1.5 1.4H7.6a1.5 1.5 0 0 1-1.5-1.4L5 8.5z" />
-      <path d="M9 8.5V6h6v2.5" />
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
+      <rect x="4.75" y="8.75" width="14.5" height="12.5" rx="1" />
+      <path d="M8.25 8.75a3.75 3.75 0 0 1 7.5 0" />
     </svg>
   );
 }
