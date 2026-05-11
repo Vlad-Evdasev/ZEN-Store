@@ -1754,16 +1754,11 @@ body.zen-inspire-overlay-on .zen-pin-fab {
    3) body background: transparent — user видит TELEGRAM'S BG через
       transparent клавиатуру (или OS chrome), не наш black var(--bg).
       «Хочу прозрачный фон под клавиатурой».                          */
-/* Минимальная стратегия для избежания flicker хедера/футера на blur.
-   ВАЖНОЕ ПОНИМАНИЕ: предыдущие transitions на body/zen-app bg
-   создавали visible bg-fade на blur → user perceived это как flicker.
-   Убрал bg transparent (была идея showing through transparent
-   keyboard, но flicker неприемлемее black bg).
-   Nav visibility:hidden — instant, no transition (быстрее = меньше
-   шансов на perception of flicker). */
-.zen-bottom-nav {
-  transform: translateY(var(--zen-kb-offset, 0px));
-}
+/* Nav при focus: instant visibility:hidden (без любых transitions
+   или transform), чтобы при появлении после blur НИКАКОГО slide/animation,
+   nav «возвращается на своё место» instant. Раньше transform:
+   translateY(--zen-kb-offset) + transitions создавали slide-up
+   animation который user voiced as «футер выезжает после полсекунды». */
 body.zen-input-focused .zen-bottom-nav {
   visibility: hidden;
   pointer-events: none;

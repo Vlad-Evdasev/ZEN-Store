@@ -272,13 +272,11 @@ function App() {
     };
     const unlockBody = () => {
       const scroll = savedScrollY;
-      // Sequence для no-flicker unlock:
-      //  1) sync: убрать body fixed + восстановить scroll
-      //  2) double rAF — даём браузеру 2 кадра чтобы СТРОГО painted
-      //     unlock state до удаления body class. Один rAF может не
-      //     успеть (некоторые браузеры paint позже).
-      //  3) class removal → nav visibility вернётся, но layout уже
-      //     settled — nav «появляется на своём месте», не flicker-ит.
+      // ВСЁ atomic в одной synchronous блоке. Browser batches all DOM
+      // mutations и paints итог. No intermediate paint = no flicker.
+      // Pre-set documentElement.scrollTop тоже — на случай если scrollTo
+      // не сработает на ещё locked body.
+      document.documentElement.scrollTop = scroll;
       document.body.style.position = "";
       document.body.style.top = "";
       document.body.style.left = "";
@@ -286,18 +284,12 @@ function App() {
       document.body.style.width = "";
       document.documentElement.style.overflow = "";
       window.scrollTo(0, scroll);
+      document.body.classList.remove("zen-input-focused");
       try {
         const tg = window.Telegram?.WebApp as { enableVerticalSwipes?: () => void } | undefined;
         tg?.enableVerticalSwipes?.();
       } catch {}
-      // Double rAF — гарантируем что layout fully painted before класс
-      // удалён. Nav «вернётся» на своё место instant без visible jump.
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          document.body.classList.remove("zen-input-focused");
-        });
-      });
-      // iOS auto-scroll override interval.
+      // iOS auto-scroll override interval как failsafe.
       let attempts = 0;
       const restoreInterval = window.setInterval(() => {
         if (window.scrollY !== scroll) {
@@ -349,33 +341,10 @@ function App() {
     };
   }, []);
 
-  // VisualViewport-based keyboard compensation.
-  // iOS Safari (включая Telegram WebView) автоматически шифтит ВЕСЬ
-  // layout вверх при появлении клавиатуры, поэтому position:fixed nav
-  // «всплывает» над клавиатурой, а под ним появляется body bg.
-  // viewport-meta `interactive-widget=overlays-content` теоретически это
-  // выключает, но не везде работает (Telegram WebView).
-  //
-  // Решение: слушаем visualViewport.resize/scroll, считаем разницу между
-  // layout-height (innerHeight) и visual-height (vv.height) — это высота
-  // клавиатуры. Translate-им BottomNavBar ВНИЗ на эту разницу через
-  // CSS custom property → nav снова за пределами visible viewport, под
-  // клавиатурой. Зрителю кажется что layout «не сдвинулся».
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const update = () => {
-      const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-      document.documentElement.style.setProperty("--zen-kb-offset", `${offset}px`);
-    };
-    update();
-    vv.addEventListener("resize", update);
-    vv.addEventListener("scroll", update);
-    return () => {
-      vv.removeEventListener("resize", update);
-      vv.removeEventListener("scroll", update);
-    };
-  }, []);
+  // VisualViewport-based listener был удалён — он управлял nav transform
+  // (translateY на keyboard height), что создавало slide-up animation
+  // на close клавиатуры. Nav теперь stays at bottom:0 (covered by
+  // keyboard when open, visible normally). body lock prevents iOS shift.
 
   useEffect(() => {
     let cancelled = false;
