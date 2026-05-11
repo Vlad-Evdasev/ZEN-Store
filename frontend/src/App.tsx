@@ -131,13 +131,14 @@ function HeaderIconFavorites() {
 }
 
 function HeaderIconCart() {
-  // Solid filled tote с stroke handle сверху — modern e-com style.
-  // Тонкая дуга-ручка + bold filled корпус даёт визуальный «вес»,
-  // который не достижим чисто-stroke иконками.
+  // Luxury handbag silhouette: трапеция (Birkin/Kelly geometry) +
+  // элегантная bezier-handle + clasp dot. Sharp angular corners
+  // дают fashion-editorial вибу, clasp deталь — luxury feel.
   return (
-    <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
-      <path stroke="none" d="M5.5 8.5h13l-1.05 11.05a1.6 1.6 0 0 1-1.6 1.45H8.15a1.6 1.6 0 0 1-1.6-1.45L5.5 8.5z" />
-      <path fill="none" d="M8.5 8.5a3.5 3.5 0 0 1 7 0" />
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
+      <path d="M4.5 9L19.5 9L18 21H6Z" />
+      <path d="M9 9C9 6.5 10.3 5 12 5C13.7 5 15 6.5 15 9" />
+      <circle cx="12" cy="13.5" r="0.9" fill="currentColor" stroke="none" />
     </svg>
   );
 }
