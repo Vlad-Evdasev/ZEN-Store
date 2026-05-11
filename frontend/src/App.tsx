@@ -272,22 +272,31 @@ function App() {
     };
     const unlockBody = () => {
       const scroll = savedScrollY;
+      // ORDER MATTERS чтобы избежать flicker хедера и футера:
+      //  1) Remove body position:fixed + восстановить scroll В ОДНОМ
+      //     synchronous блоке — браузер batch-ит reflow.
+      //  2) Class removal (footer становится visible) ОТЛОЖЕНА в rAF,
+      //     даём layout settled перед unhiding nav.
       document.body.style.position = "";
       document.body.style.top = "";
       document.body.style.left = "";
       document.body.style.right = "";
       document.body.style.width = "";
       document.documentElement.style.overflow = "";
-      document.body.classList.remove("zen-input-focused");
       window.scrollTo(0, scroll);
       // Telegram WebApp: re-enable swipes after blur.
       try {
         const tg = window.Telegram?.WebApp as { enableVerticalSwipes?: () => void } | undefined;
         tg?.enableVerticalSwipes?.();
       } catch {}
+      // Class removal в rAF — header/footer reveal происходит после
+      // того как layout settled от style removal + scrollTo. Без rAF
+      // class removal + style removal могут конкурировать → flicker.
+      requestAnimationFrame(() => {
+        document.body.classList.remove("zen-input-focused");
+      });
       // iOS Safari может auto-scroll-нуть страницу после blur input-а.
-      // Override его caretно в interval-е первые 500ms — header не
-      // «прыгает» когда юзер снимает выбор с поля поиска.
+      // Override его в interval-е первые 500ms.
       let attempts = 0;
       const restoreInterval = window.setInterval(() => {
         if (window.scrollY !== scroll) {
