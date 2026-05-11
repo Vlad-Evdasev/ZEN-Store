@@ -229,12 +229,18 @@ function App() {
     }
   }, []);
 
-  // Global focus-tracker:
-  //  1) запоминаем когда input/textarea ПОТЕРЯЛ фокус (для __zenLastInputBlur);
-  //  2) добавляем body.zen-input-focused класс на focusin — для МГНОВЕННОГО
-  //     скрытия BottomNavBar (без задержки на vv.resize event);
-  //  3) сохраняем scrollY перед фокусом и восстанавливаем после, чтобы
-  //     iOS не auto-скроллил страницу к input-у.
+  // Global focus-tracker + body-lock на input focus.
+  //
+  // iOS Safari (включая Telegram WebView) при focus на input делает:
+  //  - auto-scroll страницы вверх чтобы input был в visual viewport
+  //  - layout shift вверх → bottom-nav «всплывает» над клавиатурой
+  //    + черный body bg «вылазит» под клавиатурой
+  //
+  // Решение: position:fixed body во время focus. Body становится
+  // зафиксированным к viewport-у на сохранённой scrollY-позиции.
+  // iOS не может scrollить fixed body. Layout не сдвигается.
+  // Visual viewport просто shrink-ается под клавиатуру.
+  // На blur восстанавливаем scrollY.
   useEffect(() => {
     const isInputEl = (t: EventTarget | null): boolean => {
       if (!t) return false;
@@ -246,39 +252,36 @@ function App() {
       return el.tagName === "TEXTAREA";
     };
     let savedScrollY = 0;
-    let restoreInterval: number | null = null;
+    const lockBody = () => {
+      savedScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${savedScrollY}px`;
+      document.body.style.left = "0";
+      document.body.style.right = "0";
+      document.body.style.width = "100%";
+      document.body.classList.add("zen-input-focused");
+    };
+    const unlockBody = () => {
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
+      document.body.style.width = "";
+      document.body.classList.remove("zen-input-focused");
+      window.scrollTo(0, savedScrollY);
+    };
     const onFocusIn = (e: FocusEvent) => {
-      if (isInputEl(e.target)) {
-        // Сохраняем текущий скролл ДО того как iOS auto-scroll-нёт страницу.
-        savedScrollY = window.scrollY || document.documentElement.scrollTop || 0;
-        document.body.classList.add("zen-input-focused");
-        // iOS auto-скроллит несколько раз в течение ~700ms после focus.
-        // Restore-им в interval-е чтобы перебить все попытки.
-        if (restoreInterval !== null) window.clearInterval(restoreInterval);
-        restoreInterval = window.setInterval(() => {
-          if (window.scrollY !== savedScrollY) {
-            window.scrollTo(0, savedScrollY);
-          }
-        }, 30);
-        window.setTimeout(() => {
-          if (restoreInterval !== null) {
-            window.clearInterval(restoreInterval);
-            restoreInterval = null;
-          }
-        }, 800);
+      if (isInputEl(e.target) && !document.body.classList.contains("zen-input-focused")) {
+        lockBody();
       }
     };
     const onFocusOut = (e: FocusEvent) => {
       if (isInputEl(e.target)) {
         (window as unknown as { __zenLastInputBlur?: number }).__zenLastInputBlur = Date.now();
-        if (restoreInterval !== null) {
-          window.clearInterval(restoreInterval);
-          restoreInterval = null;
-        }
         setTimeout(() => {
           const a = document.activeElement;
           if (!isInputEl(a)) {
-            document.body.classList.remove("zen-input-focused");
+            unlockBody();
           }
         }, 50);
       }
@@ -288,7 +291,6 @@ function App() {
     return () => {
       document.removeEventListener("focusin", onFocusIn, true);
       document.removeEventListener("focusout", onFocusOut, true);
-      if (restoreInterval !== null) window.clearInterval(restoreInterval);
     };
   }, []);
 
