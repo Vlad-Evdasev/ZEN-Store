@@ -1713,6 +1713,15 @@ body.zen-product-overlay-on .zen-app .zen-catalog-search-row {
      создавая «settle into place»-эффект. */
   box-shadow: none;
   pointer-events: none;
+  /* Slide-UP transition (open карточки) — переопределяет base.
+     easeInOutCubic cubic-bezier(0.65, 0, 0.35, 1) — плавный СТАРТ
+     движения вверх (без резкого срыва как easeOut). + длиннее 800ms
+     чтобы дать пользователю время визуально проследить за анимацией
+     synchronously с FLIP-image. */
+  transition:
+    height 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 800ms cubic-bezier(0.65, 0, 0.35, 1),
+    transform 800ms cubic-bezier(0.65, 0, 0.35, 1);
 }
 body.zen-inspire-overlay-on .zen-app .zen-catalog-search-shelf,
 body.zen-product-overlay-on .zen-app .zen-catalog-search-shelf {
@@ -2436,10 +2445,14 @@ html[data-theme="dark"] .zen-app .zen-catalog-search-shelf {
      это = половина высоты пилюли (идеальный полукруг), в открытом —
      те же самые углы, что и у пилюли поиска.
      Transitions:
-     - height 0.38s: для filter-row expansion (плавно растёт по
-       вертикали когда юзер открывает filters)
-     - transform + box-shadow 720ms: для slide-up/down за хедер при
-       open/close карточки товара. easeOutQuint smooth feel. */
+     - height 0.38s: для filter-row expansion
+     - transform + box-shadow 720ms easeOutQuint:
+       ИСПОЛЬЗУЕТСЯ ТОЛЬКО ДЛЯ SLIDE-DOWN (close карточки). При close
+       класс снимается → CSS использует transition ИЗ base-ruleset.
+       Плавный финиш для появления pill из-под хедера.
+     Slide-UP transition (open карточки) переопределяется в
+     body.overlay-on ruleset ниже — там easeInOutCubic для плавного
+     стартового движения (не resko как было с pure easeOut). */
   transition:
     height 0.38s cubic-bezier(0.4, 0, 0.2, 1),
     box-shadow 720ms cubic-bezier(0.22, 1, 0.36, 1),
