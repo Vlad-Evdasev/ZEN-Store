@@ -29,6 +29,16 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
   const { formatPrice } = useSettings();
   const imgWrapRef = useRef<HTMLDivElement>(null);
   const handleClick = () => {
+    // Если в фокусе input/textarea (например, search в каталоге) —
+    // первый клик ВНЕ него должен ТОЛЬКО снять фокус (= спрятать
+    // клавиатуру), а не открыть товар. Это поведение «native iOS
+    // app» — пользователь часто тапает на карточку чтобы закрыть
+    // клавиатуру, а не для открытия товара.
+    const active = document.activeElement;
+    if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA")) {
+      (active as HTMLElement).blur();
+      return;
+    }
     const rect = imgWrapRef.current?.getBoundingClientRect() ?? null;
     onClick(rect);
   };
@@ -74,11 +84,11 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
       onKeyDown={handleKeyDown}
       style={cardStyle}
     >
-      <div ref={imgWrapRef} className="product-card__image-wrap" style={imageWrapStyle}>
+      <div ref={imgWrapRef} className="product-card__image-wrap" style={{ ...imageWrapStyle, visibility: isHidden ? "hidden" : "visible" }}>
         <img
           src={(product.image_urls && product.image_urls[0]) || product.image_url || "https://via.placeholder.com/200"}
           alt={product.name}
-          style={{ ...styles.image, visibility: isHidden ? "hidden" : "visible" }}
+          style={styles.image}
         />
       </div>
       <div className="product-card-desc" style={descWrapStyle}>

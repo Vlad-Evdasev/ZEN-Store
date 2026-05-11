@@ -161,6 +161,13 @@ function MasonryCard({ post, onOpen, isHidden = false }: MasonryCardProps) {
   if (images.length === 0) return null;
 
   const handleClick = () => {
+    // Если в фокусе input/textarea — первый клик ВНЕ него
+    // снимает фокус (закрывает клавиатуру) и НЕ открывает пост.
+    const active = document.activeElement;
+    if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA")) {
+      (active as HTMLElement).blur();
+      return;
+    }
     const rect = imgRef.current?.getBoundingClientRect()
       ?? ref.current?.getBoundingClientRect()
       ?? null;
@@ -301,6 +308,10 @@ interface ExpandedViewProps {
    *  анимируются обратно в outgoing-слое). Без этого зритель видит
    *  «двойник» — летящую карточку И thumb под ней. */
   hiddenIds?: Set<number>;
+  /** Регистрирует функцию закрытия в parent. Parent рендерит общую
+   *  back-кнопку и зовёт эту функцию при тапе. Только активный
+   *  ExpandedView (не forceClose, не forwardOut) регистрируется. */
+  registerClose?: (fn: (() => void) | null) => void;
   /** Вызывается СРАЗУ когда юзер тапает close — раньше чем стартует
    *  FLIP-close. Parent в ответ снимает body-class (если это финальное
    *  закрытие), чтобы фоновая страница начала un-zoom-иться параллельно
@@ -360,7 +371,7 @@ function computeSheetAnim({
 
 function ExpandedView({
   post, startRect, startSrc, startIndex, userId, lang,
-  fadeOnClose, isBackNav, initialScrollTop, forceClose, forwardOut, related, hiddenIds,
+  fadeOnClose, isBackNav, initialScrollTop, forceClose, forwardOut, related, hiddenIds, registerClose,
   onStartClose, onClose, onPinToggle, onShare, onOpenRelated,
 }: ExpandedViewProps) {
   const images = getPostImages(post);
@@ -562,6 +573,15 @@ function ExpandedView({
     };
   }, [requestClose]);
 
+  // Регистрируем requestClose в parent (для общей back-кнопки).
+  // Только активный ExpandedView — не outgoing (forceClose) и не
+  // forwardOut. Эти не должны управлять back-кнопкой.
+  useEffect(() => {
+    if (forceClose || forwardOut || !registerClose) return;
+    registerClose(requestClose);
+    return () => registerClose(null);
+  }, [registerClose, requestClose, forceClose, forwardOut]);
+
   const handlePin = async () => {
     const myVersion = ++reqVersion.current;
     const wasPinned = post.user_liked;
@@ -636,30 +656,14 @@ function ExpandedView({
       ? 0
       : 1;
 
-  // Back-кнопка портируется отдельно в body, чтобы её stacking-context
-  // был выше хедера (header z-index = 1300 при overlay). ExpandedView
-  // root имеет z-index 1100 — image должна быть под хедером, а кнопка
-  // НАД ним. Разделение через два независимых портала это и даёт.
-  // Не рендерим для forceClose (outgoing back-nav) и forwardOut
-  // (previous уходит) — в эти моменты есть active expanded, и его
-  // back-кнопка появится после 520ms.
-  const backBtnNode = (contentReady && !forceClose && !forwardOut && typeof document !== "undefined")
-    ? createPortal(
-        <button
-          type="button"
-          onClick={requestClose}
-          style={expandedStyles.backBtnFloating}
-          aria-label="Назад"
-        >
-          <BackArrowIcon size={20} />
-        </button>,
-        document.body
-      )
-    : null;
+  // Back-кнопка теперь рендерится в PARENT (NewArrivalsPage) — это
+  // позволяет ей оставаться видимой ВО ВРЕМЯ навигации между постами
+  // (forward к related или back через стек). Раньше каждый ExpandedView
+  // имел свою back-кнопку, привязанную к contentReady, и при пере-
+  // mount-е она пропадала на 520ms.
 
   return (
     <>
-    {backBtnNode}
     <div
       role="dialog"
       aria-modal="true"
@@ -878,6 +882,25 @@ export function NewArrivalsPage({
   // открытии). 520ms потом размонтируется. Эффект «контент расталкивается
   // и уходит» симметричный главному page-open.
   const [forwardOutgoingItem, setForwardOutgoingItem] = useState<ExpandedItem | null>(null);
+  // Common back-кнопка живёт на уровне NewArrivalsPage — это даёт
+  // плавный «не пропадает» между переходами по постам (forward/back-
+  // nav). Раньше каждый ExpandedView имел свою back-кнопку, привязанную
+  // к contentReady, и при пере-mount-е она пропадала на 520ms.
+  const closeRequestRef = useRef<(() => void) | null>(null);
+  const [backBtnVisible, setBackBtnVisible] = useState(false);
+  useEffect(() => {
+    if (!expanded) {
+      setBackBtnVisible(false);
+      return;
+    }
+    // Первый раз показываем back-btn ПОСЛЕ FLIP-open (520ms).
+    // Дальше — пока есть expanded, она остаётся видимой.
+    if (!backBtnVisible) {
+      const tm = setTimeout(() => setBackBtnVisible(true), 520);
+      return () => clearTimeout(tm);
+    }
+    return undefined;
+  }, [expanded, backBtnVisible]);
   // Кэш related-постов по id поста. Когда юзер закрывает related-пост и
   // возвращается к предыдущему через стек — related для него уже здесь
   // (фетчили при первом открытии), и ExpandedView мгновенно рендерится
@@ -1210,6 +1233,7 @@ export function NewArrivalsPage({
           isBackNav={!!expanded.isBackNav}
           related={relatedMap[expanded.post.id] ?? []}
           hiddenIds={hiddenPostIds}
+          registerClose={(fn) => { closeRequestRef.current = fn; }}
           onStartClose={handleStartClose}
           initialScrollTop={expanded.scrollTop}
           onClose={closeExpanded}
@@ -1217,6 +1241,21 @@ export function NewArrivalsPage({
           onShare={handleShare}
           onOpenRelated={openRelated}
         />,
+        portalTarget
+      )}
+
+      {/* Общая back-кнопка для всех состояний expanded (включая
+          forward/back-nav). Рендерится одним порталом, между навигациями
+          не unmount-ится — stays visible all the time. */}
+      {portalTarget && backBtnVisible && createPortal(
+        <button
+          type="button"
+          onClick={() => closeRequestRef.current?.()}
+          style={expandedStyles.backBtnFloating}
+          aria-label="Назад"
+        >
+          <BackArrowIcon size={20} />
+        </button>,
         portalTarget
       )}
 

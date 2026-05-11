@@ -229,6 +229,35 @@ function App() {
     }
   }, []);
 
+  // Keyboard-up detection: фокус на input/textarea означает что
+  // мобильная клавиатура поднимется. WebView (iOS Safari + Telegram)
+  // имеет тенденцию через ~200ms репозиционировать position:fixed
+  // элементы НАД клавиатурой → BottomNavBar всплывает над клавишами.
+  // Скрываем nav через body-class пока input в фокусе.
+  useEffect(() => {
+    const onFocusIn = (e: FocusEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (!t) return;
+      const isInput = (t.tagName === "INPUT" && (t as HTMLInputElement).type !== "checkbox" && (t as HTMLInputElement).type !== "radio")
+        || t.tagName === "TEXTAREA";
+      if (isInput) document.body.classList.add("zen-keyboard-up");
+    };
+    const onFocusOut = () => {
+      // Small delay чтобы не мигать nav-ом при переключении между inputs.
+      setTimeout(() => {
+        const a = document.activeElement;
+        const stillInput = a && ((a.tagName === "INPUT" && (a as HTMLInputElement).type !== "checkbox" && (a as HTMLInputElement).type !== "radio") || a.tagName === "TEXTAREA");
+        if (!stillInput) document.body.classList.remove("zen-keyboard-up");
+      }, 50);
+    };
+    document.addEventListener("focusin", onFocusIn);
+    document.addEventListener("focusout", onFocusOut);
+    return () => {
+      document.removeEventListener("focusin", onFocusIn);
+      document.removeEventListener("focusout", onFocusOut);
+    };
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     getProducts()

@@ -43,7 +43,11 @@ export function ProductPage({
   const [descExpanded, setDescExpanded] = useState(false);
   const [imageIndex, setImageIndex] = useState(0);
   const sheetRef = useRef<HTMLDivElement>(null);
-  const heroImgRef = useRef<HTMLImageElement>(null);
+  // FLIP применяем к ВСЕМУ hero-контейнеру (а не только к image): иначе
+  // фон контейнера (var(--surface) + box-shadow + border-radius) виден
+  // в полный размер позади маленькой FLIP-картинки → выглядит как
+  // огромный скелетон. С FLIP контейнера всё растёт ОДНИМ блоком.
+  const heroRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const wheelLockedRef = useRef(false);
@@ -97,45 +101,34 @@ export function ProductPage({
     };
   }, []);
 
-  // FLIP-open: hero-image стартует в координатах thumbRect (catalog),
-  // затем плавно «вырастает» в полноразмерное hero. ease-in-out 520ms
-  // — синхронно с inspire-постами.
+  // FLIP-open: hero-CONTAINER стартует в координатах thumbRect, затем
+  // transform-анимируется в свою фуллскрин-позицию. Image внутри (100%
+  // x 100% с object-fit:cover) автоматически масштабируется с
+  // родителем — никакого «огромного скелетона» позади image.
   useLayoutEffect(() => {
-    const img = heroImgRef.current;
-    if (!img) {
-      requestAnimationFrame(() => setPhase("open"));
-      return;
-    }
-    if (!thumbRect) {
+    const hero = heroRef.current;
+    if (!hero || !thumbRect) {
       requestAnimationFrame(() => setPhase("open"));
       return;
     }
     const apply = () => {
-      const final = img.getBoundingClientRect();
+      const final = hero.getBoundingClientRect();
       if (final.width === 0 || final.height === 0) return;
       const dx = thumbRect.left - final.left;
       const dy = thumbRect.top - final.top;
       const sx = thumbRect.width / final.width;
       const sy = thumbRect.height / final.height;
-      img.style.transformOrigin = "top left";
-      img.style.transition = "none";
-      img.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
-      void img.offsetWidth;
-      img.style.transition = `transform ${ANIM_DURATION}ms cubic-bezier(0.45, 0, 0.55, 1)`;
-      img.style.transform = "translate3d(0, 0, 0) scale(1, 1)";
+      hero.style.transformOrigin = "top left";
+      hero.style.transition = "none";
+      hero.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
+      void hero.offsetWidth;
+      hero.style.transition = `transform ${ANIM_DURATION}ms cubic-bezier(0.45, 0, 0.55, 1)`;
+      hero.style.transform = "translate3d(0, 0, 0) scale(1, 1)";
       setPhase("open");
     };
-    if (img.complete && img.naturalWidth > 0) {
-      apply();
-    } else {
-      const onLoad = () => {
-        img.removeEventListener("load", onLoad);
-        apply();
-      };
-      img.addEventListener("load", onLoad);
-      const t2 = setTimeout(apply, 60);
-      return () => { img.removeEventListener("load", onLoad); clearTimeout(t2); };
-    }
+    // Контейнер всегда имеет финальный layout-размер, ждать загрузки
+    // картинки не нужно — image сам fade-ится через CSS keyframe.
+    apply();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -192,22 +185,22 @@ export function ProductPage({
   };
 
   // requestClose: на тап back-кнопки. Снимаем dim-класс (main
-  // расправляется параллельно), FLIP-back image в thumbRect, через
-  // 520ms зовём onBack для размонтирования.
+  // расправляется параллельно), FLIP-back hero-container в thumbRect,
+  // через 520ms зовём onBack для размонтирования.
   const requestClose = useCallback(() => {
     if (phase === "closing") return;
     document.body.classList.remove("zen-product-overlay-on");
     setContentReady(false);
-    const img = heroImgRef.current;
-    if (img && thumbRect) {
-      const final = img.getBoundingClientRect();
+    const hero = heroRef.current;
+    if (hero && thumbRect) {
+      const final = hero.getBoundingClientRect();
       const dx = thumbRect.left - final.left;
       const dy = thumbRect.top - final.top;
       const sx = thumbRect.width / Math.max(final.width, 1);
       const sy = thumbRect.height / Math.max(final.height, 1);
-      img.style.transformOrigin = "top left";
-      img.style.transition = `transform ${ANIM_DURATION}ms cubic-bezier(0.45, 0, 0.55, 1)`;
-      img.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
+      hero.style.transformOrigin = "top left";
+      hero.style.transition = `transform ${ANIM_DURATION}ms cubic-bezier(0.45, 0, 0.55, 1)`;
+      hero.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
     }
     setPhase("closing");
     setTimeout(onBack, ANIM_DURATION);
@@ -293,10 +286,9 @@ export function ProductPage({
       }}
     >
       <div className="product-v2">
-        <div className="product-v2__hero">
+        <div ref={heroRef} className="product-v2__hero">
           {imageUrls.length <= 1 ? (
             <img
-              ref={heroImgRef}
               key={`${product.id}-img`}
               src={currentImage}
               alt={product.name}
@@ -318,7 +310,6 @@ export function ProductPage({
                   style={{ opacity: i === imageIndex ? 1 : 0, pointerEvents: i === imageIndex ? "auto" : "none" }}
                 >
                   <img
-                    ref={i === 0 ? heroImgRef : undefined}
                     src={url}
                     alt={`${product.name} — ${i + 1}`}
                     className="product-v2__hero-img"
