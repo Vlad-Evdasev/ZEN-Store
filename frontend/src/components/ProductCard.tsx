@@ -255,8 +255,8 @@ const styles: Record<string, React.CSSProperties> = {
     height: "100%",
     objectFit: "cover",
   },
-  // Стиль точек идентичен ProductPage gallery-dots — pill-bg
-  // с blur, активная точка превращается в widened pill.
+  // Стиль точек идентичен post-card в feed постов (NewArrivalsPage) —
+  // компактнее чем в раскрытой ProductPage.
   dotsRow: {
     position: "absolute",
     bottom: 8,
@@ -264,24 +264,24 @@ const styles: Record<string, React.CSSProperties> = {
     transform: "translateX(-50%)",
     display: "flex",
     alignItems: "center",
-    gap: 6,
-    padding: "6px 10px",
+    gap: 4,
+    padding: "5px 8px",
     borderRadius: 999,
-    background: "rgba(0, 0, 0, 0.28)",
-    backdropFilter: "blur(10px)",
-    WebkitBackdropFilter: "blur(10px)",
+    background: "rgba(0, 0, 0, 0.32)",
+    backdropFilter: "blur(6px)",
+    WebkitBackdropFilter: "blur(6px)",
     pointerEvents: "none",
   },
   dot: {
-    width: 6,
-    height: 6,
+    width: 5,
+    height: 5,
     borderRadius: "50%",
-    background: "rgba(255, 255, 255, 0.45)",
-    transition: "background 0.2s ease, width 0.25s ease, border-radius 0.25s ease",
+    background: "rgba(255, 255, 255, 0.55)",
+    transition: "background 0.15s ease, width 0.15s ease, border-radius 0.15s ease",
   },
   dotActive: {
     background: "#fff",
-    width: 18,
+    width: 12,
     borderRadius: 3,
   },
   nameRow: {
