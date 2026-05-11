@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import type { Product, Store, Category, ProductReviewStats } from "../api";
 import { getProductReviewStats } from "../api";
 import { FilterIcon } from "../components/FilterIcon";
@@ -436,17 +437,24 @@ export function Catalog({
         </div>
       )}
 
-      <div className="zen-catalog-search-shelf" aria-hidden />
-      <div
-        ref={searchRowRef}
-        className={`zen-catalog-search-row ${filtersOpen && !filtersClosing ? "zen-catalog-search-row--filter-open" : ""}`}
-        style={searchRowHeight !== null ? { height: `${searchRowHeight}px` } : undefined}
-        onTransitionEnd={(e) => {
-          if (e.propertyName !== "height") return;
-          if (e.target !== e.currentTarget) return;
-          handleFiltersPanelAnimationEnd();
-        }}
-      >
+      {/* Search-shelf и search-row рендерятся через PORTAL в body,
+          ВНЕ main. Это нужно чтобы они не получали main's opacity:0
+          при overlay-on (иначе search-row невидим и slide-up анимация
+          не видна пользователю). В portal они анимируются translateY
+          ВВЕРХ за хедер при open карточки товара. */}
+      {typeof document !== "undefined" && createPortal(
+        <div className="zen-app">
+          <div className="zen-catalog-search-shelf" aria-hidden />
+          <div
+            ref={searchRowRef}
+            className={`zen-catalog-search-row ${filtersOpen && !filtersClosing ? "zen-catalog-search-row--filter-open" : ""}`}
+            style={searchRowHeight !== null ? { height: `${searchRowHeight}px` } : undefined}
+            onTransitionEnd={(e) => {
+              if (e.propertyName !== "height") return;
+              if (e.target !== e.currentTarget) return;
+              handleFiltersPanelAnimationEnd();
+            }}
+          >
         <div className="zen-catalog-search-row-header">
           <span className="zen-catalog-search-icon zen-catalog-search-row-search-slot" aria-hidden>
             <SearchIcon />
@@ -519,7 +527,10 @@ export function Catalog({
           onApply={handleApplyFilters}
           lang={lang}
         />
-      </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {displayList.length === 0 ? (
         productsLoading && products.length === 0 ? (
