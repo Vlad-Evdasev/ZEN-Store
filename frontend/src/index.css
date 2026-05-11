@@ -17,19 +17,20 @@
   --input-height: 48px;
   --input-padding: 14px 16px;
   --font-size-body: 15px;
-  /* Тёмная тема: тот же тёплый тон, затемнённый */
-  --bg: #0f0e0e;
-  --bg-rgb: 15, 14, 14;
-  --surface: #1c1b1a;
-  --surface-elevated: #262524;
-  --border: #353432;
+  /* Тёмная тема: OLED-deep black (pure #000), surfaces — почти-чёрные.
+     Без тёплого подтона — глубже, более premium / контрастно. */
+  --bg: #000000;
+  --bg-rgb: 0, 0, 0;
+  --surface: #0a0a0a;
+  --surface-elevated: #1a1a1a;
+  --border: #262626;
   --text: #f0efec;
   --muted: #9a9895;
   --accent: #c62828;
   --accent-hover: #e53935;
   --accent-dim: #8b0000;
-  --header-bg: #0f0e0e;
-  --card-desc-bg: rgba(28,27,26,0.92);
+  --header-bg: #000000;
+  --card-desc-bg: rgba(10,10,10,0.92);
   --card-desc-bleed: 2px;
   --card-desc-outer: none;
 }
@@ -196,11 +197,11 @@ a {
 
 /* ─── DARK THEME — control-room после заката ─────────────────────────── */
 .zen-admin[data-theme="dark"] {
-  --bg: #0d0d0c;
-  --surface: #161614;
-  --surface-2: #1f1f1d;
-  --surface-hover: #252522;
-  --surface-active: #2c2c29;
+  --bg: #000000;
+  --surface: #0a0a0a;
+  --surface-2: #141414;
+  --surface-hover: #1c1c1c;
+  --surface-active: #232323;
   --border: #ffffff18;
   --border-strong: #ffffff2e;
   --hairline: #ffffff10;
@@ -228,7 +229,7 @@ a {
 
 /* admin-id в тёмной теме — тёмный код-чип не сливается с фоном */
 .zen-admin[data-theme="dark"] .admin-id {
-  background: #0a0a08;
+  background: #161616;
   border-color: var(--border-strong);
 }
 
@@ -1434,7 +1435,7 @@ html[data-theme="light"] .zen-app .product-card-price {
   z-index: 9999;
   /* Тот же тёмный фон что в основном приложении (var(--bg) в тёмной теме).
      Хардкодим значение чтобы экран был чёрным даже если юзер на светлой теме. */
-  background: #0f0e0e;
+  background: #000000;
   color: #f0efec;
   display: flex;
   align-items: center;

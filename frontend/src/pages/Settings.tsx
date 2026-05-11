@@ -85,7 +85,7 @@ export function Settings({ userId }: SettingsProps) {
           onClick={() => setTheme("dark")}
           style={{ ...styles.themeCard, ...(settings.theme === "dark" ? styles.themeCardActive : {}) }}
         >
-          <span style={{ ...styles.themePreview, background: "#0f0e0e" }}>
+          <span style={{ ...styles.themePreview, background: "#000000" }}>
             <span style={styles.themePreviewAccent} />
             <span style={styles.themePreviewBody} />
           </span>
