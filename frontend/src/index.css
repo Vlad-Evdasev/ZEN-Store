@@ -2445,16 +2445,13 @@ html[data-theme="dark"] .zen-app .zen-catalog-search-shelf {
   height: 50px;
   overflow: hidden;
   /* Base transition = ПРИ CLOSE (slide-down).
-     easeOutQuint fast start + 200ms DELAY чтобы search-row не входил
-     в viewport пока hero ещё в close-animation (иначе shadow appears
-     at top viewport во время closing — «extra shadow» в user's words).
-     После 200ms delay hero close уже на 38% (520ms hero anim),
-     search-row тогда быстро скользит вниз. По итогу hero и search-row
-     finish близко по времени, без visual conflict. */
+     easeOutQuint fast start, БЕЗ delay (раньше был 200ms delay — user
+     перцептивно ощущал как «минимальную задержку»). transform + opacity
+     синхронно. Pill моментально начинает ехать вниз когда class снят. */
   transition:
     height 0.38s cubic-bezier(0.4, 0, 0.2, 1),
-    transform 720ms cubic-bezier(0.22, 1, 0.36, 1) 200ms,
-    opacity 720ms cubic-bezier(0.22, 1, 0.36, 1) 200ms;
+    transform 720ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 720ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform, opacity;
 }
 /* Шапка внутри единой формы — всегда 50px, row-layout, не зависит от

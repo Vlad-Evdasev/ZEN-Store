@@ -259,11 +259,14 @@ function App() {
       document.body.style.left = "0";
       document.body.style.right = "0";
       document.body.style.width = "100%";
-      // Transparent bg на body+html — user видит Telegram theme bg
-      // через прозрачную клавиатуру, не наш var(--bg) dark.
-      // Inline styles = атомарно с body lock, no CSS transition = no flicker.
+      // Transparent bg на body+html+.zen-app — user видит Telegram theme
+      // bg через прозрачную клавиатуру. .zen-app тоже transparent потому
+      // что оно ОПЕКЕЙТНО (var(--bg) inline в App.tsx) и покрывает body.
+      // Без .zen-app transparent user видит только .zen-app's bg.
       document.body.style.background = "transparent";
       document.documentElement.style.background = "transparent";
+      const zenApp = document.querySelector(".zen-app") as HTMLElement | null;
+      if (zenApp) zenApp.style.background = "transparent";
       document.documentElement.style.overflow = "hidden";
       document.body.classList.add("zen-input-focused");
       try {
@@ -285,6 +288,8 @@ function App() {
       document.body.style.width = "";
       document.body.style.background = "";
       document.documentElement.style.background = "";
+      const zenApp = document.querySelector(".zen-app") as HTMLElement | null;
+      if (zenApp) zenApp.style.background = "";
       document.documentElement.style.overflow = "";
       window.scrollTo(0, scroll);
       try {
@@ -300,18 +305,36 @@ function App() {
     const onFocusOut = (e: FocusEvent) => {
       if (isInputEl(e.target)) {
         (window as unknown as { __zenLastInputBlur?: number }).__zenLastInputBlur = Date.now();
-        // PHASE 1 (300ms): iOS keyboard close ~animation done. Remove
-        // class → footer instantly visible. Body still locked, layout
-        // stable. User видит footer на месте СРАЗУ когда клавиатура
-        // ушла, без delay 0.5s wait.
-        setTimeout(() => {
+        // PHASE 1: REVEAL FOOTER as soon as iOS клавиатура реально
+        // закрылась. Используем visualViewport.resize для точного
+        // detection — когда vv.height возвращается к full innerHeight,
+        // клавиатура ушла. Footer instantly visible без waiting за
+        // fixed delay (раньше 300ms был слишком поздно или рано).
+        let revealed = false;
+        const reveal = () => {
+          if (revealed) return;
+          revealed = true;
           if (!isInputEl(document.activeElement)) {
             document.body.classList.remove("zen-input-focused");
           }
-        }, 300);
-        // PHASE 2 (600ms): iOS layout adjustments fully done. Unlock
-        // body atomically. Footer was уже visible, scroll restore
-        // под footer-ом не виден как flicker.
+        };
+        const vv = window.visualViewport;
+        const onResize = () => {
+          if (!vv) return;
+          // Keyboard fully closed: vv.height almost equals innerHeight
+          if (Math.abs(window.innerHeight - vv.height) < 10) {
+            reveal();
+            vv.removeEventListener("resize", onResize);
+          }
+        };
+        vv?.addEventListener("resize", onResize);
+        // Fallback at 350ms (если visualViewport не fire-нул)
+        setTimeout(() => {
+          reveal();
+          vv?.removeEventListener("resize", onResize);
+        }, 350);
+        // PHASE 2 (600ms): full unlockBody. iOS layout fully settled,
+        // scroll restore без flicker.
         setTimeout(() => {
           if (!isInputEl(document.activeElement)) {
             unlockBody();
