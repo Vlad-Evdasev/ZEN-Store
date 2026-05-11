@@ -307,19 +307,33 @@ function App() {
     const onFocusOut = (e: FocusEvent) => {
       if (isInputEl(e.target)) {
         (window as unknown as { __zenLastInputBlur?: number }).__zenLastInputBlur = Date.now();
+        // 350ms delay — даём iOS клавиатуре полностью закрыться ДО
+        // unlock body. Иначе iOS делает layout adjust во время close
+        // и header «прыгает» на момент unlock.
         setTimeout(() => {
           const a = document.activeElement;
           if (!isInputEl(a)) {
             unlockBody();
           }
-        }, 50);
+        }, 350);
+      }
+    };
+    // PRE-EMPTIVE pointerdown listener: добавляем body.zen-input-focused
+    // ДО того как iOS успеет обработать focus и shift layout. Это
+    // мгновенно скрывает nav через CSS visibility:hidden и не даёт
+    // ему «всплыть» над клавиатурой.
+    const onPointerDown = (e: PointerEvent) => {
+      if (isInputEl(e.target)) {
+        document.body.classList.add("zen-input-focused");
       }
     };
     document.addEventListener("focusin", onFocusIn, true);
     document.addEventListener("focusout", onFocusOut, true);
+    document.addEventListener("pointerdown", onPointerDown, true);
     return () => {
       document.removeEventListener("focusin", onFocusIn, true);
       document.removeEventListener("focusout", onFocusOut, true);
+      document.removeEventListener("pointerdown", onPointerDown, true);
     };
   }, []);
 
