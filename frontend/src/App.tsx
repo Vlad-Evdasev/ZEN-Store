@@ -259,11 +259,13 @@ function App() {
       document.body.style.left = "0";
       document.body.style.right = "0";
       document.body.style.width = "100%";
+      // Transparent bg на body+html — user видит Telegram theme bg
+      // через прозрачную клавиатуру, не наш var(--bg) dark.
+      // Inline styles = атомарно с body lock, no CSS transition = no flicker.
+      document.body.style.background = "transparent";
+      document.documentElement.style.background = "transparent";
       document.documentElement.style.overflow = "hidden";
       document.body.classList.add("zen-input-focused");
-      // Telegram WebApp: expand чтобы layout оставался full size
-      // когда клавиатура открывается. Без expand iOS WebView shift-ит
-      // layout вверх → footer над клавиатурой + black bg.
       try {
         const tg = window.Telegram?.WebApp as { expand?: () => void; disableVerticalSwipes?: () => void } | undefined;
         tg?.expand?.();
@@ -274,17 +276,17 @@ function App() {
       const scroll = savedScrollY;
       // ВСЁ atomic в одной synchronous блоке. Browser batches all DOM
       // mutations и paints единый final state — no flicker.
-      // Interval scrollTo failsafe удалён — он сам мог создавать
-      // micro-jerks. С 600ms delay iOS уже settled, interval не нужен.
+      // (class removal сделана раньше в Phase 1 — см. onFocusOut)
       document.documentElement.scrollTop = scroll;
       document.body.style.position = "";
       document.body.style.top = "";
       document.body.style.left = "";
       document.body.style.right = "";
       document.body.style.width = "";
+      document.body.style.background = "";
+      document.documentElement.style.background = "";
       document.documentElement.style.overflow = "";
       window.scrollTo(0, scroll);
-      document.body.classList.remove("zen-input-focused");
       try {
         const tg = window.Telegram?.WebApp as { enableVerticalSwipes?: () => void } | undefined;
         tg?.enableVerticalSwipes?.();
@@ -298,14 +300,20 @@ function App() {
     const onFocusOut = (e: FocusEvent) => {
       if (isInputEl(e.target)) {
         (window as unknown as { __zenLastInputBlur?: number }).__zenLastInputBlur = Date.now();
-        // 600ms delay — iOS keyboard close + layout settle. Раньше 350ms
-        // было недостаточно — iOS все ещё делал position adjustments
-        // ПОСЛЕ нашего unlock → header/footer «дергались» на полсекунды.
-        // Body остаётся locked все 600ms, iOS не shift-ит layout,
-        // потом unlock происходит когда iOS уже settled.
+        // PHASE 1 (300ms): iOS keyboard close ~animation done. Remove
+        // class → footer instantly visible. Body still locked, layout
+        // stable. User видит footer на месте СРАЗУ когда клавиатура
+        // ушла, без delay 0.5s wait.
         setTimeout(() => {
-          const a = document.activeElement;
-          if (!isInputEl(a)) {
+          if (!isInputEl(document.activeElement)) {
+            document.body.classList.remove("zen-input-focused");
+          }
+        }, 300);
+        // PHASE 2 (600ms): iOS layout adjustments fully done. Unlock
+        // body atomically. Footer was уже visible, scroll restore
+        // под footer-ом не виден как flicker.
+        setTimeout(() => {
+          if (!isInputEl(document.activeElement)) {
             unlockBody();
           }
         }, 600);
