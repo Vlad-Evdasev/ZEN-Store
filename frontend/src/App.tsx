@@ -232,6 +232,16 @@ function App() {
     }
   }, []);
 
+  // При навигации (тап на cart/favorites/profile/settings/etc.) — если
+  // открыт product overlay, закрываем его. Иначе пользователь жал
+  // например «корзина», страница менялась под оверлеем, но карточка
+  // оставалась поверх → нужно было ещё раз вручную её закрывать.
+  // openProduct() меняет только overlay, не page, поэтому effect
+  // не дергается при открытии товара.
+  useEffect(() => {
+    setProductOverlay(null);
+  }, [page]);
+
   // Global focus-tracker + body-lock на input focus.
   //
   // iOS Safari (включая Telegram WebView) при focus на input делает:
@@ -262,14 +272,12 @@ function App() {
       document.body.style.left = "0";
       document.body.style.right = "0";
       document.body.style.width = "100%";
-      // Transparent bg на body+html+.zen-app — user видит Telegram theme
-      // bg через прозрачную клавиатуру. .zen-app тоже transparent потому
-      // что оно ОПЕКЕЙТНО (var(--bg) inline в App.tsx) и покрывает body.
-      // Без .zen-app transparent user видит только .zen-app's bg.
-      document.body.style.background = "transparent";
-      document.documentElement.style.background = "transparent";
-      const zenApp = document.querySelector(".zen-app") as HTMLElement | null;
-      if (zenApp) zenApp.style.background = "transparent";
+      // НЕ делаем body/html/.zen-app transparent. С deep OLED-black --bg
+      // и Telegram dark themes они выглядят одинаково, а transparent
+      // overrides создавал заметный flash: при открытии клавиатуры
+      // сначала виден Telegram bg, потом under keyboard вылезал solid
+      // #000 нашего --bg. Оставляем app bg solid всегда — keyboard
+      // вылезает на ровный чёрный фон без перехода.
       document.documentElement.style.overflow = "hidden";
       document.body.classList.add("zen-input-focused");
       try {
@@ -289,10 +297,6 @@ function App() {
       document.body.style.left = "";
       document.body.style.right = "";
       document.body.style.width = "";
-      document.body.style.background = "";
-      document.documentElement.style.background = "";
-      const zenApp = document.querySelector(".zen-app") as HTMLElement | null;
-      if (zenApp) zenApp.style.background = "";
       document.documentElement.style.overflow = "";
       window.scrollTo(0, scroll);
       try {
