@@ -232,9 +232,9 @@ function App() {
   // Global focus-tracker:
   //  1) запоминаем когда input/textarea ПОТЕРЯЛ фокус (для __zenLastInputBlur);
   //  2) добавляем body.zen-input-focused класс на focusin — для МГНОВЕННОГО
-  //     скрытия BottomNavBar (без задержки на vv.resize event), иначе
-  //     iOS успевает «всплыть» nav над клавиатурой на миллисекунду
-  //     (flicker).
+  //     скрытия BottomNavBar (без задержки на vv.resize event);
+  //  3) сохраняем scrollY перед фокусом и восстанавливаем после, чтобы
+  //     iOS не auto-скроллил страницу к input-у.
   useEffect(() => {
     const isInputEl = (t: EventTarget | null): boolean => {
       if (!t) return false;
@@ -245,15 +245,36 @@ function App() {
       }
       return el.tagName === "TEXTAREA";
     };
+    let savedScrollY = 0;
+    let restoreInterval: number | null = null;
     const onFocusIn = (e: FocusEvent) => {
       if (isInputEl(e.target)) {
+        // Сохраняем текущий скролл ДО того как iOS auto-scroll-нёт страницу.
+        savedScrollY = window.scrollY || document.documentElement.scrollTop || 0;
         document.body.classList.add("zen-input-focused");
+        // iOS auto-скроллит несколько раз в течение ~700ms после focus.
+        // Restore-им в interval-е чтобы перебить все попытки.
+        if (restoreInterval !== null) window.clearInterval(restoreInterval);
+        restoreInterval = window.setInterval(() => {
+          if (window.scrollY !== savedScrollY) {
+            window.scrollTo(0, savedScrollY);
+          }
+        }, 30);
+        window.setTimeout(() => {
+          if (restoreInterval !== null) {
+            window.clearInterval(restoreInterval);
+            restoreInterval = null;
+          }
+        }, 800);
       }
     };
     const onFocusOut = (e: FocusEvent) => {
       if (isInputEl(e.target)) {
         (window as unknown as { __zenLastInputBlur?: number }).__zenLastInputBlur = Date.now();
-        // 50ms задержка чтобы не мигать при переключении между inputs.
+        if (restoreInterval !== null) {
+          window.clearInterval(restoreInterval);
+          restoreInterval = null;
+        }
         setTimeout(() => {
           const a = document.activeElement;
           if (!isInputEl(a)) {
@@ -267,6 +288,7 @@ function App() {
     return () => {
       document.removeEventListener("focusin", onFocusIn, true);
       document.removeEventListener("focusout", onFocusOut, true);
+      if (restoreInterval !== null) window.clearInterval(restoreInterval);
     };
   }, []);
 
