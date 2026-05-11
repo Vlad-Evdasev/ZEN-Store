@@ -265,6 +265,10 @@ function App() {
       return el.tagName === "TEXTAREA";
     };
     let savedScrollY = 0;
+    // Pre-touch scrollY — сохраняется на touchstart до того как iOS
+    // успевает auto-scroll'нуть. Используется при lockBody чтобы
+    // визуально восстановить позицию юзера.
+    let pendingScrollY: number | null = null;
     // Состояние lock'а отдельно от body-класса. Класс может быть снят
     // в Phase 1 focusout (для немедленного показа nav), но body всё ещё
     // position:fixed до Phase 2 (600ms). Если в этом окне юзер re-tap-нет
@@ -289,7 +293,12 @@ function App() {
       document.body.classList.add("zen-input-focused");
       if (isLocked) return; // Уже locked — DOM mutations + scrollY save пропускаем.
       isLocked = true;
-      savedScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+      // Если есть pre-touch scrollY (сохранён на touchstart до iOS
+      // auto-scroll) — используем его. Иначе фолбэк на текущий.
+      savedScrollY = pendingScrollY !== null
+        ? pendingScrollY
+        : (window.scrollY || document.documentElement.scrollTop || 0);
+      pendingScrollY = null;
       document.body.style.position = "fixed";
       document.body.style.top = `-${savedScrollY}px`;
       document.body.style.left = "0";
@@ -361,16 +370,20 @@ function App() {
         }, 600);
       }
     };
-    // PRE-EMPTIVE listeners: срабатывают ДО focus event и ДО того как
-    // iOS успевает auto-scroll к input. Используем И pointerdown,
-    // И touchstart — некоторые версии Telegram WebView на iOS не
-    // диспатчат PointerEvent, и без touchstart-fallback lockBody
-    // вызывался только из focusin (после iOS auto-scroll → scrollY=0).
+    // PRE-EMPTIVE pointerdown/touchstart — ТОЛЬКО сохраняем scrollY до
+    // того как iOS успеет auto-scroll. position:fixed применяется
+    // позже, на focusin — иначе iOS отменяет focus (особенно на самом
+    // низу страницы, когда input под клавиатурой и iOS нужно его
+    // подвинуть).
     const onPointerDown = (e: PointerEvent) => {
-      if (isInputEl(e.target)) lockBody();
+      if (isInputEl(e.target) && !isLocked) {
+        pendingScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+      }
     };
     const onTouchStartCapture = (e: TouchEvent) => {
-      if (isInputEl(e.target)) lockBody();
+      if (isInputEl(e.target) && !isLocked) {
+        pendingScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+      }
     };
     document.addEventListener("focusin", onFocusIn, true);
     document.addEventListener("focusout", onFocusOut, true);
