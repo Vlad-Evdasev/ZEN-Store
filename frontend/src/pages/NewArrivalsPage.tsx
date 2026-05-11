@@ -361,6 +361,16 @@ function ExpandedView({
   const [phase, setPhase] = useState<"opening" | "open" | "closing">(
     forceClose || isBackNav ? "open" : "opening"
   );
+  // ContentReady — управляет видимостью НЕ-image частей (back button,
+  // actions, caption, related). Image у нас «звезда» — анимируется FLIP-ом.
+  // Всё остальное должно появляться ПОСЛЕ того как image открылся,
+  // и пропадать СРАЗУ когда юзер закрывает (не fade-out с image).
+  //  - forceClose (outgoing): false — только image видна, content скрыт
+  //  - isBackNav (previous возвращается): true — content уже был виден
+  //  - main open: false initial, true после FLIP (520ms)
+  const [contentReady, setContentReady] = useState<boolean>(
+    forceClose ? false : isBackNav
+  );
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const touchMoveDx = useRef(0);
@@ -388,6 +398,18 @@ function ExpandedView({
   }, [related, initialScrollTop]);
 
   const reqVersion = useRef(0);
+
+  // Через 520ms после mount (когда FLIP-open анимация завершилась)
+  // показываем не-image содержимое (back button, actions, caption,
+  // related). Применяется только при «обычном» открытии — для outgoing
+  // и back-nav оно либо ВСЕГДА false (outgoing), либо ВСЕГДА true
+  // изначально (back-nav уже видел previous post).
+  useEffect(() => {
+    if (forceClose || isBackNav) return; // contentReady уже выставлен
+    const t = setTimeout(() => setContentReady(true), 520);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // forceClose: outgoing-слой при back-nav. CSS-класс
   // zen-sheet-force-close применяет keyframe-анимацию ИНСТАНТНО при
@@ -450,6 +472,10 @@ function ExpandedView({
   const requestClose = useCallback(() => {
     if (phase === "closing") return;
     onStartClose();
+    // Прячем content МГНОВЕННО (back btn, description, related).
+    // Видимой остаётся только image — она FLIP-анимируется обратно
+    // в thumb-rect. Юзер видит «карточка-фото уезжает», без сопровождения.
+    setContentReady(false);
 
     if (fadeOnClose) {
       // BACK-NAV: НЕ запускаем локальную close-анимацию. Иначе current
@@ -594,97 +620,114 @@ function ExpandedView({
             : { ...expandedStyles.sheet, ...computeSheetAnim({ phase, dragY }) }
         }
       >
-        <button
-          type="button"
-          onClick={requestClose}
-          style={expandedStyles.backBtn}
-          aria-label="Назад"
-        >
-          <BackArrowIcon size={20} />
-        </button>
+        {/* contentStyle: показываем не-image элементы ТОЛЬКО когда image
+            полностью открылся (после FLIP). На close прячем мгновенно
+            (transition: 0s) — содержимое не «уезжает» вместе с image.
+            На open плавно появляются (220ms ease-out). */}
+        {(() => {
+          const contentStyle: React.CSSProperties = {
+            opacity: contentReady ? 1 : 0,
+            transition: contentReady
+              ? "opacity 240ms cubic-bezier(0.4, 0, 0.2, 1)"
+              : "opacity 0s",
+            pointerEvents: contentReady ? "auto" : "none",
+          };
+          return (
+            <>
+              <button
+                type="button"
+                onClick={requestClose}
+                style={{ ...expandedStyles.backBtn, ...contentStyle }}
+                aria-label="Назад"
+              >
+                <BackArrowIcon size={20} />
+              </button>
 
-        <div style={expandedStyles.imageArea}>
-          <img
-            ref={imageRef}
-            key={currentIdx}
-            src={images[currentIdx] ?? startSrc}
-            alt=""
-            loading="eager"
-            decoding="sync"
-            style={expandedStyles.image}
-            draggable={false}
-          />
-          {images.length > 1 && (
-            <div style={expandedStyles.dotsRow} aria-hidden>
-              {images.map((_, i) => (
-                <span
-                  key={i}
+              <div style={expandedStyles.imageArea}>
+                <img
+                  ref={imageRef}
+                  key={currentIdx}
+                  src={images[currentIdx] ?? startSrc}
+                  alt=""
+                  loading="eager"
+                  decoding="sync"
+                  className={forceClose ? "zen-image-force-close" : undefined}
+                  style={expandedStyles.image}
+                  draggable={false}
+                />
+                {images.length > 1 && (
+                  <div style={{ ...expandedStyles.dotsRow, ...contentStyle }} aria-hidden>
+                    {images.map((_, i) => (
+                      <span
+                        key={i}
+                        style={{
+                          ...expandedStyles.dot,
+                          ...(i === currentIdx ? expandedStyles.dotActive : null),
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ ...expandedStyles.actionsRow, ...contentStyle }}>
+                <button
+                  type="button"
+                  onClick={handlePin}
                   style={{
-                    ...expandedStyles.dot,
-                    ...(i === currentIdx ? expandedStyles.dotActive : null),
+                    ...expandedStyles.iconBtn,
+                    color: post.user_liked ? "var(--accent)" : "var(--text)",
                   }}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+                  aria-pressed={post.user_liked}
+                  aria-label={post.user_liked ? t(lang, "postPinned") : t(lang, "postPin")}
+                >
+                  <PinIcon active={post.user_liked} size={28} />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  style={{ ...expandedStyles.iconBtn, marginLeft: "auto" }}
+                  aria-label={t(lang, "postShare")}
+                >
+                  <ShareIcon size={26} />
+                </button>
+              </div>
 
-        <div style={expandedStyles.actionsRow}>
-          <button
-            type="button"
-            onClick={handlePin}
-            style={{
-              ...expandedStyles.iconBtn,
-              color: post.user_liked ? "var(--accent)" : "var(--text)",
-            }}
-            aria-pressed={post.user_liked}
-            aria-label={post.user_liked ? t(lang, "postPinned") : t(lang, "postPin")}
-          >
-            <PinIcon active={post.user_liked} size={28} />
-          </button>
-          <button
-            type="button"
-            onClick={handleShare}
-            style={{ ...expandedStyles.iconBtn, marginLeft: "auto" }}
-            aria-label={t(lang, "postShare")}
-          >
-            <ShareIcon size={26} />
-          </button>
-        </div>
+              {post.caption && (
+                <div style={{ ...expandedStyles.captionWrap, ...contentStyle }}>
+                  <p style={expandedStyles.caption}>{post.caption}</p>
+                </div>
+              )}
 
-        {post.caption && (
-          <div style={expandedStyles.captionWrap}>
-            <p style={expandedStyles.caption}>{post.caption}</p>
-          </div>
-        )}
+              {post.product_url && (
+                <div style={{ ...expandedStyles.productCtaWrap, ...contentStyle }}>
+                  <a
+                    href={post.product_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={expandedStyles.productCta}
+                  >
+                    {t(lang, "postOpenProduct")} →
+                  </a>
+                </div>
+              )}
 
-        {post.product_url && (
-          <div style={expandedStyles.productCtaWrap}>
-            <a
-              href={post.product_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={expandedStyles.productCta}
-            >
-              {t(lang, "postOpenProduct")} →
-            </a>
-          </div>
-        )}
-
-        {/* Related grid: тот же масонри-сетка что и на главной, без заголовка. */}
-        {related.length > 0 && (
-          <div style={expandedStyles.relatedWrap}>
-            <PinMasonry
-              items={related.map((rp) => (
-                <MasonryCard
-                  key={rp.id}
-                  post={rp}
-                  onOpen={(p, rect, src, idx) => onOpenRelated(p, rect, src, idx, sheetRef.current?.scrollTop ?? 0)}
-                />
-              ))}
-            />
-          </div>
-        )}
+              {related.length > 0 && (
+                <div style={{ ...expandedStyles.relatedWrap, ...contentStyle }}>
+                  <PinMasonry
+                    items={related.map((rp) => (
+                      <MasonryCard
+                        key={rp.id}
+                        post={rp}
+                        onOpen={(p, rect, src, idx) => onOpenRelated(p, rect, src, idx, sheetRef.current?.scrollTop ?? 0)}
+                      />
+                    ))}
+                  />
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
     </div>
   );
