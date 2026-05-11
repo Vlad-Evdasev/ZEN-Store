@@ -787,17 +787,17 @@ bot.command("start", async (ctx) => {
       // что в этой клавиатуре только вторичная навигация.
       keyboard: [
         [
-          // OUTLINE Unicode-глифы — контурные, в одном цвете с лейблом.
-          // ✧ — outline 4-point star (вдохновение)
-          // ▢ — outline white square (контейнер / заказ)
-          // ◯ — outline circle (avatar / профиль)
-          // ◇ — outline diamond (метка / support)
-          { text: "✧  Вдохновиться", web_app: { url: `${WEB_APP_URL}#page=inspire` } },
-          { text: "▢  Заказы", web_app: { url: `${WEB_APP_URL}#page=history` } },
+          // OUTLINE glyphs с более широким stroke и modern silhouette.
+          // ☆ — 5-point white star (универсальный «discover/inspire»)
+          // ⊟ — squared minus (список / заказы, тонкая горизонталь)
+          // ⊙ — circled dot operator (avatar с центральной точкой)
+          // ⬡ — white hexagon (modern geometric support-метка)
+          { text: "☆  Вдохновиться", web_app: { url: `${WEB_APP_URL}#page=inspire` } },
+          { text: "⊟  Заказы", web_app: { url: `${WEB_APP_URL}#page=history` } },
         ],
         [
-          { text: "◯  Профиль", web_app: { url: `${WEB_APP_URL}#page=settings` } },
-          { text: "◇  Поддержка", web_app: { url: `${WEB_APP_URL}#page=support` } },
+          { text: "⊙  Профиль", web_app: { url: `${WEB_APP_URL}#page=settings` } },
+          { text: "⬡  Поддержка", web_app: { url: `${WEB_APP_URL}#page=support` } },
         ],
       ],
       is_persistent: true,
