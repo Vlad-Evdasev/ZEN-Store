@@ -1754,8 +1754,26 @@ body.zen-inspire-overlay-on .zen-pin-fab {
    3) body background: transparent — user видит TELEGRAM'S BG через
       transparent клавиатуру (или OS chrome), не наш black var(--bg).
       «Хочу прозрачный фон под клавиатурой».                          */
+/* Transitions для smooth изменений (избегаем «мерцания» хедера/футера
+   при unlock body на blur). Без transition все изменения instant и
+   создают визуальный flicker при unlockBody (одновременно меняются
+   bg, opacity nav, body position). С transition изменения плавно
+   накладываются на любой residual reflow. */
+.zen-bottom-nav {
+  transform: translateY(var(--zen-kb-offset, 0px));
+  transition:
+    transform 120ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+body,
+.zen-app {
+  transition: background-color 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 body.zen-input-focused .zen-bottom-nav {
+  opacity: 0;
   visibility: hidden;
+  pointer-events: none;
 }
 body.zen-input-focused .zen-app main.zen-main--catalog,
 body.zen-input-focused .zen-app main.zen-main--edge,
