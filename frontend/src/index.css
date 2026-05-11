@@ -1695,16 +1695,16 @@ body.zen-product-header-up .zen-app > header {
   z-index: 1300;
 }
 
-/* Search-row + shelf теперь портируются в body (см. Catalog.tsx) ЧТОБЫ
-   НЕ получать opacity:0 от main. На overlay-on они СЛАЙДЯТСЯ ВВЕРХ
-   за хедер с тем же easing/duration что и FLIP-карточки (520ms).
-   Это даёт ощущение что search-row ЛОГИЧНО уходит вверх когда юзер
-   углубляется в продукт, и возвращается на место при close. */
+/* Search-row + shelf портируются в body (см. Catalog.tsx) чтобы НЕ
+   получать opacity:0 от main. На overlay-on они слайдятся ВВЕРХ за
+   хедер. На overlay-off (close) — плавно возвращаются.
+   easeOutQuint cubic-bezier(0.22, 1, 0.36, 1) — premium feel:
+   плавный заезд без рывков, замедление к концу. */
 .zen-app .zen-catalog-search-row {
-  transition: transform 520ms cubic-bezier(0.45, 0, 0.55, 1);
+  transition: transform 560ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .zen-app .zen-catalog-search-shelf {
-  transition: transform 520ms cubic-bezier(0.45, 0, 0.55, 1);
+  transition: transform 560ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 body.zen-inspire-overlay-on .zen-app .zen-catalog-search-row,
 body.zen-product-overlay-on .zen-app .zen-catalog-search-row {

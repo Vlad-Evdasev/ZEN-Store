@@ -40,11 +40,12 @@
   overflow: hidden;
   background: transparent;
   isolation: isolate;
-  /* Hero стартует сразу под хедер-зоной — минимальный воздух.
-     padding-top = safe + 64 идентично inspire-post imageArea, чтобы
-     визуально hero-row совпадал с post-image-row. */
+  /* margin-top safe + 68 — hero стартует на уровне search-row top
+     (y=68 absolute). Image при close FLIP не появляется в gap между
+     header bottom (y=62) и search-row top (y=68). Image либо за
+     header-ом (y<62), либо за search-row (y=68-118), либо ниже него. */
   margin: 8px 8px 0;
-  margin-top: calc(env(safe-area-inset-top, 0px) + 64px);
+  margin-top: calc(env(safe-area-inset-top, 0px) + 68px);
   width: calc(100% - 16px);
   border-radius: 18px;
   /* FLIP-анимация применяется к ВСЕМУ hero-контейнеру (см. heroRef в
