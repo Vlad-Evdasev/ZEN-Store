@@ -265,21 +265,37 @@ function App() {
       return el.tagName === "TEXTAREA";
     };
     let savedScrollY = 0;
+    // Состояние lock'а отдельно от body-класса. Класс может быть снят
+    // в Phase 1 focusout (для немедленного показа nav), но body всё ещё
+    // position:fixed до Phase 2 (600ms). Если в этом окне юзер re-tap-нет
+    // input — нельзя trigger'ить lockBody повторно с window.scrollY (=0
+    // потому что body fixed) — savedScrollY перезатрётся в 0 и финальный
+    // scrollTo приведёт к скачку на верх.
+    let isLocked = false;
+    let pendingUnlockTimer: number | null = null;
+    let pendingRevealTimer: number | null = null;
+
     const lockBody = () => {
+      // Re-focus в окне Phase1→Phase2 — отменяем pending unlock/reveal,
+      // re-add class (Phase 1 мог его снять), savedScrollY не трогаем.
+      if (pendingUnlockTimer != null) {
+        clearTimeout(pendingUnlockTimer);
+        pendingUnlockTimer = null;
+      }
+      if (pendingRevealTimer != null) {
+        clearTimeout(pendingRevealTimer);
+        pendingRevealTimer = null;
+      }
+      document.body.classList.add("zen-input-focused");
+      if (isLocked) return; // Уже locked — DOM mutations + scrollY save пропускаем.
+      isLocked = true;
       savedScrollY = window.scrollY || document.documentElement.scrollTop || 0;
       document.body.style.position = "fixed";
       document.body.style.top = `-${savedScrollY}px`;
       document.body.style.left = "0";
       document.body.style.right = "0";
       document.body.style.width = "100%";
-      // НЕ делаем body/html/.zen-app transparent. С deep OLED-black --bg
-      // и Telegram dark themes они выглядят одинаково, а transparent
-      // overrides создавал заметный flash: при открытии клавиатуры
-      // сначала виден Telegram bg, потом under keyboard вылезал solid
-      // #000 нашего --bg. Оставляем app bg solid всегда — keyboard
-      // вылезает на ровный чёрный фон без перехода.
       document.documentElement.style.overflow = "hidden";
-      document.body.classList.add("zen-input-focused");
       try {
         const tg = window.Telegram?.WebApp as { expand?: () => void; disableVerticalSwipes?: () => void } | undefined;
         tg?.expand?.();
@@ -287,10 +303,9 @@ function App() {
       } catch {}
     };
     const unlockBody = () => {
+      if (!isLocked) return;
+      isLocked = false;
       const scroll = savedScrollY;
-      // ВСЁ atomic в одной synchronous блоке. Browser batches all DOM
-      // mutations и paints единый final state — no flicker.
-      // (class removal сделана раньше в Phase 1 — см. onFocusOut)
       document.documentElement.scrollTop = scroll;
       document.body.style.position = "";
       document.body.style.top = "";
@@ -305,9 +320,7 @@ function App() {
       } catch {}
     };
     const onFocusIn = (e: FocusEvent) => {
-      if (isInputEl(e.target) && !document.body.classList.contains("zen-input-focused")) {
-        lockBody();
-      }
+      if (isInputEl(e.target)) lockBody();
     };
     const onFocusOut = (e: FocusEvent) => {
       if (isInputEl(e.target)) {
@@ -315,7 +328,6 @@ function App() {
         // PHASE 1: REVEAL FOOTER as soon as iOS клавиатура начала
         // закрываться. Trigger на FIRST visualViewport.resize event —
         // как только vv.height растёт = клавиатура closing.
-        // Footer показывается синхронно с keyboard slide-down animation.
         let revealed = false;
         const reveal = () => {
           if (revealed) return;
@@ -328,37 +340,32 @@ function App() {
         const initialVvHeight = vv?.height || 0;
         const onResize = () => {
           if (!vv) return;
-          // ANY resize where height growing = keyboard closing started
           if (vv.height > initialVvHeight + 5) {
             reveal();
             vv.removeEventListener("resize", onResize);
           }
         };
         vv?.addEventListener("resize", onResize);
-        // Fallback at 150ms (very short) — на случай если vv не fire-нул.
-        setTimeout(() => {
+        pendingRevealTimer = window.setTimeout(() => {
+          pendingRevealTimer = null;
           reveal();
           vv?.removeEventListener("resize", onResize);
         }, 150);
-        // PHASE 2 (600ms): full unlockBody. iOS layout fully settled,
-        // scroll restore без flicker.
-        setTimeout(() => {
+        // PHASE 2 (600ms): full unlockBody. Save timer id — re-focus
+        // его отменит и savedScrollY останется правильным.
+        pendingUnlockTimer = window.setTimeout(() => {
+          pendingUnlockTimer = null;
           if (!isInputEl(document.activeElement)) {
             unlockBody();
           }
         }, 600);
       }
     };
-    // PRE-EMPTIVE pointerdown listener: КРИТИЧНО! Срабатывает ДО focus
-    // event и ДО того как iOS успевает auto-scroll к input. Здесь:
-    //  1) Сохраняем scrollY ДО любых iOS адаптаций (auto-scroll затирает)
-    //  2) Блокируем body СРАЗУ (iOS не может scroll-нуть fixed body)
-    //  3) Добавляем body.zen-input-focused класс (скрывает nav через CSS)
-    // На focusin потом lockBody НЕ запустится повторно (проверка class).
+    // PRE-EMPTIVE pointerdown listener: срабатывает ДО focus event и ДО
+    // того как iOS успевает auto-scroll к input. Сохраняем scrollY ДО
+    // адаптаций и блокируем body сразу.
     const onPointerDown = (e: PointerEvent) => {
-      if (isInputEl(e.target) && !document.body.classList.contains("zen-input-focused")) {
-        lockBody();
-      }
+      if (isInputEl(e.target)) lockBody();
     };
     document.addEventListener("focusin", onFocusIn, true);
     document.addEventListener("focusout", onFocusOut, true);

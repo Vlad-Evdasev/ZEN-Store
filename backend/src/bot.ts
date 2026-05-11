@@ -787,19 +787,17 @@ bot.command("start", async (ctx) => {
       // что в этой клавиатуре только вторичная навигация.
       keyboard: [
         [
-          // FILLED Unicode-глифы — выглядят жирнее/смелее outline-версий,
-          // в Telegram dark theme рендерятся как solid white shapes,
-          // в light — как solid black. Никаких colored emoji.
-          // ✦ — filled 4-point star (вдохновение / спарк)
-          // ▣ — concentric squares (контейнер / заказ-бокс)
-          // ● — filled black circle (avatar / профиль)
-          // ◆ — filled diamond (метка / pin / support)
-          { text: "✦  Вдохновиться", web_app: { url: `${WEB_APP_URL}#page=inspire` } },
-          { text: "▣  Заказы", web_app: { url: `${WEB_APP_URL}#page=history` } },
+          // OUTLINE Unicode-глифы — контурные, в одном цвете с лейблом.
+          // ✧ — outline 4-point star (вдохновение)
+          // ▢ — outline white square (контейнер / заказ)
+          // ◯ — outline circle (avatar / профиль)
+          // ◇ — outline diamond (метка / support)
+          { text: "✧  Вдохновиться", web_app: { url: `${WEB_APP_URL}#page=inspire` } },
+          { text: "▢  Заказы", web_app: { url: `${WEB_APP_URL}#page=history` } },
         ],
         [
-          { text: "●  Профиль", web_app: { url: `${WEB_APP_URL}#page=settings` } },
-          { text: "◆  Поддержка", web_app: { url: `${WEB_APP_URL}#page=support` } },
+          { text: "◯  Профиль", web_app: { url: `${WEB_APP_URL}#page=settings` } },
+          { text: "◇  Поддержка", web_app: { url: `${WEB_APP_URL}#page=support` } },
         ],
       ],
       is_persistent: true,
