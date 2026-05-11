@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { useSettings } from "../context/SettingsContext";
+import { useProductImageIdx, setProductImageIdx } from "../lib/imageIndexStore";
 import type { Product } from "../api";
 
 interface ProductCardProps {
@@ -28,6 +29,16 @@ interface ProductCardProps {
 export function ProductCard({ product, onClick, inWishlist, onWishlistClick, compact, reviewCount, reviewAvg, fillHeight, descBlockMinHeight, smallDescBlock, sizeVariant = "default", isHidden = false }: ProductCardProps) {
   const { formatPrice } = useSettings();
   const imgWrapRef = useRef<HTMLDivElement>(null);
+  // Свайп по фото в карточке. Индекс шарится через imageIndexStore с
+  // ProductPage'ом — закрытие FLIP лендится в thumb с правильной картинкой.
+  const imageUrls = (product.image_urls && product.image_urls.length > 0)
+    ? product.image_urls
+    : (product.image_url ? [product.image_url] : []);
+  const currentIdx = useProductImageIdx(product.id);
+  const safeIdx = Math.min(currentIdx, Math.max(imageUrls.length - 1, 0));
+  const isMulti = imageUrls.length > 1;
+  const touchStartX = useRef<number | null>(null);
+  const touchMoveDx = useRef(0);
   const handleClick = () => {
     // На iOS Safari порядок touch-click такой: touchstart → blur input →
     // click. К моменту click activeElement УЖЕ body (blur произошёл),
@@ -43,8 +54,36 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
       return;
     }
     if (Date.now() - lastBlur < 250) return;
+    // Если был свайп (>10px) — не открываем оверлей.
+    if (Math.abs(touchMoveDx.current) > 10) {
+      touchMoveDx.current = 0;
+      return;
+    }
     const rect = imgWrapRef.current?.getBoundingClientRect() ?? null;
     onClick(rect);
+  };
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (!isMulti) return;
+    touchStartX.current = e.touches[0].clientX;
+    touchMoveDx.current = 0;
+  };
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (!isMulti || touchStartX.current === null) return;
+    touchMoveDx.current = e.touches[0].clientX - touchStartX.current;
+  };
+  const onTouchEnd = () => {
+    if (!isMulti || touchStartX.current === null) {
+      touchStartX.current = null;
+      return;
+    }
+    const dx = touchMoveDx.current;
+    touchStartX.current = null;
+    if (Math.abs(dx) > 40) {
+      const next = dx < 0
+        ? Math.min(imageUrls.length - 1, safeIdx + 1)
+        : Math.max(0, safeIdx - 1);
+      setProductImageIdx(product.id, next);
+    }
   };
   const cardStyle = compact
     ? { ...styles.card, ...styles.cardCompact, ...(fillHeight ? styles.cardFillHeight : {}) }
@@ -88,12 +127,30 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
       onKeyDown={handleKeyDown}
       style={cardStyle}
     >
-      <div ref={imgWrapRef} className="product-card__image-wrap" style={{ ...imageWrapStyle, visibility: isHidden ? "hidden" : "visible" }}>
+      <div
+        ref={imgWrapRef}
+        className="product-card__image-wrap"
+        style={{ ...imageWrapStyle, visibility: isHidden ? "hidden" : "visible" }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
         <img
-          src={(product.image_urls && product.image_urls[0]) || product.image_url || "https://via.placeholder.com/200"}
+          key={safeIdx}
+          src={imageUrls[safeIdx] || product.image_url || "https://via.placeholder.com/200"}
           alt={product.name}
           style={styles.image}
         />
+        {isMulti && (
+          <div style={styles.dotsRow} aria-hidden>
+            {imageUrls.map((_, i) => (
+              <span
+                key={i}
+                style={{ ...styles.dot, ...(i === safeIdx ? styles.dotActive : null) }}
+              />
+            ))}
+          </div>
+        )}
       </div>
       <div className="product-card-desc" style={descWrapStyle}>
         <div style={compact ? styles.nameRowCompact : styles.nameRow}>
@@ -193,6 +250,30 @@ const styles: Record<string, React.CSSProperties> = {
     width: "100%",
     height: "100%",
     objectFit: "cover",
+  },
+  dotsRow: {
+    position: "absolute",
+    bottom: 8,
+    left: "50%",
+    transform: "translateX(-50%)",
+    display: "flex",
+    gap: 5,
+    padding: "5px 8px",
+    borderRadius: 999,
+    background: "rgba(0, 0, 0, 0.32)",
+    backdropFilter: "blur(4px)",
+    WebkitBackdropFilter: "blur(4px)",
+    pointerEvents: "none",
+  },
+  dot: {
+    width: 5,
+    height: 5,
+    borderRadius: "50%",
+    background: "rgba(255, 255, 255, 0.45)",
+    transition: "background 0.18s ease",
+  },
+  dotActive: {
+    background: "rgba(255, 255, 255, 1)",
   },
   nameRow: {
     display: "flex",

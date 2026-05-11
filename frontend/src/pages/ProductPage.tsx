@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback, useLayoutEffect } fr
 import { createPortal } from "react-dom";
 import { addToCart, type Product, type CartItem } from "../api";
 import { useSettings } from "../context/SettingsContext";
+import { useProductImageIdx, setProductImageIdx } from "../lib/imageIndexStore";
 import { t } from "../i18n";
 import "./ProductPage.css";
 
@@ -41,7 +42,16 @@ export function ProductPage({
   const [optimisticSizes, setOptimisticSizes] = useState<Set<string>>(new Set());
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
-  const [imageIndex, setImageIndex] = useState(0);
+  // imageIndex шарится через imageIndexStore с ProductCard'ом — иначе
+  // при закрытии FLIP-back лендится в thumb, у которого показана 0,
+  // а не текущая swiped-to картинка.
+  const storeIdx = useProductImageIdx(product?.id);
+  const imageIndex = storeIdx;
+  const setImageIndex = (next: number | ((prev: number) => number)) => {
+    if (!product) return;
+    const value = typeof next === "function" ? (next as (p: number) => number)(storeIdx) : next;
+    setProductImageIdx(product.id, value);
+  };
   const sheetRef = useRef<HTMLDivElement>(null);
   // FLIP применяем к ВСЕМУ hero-контейнеру (а не только к image): иначе
   // фон контейнера (var(--surface) + box-shadow + border-radius) виден
@@ -78,9 +88,10 @@ export function ProductPage({
     : [];
   const currentImage = imageUrls[imageIndex] || product?.image_url || "https://via.placeholder.com/400";
 
-  useEffect(() => {
-    setImageIndex(0);
-  }, [product?.id]);
+  // Раньше тут был setImageIndex(0) при смене product.id — это
+  // конфликтовало со store: ProductPage монтировался с store-индексом N
+  // (юзер свайпнул в каталоге на N перед тапом), потом сразу затирал в 0.
+  // Сейчас store уже хранит правильный индекс, ничего сбрасывать не нужно.
 
   // Body-class управление: ДВА класса с разным жизненным циклом,
   // симметрично inspire-overlay:

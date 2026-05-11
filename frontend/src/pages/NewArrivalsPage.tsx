@@ -7,6 +7,7 @@ import {
   type Post,
 } from "../api";
 import { useSettings, type Lang } from "../context/SettingsContext";
+import { usePostImageIdx, setPostImageIdx } from "../lib/imageIndexStore";
 import { t } from "../i18n";
 
 interface NewArrivalsPageProps {
@@ -133,30 +134,25 @@ interface MasonryCardProps {
 function MasonryCard({ post, onOpen, isHidden = false }: MasonryCardProps) {
   const images = getPostImages(post);
   const isMulti = images.length > 1;
-  const [currentIdx, setCurrentIdx] = useState(0);
+  // Индекс шарится через imageIndexStore с ExpandedView — при закрытии
+  // FLIP-back лендится в thumb с правильной (swiped-to) картинкой.
+  const currentIdx = usePostImageIdx(post.id);
+  const safeIdx = Math.min(currentIdx, Math.max(images.length - 1, 0));
   const ref = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const touchStartX = useRef<number | null>(null);
   const touchMoveDx = useRef(0);
 
-  // Берём cached aspect-ratio для текущей картинки, чтобы placeholder
-  // имел правильную высоту с первого рендера. Если кэша нет — дефолт 3:4.
-  const cachedAspect = (() => {
-    const cur = images[currentIdx];
-    if (!cur) return null;
+  // Aspect-ratio берём ТОЛЬКО по первой картинке поста — все остальные
+  // отображаются в том же боксе, чтобы при свайпе высота карточки не
+  // прыгала.
+  const firstImage = images[0];
+  const cachedFirstAspect = (() => {
+    if (!firstImage) return null;
     const c = loadAspectCache();
-    return c[cur] ?? null;
+    return c[firstImage] ?? null;
   })();
-  const [liveAspect, setLiveAspect] = useState<number | null>(cachedAspect);
-
-  // При смене currentIdx (мульти-фото) обновляем aspect из кэша.
-  useEffect(() => {
-    const cur = images[currentIdx];
-    if (!cur) return;
-    const c = loadAspectCache();
-    if (c[cur] && c[cur] !== liveAspect) setLiveAspect(c[cur]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentIdx]);
+  const [liveAspect, setLiveAspect] = useState<number | null>(cachedFirstAspect);
 
   if (images.length === 0) return null;
 
@@ -176,7 +172,7 @@ function MasonryCard({ post, onOpen, isHidden = false }: MasonryCardProps) {
     const rect = imgRef.current?.getBoundingClientRect()
       ?? ref.current?.getBoundingClientRect()
       ?? null;
-    onOpen(post, rect, images[currentIdx], currentIdx);
+    onOpen(post, rect, images[safeIdx], safeIdx);
   };
 
   const onTouchStart = (e: React.TouchEvent) => {
@@ -196,10 +192,10 @@ function MasonryCard({ post, onOpen, isHidden = false }: MasonryCardProps) {
     const dx = touchMoveDx.current;
     touchStartX.current = null;
     if (Math.abs(dx) > 40) {
-      setCurrentIdx((prev) => {
-        if (dx < 0) return Math.min(images.length - 1, prev + 1);
-        return Math.max(0, prev - 1);
-      });
+      const next = dx < 0
+        ? Math.min(images.length - 1, safeIdx + 1)
+        : Math.max(0, safeIdx - 1);
+      setPostImageIdx(post.id, next);
     }
   };
 
@@ -217,8 +213,10 @@ function MasonryCard({ post, onOpen, isHidden = false }: MasonryCardProps) {
     const img = imgRef.current;
     if (!img || !img.naturalWidth || !img.naturalHeight) return;
     const ratio = img.naturalWidth / img.naturalHeight;
-    rememberAspect(images[currentIdx], ratio);
-    if (Math.abs((liveAspect ?? 0) - ratio) > 0.01) {
+    rememberAspect(images[safeIdx], ratio);
+    // Aspect фиксируем ТОЛЬКО по первой картинке — все остальные
+    // показываются в том же боксе.
+    if (safeIdx === 0 && Math.abs((liveAspect ?? 0) - ratio) > 0.01) {
       setLiveAspect(ratio);
     }
   };
@@ -243,8 +241,8 @@ function MasonryCard({ post, onOpen, isHidden = false }: MasonryCardProps) {
       <div style={{ ...cardStyles.imageWrap, ...aspectStyle }}>
         <img
           ref={imgRef}
-          key={currentIdx}
-          src={images[currentIdx]}
+          key={safeIdx}
+          src={images[safeIdx]}
           alt=""
           loading="lazy"
           onLoad={handleImgLoad}
@@ -257,7 +255,7 @@ function MasonryCard({ post, onOpen, isHidden = false }: MasonryCardProps) {
                 key={i}
                 style={{
                   ...cardStyles.dot,
-                  ...(i === currentIdx ? cardStyles.dotActive : null),
+                  ...(i === safeIdx ? cardStyles.dotActive : null),
                 }}
               />
             ))}
@@ -380,7 +378,30 @@ function ExpandedView({
   onStartClose, onClose, onPinToggle, onShare, onOpenRelated,
 }: ExpandedViewProps) {
   const images = getPostImages(post);
-  const [currentIdx, setCurrentIdx] = useState(Math.min(startIndex, Math.max(images.length - 1, 0)));
+  // Шарим currentIdx через imageIndexStore с MasonryCard — при закрытии
+  // FLIP-back лендится в thumb с правильной картинкой.
+  const storeIdx = usePostImageIdx(post.id);
+  const currentIdx = Math.min(storeIdx, Math.max(images.length - 1, 0));
+  const setCurrentIdx = (next: number | ((prev: number) => number)) => {
+    const value = typeof next === "function" ? (next as (p: number) => number)(currentIdx) : next;
+    setPostImageIdx(post.id, value);
+  };
+  // На mount синхронизируем store с явным startIndex (если он отличается
+  // от текущего сохранённого) — открытие пост через deep-link / share
+  // должно начинаться с указанной картинки.
+  useEffect(() => {
+    const target = Math.min(startIndex, Math.max(images.length - 1, 0));
+    if (target !== storeIdx) setPostImageIdx(post.id, target);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // Aspect-ratio первой картинки — все остальные в посте показываются
+  // в боксе первой (cover-crop). При свайпе высота не дёргается.
+  const firstImage = images[0];
+  const firstImageAspect = (() => {
+    if (!firstImage) return null;
+    const c = loadAspectCache();
+    return c[firstImage] ?? null;
+  })();
   // Initial phase:
   //  - forceClose: mounts visible (open), затем useEffect ниже сразу
   //    переключает на closing — outgoing-слой при back-nav.
@@ -730,7 +751,12 @@ function ExpandedView({
                   alt=""
                   loading="eager"
                   decoding="sync"
-                  style={expandedStyles.image}
+                  style={{
+                    ...expandedStyles.image,
+                    // Все картинки в посте показываются в боксе первой
+                    // (cover crop). Высота не «прыгает» при свайпе.
+                    ...(firstImageAspect ? { aspectRatio: `${firstImageAspect}`, height: "auto", objectFit: "cover" as const } : null),
+                  }}
                   draggable={false}
                 />
                 {images.length > 1 && (
