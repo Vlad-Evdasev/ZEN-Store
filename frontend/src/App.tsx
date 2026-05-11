@@ -132,13 +132,13 @@ function HeaderIconFavorites() {
 
 function HeaderIconCart() {
   // Luxury handbag silhouette: трапеция (Birkin/Kelly geometry) +
-  // элегантная bezier-handle + clasp dot. Sharp angular corners
-  // дают fashion-editorial вибу, clasp deталь — luxury feel.
+  // элегантная bezier-handle + clasp dot. Y-bounds (4 → 20) совпадают
+  // с favorites heart (4 → 20.3), визуально центрируются одинаково.
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
-      <path d="M4.5 9L19.5 9L18 21H6Z" />
-      <path d="M9 9C9 6.5 10.3 5 12 5C13.7 5 15 6.5 15 9" />
-      <circle cx="12" cy="13.5" r="0.9" fill="currentColor" stroke="none" />
+      <path d="M4.5 8L19.5 8L18 20H6Z" />
+      <path d="M9 8C9 5.5 10.3 4 12 4C13.7 4 15 5.5 15 8" />
+      <circle cx="12" cy="12.5" r="0.9" fill="currentColor" stroke="none" />
     </svg>
   );
 }
