@@ -1714,6 +1714,40 @@ body.zen-inspire-overlay-on .zen-pin-fab {
   to   { background-color: rgba(var(--bg-rgb), 0); }
 }
 
+/* Forward-nav: предыдущий expanded (forwardOutgoingItem) при открытии
+   related анимируется scale-up + fade-out (как .zen-app > main при
+   первичном открытии). Эффект «контент карточки расталкивается и
+   уходит» — нарастающий dim, симметричный главному page-open. */
+.zen-sheet-forward-out {
+  animation: zen-sheet-forward-out 520ms cubic-bezier(0.45, 0, 0.55, 1) forwards;
+  transform-origin: center center;
+  will-change: transform, opacity;
+}
+@keyframes zen-sheet-forward-out {
+  from { transform: scale(1); opacity: 1; }
+  to   { transform: scale(1.08); opacity: 0; }
+}
+
+/* Back-nav incoming: previous expanded возвращается из стека. Sheet
+   стартует из scale(1.08) opacity(0) → scale(1) opacity(1). Симметрично
+   forward-out: «контент карточки возвращается из расталкивания». */
+.zen-sheet-back-in {
+  animation: zen-sheet-back-in 520ms cubic-bezier(0.45, 0, 0.55, 1) forwards;
+  transform-origin: center center;
+  will-change: transform, opacity;
+}
+@keyframes zen-sheet-back-in {
+  from { transform: scale(1.08); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+/* Back-кнопка появляется плавно через 520ms после открытия (когда
+   FLIP-image готова). Аккуратный fade-in без скачка. */
+@keyframes zen-back-btn-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* FAB-переключатель «Всё / Закреплённые» в правом нижнем углу. */
 .zen-pin-fab:active { transform: scale(0.94); }
 @media (hover: hover) {

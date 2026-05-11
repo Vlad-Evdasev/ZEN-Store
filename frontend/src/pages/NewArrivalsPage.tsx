@@ -286,6 +286,11 @@ interface ExpandedViewProps {
    *  с автоматическим закрытием → юзер видит выезд current и СРАЗУ
    *  готовый previous под ним, без задержки. */
   forceClose?: boolean;
+  /** Если true — компонент рендерится как «forward-outgoing» слой:
+   *  previous expanded, который при открытии related должен анимироваться
+   *  scale-up + fade-out (расталкивается и уходит). 520ms спустя
+   *  размонтируется через onClose. */
+  forwardOut?: boolean;
   /** related-посты приходят от parent (с кэшем по postId). Если уже
    *  закэшированы (back-nav), приходят сразу при mount — высота sheet-а
    *  корректная, scrollTop успешно восстанавливается без мигания
@@ -358,7 +363,7 @@ function computeSheetAnim({
 
 function ExpandedView({
   post, startRect, startSrc, startIndex, userId, lang,
-  fadeOnClose, isBackNav, initialScrollTop, forceClose, related, hiddenIds,
+  fadeOnClose, isBackNav, initialScrollTop, forceClose, forwardOut, related, hiddenIds,
   onStartClose, onClose, onPinToggle, onShare, onOpenRelated,
 }: ExpandedViewProps) {
   const images = getPostImages(post);
@@ -366,21 +371,25 @@ function ExpandedView({
   // Initial phase:
   //  - forceClose: mounts visible (open), затем useEffect ниже сразу
   //    переключает на closing — outgoing-слой при back-nav.
+  //  - forwardOut: previous expanded при открытии related. Mounts visible
+  //    (open), CSS-класс zen-sheet-forward-out делает scale-up fade-out.
   //  - isBackNav: мгновенно видимый (open), без opening-fade — previous
   //    уже отрендерен под текущим, ждёт пока outgoing уедет.
   //  - default: opening (fade-in / FLIP до open).
   const [phase, setPhase] = useState<"opening" | "open" | "closing">(
-    forceClose || isBackNav ? "open" : "opening"
+    forceClose || forwardOut || isBackNav ? "open" : "opening"
   );
   // ContentReady — управляет видимостью НЕ-image частей (back button,
   // actions, caption, related). Image у нас «звезда» — анимируется FLIP-ом.
   // Всё остальное должно появляться ПОСЛЕ того как image открылся,
   // и пропадать СРАЗУ когда юзер закрывает (не fade-out с image).
   //  - forceClose (outgoing): false — только image видна, content скрыт
+  //  - forwardOut: true — previous был полностью открыт, контент видим
+  //    пока он расталкивается scale-up
   //  - isBackNav (previous возвращается): true — content уже был виден
   //  - main open: false initial, true после FLIP (520ms)
   const [contentReady, setContentReady] = useState<boolean>(
-    forceClose ? false : isBackNav
+    forceClose ? false : (isBackNav || forwardOut || false)
   );
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
@@ -412,12 +421,21 @@ function ExpandedView({
 
   // Через 520ms после mount (когда FLIP-open анимация завершилась)
   // показываем не-image содержимое (back button, actions, caption,
-  // related). Применяется только при «обычном» открытии — для outgoing
-  // и back-nav оно либо ВСЕГДА false (outgoing), либо ВСЕГДА true
-  // изначально (back-nav уже видел previous post).
+  // related). Применяется только при «обычном» открытии — для outgoing,
+  // forwardOut и back-nav оно либо ВСЕГДА false (outgoing), либо ВСЕГДА
+  // true изначально (forwardOut/back-nav уже видели previous post).
   useEffect(() => {
-    if (forceClose || isBackNav) return; // contentReady уже выставлен
+    if (forceClose || isBackNav || forwardOut) return;
     const t = setTimeout(() => setContentReady(true), 520);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // forwardOut: previous expanded при открытии related. 520ms anim
+  // (CSS scale-up fade-out), затем onClose() размонтирует.
+  useEffect(() => {
+    if (!forwardOut) return;
+    const t = setTimeout(() => onClose(), 520);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -457,10 +475,10 @@ function ExpandedView({
 
   // FLIP-open: при наличии thumb-rect картинка стартует в его координатах,
   // CSS-transition плавно переносит её в финальные размеры.
-  // Пропускаем эту логику если phase уже стартует в "open" (isBackNav
-  // или forceClose) — там никакой opening-анимации не нужно.
+  // Пропускаем эту логику если phase уже стартует в "open" (isBackNav,
+  // forceClose, forwardOut) — там никакой opening-анимации не нужно.
   useLayoutEffect(() => {
-    if (forceClose || isBackNav) return; // mount уже в phase=open
+    if (forceClose || isBackNav || forwardOut) return; // mount уже в phase=open
     const img = imageRef.current;
     if (!img || !startRect) {
       requestAnimationFrame(() => setPhase("open"));
@@ -627,7 +645,30 @@ function ExpandedView({
       ? 0
       : Math.max(0, 1 - dragY / 400);
 
+  // Back-кнопка портируется отдельно в body, чтобы её stacking-context
+  // был выше хедера (header z-index = 1300 при overlay). ExpandedView
+  // root имеет z-index 1100 — image должна быть под хедером, а кнопка
+  // НАД ним. Разделение через два независимых портала это и даёт.
+  // Не рендерим для forceClose (outgoing back-nav) и forwardOut
+  // (previous уходит) — в эти моменты есть active expanded, и его
+  // back-кнопка появится после 520ms.
+  const backBtnNode = (contentReady && !forceClose && !forwardOut && typeof document !== "undefined")
+    ? createPortal(
+        <button
+          type="button"
+          onClick={requestClose}
+          style={expandedStyles.backBtnFloating}
+          aria-label="Назад"
+        >
+          <BackArrowIcon size={20} />
+        </button>,
+        document.body
+      )
+    : null;
+
   return (
+    <>
+    {backBtnNode}
     <div
       role="dialog"
       aria-modal="true"
@@ -643,12 +684,21 @@ function ExpandedView({
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
-        // forceClose: вместо inline transition применяем CSS keyframe-
-        // анимацию через класс. Стартует мгновенно (без RAF-задержки),
-        // что убирает «дёрг» previous поста перед его появлением.
-        className={forceClose ? "zen-sheet-force-close" : undefined}
+        // Три CSS-keyframe-варианта (бьют inline computeSheetAnim):
+        //  - forceClose:                sheet bg fade-out (image отдельно JS-FLIP)
+        //  - forwardOut:                scale 1→1.08 + opacity 1→0 (previous уходит)
+        //  - isBackNav && phase!==closing: scale 1.08→1 + opacity 0→1
+        //                               (previous возвращается)
+        // Дефолт + isBackNav в closing: inline transition через
+        // computeSheetAnim (обычный FLIP-close).
+        className={
+          forceClose ? "zen-sheet-force-close"
+            : forwardOut ? "zen-sheet-forward-out"
+            : (isBackNav && phase !== "closing") ? "zen-sheet-back-in"
+            : undefined
+        }
         style={
-          forceClose
+          (forceClose || forwardOut || (isBackNav && phase !== "closing"))
             ? expandedStyles.sheet
             : { ...expandedStyles.sheet, ...computeSheetAnim({ phase, dragY }) }
         }
@@ -667,14 +717,10 @@ function ExpandedView({
           };
           return (
             <>
-              <button
-                type="button"
-                onClick={requestClose}
-                style={{ ...expandedStyles.backBtn, ...contentStyle }}
-                aria-label="Назад"
-              >
-                <BackArrowIcon size={20} />
-              </button>
+              {/* Back-кнопка портируется в body отдельно — ниже после
+                  закрытия sheet. Здесь не рендерим, чтобы она не
+                  попадала в стек ExpandedView (z-index 1100) и не
+                  оказалась под хедером (z-index 1300 при overlay). */}
 
               <div style={expandedStyles.imageArea}>
                 <img
@@ -763,6 +809,7 @@ function ExpandedView({
         })()}
       </div>
     </div>
+    </>
   );
 }
 
@@ -834,6 +881,12 @@ export function NewArrivalsPage({
   // close, потом размонтируется. Это убирает «задержку» появления
   // предыдущего поста — он виден с первого кадра, под выезжающим.
   const [outgoingItem, setOutgoingItem] = useState<ExpandedItem | null>(null);
+  // Forward-outgoing layer: previous expanded когда юзер тапает related-
+  // карточку. Сохраняем тот пост и рендерим в отдельном портале с
+  // CSS-анимацией scale-up + fade-out (как .zen-app > main при первичном
+  // открытии). 520ms потом размонтируется. Эффект «контент расталкивается
+  // и уходит» симметричный главному page-open.
+  const [forwardOutgoingItem, setForwardOutgoingItem] = useState<ExpandedItem | null>(null);
   // Кэш related-постов по id поста. Когда юзер закрывает related-пост и
   // возвращается к предыдущему через стек — related для него уже здесь
   // (фетчили при первом открытии), и ExpandedView мгновенно рендерится
@@ -964,6 +1017,12 @@ export function NewArrivalsPage({
   const openRelated = useCallback((post: Post, rect: DOMRect | null, src: string, index: number, currentScrollTop: number) => {
     // Текущий expanded уходит в стек ВМЕСТЕ с его scrollTop — чтобы при
     // возврате через стек юзер оказался на том же месте, а не сверху.
+    // А также рендерится как forward-outgoing слой (scale-up + fade-out)
+    // — чтобы юзер увидел эффект «расталкивания» карточек, аналогичный
+    // главному page-open. Через 520ms forward-out размонтируется.
+    if (expanded) {
+      setForwardOutgoingItem({ ...expanded, scrollTop: currentScrollTop });
+    }
     setStack((prev) => (expanded ? [...prev, { ...expanded, scrollTop: currentScrollTop }] : prev));
     setExpanded({ post, rect, src, index });
   }, [expanded]);
@@ -989,10 +1048,13 @@ export function NewArrivalsPage({
       // Back-nav: текущий expanded уезжает в outgoing-слой (рендерится
       // поверх, ловит close-анимацию), previous становится новым
       // expanded ПРЯМО СЕЙЧАС — мгновенно видим под outgoing.
+      // Сохраняем last.rect — он нужен для финального FLIP-close, когда
+      // юзер потом закроет этот previous пост (он должен вернуться к
+      // своему оригинальному thumb-rect в main-сетке).
       const next = prev.slice(0, -1);
       const last = prev[prev.length - 1];
       setOutgoingItem(expanded);
-      setExpanded({ ...last, rect: null, isBackNav: true });
+      setExpanded({ ...last, isBackNav: true });
       // Outgoing размонтируется сам через onClose (forceClose useEffect).
       return next;
     });
@@ -1010,8 +1072,9 @@ export function NewArrivalsPage({
     const s = new Set<number>();
     if (expanded) s.add(expanded.post.id);
     if (outgoingItem) s.add(outgoingItem.post.id);
+    if (forwardOutgoingItem) s.add(forwardOutgoingItem.post.id);
     return s;
-  }, [expanded, outgoingItem]);
+  }, [expanded, outgoingItem, forwardOutgoingItem]);
 
   const pinnedCount = useMemo(() => posts.filter((p) => p.user_liked).length, [posts]);
 
@@ -1097,6 +1160,36 @@ export function NewArrivalsPage({
       )}
 
       {portalTarget && fabNode && createPortal(fabNode, portalTarget)}
+
+      {/* Forward-outgoing layer: previous expanded когда юзер тапает
+          related-карточку. Рендерится ПОД main expanded (zIndex 1050 <
+          1100), анимируется scale-up + fade-out (zen-sheet-forward-out
+          CSS-класс). 520ms потом размонтируется. */}
+      {portalTarget && forwardOutgoingItem && createPortal(
+        <div style={{ position: "fixed", inset: 0, zIndex: 1050, pointerEvents: "none" }}>
+          <ExpandedView
+            key={`forward-out:${forwardOutgoingItem.post.id}`}
+            post={forwardOutgoingItem.post}
+            startRect={null}
+            startSrc={forwardOutgoingItem.src}
+            startIndex={forwardOutgoingItem.index}
+            userId={userId}
+            lang={lang}
+            fadeOnClose={false}
+            isBackNav={false}
+            forwardOut={true}
+            related={relatedMap[forwardOutgoingItem.post.id] ?? []}
+            hiddenIds={hiddenPostIds}
+            onStartClose={() => {}}
+            initialScrollTop={forwardOutgoingItem.scrollTop}
+            onClose={() => setForwardOutgoingItem(null)}
+            onPinToggle={() => {}}
+            onShare={() => {}}
+            onOpenRelated={() => {}}
+          />
+        </div>,
+        portalTarget
+      )}
 
       {portalTarget && expanded && createPortal(
         <ExpandedView
@@ -1356,11 +1449,15 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     flexDirection: "column" as const,
     overscrollBehavior: "contain" as const,
   },
-  backBtn: {
+  // Back-кнопка в отдельном портале с z-index выше хедера (1300).
+  // Имеет собственный stacking-context (через position:fixed + z-index),
+  // не зависит от ExpandedView root (z-index 1100). animation для
+  // плавного появления при contentReady.
+  backBtnFloating: {
     position: "fixed" as const,
     top: "calc(env(safe-area-inset-top, 0px) + 12px)",
     left: 12,
-    zIndex: 5,
+    zIndex: 1400,
     width: 38,
     height: 38,
     borderRadius: "50%",
@@ -1375,6 +1472,7 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     justifyContent: "center",
     WebkitTapHighlightColor: "transparent",
     boxShadow: "0 2px 8px rgba(0, 0, 0, 0.22)",
+    animation: "zen-back-btn-in 240ms cubic-bezier(0.22, 1, 0.36, 1) both",
   },
   // Картинка живёт внутри подложки с safe-area-top и padding по бокам.
   // Сама картинка скруглена — выглядит как полноразмерная Pinterest-карточка,
