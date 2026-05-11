@@ -262,13 +262,27 @@ function App() {
       document.body.classList.add("zen-input-focused");
     };
     const unlockBody = () => {
+      const scroll = savedScrollY;
       document.body.style.position = "";
       document.body.style.top = "";
       document.body.style.left = "";
       document.body.style.right = "";
       document.body.style.width = "";
       document.body.classList.remove("zen-input-focused");
-      window.scrollTo(0, savedScrollY);
+      window.scrollTo(0, scroll);
+      // iOS Safari может auto-scroll-нуть страницу после blur input-а.
+      // Override его caretно в interval-е первые 500ms — header не
+      // «прыгает» когда юзер снимает выбор с поля поиска.
+      let attempts = 0;
+      const restoreInterval = window.setInterval(() => {
+        if (window.scrollY !== scroll) {
+          window.scrollTo(0, scroll);
+        }
+        attempts++;
+        if (attempts > 16) {
+          window.clearInterval(restoreInterval);
+        }
+      }, 30);
     };
     const onFocusIn = (e: FocusEvent) => {
       if (isInputEl(e.target) && !document.body.classList.contains("zen-input-focused")) {
