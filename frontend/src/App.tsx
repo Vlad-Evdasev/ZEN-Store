@@ -131,13 +131,13 @@ function HeaderIconFavorites() {
 }
 
 function HeaderIconCart() {
-  // Architectural shopper: structured square-edge корпус + одиночная
-  // полуокружность handle. Stroke 1.4 для refined / editorial look.
-  // Никаких "smile"-линий, paper-fold или curly-handle clichés.
+  // Solid filled tote с stroke handle сверху — modern e-com style.
+  // Тонкая дуга-ручка + bold filled корпус даёт визуальный «вес»,
+  // который не достижим чисто-stroke иконками.
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
-      <rect x="4.75" y="8.75" width="14.5" height="12.5" rx="1" />
-      <path d="M8.25 8.75a3.75 3.75 0 0 1 7.5 0" />
+    <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
+      <path stroke="none" d="M5.5 8.5h13l-1.05 11.05a1.6 1.6 0 0 1-1.6 1.45H8.15a1.6 1.6 0 0 1-1.6-1.45L5.5 8.5z" />
+      <path fill="none" d="M8.5 8.5a3.5 3.5 0 0 1 7 0" />
     </svg>
   );
 }
