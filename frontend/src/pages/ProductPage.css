@@ -24,7 +24,11 @@
 
 .product-v2 {
   position: relative;
-  padding-bottom: 0;
+  /* padding-bottom для размещения size-buttons НАД bottom pill
+     (zen-bag-summary `bottom: calc(64+safe+10)` + sa header height
+     64px + buffer 24px = ~160px clearance). Без этого pill перекрывает
+     sizes даже при максимальном скроле. */
+  padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px) + 90px);
 }
 
 /* ─── HERO ─── */

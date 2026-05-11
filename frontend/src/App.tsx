@@ -273,9 +273,9 @@ function App() {
     const unlockBody = () => {
       const scroll = savedScrollY;
       // ВСЁ atomic в одной synchronous блоке. Browser batches all DOM
-      // mutations и paints итог. No intermediate paint = no flicker.
-      // Pre-set documentElement.scrollTop тоже — на случай если scrollTo
-      // не сработает на ещё locked body.
+      // mutations и paints единый final state — no flicker.
+      // Interval scrollTo failsafe удалён — он сам мог создавать
+      // micro-jerks. С 600ms delay iOS уже settled, interval не нужен.
       document.documentElement.scrollTop = scroll;
       document.body.style.position = "";
       document.body.style.top = "";
@@ -289,17 +289,6 @@ function App() {
         const tg = window.Telegram?.WebApp as { enableVerticalSwipes?: () => void } | undefined;
         tg?.enableVerticalSwipes?.();
       } catch {}
-      // iOS auto-scroll override interval как failsafe.
-      let attempts = 0;
-      const restoreInterval = window.setInterval(() => {
-        if (window.scrollY !== scroll) {
-          window.scrollTo(0, scroll);
-        }
-        attempts++;
-        if (attempts > 16) {
-          window.clearInterval(restoreInterval);
-        }
-      }, 30);
     };
     const onFocusIn = (e: FocusEvent) => {
       if (isInputEl(e.target) && !document.body.classList.contains("zen-input-focused")) {
@@ -309,15 +298,17 @@ function App() {
     const onFocusOut = (e: FocusEvent) => {
       if (isInputEl(e.target)) {
         (window as unknown as { __zenLastInputBlur?: number }).__zenLastInputBlur = Date.now();
-        // 350ms delay — даём iOS клавиатуре полностью закрыться ДО
-        // unlock body. Иначе iOS делает layout adjust во время close
-        // и header «прыгает» на момент unlock.
+        // 600ms delay — iOS keyboard close + layout settle. Раньше 350ms
+        // было недостаточно — iOS все ещё делал position adjustments
+        // ПОСЛЕ нашего unlock → header/footer «дергались» на полсекунды.
+        // Body остаётся locked все 600ms, iOS не shift-ит layout,
+        // потом unlock происходит когда iOS уже settled.
         setTimeout(() => {
           const a = document.activeElement;
           if (!isInputEl(a)) {
             unlockBody();
           }
-        }, 350);
+        }, 600);
       }
     };
     // PRE-EMPTIVE pointerdown listener: КРИТИЧНО! Срабатывает ДО focus
