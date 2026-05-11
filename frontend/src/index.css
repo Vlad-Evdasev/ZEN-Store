@@ -1695,22 +1695,35 @@ body.zen-product-header-up .zen-app > header {
   z-index: 1300;
 }
 
-/* Search-row + shelf портируются в body (см. Catalog.tsx) чтобы НЕ
-   получать opacity:0 от main. На overlay-on они слайдятся ВВЕРХ за
-   хедер. На overlay-off (close) — плавно возвращаются.
-   easeOutQuint cubic-bezier(0.22, 1, 0.36, 1) — premium feel:
-   плавный заезд без рывков, замедление к концу. */
+/* Search-row + shelf портируются в body чтобы НЕ получать opacity:0
+   от main. На overlay-on они слайдятся ВВЕРХ за хедер, на overlay-off
+   плавно возвращаются с «settle»-эффектом тени.
+
+   Premium polish:
+   - duration 620ms (чуть медленнее FLIP 520ms — search-row appearance
+     ощущается «вкусным» завершающим жестом)
+   - easeOutBack cubic-bezier(0.34, 1.56, 0.64, 1): subtle overshoot
+     даёт ощущение «pop into place» при возвращении
+   - box-shadow transition: исчезает при slide-up, нарастает при
+     slide-down → search-row «настаивается» с растущей тенью
+   - shelf использует обычный easeOutQuint (тоньше, без bounce) */
 .zen-app .zen-catalog-search-row {
-  transition: transform 560ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    transform 620ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 620ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .zen-app .zen-catalog-search-shelf {
-  transition: transform 560ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 620ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 body.zen-inspire-overlay-on .zen-app .zen-catalog-search-row,
 body.zen-product-overlay-on .zen-app .zen-catalog-search-row {
   /* -100% = собственная высота (50px) + дополнительно 80px = выше
      viewport-а, ПОЛНОСТЬЮ скрыто за хедером. */
   transform: translateX(-50%) translateY(calc(-100% - 80px));
+  /* box-shadow:none — тень растворяется когда search-row уезжает за
+     хедер. На close шадоу плавно нарастает обратно вместе с pill,
+     создавая «settle into place»-эффект. */
+  box-shadow: none;
   pointer-events: none;
 }
 body.zen-inspire-overlay-on .zen-app .zen-catalog-search-shelf,
