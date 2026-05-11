@@ -1705,13 +1705,15 @@ body.zen-product-header-up .zen-app > header {
 }
 body.zen-inspire-overlay-on .zen-app .zen-catalog-search-row,
 body.zen-product-overlay-on .zen-app .zen-catalog-search-row {
-  /* -100% = собственная высота (50px) + дополнительно 80px = выше
-     viewport-а, ПОЛНОСТЬЮ скрыто за хедером. */
-  transform: translateX(-50%) translateY(calc(-100% - 80px));
+  /* translateY -200px достаточно чтобы ВЕСЬ pill + его тень (extends
+     ~28px below) полностью покинули viewport. Раньше с -130px тень
+     попадала в зону header backdrop-filter:blur, которая blur-ит
+     полупрозрачную тень сильнее чем opaque pill → визуально тень
+     «исчезала быстрее». Теперь и pill и тень покидают viewport
+     полностью через transform, без header-blur интерференции. */
+  transform: translateX(-50%) translateY(-200px);
   pointer-events: none;
-  /* Slide-UP transition: easeInOutCubic 800ms, плавный СТАРТ. Тень
-     НЕ transitionится отдельно — она частью элемента уезжает за
-     хедер вместе с pill через transform (синхронно). */
+  /* Slide-UP transition: easeInOutCubic 800ms, плавный СТАРТ. */
   transition:
     height 0.38s cubic-bezier(0.4, 0, 0.2, 1),
     transform 800ms cubic-bezier(0.65, 0, 0.35, 1);
