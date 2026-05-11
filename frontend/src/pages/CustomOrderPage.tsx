@@ -47,19 +47,29 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   const [customPhoto, setCustomPhoto] = useState<string | null>(null);
   const [customSubmitting, setCustomSubmitting] = useState(false);
   const [customSuccess, setCustomSuccess] = useState(false);
-  const [sellerHandle, setSellerHandle] = useState<string>("krot_eno");
+  // Handle админа: lazy-инициализация из localStorage кэша, чтобы при
+  // повторных открытиях формы НЕ было flash'а 'krot_eno' → актуальное
+  // значение. На первом запуске (нет кэша) показываем пусто и подтянем
+  // с бэка, чтобы старое значение не мелькало.
+  const [sellerHandle, setSellerHandle] = useState<string | null>(() => {
+    try { return localStorage.getItem("zen-admin-handle") || null; } catch { return null; }
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     let cancelled = false;
     getAdminHandle()
-      .then((h) => { if (!cancelled) setSellerHandle(h); })
+      .then((h) => {
+        if (cancelled) return;
+        setSellerHandle(h);
+        try { localStorage.setItem("zen-admin-handle", h); } catch {}
+      })
       .catch(() => {});
     return () => { cancelled = true; };
   }, []);
-  const SELLER_TG_URL = `https://t.me/${sellerHandle}`;
-  const SELLER_HANDLE = `@${sellerHandle}`;
+  const SELLER_TG_URL = sellerHandle ? `https://t.me/${sellerHandle}` : "";
+  const SELLER_HANDLE = sellerHandle ? `@${sellerHandle}` : "";
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -212,17 +222,19 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
             </button>
           </div>
 
-          <div style={styles.replyHintRow}>
-            {t(lang, "customOrderReplyFrom")}{" "}
-            <a
-              href={SELLER_TG_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={styles.replyHintLink}
-            >
-              {SELLER_HANDLE}
-            </a>
-          </div>
+          {sellerHandle && (
+            <div style={styles.replyHintRow}>
+              {t(lang, "customOrderReplyFrom")}{" "}
+              <a
+                href={SELLER_TG_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={styles.replyHintLink}
+              >
+                {SELLER_HANDLE}
+              </a>
+            </div>
+          )}
         </div>
       </form>
     </div>
