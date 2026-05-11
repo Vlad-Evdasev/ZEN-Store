@@ -196,24 +196,27 @@ const styles: Record<string, React.CSSProperties> = {
   },
   nameRow: {
     display: "flex",
-    alignItems: "center",
+    // flex-start вместо center — иначе на 2-line title heart смещается
+    // вниз (между двумя строками). С flex-start + marginTop shift
+    // на wishlistBtn heart всегда aligned с первой строкой.
+    alignItems: "flex-start",
     gap: 8,
     marginBottom: 0,
     minHeight: 0,
   },
   nameRowCompact: {
     display: "flex",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 6,
     marginBottom: 0,
     minHeight: 0,
   },
   // Wishlist-кнопка живёт в строке name (inline). marginRight: -6
   // bleeds в правый padding descWrap (heart ближе к краю карточки).
-  // marginTop: -4 — оптический «подъём» вверх: визуальный центр сердечка
-  // лежит ниже его bounding-box-центра из-за формы (тонкий хвостик
-  // снизу), поэтому при чистом center-align оно кажется ниже названия.
-  // Микроподъём на 4px возвращает баланс.
+  // marginTop: смещаем кнопку вверх так, чтобы её визуальный центр
+  // лёг на центр первой строки названия (а не на середину 2-line
+  // блока). Расчёт: btn 32px center=16, line 15px*1.3=19.5 center=9.75,
+  // shift = -(16-9.75) ≈ -6. Это same fix для 1-line И 2-line cases.
   wishlistBtn: {
     flexShrink: 0,
     width: 32,
@@ -221,7 +224,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 0,
     marginLeft: 8,
     marginRight: -6,
-    marginTop: -4,
+    marginTop: -6,
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
@@ -236,7 +239,8 @@ const styles: Record<string, React.CSSProperties> = {
     width: 28,
     height: 28,
     marginRight: -4,
-    marginTop: -3,
+    // btn 28 center=14, line 16*1.25=20 center=10, shift=-4.
+    marginTop: -4,
   },
   descWrap: {
     position: "relative",

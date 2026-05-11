@@ -206,15 +206,19 @@
 .product-v2__header {
   margin-bottom: 14px;
   display: flex;
-  /* center-align — чтобы heart-кнопка визуально была на одной линии
-     с заглавием товара, а не висела ниже его верхней границы. */
-  align-items: center;
+  /* flex-start — heart должен быть aligned с ПЕРВОЙ строкой title,
+     а не с серединой 2-line / 3-line блока. Без этого на длинных
+     названиях сердечко "проваливалось" вниз и наслаивалось на текст. */
+  align-items: flex-start;
   gap: 12px;
 }
 
 /* Heart-кнопка рядом с названием. SVG 30px ≈ font-size заголовка,
-   ёмкая зона тапа 44×44. margin-top убрали — благодаря центрированию
-   родителя кнопка автоматически встаёт на уровне заголовка. */
+   ёмкая зона тапа 44×44. margin-top: -6 — смещение вверх, чтобы
+   визуальный центр кнопки лёг на центр первой строки title (title
+   font 30px * line-height 1.1 = 33px, центр = 16.5; кнопка 44px,
+   центр = 22; shift = -(22-16.5) ≈ -6). Это same fix для 1-line И
+   многострочных названий. */
 .product-v2__title-heart {
   flex-shrink: 0;
   width: 44px;
@@ -227,7 +231,7 @@
   align-items: center;
   justify-content: center;
   padding: 0;
-  margin: 0 -6px 0 0;
+  margin: -6px -6px 0 0;
   transition: color 0.15s ease, transform 0.08s ease;
   -webkit-tap-highlight-color: transparent;
 }
@@ -297,6 +301,11 @@
   margin: 0;
   flex: 1 1 auto;
   min-width: 0;
+  /* Если в имени товара очень длинное слово, оно должно разбиваться
+     на новые строки, а не убегать за край. anywhere = break ONLY когда
+     слово не помещается, обычные пробелы wrap'ятся нормально. */
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .product-v2__price {
