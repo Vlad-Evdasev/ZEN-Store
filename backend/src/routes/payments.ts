@@ -1,7 +1,7 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
 import { randomBytes } from "crypto";
 import { db } from "../db/schema.js";
-import { notifyOrderStatusChange, notifyTonPaymentVerified, notifyOrderPaid } from "../bot.js";
+import { notifyOrderPaid } from "../bot.js";
 
 // ─── Конфигурация ─────────────────────────────────────────────────────
 // TON_RECEIVE_ADDRESS — наш приёмный адрес (raw или EQ-формат).
@@ -256,7 +256,7 @@ paymentsRouter.post("/ton/verify/:orderId", async (req, res) => {
   const id = Number(req.params.orderId);
   const order = db
     .prepare(
-      "SELECT id, user_id, total, status, payment_status, payment_payload, payment_amount_nano FROM orders WHERE id = ?"
+      "SELECT id, user_id, total, status, payment_status, payment_payload, payment_amount_nano, items FROM orders WHERE id = ?"
     )
     .get(id) as
     | {
@@ -267,6 +267,7 @@ paymentsRouter.post("/ton/verify/:orderId", async (req, res) => {
         payment_status: string;
         payment_payload: string | null;
         payment_amount_nano: string | null;
+        items: string;
       }
     | undefined;
   if (!order) return res.status(404).json({ error: "Order not found" });
@@ -345,10 +346,15 @@ paymentsRouter.post("/ton/verify/:orderId", async (req, res) => {
     ).run(found!.hash, order.payment_payload!);
   })();
 
-  // Уведомляем юзера: пуш с TonScan-ссылкой (с amount), плюс стандартный
-  // pending-нотиф «заказ оформлен».
-  notifyTonPaymentVerified(order.user_id, id, found.hash, Number(found.amount_nano) / 1e9).catch(() => {});
-  notifyOrderStatusChange(order.user_id, id, "pending").catch(() => {});
+  // Один пуш «Оплата подтверждена» (тот же что и при ручной отметке
+  // админом). Без отдельного TON-уведомления и без pending-нотифа —
+  // payment_received уже сообщает «Заказ ушёл в сборку».
+  let firstItem: { name?: string | null; size?: string | null } | undefined;
+  try {
+    const items = JSON.parse(order.items) as Array<{ name?: string; size?: string }>;
+    if (items[0]) firstItem = { name: items[0].name, size: items[0].size };
+  } catch {}
+  notifyOrderPaid(order.user_id, id, firstItem).catch(() => {});
 
   res.json({ ok: true, payment_status: "paid", tx_hash: found.hash });
 });

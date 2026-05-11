@@ -431,35 +431,6 @@ export async function notifyNewArrival(
   }
 }
 
-// ── Verified TON payment notification (с TonScan-ссылкой) ────────────
-
-export async function notifyTonPaymentVerified(
-  userId: string | number,
-  orderId: number,
-  txHash: string,
-  amountTon: number
-): Promise<void> {
-  const tonscan = `https://tonscan.org/tx/${txHash}`;
-  const text =
-    `✅ <b>Оплата заказа #${orderId} принята</b>\n\n` +
-    `Получили <b>${amountTon.toFixed(4)} TON</b>. Спасибо!\n\n` +
-    `<a href="${tonscan}">Транзакция в TonScan</a>`;
-  try {
-    await bot.api.sendMessage(userId, text, {
-      parse_mode: "HTML",
-      link_preview_options: { is_disabled: true },
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: "Открыть историю", web_app: { url: WEB_APP_URL } }],
-        ],
-      },
-    });
-  } catch (e) {
-    const err = e instanceof Error ? e.message : String(e);
-    if (isUserBlocked(err)) markBotUserBlocked(userId);
-  }
-}
-
 // ── Order invoice notification ──────────────────────────────────────
 // Одно красивое сообщение: фото первого товара + caption с резюме +
 // inline-кнопка «Оплатить» (https://app.tonkeeper.com/transfer/...

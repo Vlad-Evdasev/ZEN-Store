@@ -641,7 +641,6 @@ if (tplCount.c === 0) {
     ["custom_delivered", "custom_status", "Кастом доставлен", "📦", "Кастом-заявка #{id} доставлена\n\nЗабирай!"],
     ["custom_completed", "custom_status", "Кастом завершён", "💚", "Кастом-заявка #{id} завершена\n\nСпасибо!"],
     ["payment_received", "payment", "Оплата подтверждена", "💚", "Оплата подтверждена\n{item}\n\nЗаказ ушёл в сборку. Когда отправим — пришлём трек-номер."],
-    ["payment_ton_verified", "payment", "TON оплата принята", "✅", "Оплата заказа #{id} принята\n\nПолучили <b>{amount} TON</b>. Спасибо!"],
     ["cart_abandoned", "engagement", "Корзина ждёт", "🛒", "Твоя корзина ждёт\n\n{count} {noun} на сумму <b>{total} $</b>. Готов оформить?"],
     ["new_arrival", "engagement", "Новинка в категории", "🔥", "Новинка в категории «{category}»\n\n{name} — только что добавили в каталог. Залетай первым."],
     ["drop_24h", "drop", "Drop через 24 часа", "🔥", "Drop через 24 часа: {title}\n\n{description}"],
@@ -651,3 +650,11 @@ if (tplCount.c === 0) {
   ];
   for (const tpl of defaults) insertTpl.run(...tpl);
 }
+
+// Cleanup: 'payment_ton_verified' больше не используется — оба пути оплаты
+// (ручная отметка + автоматическая TON-верификация) отправляют один и тот
+// же payment_received. Удаляем legacy template если он остался от
+// предыдущей версии — иначе в админке висит «мёртвый» шаблон.
+try {
+  db.prepare("DELETE FROM bot_message_templates WHERE template_id = 'payment_ton_verified'").run();
+} catch {}
