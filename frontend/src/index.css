@@ -1708,19 +1708,12 @@ body.zen-product-overlay-on .zen-app .zen-catalog-search-row {
   /* -100% = собственная высота (50px) + дополнительно 80px = выше
      viewport-а, ПОЛНОСТЬЮ скрыто за хедером. */
   transform: translateX(-50%) translateY(calc(-100% - 80px));
-  /* box-shadow:none — тень растворяется когда search-row уезжает за
-     хедер. На close шадоу плавно нарастает обратно вместе с pill,
-     создавая «settle into place»-эффект. */
-  box-shadow: none;
   pointer-events: none;
-  /* Slide-UP transition (open карточки) — переопределяет base.
-     easeInOutCubic cubic-bezier(0.65, 0, 0.35, 1) — плавный СТАРТ
-     движения вверх (без резкого срыва как easeOut). + длиннее 800ms
-     чтобы дать пользователю время визуально проследить за анимацией
-     synchronously с FLIP-image. */
+  /* Slide-UP transition: easeInOutCubic 800ms, плавный СТАРТ. Тень
+     НЕ transitionится отдельно — она частью элемента уезжает за
+     хедер вместе с pill через transform (синхронно). */
   transition:
     height 0.38s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 800ms cubic-bezier(0.65, 0, 0.35, 1),
     transform 800ms cubic-bezier(0.65, 0, 0.35, 1);
 }
 body.zen-inspire-overlay-on .zen-app .zen-catalog-search-shelf,
@@ -2441,21 +2434,15 @@ html[data-theme="dark"] .zen-app .zen-catalog-search-shelf {
   max-width: 460px;
   height: 50px;
   overflow: hidden;
-  /* Радиус фиксирован на 25px и НЕ анимируется. В закрытом состоянии
-     это = половина высоты пилюли (идеальный полукруг), в открытом —
-     те же самые углы, что и у пилюли поиска.
+  /* Радиус фиксирован на 25px и НЕ анимируется.
      Transitions:
      - height 0.38s: для filter-row expansion
-     - transform + box-shadow 720ms easeOutQuint:
-       ИСПОЛЬЗУЕТСЯ ТОЛЬКО ДЛЯ SLIDE-DOWN (close карточки). При close
-       класс снимается → CSS использует transition ИЗ base-ruleset.
-       Плавный финиш для появления pill из-под хедера.
-     Slide-UP transition (open карточки) переопределяется в
-     body.overlay-on ruleset ниже — там easeInOutCubic для плавного
-     стартового движения (не resko как было с pure easeOut). */
+     - transform 720ms easeOutQuint: slide-DOWN при close. Тень
+       НЕ transition-ится отдельно — она часть элемента и двигается
+       С НИМ синхронно через transform (а не через альфа-интерполяцию).
+     Slide-UP (open) переопределяется в body.overlay-on ниже. */
   transition:
     height 0.38s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 720ms cubic-bezier(0.22, 1, 0.36, 1),
     transform 720ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 /* Шапка внутри единой формы — всегда 50px, row-layout, не зависит от
