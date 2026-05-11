@@ -1701,7 +1701,13 @@ body.zen-product-header-up .zen-app > header {
    друга и transform-transition терялся. Тут только shelf transition
    и overlay-on overrides. */
 .zen-app .zen-catalog-search-shelf {
-  transition: transform 720ms cubic-bezier(0.22, 1, 0.36, 1);
+  /* Shelf — это gradient bar выше pill (y=56-124). User видел его
+     при slide-down как «shadow появляется первой». Shelf занимает
+     больше места по вертикали чем pill (68 vs 50), и его bottom
+     раньше crosses header line.
+     Fix: 300ms DELAY на close (base rule). Shelf начинает слайдиться
+     вниз ПОСЛЕ того как pill уже visible. Pill first, shelf after. */
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1) 300ms;
 }
 body.zen-inspire-overlay-on .zen-app .zen-catalog-search-row,
 body.zen-product-overlay-on .zen-app .zen-catalog-search-row {
@@ -1720,6 +1726,10 @@ body.zen-inspire-overlay-on .zen-app .zen-catalog-search-shelf,
 body.zen-product-overlay-on .zen-app .zen-catalog-search-shelf {
   transform: translateY(-100%);
   pointer-events: none;
+  /* Open: shelf уходит ВВЕРХ быстро (200ms), не блокирует pill's
+     slide-up. base rule имеет 300ms delay на close — здесь delay 0
+     чтобы shelf уезжал immediately когда юзер открывает карточку. */
+  transition: transform 200ms cubic-bezier(0.65, 0, 0.35, 1) 0ms;
 }
 body.zen-inspire-overlay-on .zen-app > header,
 body.zen-product-overlay-on .zen-app > header {
