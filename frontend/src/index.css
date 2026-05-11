@@ -1663,18 +1663,35 @@ body.zen-inspire-overlay-on .zen-app > main {
    = некрасиво просвечивает). Slide-out гарантирует, что хедер
    ВСЕГДА opaque (никогда не полупрозрачный), просто уходит из
    видимой области. */
+/* Asymmetric тайминги: на ОТКРЫТИИ хедер/нав уезжают БЫСТРО (90мс),
+   чтобы исчезнуть раньше чем backdrop dim успеет стать заметно
+   полупрозрачным (no see-through). На ЗАКРЫТИИ возвращаются ПЛАВНО
+   (380мс с ease-in-out), синхронно с FLIP-image-close — юзер видит
+   как они «прилетают» вместе с raised контентом. Разные transitions
+   на body-class состоянии и default — браузер применяет ту что
+   объявлена на КОНЕЧНОМ селекторе для transition.
+
+   Закрытие: body-class снимается → default selector активен →
+   transition 380ms cubic-bezier(0.22, 1, 0.36, 1) → плавный
+   slide-back.
+
+   Открытие: body-class добавляется → overlay selector активен →
+   transition 90ms cubic-bezier(0.4, 0, 1, 1) (acceleration in)
+   → быстрый snap-out. */
 .zen-app > header,
 .zen-app > .zen-bottom-nav,
 .zen-app > nav {
-  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform;
 }
 body.zen-inspire-overlay-on .zen-app > header {
   transform: translateY(-110%);
+  transition: transform 90ms cubic-bezier(0.4, 0, 1, 1);
 }
 body.zen-inspire-overlay-on .zen-app > .zen-bottom-nav,
 body.zen-inspire-overlay-on .zen-app > nav {
   transform: translateY(110%);
+  transition: transform 90ms cubic-bezier(0.4, 0, 1, 1);
 }
 
 /* FAB-пин-кнопка тоже скрывается во время overlay. */

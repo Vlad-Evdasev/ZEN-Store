@@ -443,30 +443,34 @@ function ExpandedView({
 
   const requestClose = useCallback(() => {
     if (phase === "closing") return;
-    // Сигналим parent-у: parent при финальном закрытии (стек пуст) снимет
-    // body-class СРАЗУ → фон-страница начнёт расправляться параллельно с
-    // FLIP-close, а не после.
     onStartClose();
 
+    if (fadeOnClose) {
+      // BACK-NAV: НЕ запускаем локальную close-анимацию. Иначе current
+      // ExpandedView начинает фейдиться, через 220ms unmount-ится, а
+      // outgoing-слой mount-ится с opacity 1 → юзер видит «скачок»
+      // opacity от ~0.58 к 1.0. Вместо этого зовём onClose() сразу —
+      // parent монтирует outgoing-слой с CSS keyframe-анимацией, и
+      // переход current → outgoing неразличим (одинаковый контент).
+      onClose();
+      return;
+    }
+
+    // MAIN FINAL CLOSE (stack=0): FLIP-close с image-морфом обратно в
+    // thumb-rect + sheet/backdrop fade-out 520ms ease-in-out.
     const img = imageRef.current;
-    if (img && startRect && !fadeOnClose) {
-      // FLIP-close: картинка плавно возвращается в координаты thumb-а.
-      // Используем только при финальном закрытии (стек пуст) — на back-nav
-      // используется slide-down + fade у sheet-а (см. ниже).
+    if (img && startRect) {
       const final = img.getBoundingClientRect();
       const dx = startRect.left - final.left;
       const dy = startRect.top - final.top;
       const sx = startRect.width / Math.max(final.width, 1);
       const sy = startRect.height / Math.max(final.height, 1);
       img.style.transformOrigin = "top left";
-      // Симметрично open: 520ms ease-in-out. Картинка плавно
-      // сжимается обратно в thumb-rect.
       img.style.transition = "transform 520ms cubic-bezier(0.45, 0, 0.55, 1)";
       img.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
     }
     setPhase("closing");
-    // Main FLIP-close 520ms, back-nav squeeze 220ms.
-    setTimeout(onClose, fadeOnClose ? 220 : 520);
+    setTimeout(onClose, 520);
   }, [phase, onClose, onStartClose, startRect, fadeOnClose]);
 
   useEffect(() => {
@@ -548,13 +552,18 @@ function ExpandedView({
     }
   };
 
-  // Backdrop opaque сразу при mount (даже в phase=opening). Это
-  // решает баг «хедер просвечивает контент»: дайлог покрывает экран
-  // ИНСТАНТНО, header (z-index 10) за ним полностью скрыт пока
-  // body-class транзитит. На closing — fade-out 460мс, синхронно с
-  // FLIP-close image и main page un-scale; pull-to-close драг-фейд
-  // также продолжает работать.
-  const backdropOpacity = phase === "closing" ? 0 : Math.max(0.3, 1 - dragY / 500);
+  // Backdrop dim анимируется ПЛАВНО (gradual build-up) вместе с FLIP
+  // image. opening → 0 (мгновенно при mount, нет starting frame с
+  // opaque), через RAF → open → 1 (520ms transition). closing → 0
+  // (520ms fade out). Header slides off-screen быстрее (80ms) чем
+  // backdrop становится полупрозрачным, поэтому see-through не
+  // происходит. forceClose (outgoing layer) → backdrop transparent
+  // всегда, чтобы previous post showed through behind shrinking sheet.
+  const backdropOpacity = forceClose
+    ? 0
+    : (phase === "opening" || phase === "closing")
+      ? 0
+      : Math.max(0.3, 1 - dragY / 500);
 
   return (
     <div
@@ -564,11 +573,7 @@ function ExpandedView({
         ...expandedStyles.root,
         background: `rgba(var(--bg-rgb), ${0.98 * backdropOpacity})`,
         pointerEvents: phase === "closing" ? "none" : "auto",
-        // Только close-фаза анимируется (open инстант). При первом
-        // рендере значение уже opaque → transition не запускается.
-        transition: phase === "closing"
-          ? "background 520ms cubic-bezier(0.45, 0, 0.55, 1)"
-          : "none",
+        transition: "background 520ms cubic-bezier(0.45, 0, 0.55, 1)",
       }}
     >
       <div
