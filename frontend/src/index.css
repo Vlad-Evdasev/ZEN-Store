@@ -1663,36 +1663,12 @@ body.zen-inspire-overlay-on .zen-app > main {
    = некрасиво просвечивает). Slide-out гарантирует, что хедер
    ВСЕГДА opaque (никогда не полупрозрачный), просто уходит из
    видимой области. */
-/* Asymmetric тайминги: на ОТКРЫТИИ хедер/нав уезжают БЫСТРО (90мс),
-   чтобы исчезнуть раньше чем backdrop dim успеет стать заметно
-   полупрозрачным (no see-through). На ЗАКРЫТИИ возвращаются ПЛАВНО
-   (380мс с ease-in-out), синхронно с FLIP-image-close — юзер видит
-   как они «прилетают» вместе с raised контентом. Разные transitions
-   на body-class состоянии и default — браузер применяет ту что
-   объявлена на КОНЕЧНОМ селекторе для transition.
-
-   Закрытие: body-class снимается → default selector активен →
-   transition 380ms cubic-bezier(0.22, 1, 0.36, 1) → плавный
-   slide-back.
-
-   Открытие: body-class добавляется → overlay selector активен →
-   transition 90ms cubic-bezier(0.4, 0, 1, 1) (acceleration in)
-   → быстрый snap-out. */
-.zen-app > header,
-.zen-app > .zen-bottom-nav,
-.zen-app > nav {
-  transition: transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: transform;
-}
-body.zen-inspire-overlay-on .zen-app > header {
-  transform: translateY(-110%);
-  transition: transform 90ms cubic-bezier(0.4, 0, 1, 1);
-}
-body.zen-inspire-overlay-on .zen-app > .zen-bottom-nav,
-body.zen-inspire-overlay-on .zen-app > nav {
-  transform: translateY(110%);
-  transition: transform 90ms cubic-bezier(0.4, 0, 1, 1);
-}
+/* Хедер и нав-бар БОЛЬШЕ НЕ АНИМИРУЮТСЯ при открытии/закрытии поста.
+   Они остаются на своих местах. Sheet bg (z-index 1100, поверх) сам
+   градуально закрывает их по мере того как меняется rgba alpha
+   sheet-а. Юзер видит: header → постепенно темнеет → исчезает под
+   opaque sheet bg. На закрытии — обратно: sheet bg fades to
+   transparent, header гладко проявляется на своём месте без slide. */
 
 /* FAB-пин-кнопка тоже скрывается во время overlay. */
 .zen-pin-fab {
@@ -1705,21 +1681,22 @@ body.zen-inspire-overlay-on .zen-pin-fab {
   pointer-events: none;
 }
 
-/* Outgoing sheet анимация при back-nav. CSS keyframes вместо
-   transition+RAF — keyframes стартуют МГНОВЕННО при маунте,
-   нет задержки на rerender + RAF (~16мс), которая раньше
-   ощущалась как «дёрг» предыдущего поста перед его появлением. */
+/* Outgoing sheet анимация при back-nav. CSS keyframes стартуют ИНСТАНТНО
+   при маунте — нет задержки на rerender + RAF. Анимируем bg-color и
+   transform, НЕ element.opacity — image и контент внутри sheet остаются
+   полностью видимыми, не «просвечивают». Длительность 520ms ease-in-out
+   совпадает с main close → ощущение одинаковой плавности. */
 .zen-sheet-force-close {
-  animation: zen-sheet-out 260ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: zen-sheet-out 520ms cubic-bezier(0.45, 0, 0.55, 1) forwards;
 }
 @keyframes zen-sheet-out {
   from {
-    opacity: 1;
+    background-color: rgba(var(--bg-rgb), 1);
     transform: translate3d(0, 0, 0) scale(1);
   }
   to {
-    opacity: 0;
-    transform: translate3d(0, 60px, 0) scale(0.88);
+    background-color: rgba(var(--bg-rgb), 0);
+    transform: translate3d(0, 80px, 0) scale(0.78);
   }
 }
 

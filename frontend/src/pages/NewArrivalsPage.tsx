@@ -314,28 +314,34 @@ function computeSheetAnim({
   phase: "opening" | "open" | "closing";
   dragY: number;
 }): React.CSSProperties {
-  // Тайминги. Main open/close = 520ms ease-in-out (плавный
-  // gradual grow/shrink). Back-nav close = CSS keyframe (260ms),
-  // back-nav open instant (phase=open сразу). Здесь обрабатываются
-  // только non-forceClose рендеры.
+  // ВАЖНО: НЕ анимируем element.opacity — это сделает image внутри
+  // sheet полупрозрачной (CSS opacity affects children). Вместо этого
+  // анимируем background-color rgba alpha. Sheet element opacity всегда 1,
+  // image остаётся opaque. Только sheet bg меняется (transparent →
+  // var(--bg)), что создаёт «gradual dim» эффект: контент позади sheet
+  // (header, main page) виден через transparent bg в начале → постепенно
+  // скрывается под opaque bg к концу анимации open.
   if (phase === "open") {
     return {
-      opacity: 1,
+      backgroundColor: "rgba(var(--bg-rgb), 1)",
       transform: `translate3d(0, ${dragY}px, 0) scale(1)`,
       transition: dragY === 0
-        ? `opacity 520ms cubic-bezier(0.45, 0, 0.55, 1), transform 520ms cubic-bezier(0.45, 0, 0.55, 1)`
+        ? `background-color 520ms cubic-bezier(0.45, 0, 0.55, 1), transform 520ms cubic-bezier(0.45, 0, 0.55, 1)`
         : "none",
     };
   }
   if (phase === "opening") {
-    return { opacity: 0, transform: "translate3d(0, 0, 0) scale(1)", transition: "none" };
+    return {
+      backgroundColor: "rgba(var(--bg-rgb), 0)",
+      transform: "translate3d(0, 0, 0) scale(1)",
+      transition: "none",
+    };
   }
-  // phase = closing (main close, не back-nav — back-nav обрабатывается
-  // CSS-классом zen-sheet-force-close на outgoing-слое)
+  // phase = closing (main close)
   return {
-    opacity: 0,
+    backgroundColor: "rgba(var(--bg-rgb), 0)",
     transform: `translate3d(0, ${dragY}px, 0) scale(1)`,
-    transition: "opacity 520ms cubic-bezier(0.45, 0, 0.55, 1)",
+    transition: "background-color 520ms cubic-bezier(0.45, 0, 0.55, 1)",
   };
 }
 
@@ -389,7 +395,7 @@ function ExpandedView({
   // onClose — parent размонтирует. Под выезжающим уже виден previous.
   useEffect(() => {
     if (!forceClose) return;
-    const t = setTimeout(() => onClose(), 260);
+    const t = setTimeout(() => onClose(), 520);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -552,18 +558,15 @@ function ExpandedView({
     }
   };
 
-  // Backdrop dim анимируется ПЛАВНО (gradual build-up) вместе с FLIP
-  // image. opening → 0 (мгновенно при mount, нет starting frame с
-  // opaque), через RAF → open → 1 (520ms transition). closing → 0
-  // (520ms fade out). Header slides off-screen быстрее (80ms) чем
-  // backdrop становится полупрозрачным, поэтому see-through не
-  // происходит. forceClose (outgoing layer) → backdrop transparent
-  // всегда, чтобы previous post showed through behind shrinking sheet.
+  // Backdrop теперь НЕ используется как дим-слой (это делает sheet bg).
+  // Backdrop здесь только для pull-to-close drag-фейда (когда юзер тянет
+  // sheet вниз, drag-визуал ослабляется). 0 в opening/closing/forceClose,
+  // (1 - dragY/500) в open.
   const backdropOpacity = forceClose
     ? 0
     : (phase === "opening" || phase === "closing")
       ? 0
-      : Math.max(0.3, 1 - dragY / 500);
+      : Math.max(0, 1 - dragY / 400);
 
   return (
     <div
@@ -571,9 +574,8 @@ function ExpandedView({
       aria-modal="true"
       style={{
         ...expandedStyles.root,
-        background: `rgba(var(--bg-rgb), ${0.98 * backdropOpacity})`,
+        background: `rgba(var(--bg-rgb), ${0.4 * backdropOpacity})`,
         pointerEvents: phase === "closing" ? "none" : "auto",
-        transition: "background 520ms cubic-bezier(0.45, 0, 0.55, 1)",
       }}
     >
       <div
@@ -1254,7 +1256,10 @@ const expandedStyles: Record<string, React.CSSProperties> = {
     position: "relative" as const,
     width: "100%",
     height: "100%",
-    background: "var(--bg)",
+    // background задаётся через computeSheetAnim для main, и через
+    // CSS keyframe для outgoing. Изначально opaque для forceClose-пути,
+    // которому inline background не приходит.
+    backgroundColor: "rgba(var(--bg-rgb), 1)",
     overflowY: "auto" as const,
     overflowX: "hidden" as const,
     display: "flex",
