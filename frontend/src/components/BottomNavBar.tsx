@@ -195,7 +195,10 @@ const styles: Record<string, React.CSSProperties> = {
     height: 64,
     borderTop: "1px solid var(--border)",
     background: "var(--bg)",
-    zIndex: 20,
+    // z-index 1250 — выше overlay (1100), outgoing (1200), но ниже
+    // хедера (1300) и back-кнопки (1400). Карточка товара/поста при
+    // open/close НЕ заходит на этот футер, а проходит ПОД ним.
+    zIndex: 1250,
   },
   btn: {
     position: "relative",

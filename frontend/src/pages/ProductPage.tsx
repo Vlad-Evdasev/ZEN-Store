@@ -455,7 +455,10 @@ export function ProductPage({
           </div>
         </div>
 
-        <div className="zen-bag-summary zen-bag-summary--bottom" style={contentStyle}>
+        {/* Без --bottom модификатора — pill располагается над BottomNavBar
+            (bottom: 64+safe+10 из .zen-bag-summary). Иначе nav (z-index 1250)
+            покрывает CTA, и пользователь не может тапнуть кнопку. */}
+        <div className="zen-bag-summary" style={contentStyle}>
           <div
             className="zen-bag-summary-bar"
             role="group"

@@ -249,6 +249,34 @@ function App() {
     return () => document.removeEventListener("focusout", onFocusOut, true);
   }, []);
 
+  // VisualViewport-based keyboard compensation.
+  // iOS Safari (включая Telegram WebView) автоматически шифтит ВЕСЬ
+  // layout вверх при появлении клавиатуры, поэтому position:fixed nav
+  // «всплывает» над клавиатурой, а под ним появляется body bg.
+  // viewport-meta `interactive-widget=overlays-content` теоретически это
+  // выключает, но не везде работает (Telegram WebView).
+  //
+  // Решение: слушаем visualViewport.resize/scroll, считаем разницу между
+  // layout-height (innerHeight) и visual-height (vv.height) — это высота
+  // клавиатуры. Translate-им BottomNavBar ВНИЗ на эту разницу через
+  // CSS custom property → nav снова за пределами visible viewport, под
+  // клавиатурой. Зрителю кажется что layout «не сдвинулся».
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      document.documentElement.style.setProperty("--zen-kb-offset", `${offset}px`);
+    };
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     getProducts()
