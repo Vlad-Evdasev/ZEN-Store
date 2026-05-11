@@ -31,7 +31,11 @@
 .product-v2__hero {
   position: relative;
   width: 100%;
-  aspect-ratio: 4 / 5;
+  /* aspect 1:1 — матчит thumb-aspect (1:1) в catalog. Это позволяет
+     FLIP-анимации НЕ менять визуальное соотношение сторон image при
+     открытии/закрытии. Раньше hero был 4:5 → image content «менял
+     aspect» от thumb 1:1 к hero 4:5 (cover crop differed). */
+  aspect-ratio: 1 / 1;
   max-height: min(62vh, calc(100dvh - 260px));
   overflow: hidden;
   background: transparent;

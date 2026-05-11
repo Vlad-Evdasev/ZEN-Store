@@ -2366,7 +2366,10 @@ html[data-theme="dark"] .zen-app .zen-back-btn:active {
   left: 0;
   right: 0;
   height: 68px;
-  z-index: 9;
+  /* z-index 1149 — синхронно с search-row (1150), чуть ниже. Shelf
+     это градиент-подложка ПОД pill — должна быть выше overlay для
+     визуальной связности. */
+  z-index: 1149;
   pointer-events: none;
   background: linear-gradient(
     to bottom,
@@ -2406,7 +2409,12 @@ html[data-theme="dark"] .zen-app .zen-catalog-search-shelf {
   top: 68px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 13;
+  /* z-index 1150 — выше overlay (1100). При open/close карточки товара
+     image анимация проходит ПОД search-row (как и thumb в каталоге
+     находится ПОД search-row в обычном состоянии). На overlay-on
+     main fades to opacity 0 → search-row тоже невидим, поэтому не
+     мешает финальному виду overlay. */
+  z-index: 1150;
   width: calc(100% - 28px);
   max-width: 460px;
   height: 50px;
