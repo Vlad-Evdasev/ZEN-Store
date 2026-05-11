@@ -1680,11 +1680,18 @@ body.zen-inspire-overlay-on .zen-app > main {
   transition: background 460ms cubic-bezier(0.45, 0, 0.55, 1),
               backdrop-filter 460ms cubic-bezier(0.45, 0, 0.55, 1);
 }
-/* При активном overlay: header выше outgoing-слоя (1200) и expanded-
-   слоя (1100), а также имеет frosted-glass подложку. Так image при
-   FLIP-открытии/закрытии проходит ПОД хедером (без наслаивания). */
-body.zen-inspire-overlay-on .zen-app > header {
+/* z-index хедера управляется ОТДЕЛЬНЫМ классом zen-inspire-header-up.
+   Этот класс ставится при открытии и снимается ТОЛЬКО когда ExpandedView
+   полностью размонтирован (через useEffect cleanup). Frosted background
+   и backdrop-filter — отдельный класс zen-inspire-overlay-on, который
+   снимается СРАЗУ при тапе close (чтобы main-страница начала
+   расправляться параллельно с close-анимацией). Разделение нужно
+   чтобы image при FLIP-close НЕ оказывался выше хедера (баг
+   «картинка наслаивается над хедер при закрытии»). */
+body.zen-inspire-header-up .zen-app > header {
   z-index: 1300;
+}
+body.zen-inspire-overlay-on .zen-app > header {
   background: rgba(var(--bg-rgb), 0.62);
   backdrop-filter: blur(24px) saturate(160%);
   -webkit-backdrop-filter: blur(24px) saturate(160%);

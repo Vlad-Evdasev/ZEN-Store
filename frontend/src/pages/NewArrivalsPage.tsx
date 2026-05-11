@@ -325,10 +325,9 @@ interface ExpandedViewProps {
 //   - fadeOnClose (back-nav out): sheet «уезжает вниз» translateY(60) +
 //     opacity 0. Снизу появляется уже распакованный предыдущий expanded.
 function computeSheetAnim({
-  phase, dragY,
+  phase,
 }: {
   phase: "opening" | "open" | "closing";
-  dragY: number;
 }): React.CSSProperties {
   // ВАЖНО: НЕ анимируем element.opacity — это сделает image внутри
   // sheet полупрозрачной (CSS opacity affects children). Вместо этого
@@ -340,10 +339,8 @@ function computeSheetAnim({
   if (phase === "open") {
     return {
       backgroundColor: "rgba(var(--bg-rgb), 1)",
-      transform: `translate3d(0, ${dragY}px, 0) scale(1)`,
-      transition: dragY === 0
-        ? `background-color 520ms cubic-bezier(0.45, 0, 0.55, 1), transform 520ms cubic-bezier(0.45, 0, 0.55, 1)`
-        : "none",
+      transform: "translate3d(0, 0, 0) scale(1)",
+      transition: "background-color 520ms cubic-bezier(0.45, 0, 0.55, 1)",
     };
   }
   if (phase === "opening") {
@@ -356,7 +353,7 @@ function computeSheetAnim({
   // phase = closing (main close)
   return {
     backgroundColor: "rgba(var(--bg-rgb), 0)",
-    transform: `translate3d(0, ${dragY}px, 0) scale(1)`,
+    transform: "translate3d(0, 0, 0) scale(1)",
     transition: "background-color 520ms cubic-bezier(0.45, 0, 0.55, 1)",
   };
 }
@@ -396,7 +393,6 @@ function ExpandedView({
   const touchMoveDx = useRef(0);
   const touchMoveDy = useRef(0);
   const dragDirection = useRef<"horizontal" | "vertical" | null>(null);
-  const [dragY, setDragY] = useState(0);
   const sheetRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
 
@@ -608,13 +604,12 @@ function ExpandedView({
     if (dragDirection.current === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
       dragDirection.current = Math.abs(dx) > Math.abs(dy) ? "horizontal" : "vertical";
     }
-    if (dragDirection.current === "vertical" && dy > 0 && (sheetRef.current?.scrollTop ?? 0) <= 0) {
-      setDragY(dy);
-    }
+    // ВЕРТИКАЛЬНЫЙ pull-to-close отключён — пост закрывается ТОЛЬКО
+    // по кнопке назад. Скролл выше начала контента — нормальный native
+    // overscroll-bounce без сворачивания диалога.
   };
   const onTouchEnd = () => {
     const dx = touchMoveDx.current;
-    const dy = touchMoveDy.current;
     const dir = dragDirection.current;
     touchStartX.current = null;
     touchStartY.current = null;
@@ -622,28 +617,24 @@ function ExpandedView({
     touchMoveDy.current = 0;
     dragDirection.current = null;
 
+    // Только horizontal-swipe для переключения фоток в multi-image посте.
+    // Vertical больше не закрывает диалог (см. onTouchMove выше).
     if (dir === "horizontal" && Math.abs(dx) > 60 && images.length > 1) {
       setCurrentIdx((prev) => {
         if (dx < 0) return Math.min(images.length - 1, prev + 1);
         return Math.max(0, prev - 1);
       });
     }
-    if (dir === "vertical" && dy > 100 && (sheetRef.current?.scrollTop ?? 0) <= 0) {
-      requestClose();
-    } else {
-      setDragY(0);
-    }
   };
 
   // Backdrop теперь НЕ используется как дим-слой (это делает sheet bg).
-  // Backdrop здесь только для pull-to-close drag-фейда (когда юзер тянет
-  // sheet вниз, drag-визуал ослабляется). 0 в opening/closing/forceClose,
-  // (1 - dragY/500) в open.
+  // Pull-to-close убран — backdrop просто 0 при opening/closing/forceClose,
+  // 1 в open. Может быть удалён в дальнейшем рефакторинге.
   const backdropOpacity = forceClose
     ? 0
     : (phase === "opening" || phase === "closing")
       ? 0
-      : Math.max(0, 1 - dragY / 400);
+      : 1;
 
   // Back-кнопка портируется отдельно в body, чтобы её stacking-context
   // был выше хедера (header z-index = 1300 при overlay). ExpandedView
@@ -700,7 +691,7 @@ function ExpandedView({
         style={
           (forceClose || forwardOut || (isBackNav && phase !== "closing"))
             ? expandedStyles.sheet
-            : { ...expandedStyles.sheet, ...computeSheetAnim({ phase, dragY }) }
+            : { ...expandedStyles.sheet, ...computeSheetAnim({ phase }) }
         }
       >
         {/* contentStyle: показываем не-image элементы ТОЛЬКО когда image
@@ -941,13 +932,24 @@ export function NewArrivalsPage({
   // Так при back-nav через стек (когда expanded быстро меняется на
   // предыдущий, не становясь null) фоновая страница НЕ мигает между
   // scale(0.94) и scale(1) — класс не снимается ни на миг.
+  //
+  // ДВА КЛАССА с РАЗНЫМ ЖИЗНЕННЫМ ЦИКЛОМ:
+  //  - zen-inspire-overlay-on: применяет dim + scale(1.08) к main-странице.
+  //    Снимается СРАЗУ при клике close (через handleStartClose), чтобы
+  //    main-страница начинала расправляться параллельно с close-анимацией.
+  //  - zen-inspire-header-up: поднимает z-index хедера до 1300 (выше
+  //    ExpandedView root 1100). Снимается ТОЛЬКО когда expanded
+  //    становится null (после 520ms close-анимации). Это гарантирует
+  //    что image при FLIP-close идёт ПОД хедером, а не наслаивается.
   useEffect(() => {
     if (expanded) {
       document.body.classList.add("zen-inspire-overlay-on");
+      document.body.classList.add("zen-inspire-header-up");
       const prev = document.body.style.overflow;
       document.body.style.overflow = "hidden";
       return () => {
         document.body.classList.remove("zen-inspire-overlay-on");
+        document.body.classList.remove("zen-inspire-header-up");
         document.body.style.overflow = prev;
       };
     }
@@ -1028,10 +1030,14 @@ export function NewArrivalsPage({
   }, [expanded]);
 
   // Callback из ExpandedView в момент тапа close — раньше чем стартует
-  // FLIP-close-анимация. Снимаем body-class СРАЗУ при финальном закрытии
-  // (стек пуст), чтобы фон-страница начала расправляться параллельно с
-  // диалогом. Для back-nav (стек не пуст) ничего не делаем — класс
-  // должен оставаться, потому что предыдущий expanded сейчас покажется.
+  // FLIP-close-анимация. Снимаем ТОЛЬКО dim-класс (zen-inspire-overlay-on)
+  // при финальном закрытии (стек пуст), чтобы фон-страница начала
+  // расправляться параллельно с диалогом. Класс zen-inspire-header-up
+  // НЕ снимаем — он должен жить до фактического unmount-а ExpandedView
+  // (через useEffect cleanup), иначе image при FLIP-close на ~520ms
+  // оказывается ВЫШЕ хедера (z-index хедера падает до 10 vs root 1100).
+  // Для back-nav (стек не пуст) оба класса остаются — previous expanded
+  // сейчас покажется.
   const handleStartClose = useCallback(() => {
     if (stack.length === 0) {
       document.body.classList.remove("zen-inspire-overlay-on");
@@ -1453,25 +1459,30 @@ const expandedStyles: Record<string, React.CSSProperties> = {
   // Имеет собственный stacking-context (через position:fixed + z-index),
   // не зависит от ExpandedView root (z-index 1100). animation для
   // плавного появления при contentReady.
+  //
+  // Позиционирование: НАД фотографией, в её верхнем-левом углу
+  // (top: safe + 76 = imageArea padding-top + 12px inset; left: 24).
+  // Раньше была на top: safe + 12 — пересекалась с хедер-кнопкой
+  // burger, блокировала клики по action-menu хедера.
   backBtnFloating: {
     position: "fixed" as const,
-    top: "calc(env(safe-area-inset-top, 0px) + 12px)",
-    left: 12,
+    top: "calc(env(safe-area-inset-top, 0px) + 76px)",
+    left: 24,
     zIndex: 1400,
     width: 38,
     height: 38,
     borderRadius: "50%",
-    background: "rgba(var(--bg-rgb), 0.78)",
-    color: "var(--text)",
-    border: "1px solid var(--border)",
+    background: "rgba(0, 0, 0, 0.55)",
+    color: "#fff",
+    border: "none",
     cursor: "pointer",
-    backdropFilter: "blur(10px)",
-    WebkitBackdropFilter: "blur(10px)",
+    backdropFilter: "blur(12px)",
+    WebkitBackdropFilter: "blur(12px)",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
     WebkitTapHighlightColor: "transparent",
-    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.22)",
+    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.32)",
     animation: "zen-back-btn-in 240ms cubic-bezier(0.22, 1, 0.36, 1) both",
   },
   // Картинка живёт внутри подложки с safe-area-top и padding по бокам.
