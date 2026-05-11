@@ -102,9 +102,11 @@ export function ProductPage({
   }, []);
 
   // FLIP-open: hero-CONTAINER стартует в координатах thumbRect, затем
-  // transform-анимируется в свою фуллскрин-позицию. Image внутри (100%
-  // x 100% с object-fit:cover) автоматически масштабируется с
-  // родителем — никакого «огромного скелетона» позади image.
+  // transform-анимируется в свою фуллскрин-позицию. ВАЖНО: используем
+  // UNIFORM scale (одинаковый по X и Y), чтобы сохранить aspect-ratio
+  // картинки. Если scale-X != scale-Y, image внутри визуально squish-
+  // ится при анимации — это «прыжок aspect ratio» в баге пользователя.
+  // Container центрируется внутри thumbRect для плавного входа.
   useLayoutEffect(() => {
     const hero = heroRef.current;
     if (!hero || !thumbRect) {
@@ -114,20 +116,25 @@ export function ProductPage({
     const apply = () => {
       const final = hero.getBoundingClientRect();
       if (final.width === 0 || final.height === 0) return;
-      const dx = thumbRect.left - final.left;
-      const dy = thumbRect.top - final.top;
-      const sx = thumbRect.width / final.width;
-      const sy = thumbRect.height / final.height;
+      // Uniform scale — берём минимальный, чтобы container полностью
+      // умещался внутри thumbRect (без выхода за края).
+      const scale = Math.min(
+        thumbRect.width / final.width,
+        thumbRect.height / final.height,
+      );
+      const scaledW = final.width * scale;
+      const scaledH = final.height * scale;
+      // Центрируем уменьшенный container внутри thumbRect.
+      const dx = thumbRect.left + (thumbRect.width - scaledW) / 2 - final.left;
+      const dy = thumbRect.top + (thumbRect.height - scaledH) / 2 - final.top;
       hero.style.transformOrigin = "top left";
       hero.style.transition = "none";
-      hero.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
+      hero.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${scale})`;
       void hero.offsetWidth;
       hero.style.transition = `transform ${ANIM_DURATION}ms cubic-bezier(0.45, 0, 0.55, 1)`;
-      hero.style.transform = "translate3d(0, 0, 0) scale(1, 1)";
+      hero.style.transform = "translate3d(0, 0, 0) scale(1)";
       setPhase("open");
     };
-    // Контейнер всегда имеет финальный layout-размер, ждать загрузки
-    // картинки не нужно — image сам fade-ится через CSS keyframe.
     apply();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -187,6 +194,8 @@ export function ProductPage({
   // requestClose: на тап back-кнопки. Снимаем dim-класс (main
   // расправляется параллельно), FLIP-back hero-container в thumbRect,
   // через 520ms зовём onBack для размонтирования.
+  // Uniform scale (как при open) — чтобы aspect картинки не «прыгал»
+  // во время сворачивания.
   const requestClose = useCallback(() => {
     if (phase === "closing") return;
     document.body.classList.remove("zen-product-overlay-on");
@@ -194,13 +203,17 @@ export function ProductPage({
     const hero = heroRef.current;
     if (hero && thumbRect) {
       const final = hero.getBoundingClientRect();
-      const dx = thumbRect.left - final.left;
-      const dy = thumbRect.top - final.top;
-      const sx = thumbRect.width / Math.max(final.width, 1);
-      const sy = thumbRect.height / Math.max(final.height, 1);
+      const scale = Math.min(
+        thumbRect.width / Math.max(final.width, 1),
+        thumbRect.height / Math.max(final.height, 1),
+      );
+      const scaledW = final.width * scale;
+      const scaledH = final.height * scale;
+      const dx = thumbRect.left + (thumbRect.width - scaledW) / 2 - final.left;
+      const dy = thumbRect.top + (thumbRect.height - scaledH) / 2 - final.top;
       hero.style.transformOrigin = "top left";
       hero.style.transition = `transform ${ANIM_DURATION}ms cubic-bezier(0.45, 0, 0.55, 1)`;
-      hero.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
+      hero.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${scale})`;
     }
     setPhase("closing");
     setTimeout(onBack, ANIM_DURATION);
@@ -258,33 +271,41 @@ export function ProductPage({
 
   if (typeof document === "undefined") return null;
 
-  // Back-кнопка — отдельный портал в body с z-index 1400 (выше хедера 1300).
-  const backBtnNode = contentReady ? createPortal(
-    <button
-      type="button"
-      onClick={requestClose}
-      className="product-v2__hero-back-floating"
-      aria-label={t(lang, "back")}
-    >
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="19" y1="12" x2="5" y2="12" />
-        <polyline points="12 19 5 12 12 5" />
-      </svg>
-    </button>,
-    document.body
-  ) : null;
-
   return createPortal(
-    <>
-    {backBtnNode}
-    <div
-      ref={sheetRef}
-      className="product-v2-overlay"
-      style={{
-        ...sheetBgStyle,
-        pointerEvents: phase === "closing" ? "none" : "auto",
-      }}
-    >
+    // Враппер с className="zen-app" нужен чтобы CSS-правила с
+    // селектором `.zen-app .zen-bag-summary`, `.zen-app .zen-bag-checkout-btn`
+    // и т.п. (75+ правил в index.css) применялись к контенту портала.
+    // Без этого pill «добавить в корзину» теряет стили (background,
+    // border-radius, shadow, цвета) и выглядит сломанной.
+    <div className="zen-app">
+      {/* Back-кнопка приклеена в верхний-левый угол viewport — отдельный
+          элемент внутри того же портала, position:fixed + z-index 1400. */}
+      {contentReady && (
+        <button
+          type="button"
+          onClick={() => {
+            // Скрываем сразу через CSS — иначе она торчит ещё 520ms
+            // во время close-анимации.
+            setContentReady(false);
+            requestClose();
+          }}
+          className="product-v2__hero-back-floating"
+          aria-label={t(lang, "back")}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12" />
+            <polyline points="12 19 5 12 12 5" />
+          </svg>
+        </button>
+      )}
+      <div
+        ref={sheetRef}
+        className="product-v2-overlay"
+        style={{
+          ...sheetBgStyle,
+          pointerEvents: phase === "closing" ? "none" : "auto",
+        }}
+      >
       <div className="product-v2">
         <div ref={heroRef} className="product-v2__hero">
           {imageUrls.length <= 1 ? (
@@ -474,8 +495,8 @@ export function ProductPage({
           </div>
         )}
       </div>
-    </div>
-    </>,
+      </div>
+    </div>,
     document.body
   );
 }

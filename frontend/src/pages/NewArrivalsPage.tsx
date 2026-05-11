@@ -161,13 +161,18 @@ function MasonryCard({ post, onOpen, isHidden = false }: MasonryCardProps) {
   if (images.length === 0) return null;
 
   const handleClick = () => {
-    // Если в фокусе input/textarea — первый клик ВНЕ него
-    // снимает фокус (закрывает клавиатуру) и НЕ открывает пост.
+    // На iOS click срабатывает ПОСЛЕ blur input (если был тап-вне).
+    // Проверяем activeElement И timestamp последнего blur'а (см.
+    // focusout-listener в App.tsx) — если input был в фокусе или
+    // только что blur'нулся (<250ms), НЕ открываем пост.
+    const lastBlur = (window as unknown as { __zenLastInputBlur?: number }).__zenLastInputBlur ?? 0;
     const active = document.activeElement;
-    if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA")) {
+    const inputFocused = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA");
+    if (inputFocused) {
       (active as HTMLElement).blur();
       return;
     }
+    if (Date.now() - lastBlur < 250) return;
     const rect = imgRef.current?.getBoundingClientRect()
       ?? ref.current?.getBoundingClientRect()
       ?? null;
@@ -1246,11 +1251,20 @@ export function NewArrivalsPage({
 
       {/* Общая back-кнопка для всех состояний expanded (включая
           forward/back-nav). Рендерится одним порталом, между навигациями
-          не unmount-ится — stays visible all the time. */}
+          не unmount-ится — stays visible all the time.
+          На ФИНАЛЬНОМ close (stack=0 → expanded станет null через 520ms)
+          скрываем кнопку МГНОВЕННО, иначе она торчит во время сворачивания
+          поста. На back-nav (stack>0) НЕ скрываем — будет показывать
+          previous-пост, она нужна. */}
       {portalTarget && backBtnVisible && createPortal(
         <button
           type="button"
-          onClick={() => closeRequestRef.current?.()}
+          onClick={() => {
+            if (stack.length === 0) {
+              setBackBtnVisible(false);
+            }
+            closeRequestRef.current?.();
+          }}
           style={expandedStyles.backBtnFloating}
           aria-label="Назад"
         >

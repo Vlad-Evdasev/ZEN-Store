@@ -1693,6 +1693,23 @@ body.zen-inspire-header-up .zen-app > header,
 body.zen-product-header-up .zen-app > header {
   z-index: 1300;
 }
+
+/* Search-row на каталоге это position:fixed, но из-за transform на
+   родительском .zen-app > main она при overlay scale(1.08) визуально
+   «прыгает» (containing block становится transformed-родителем). Скрываем
+   её во время оверлея — выглядит чище чем шифт + scale. */
+body.zen-inspire-overlay-on .zen-app .zen-catalog-search-row,
+body.zen-product-overlay-on .zen-app .zen-catalog-search-row,
+body.zen-inspire-overlay-on .zen-app .zen-catalog-search-shelf,
+body.zen-product-overlay-on .zen-app .zen-catalog-search-shelf {
+  opacity: 0;
+  transition: opacity 240ms cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+.zen-app .zen-catalog-search-row,
+.zen-app .zen-catalog-search-shelf {
+  transition: opacity 240ms cubic-bezier(0.4, 0, 0.2, 1);
+}
 body.zen-inspire-overlay-on .zen-app > header,
 body.zen-product-overlay-on .zen-app > header {
   background: rgba(var(--bg-rgb), 0.62);
@@ -1711,19 +1728,6 @@ body.zen-inspire-overlay-on .zen-pin-fab {
   pointer-events: none;
 }
 
-/* Когда iOS/WebView mobile keyboard поднята (focusin на input/textarea),
-   уезжаем BottomNavBar вниз через transform, чтобы он не зависал «над
-   клавиатурой» после автоматического репозиционирования fixed-элементов
-   браузером. Появится обратно при blur. */
-.zen-bottom-nav {
-  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
-              opacity 220ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-body.zen-keyboard-up .zen-bottom-nav {
-  transform: translateY(100%);
-  opacity: 0;
-  pointer-events: none;
-}
 
 /* Outgoing back-nav: sheet bg градуально fades to transparent через
    keyframe (применяется через .zen-sheet-force-close). А image внутри

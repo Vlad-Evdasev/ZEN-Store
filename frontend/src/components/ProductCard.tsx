@@ -29,16 +29,20 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
   const { formatPrice } = useSettings();
   const imgWrapRef = useRef<HTMLDivElement>(null);
   const handleClick = () => {
-    // Если в фокусе input/textarea (например, search в каталоге) —
-    // первый клик ВНЕ него должен ТОЛЬКО снять фокус (= спрятать
-    // клавиатуру), а не открыть товар. Это поведение «native iOS
-    // app» — пользователь часто тапает на карточку чтобы закрыть
-    // клавиатуру, а не для открытия товара.
+    // На iOS Safari порядок touch-click такой: touchstart → blur input →
+    // click. К моменту click activeElement УЖЕ body (blur произошёл),
+    // поэтому проверка `instanceof HTMLInputElement` не сработает.
+    // Используем timestamp последнего blur'а (см. focusout-listener в
+    // App.tsx) — если input был активен <250ms назад, считаем что это
+    // клик «снять клавиатуру», и НЕ открываем товар.
+    const lastBlur = (window as unknown as { __zenLastInputBlur?: number }).__zenLastInputBlur ?? 0;
     const active = document.activeElement;
-    if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA")) {
+    const inputFocused = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA");
+    if (inputFocused) {
       (active as HTMLElement).blur();
       return;
     }
+    if (Date.now() - lastBlur < 250) return;
     const rect = imgWrapRef.current?.getBoundingClientRect() ?? null;
     onClick(rect);
   };
