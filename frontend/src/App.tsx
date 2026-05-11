@@ -361,19 +361,26 @@ function App() {
         }, 600);
       }
     };
-    // PRE-EMPTIVE pointerdown listener: срабатывает ДО focus event и ДО
-    // того как iOS успевает auto-scroll к input. Сохраняем scrollY ДО
-    // адаптаций и блокируем body сразу.
+    // PRE-EMPTIVE listeners: срабатывают ДО focus event и ДО того как
+    // iOS успевает auto-scroll к input. Используем И pointerdown,
+    // И touchstart — некоторые версии Telegram WebView на iOS не
+    // диспатчат PointerEvent, и без touchstart-fallback lockBody
+    // вызывался только из focusin (после iOS auto-scroll → scrollY=0).
     const onPointerDown = (e: PointerEvent) => {
+      if (isInputEl(e.target)) lockBody();
+    };
+    const onTouchStartCapture = (e: TouchEvent) => {
       if (isInputEl(e.target)) lockBody();
     };
     document.addEventListener("focusin", onFocusIn, true);
     document.addEventListener("focusout", onFocusOut, true);
     document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("touchstart", onTouchStartCapture, { capture: true, passive: true });
     return () => {
       document.removeEventListener("focusin", onFocusIn, true);
       document.removeEventListener("focusout", onFocusOut, true);
       document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("touchstart", onTouchStartCapture, { capture: true } as EventListenerOptions);
     };
   }, []);
 

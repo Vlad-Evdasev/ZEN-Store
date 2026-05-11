@@ -38,17 +38,18 @@ export function useTelegram() {
     setBrowserUser({ userId: id, firstName: name, userName: uname });
   }, []);
 
-  if (tg) {
+  // tg-методы зовём ровно один раз на mount, а не на каждый render.
+  // Раньше каждый ре-рендер триггерил expand() / setBackgroundColor() и
+  // т.д. — это могло вызывать layout-shift / scroll-jump на iOS.
+  useEffect(() => {
+    if (!tg) return;
     tg.ready();
     tg.expand();
     tg.disableVerticalSwipes?.();
-    // Telegram WebView container bg по дефолту берёт цвет theme юзера —
-    // на iOS при slide-up клавиатуры это viable как «прозрачный» переход
-    // (Telegram bg выглядит чуть светлее нашего OLED-#000). Принудительно
-    // выставляем чёрный чтобы все слои совпадали и не было flash'а.
     tg.setBackgroundColor?.("#000000");
     tg.setHeaderColor?.("#000000");
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return { tg, userId, userName, firstName, isInTelegram, setBrowserAuth };
 }
