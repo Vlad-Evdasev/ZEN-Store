@@ -1705,18 +1705,16 @@ body.zen-product-header-up .zen-app > header {
 }
 body.zen-inspire-overlay-on .zen-app .zen-catalog-search-row,
 body.zen-product-overlay-on .zen-app .zen-catalog-search-row {
-  /* translateY -200px — pill полностью выезжает из viewport. */
+  /* ТОЛЬКО transform. Opacity и box-shadow НЕ trogaем — pill+shadow
+     остаются с full alpha и движутся вместе как ОДИН БЛОК. Header
+     (opaque var(--bg)) covers оба когда они входят в header zone.
+     Маленький shadow (см. base rule выше) делает «alone window» <20ms,
+     перцептивно invisible. */
   transform: translateX(-50%) translateY(-200px);
-  /* opacity 0 + transform → pill И тень фейдятся СИНХРОННО. */
-  opacity: 0;
   pointer-events: none;
-  /* Open transition (slide-UP): easeInOutCubic — smooth start, не
-     abrupt. На open user важно плавность; на close важно «без
-     задержки» (см. base rule выше с easeOutQuint). */
   transition:
     height 0.38s cubic-bezier(0.4, 0, 0.2, 1),
-    transform 720ms cubic-bezier(0.65, 0, 0.35, 1),
-    opacity 720ms cubic-bezier(0.65, 0, 0.35, 1);
+    transform 720ms cubic-bezier(0.65, 0, 0.35, 1);
 }
 body.zen-inspire-overlay-on .zen-app .zen-catalog-search-shelf,
 body.zen-product-overlay-on .zen-app .zen-catalog-search-shelf {
@@ -2424,10 +2422,14 @@ html[data-theme="dark"] .zen-app .zen-catalog-search-shelf {
   background: var(--surface);
   border: 1px solid var(--border);
   /* 25px — ровно половина высоты закрытой пилюли (50px). В закрытом
-     состоянии это даёт идеальный полукруг (= пилюля), а в открытом
-     состоянии углы остаются такими же, как у пилюли поиска. */
+     состоянии это даёт идеальный полукруг (= пилюля). */
   border-radius: 25px;
-  box-shadow: 0 16px 28px -10px rgba(0, 0, 0, 0.28), 0 6px 14px -6px rgba(0, 0, 0, 0.18);
+  /* МАЛЕНЬКАЯ shadow которая extends только ~6px ниже pill. Раньше
+     box-shadow extended ~30px → при slide-up shadow была visible alone
+     ~100ms после того как pill исчезла за хедером (asymmetric).
+     С этой shadow «alone window» < 20ms — perceptually pill+shadow
+     движутся как ОДИН БЛОК. */
+  box-shadow: 0 2px 6px -1px rgba(0, 0, 0, 0.22), 0 1px 2px 0 rgba(0, 0, 0, 0.14);
   position: fixed;
   top: 68px;
   left: 50%;
@@ -2444,15 +2446,15 @@ html[data-theme="dark"] .zen-app .zen-catalog-search-shelf {
   max-width: 460px;
   height: 50px;
   overflow: hidden;
-  /* Base transition = ПРИ CLOSE (slide-down).
-     easeOutQuint fast start, БЕЗ delay (раньше был 200ms delay — user
-     перцептивно ощущал как «минимальную задержку»). transform + opacity
-     синхронно. Pill моментально начинает ехать вниз когда class снят. */
+  /* Base transition = ПРИ CLOSE. ТОЛЬКО transform — pill+shadow
+     движутся одним block-ом. opacity transition удалена потому что
+     opacity multiplication делала shadow perceptually fade быстрее
+     pill (asymmetric). Маленькая shadow (см. box-shadow выше) делает
+     "shadow alone" window <20ms = perceptually invisible. */
   transition:
     height 0.38s cubic-bezier(0.4, 0, 0.2, 1),
-    transform 720ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 720ms cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: transform, opacity;
+    transform 720ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
 }
 /* Шапка внутри единой формы — всегда 50px, row-layout, не зависит от
    открытого состояния. */
@@ -2470,7 +2472,9 @@ html[data-theme="dark"] .zen-app .zen-catalog-search-shelf {
 html[data-theme="dark"] .zen-app .zen-catalog-search-row {
   background: var(--surface);
   border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 18px 32px -10px rgba(0, 0, 0, 0.70), 0 6px 14px -6px rgba(0, 0, 0, 0.45);
+  /* Maximum 6px shadow extent — synchronizes pill+shadow movement
+     during slide. См. light theme rule выше — same approach. */
+  box-shadow: 0 2px 6px -1px rgba(0, 0, 0, 0.50), 0 1px 2px 0 rgba(0, 0, 0, 0.32);
 }
 .zen-app .zen-catalog-search-row:focus-within:not(.zen-catalog-search-row--filter-open) {
   border-color: var(--accent);

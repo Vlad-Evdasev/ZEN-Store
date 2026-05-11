@@ -328,11 +328,13 @@ function App() {
           }
         };
         vv?.addEventListener("resize", onResize);
-        // Fallback at 350ms (если visualViewport не fire-нул)
+        // Fallback at 200ms (если visualViewport не fire-нул).
+        // iOS keyboard close ~200-300ms — fallback должен trigger
+        // близко к keyboard finish, не позже.
         setTimeout(() => {
           reveal();
           vv?.removeEventListener("resize", onResize);
-        }, 350);
+        }, 200);
         // PHASE 2 (600ms): full unlockBody. iOS layout fully settled,
         // scroll restore без flicker.
         setTimeout(() => {
