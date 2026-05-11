@@ -245,6 +245,10 @@ const styles: Record<string, React.CSSProperties> = {
     overflow: "hidden",
     background: "var(--surface-elevated)",
     borderRadius: 12,
+    // touch-action: pan-y — освобождает горизонтальный жест для нашего
+    // swipe-handler. Без этого iOS Safari трактует горизонтальный
+    // touchmove как page-pan и наши touchmove события прерываются.
+    touchAction: "pan-y",
   },
   image: {
     width: "100%",

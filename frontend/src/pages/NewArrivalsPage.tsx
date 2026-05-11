@@ -396,12 +396,26 @@ function ExpandedView({
   }, []);
   // Aspect-ratio первой картинки — все остальные в посте показываются
   // в боксе первой (cover-crop). При свайпе высота не дёргается.
+  // Если aspect ещё не в кэше — preload-им первую картинку через
+  // new Image() и сохраняем aspect в state + cache.
   const firstImage = images[0];
-  const firstImageAspect = (() => {
-    if (!firstImage) return null;
-    const c = loadAspectCache();
-    return c[firstImage] ?? null;
-  })();
+  const cachedFirstAspect = firstImage ? (loadAspectCache()[firstImage] ?? null) : null;
+  const [firstImageAspect, setFirstImageAspect] = useState<number | null>(cachedFirstAspect);
+  useEffect(() => {
+    if (firstImageAspect || !firstImage) return;
+    const im = new window.Image();
+    let cancelled = false;
+    im.onload = () => {
+      if (cancelled) return;
+      if (im.naturalWidth && im.naturalHeight) {
+        const r = im.naturalWidth / im.naturalHeight;
+        rememberAspect(firstImage, r);
+        setFirstImageAspect(r);
+      }
+    };
+    im.src = firstImage;
+    return () => { cancelled = true; };
+  }, [firstImage, firstImageAspect]);
   // Initial phase:
   //  - forceClose: mounts visible (open), затем useEffect ниже сразу
   //    переключает на closing — outgoing-слой при back-nav.
@@ -1461,6 +1475,8 @@ const cardStyles: Record<string, React.CSSProperties> = {
     overflow: "hidden",
     borderRadius: 12,
     background: "rgba(0,0,0,0.04)",
+    // touch-action: pan-y — освобождает горизонтальный жест для swipe.
+    touchAction: "pan-y" as const,
   },
   // Картинка тянется на весь wrap; так как у wrap зафиксирован
   // aspect-ratio, высота резервируется до загрузки картинки.
