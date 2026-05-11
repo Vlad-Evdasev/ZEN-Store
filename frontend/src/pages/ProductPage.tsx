@@ -170,22 +170,22 @@ export function ProductPage({
 
   return (
     <div ref={rootRef} className="product-v2">
-      {/* Back-arrow расположена НАД hero фотографией, не приклеена в угол —
-          стоит с воздухом сверху + 12px слева (как в постах expanded view,
-          но без glue-к-углу). */}
-      <button
-        type="button"
-        onClick={onBack}
-        className="product-v2__back-arrow"
-        aria-label={t(lang, "back")}
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="19" y1="12" x2="5" y2="12" />
-          <polyline points="12 19 5 12 12 5" />
-        </svg>
-      </button>
-
+      {/* Back-кнопка приклеена в левый-верхний угол hero (position:absolute
+          поверх фотографии), тёмная с blur — точно как в expanded post.
+          Минимальный отступ между hero и хедером — никакого «воздуха»
+          выше фото. */}
       <div className="product-v2__hero">
+        <button
+          type="button"
+          onClick={onBack}
+          className="product-v2__hero-back"
+          aria-label={t(lang, "back")}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12" />
+            <polyline points="12 19 5 12 12 5" />
+          </svg>
+        </button>
         {imageUrls.length <= 1 ? (
           <img
             key={`${product.id}-img`}

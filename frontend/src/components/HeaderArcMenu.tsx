@@ -288,10 +288,11 @@ export function HeaderArcMenu({
 }
 
 // Иерархия z-index: хедер = 10, BottomNavBar = 20, search-row = 13,
-// модалка фильтров = 100+. Overlay (1000) < layer арки + крестик (1001).
-// Весь хедер и контент уходят под блюр/затемнение оверлея; поверх
-// оставляем только крестик (в точке бургера) и 4 кружка арки.
-// Меню портал-рендерится в document.body, числа сравниваются глобально.
+// модалка фильтров = 100+. Overlay (1500) < layer арки + крестик (1501).
+// Inspire-post-overlay поднимает хедер до 1300 — нам надо быть ВЫШЕ
+// хедера в этом случае (иначе меню не видно из-за frosted header
+// слоя). Поэтому базовые числа выбраны 1500/1501 — выше всех
+// post-overlay слоёв (header 1300, back-btn 1400).
 const styles: Record<string, React.CSSProperties> = {
   // Затемнение + блюр заднего фона при раскрытом меню.
   // Анимируем opacity, чтобы при закрытии был плавный fade-out (а не мгновенный unmount).
@@ -302,14 +303,14 @@ const styles: Record<string, React.CSSProperties> = {
     backdropFilter: "blur(8px)",
     WebkitBackdropFilter: "blur(8px)",
     transition: "opacity 280ms cubic-bezier(0.22, 1, 0.36, 1)",
-    zIndex: 1000,
+    zIndex: 1500,
   },
   layer: {
     position: "fixed",
     width: 0,
     height: 0,
     pointerEvents: "none",
-    zIndex: 1001,
+    zIndex: 1501,
   },
   item: {
     position: "absolute",
