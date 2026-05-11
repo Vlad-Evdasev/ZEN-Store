@@ -2424,12 +2424,15 @@ html[data-theme="dark"] .zen-app .zen-catalog-search-shelf {
   /* 25px — ровно половина высоты закрытой пилюли (50px). В закрытом
      состоянии это даёт идеальный полукруг (= пилюля). */
   border-radius: 25px;
-  /* МАЛЕНЬКАЯ shadow которая extends только ~6px ниже pill. Раньше
-     box-shadow extended ~30px → при slide-up shadow была visible alone
-     ~100ms после того как pill исчезла за хедером (asymmetric).
-     С этой shadow «alone window» < 20ms — perceptually pill+shadow
-     движутся как ОДИН БЛОК. */
-  box-shadow: 0 2px 6px -1px rgba(0, 0, 0, 0.22), 0 1px 2px 0 rgba(0, 0, 0, 0.14);
+  /* filter:drop-shadow вместо box-shadow — рендерится в ТОМ ЖЕ
+     GPU compositing pass что и transform. Pill + shadow гарантированно
+     движутся как ОДИН БЛОК на GPU. Box-shadow рендерилось в отдельном
+     paint и могло «лагать» относительно pill's transform.
+     drop-shadow values:
+     - y offset 3px (минимально smooth «lift» эффект)
+     - blur 8px (soft эффект)
+     - color rgba alpha 0.25 */
+  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.25));
   position: fixed;
   top: 68px;
   left: 50%;
@@ -2472,9 +2475,8 @@ html[data-theme="dark"] .zen-app .zen-catalog-search-shelf {
 html[data-theme="dark"] .zen-app .zen-catalog-search-row {
   background: var(--surface);
   border-color: rgba(255, 255, 255, 0.08);
-  /* Maximum 6px shadow extent — synchronizes pill+shadow movement
-     during slide. См. light theme rule выше — same approach. */
-  box-shadow: 0 2px 6px -1px rgba(0, 0, 0, 0.50), 0 1px 2px 0 rgba(0, 0, 0, 0.32);
+  /* Dark theme — stronger filter:drop-shadow alpha. См. light выше. */
+  filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.6));
 }
 .zen-app .zen-catalog-search-row:focus-within:not(.zen-catalog-search-row--filter-open) {
   border-color: var(--accent);

@@ -305,11 +305,10 @@ function App() {
     const onFocusOut = (e: FocusEvent) => {
       if (isInputEl(e.target)) {
         (window as unknown as { __zenLastInputBlur?: number }).__zenLastInputBlur = Date.now();
-        // PHASE 1: REVEAL FOOTER as soon as iOS клавиатура реально
-        // закрылась. Используем visualViewport.resize для точного
-        // detection — когда vv.height возвращается к full innerHeight,
-        // клавиатура ушла. Footer instantly visible без waiting за
-        // fixed delay (раньше 300ms был слишком поздно или рано).
+        // PHASE 1: REVEAL FOOTER as soon as iOS клавиатура начала
+        // закрываться. Trigger на FIRST visualViewport.resize event —
+        // как только vv.height растёт = клавиатура closing.
+        // Footer показывается синхронно с keyboard slide-down animation.
         let revealed = false;
         const reveal = () => {
           if (revealed) return;
@@ -319,22 +318,21 @@ function App() {
           }
         };
         const vv = window.visualViewport;
+        const initialVvHeight = vv?.height || 0;
         const onResize = () => {
           if (!vv) return;
-          // Keyboard fully closed: vv.height almost equals innerHeight
-          if (Math.abs(window.innerHeight - vv.height) < 10) {
+          // ANY resize where height growing = keyboard closing started
+          if (vv.height > initialVvHeight + 5) {
             reveal();
             vv.removeEventListener("resize", onResize);
           }
         };
         vv?.addEventListener("resize", onResize);
-        // Fallback at 200ms (если visualViewport не fire-нул).
-        // iOS keyboard close ~200-300ms — fallback должен trigger
-        // близко к keyboard finish, не позже.
+        // Fallback at 150ms (very short) — на случай если vv не fire-нул.
         setTimeout(() => {
           reveal();
           vv?.removeEventListener("resize", onResize);
-        }, 200);
+        }, 150);
         // PHASE 2 (600ms): full unlockBody. iOS layout fully settled,
         // scroll restore без flicker.
         setTimeout(() => {
