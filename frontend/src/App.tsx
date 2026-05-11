@@ -318,13 +318,15 @@ function App() {
         }, 350);
       }
     };
-    // PRE-EMPTIVE pointerdown listener: добавляем body.zen-input-focused
-    // ДО того как iOS успеет обработать focus и shift layout. Это
-    // мгновенно скрывает nav через CSS visibility:hidden и не даёт
-    // ему «всплыть» над клавиатурой.
+    // PRE-EMPTIVE pointerdown listener: КРИТИЧНО! Срабатывает ДО focus
+    // event и ДО того как iOS успевает auto-scroll к input. Здесь:
+    //  1) Сохраняем scrollY ДО любых iOS адаптаций (auto-scroll затирает)
+    //  2) Блокируем body СРАЗУ (iOS не может scroll-нуть fixed body)
+    //  3) Добавляем body.zen-input-focused класс (скрывает nav через CSS)
+    // На focusin потом lockBody НЕ запустится повторно (проверка class).
     const onPointerDown = (e: PointerEvent) => {
-      if (isInputEl(e.target)) {
-        document.body.classList.add("zen-input-focused");
+      if (isInputEl(e.target) && !document.body.classList.contains("zen-input-focused")) {
+        lockBody();
       }
     };
     document.addEventListener("focusin", onFocusIn, true);
