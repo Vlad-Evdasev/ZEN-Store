@@ -160,6 +160,10 @@ try {
     )
   `);
   db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('currency_rate_byn', '3.2')").run();
+  // Контакт админа без '@' — используется в текстах бота, инвойсах,
+  // CustomOrderPage и т.д. Дефолт ENV ADMIN_TG_HANDLE → 'krot_eno'.
+  db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('admin_tg_handle', ?)")
+    .run(process.env.ADMIN_TG_HANDLE || "krot_eno");
 } catch {}
 
 // Подписчики бота — тапнули /start, открыли мини-аппу или были замечены в

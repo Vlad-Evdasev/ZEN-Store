@@ -438,7 +438,16 @@ export async function notifyNewArrival(
 // устройствах с установленным Tonkeeper deep-link открывает приложение
 // сразу с подставленными адресом, суммой и комментарием).
 
-const ADMIN_HANDLE = process.env.ADMIN_TG_HANDLE || "krot_eno";
+// Контакт админа берём из app_settings (можно править из админки),
+// фолбэк — ENV ADMIN_TG_HANDLE → 'krot_eno'.
+function adminHandle(): string {
+  try {
+    const row = db.prepare("SELECT value FROM app_settings WHERE key = 'admin_tg_handle'")
+      .get() as { value: string } | undefined;
+    if (row?.value) return row.value.replace(/^@/, "");
+  } catch {}
+  return process.env.ADMIN_TG_HANDLE || "krot_eno";
+}
 
 export interface OrderItemForInvoice {
   name: string;
@@ -479,7 +488,7 @@ export async function notifyOrderInvoice(
     lines.push(`<b>${total} $</b>`);
   }
   lines.push("");
-  lines.push(`<a href="https://t.me/${ADMIN_HANDLE}">@${ADMIN_HANDLE}</a>`);
+  lines.push((() => { const h = adminHandle(); return `<a href="https://t.me/${h}">@${h}</a>`; })());
 
   const caption = lines.join("\n");
 
@@ -548,7 +557,7 @@ export async function notifyCustomOrderInvoice(
   lines.push("");
   lines.push(`<b>${total} $</b>`);
   lines.push("");
-  lines.push(`<a href="https://t.me/${ADMIN_HANDLE}">@${ADMIN_HANDLE}</a>`);
+  lines.push((() => { const h = adminHandle(); return `<a href="https://t.me/${h}">@${h}</a>`; })());
 
   const caption = lines.join("\n");
 
@@ -593,7 +602,7 @@ export async function notifyOrderPaid(
   lines.push("");
   lines.push("Заказ ушёл в сборку. Когда отправим — пришлём трек-номер.");
   lines.push("");
-  lines.push(`<a href="https://t.me/${ADMIN_HANDLE}">@${ADMIN_HANDLE}</a>`);
+  lines.push((() => { const h = adminHandle(); return `<a href="https://t.me/${h}">@${h}</a>`; })());
   const text = lines.join("\n");
   try {
     await bot.api.sendMessage(userId, text, {

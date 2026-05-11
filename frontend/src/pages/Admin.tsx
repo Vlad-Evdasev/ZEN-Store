@@ -24,6 +24,8 @@ import {
   getBotMessageTemplates,
   updateBotMessageTemplate,
   type BotMessageTemplate,
+  getAdminHandle,
+  updateAdminHandle,
   getCurrencyRateAdmin,
   updateCurrencyRateAdmin,
   refreshCurrencyRateFromNbrb,
@@ -1732,7 +1734,71 @@ function CurrencyRateTab({ adminSecret }: { adminSecret: string }) {
           Включение опции прямо сейчас тоже триггерит refresh.
         </div>
       </section>
+
+      <AdminHandleSection adminSecret={adminSecret} />
     </>
+  );
+}
+
+// Маленькая секция: TG-handle админа (используется в CustomOrderPage,
+// инвойсах и текстах бота). Хранится в app_settings.admin_tg_handle.
+function AdminHandleSection({ adminSecret }: { adminSecret: string }) {
+  const [handle, setHandle] = useState("");
+  const [original, setOriginal] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  useEffect(() => {
+    getAdminHandle().then((h) => { setHandle(h); setOriginal(h); }).catch(() => {});
+  }, []);
+  const dirty = handle.trim().replace(/^@/, "") !== original;
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const raw = handle.trim().replace(/^@/, "");
+    if (!/^[A-Za-z0-9_]{3,32}$/.test(raw)) {
+      setMessage("3–32 латинских буквы / цифры / подчёркивание");
+      return;
+    }
+    setSaving(true);
+    setMessage("");
+    try {
+      await updateAdminHandle(raw, adminSecret);
+      setOriginal(raw);
+      setHandle(raw);
+      setMessage("Контакт обновлён");
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <section className="admin-card" style={{ marginTop: 16 }}>
+      <div className="admin-card-head">
+        <h3>Контакт админа</h3>
+        <span className="admin-card-head-meta">Telegram</span>
+      </div>
+      <form onSubmit={handleSave} className="admin-card-body" style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
+        <label className="admin-field" style={{ flex: "1 1 240px" }}>
+          <span className="admin-field-label">@-handle (без «@»)</span>
+          <input
+            type="text"
+            value={handle}
+            onChange={(e) => setHandle(e.target.value)}
+            placeholder="krot_eno"
+            style={styles.input}
+            autoComplete="off"
+          />
+        </label>
+        <button type="submit" disabled={saving || !dirty} style={styles.submit}>
+          {saving ? "Сохраняю…" : "Сохранить"}
+        </button>
+      </form>
+      {message && <p style={{ ...styles.message, padding: "0 18px 14px" }}>{message}</p>}
+      <div style={{ padding: "0 18px 16px", fontSize: 12, color: "var(--muted)", lineHeight: 1.55 }}>
+        Этот handle подставляется в форму «Заказ не из каталога» («Ответим от @…»),
+        инвойсы и hi-сообщения бота. Меняется без redeploy.
+      </div>
+    </section>
   );
 }
 

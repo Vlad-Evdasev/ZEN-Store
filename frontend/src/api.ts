@@ -442,6 +442,32 @@ export async function getCurrencyRate(): Promise<{ rate: number }> {
   return { rate: typeof data.rate === "number" ? data.rate : 3.2 };
 }
 
+// Admin TG handle — единый источник правды через app_settings.
+// Используется в CustomOrderPage и пр. Admin может его править.
+export async function getAdminHandle(): Promise<string> {
+  try {
+    const res = await fetchWithRetry(`${API_URL}/api/settings/admin-handle`);
+    if (!res.ok) return "krot_eno";
+    const data = await res.json();
+    return typeof data.handle === "string" && data.handle ? data.handle : "krot_eno";
+  } catch {
+    return "krot_eno";
+  }
+}
+
+export async function updateAdminHandle(handle: string, adminSecret: string): Promise<{ handle: string }> {
+  const res = await fetch(`${API_URL}/api/settings/admin-handle`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
+    body: JSON.stringify({ handle }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+  return res.json();
+}
+
 export async function updateSettings(
   userId: string,
   data: { lang?: string; theme?: string; currency?: string }

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { submitCustomOrder } from "../api";
+import { submitCustomOrder, getAdminHandle } from "../api";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 
@@ -19,8 +19,8 @@ function PaperclipIcon() {
   );
 }
 
-const SELLER_TG_URL = "https://t.me/krot_eno";
-const SELLER_HANDLE = "@krot_eno";
+// Handle админа теперь берётся с бэка (app_settings: admin_tg_handle),
+// его можно править из админки. Fallback на krot_eno если API failed.
 
 function CheckCircleIcon() {
   return (
@@ -47,8 +47,19 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   const [customPhoto, setCustomPhoto] = useState<string | null>(null);
   const [customSubmitting, setCustomSubmitting] = useState(false);
   const [customSuccess, setCustomSuccess] = useState(false);
+  const [sellerHandle, setSellerHandle] = useState<string>("krot_eno");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getAdminHandle()
+      .then((h) => { if (!cancelled) setSellerHandle(h); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+  const SELLER_TG_URL = `https://t.me/${sellerHandle}`;
+  const SELLER_HANDLE = `@${sellerHandle}`;
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
