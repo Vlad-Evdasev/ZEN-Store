@@ -2421,18 +2421,17 @@ html[data-theme="dark"] .zen-app .zen-catalog-search-shelf {
   box-sizing: border-box;
   background: var(--surface);
   border: 1px solid var(--border);
-  /* 25px — ровно половина высоты закрытой пилюли (50px). В закрытом
-     состоянии это даёт идеальный полукруг (= пилюля). */
+  /* 25px — половина pill height. Perfect полукруг. */
   border-radius: 25px;
-  /* filter:drop-shadow вместо box-shadow — рендерится в ТОМ ЖЕ
-     GPU compositing pass что и transform. Pill + shadow гарантированно
-     движутся как ОДИН БЛОК на GPU. Box-shadow рендерилось в отдельном
-     paint и могло «лагать» относительно pill's transform.
-     drop-shadow values:
-     - y offset 3px (минимально smooth «lift» эффект)
-     - blur 8px (soft эффект)
-     - color rgba alpha 0.25 */
-  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.25));
+  /* INSET shadow вместо outer — РЕНДЕРИТСЯ ВНУТРИ pill bounds.
+     Физически не может extend за пределы pill → pill+shadow это
+     БУКВАЛЬНО один pixel рендеринг. При slide-up за header они
+     hidden одновременно (нечего видеть alone).
+     Visual: subtle depth at bottom-inside pill — мягкий 3D effect,
+     premium feel но никаких outer-shadow sync проблем. */
+  box-shadow:
+    inset 0 -2px 4px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
   position: fixed;
   top: 68px;
   left: 50%;
@@ -2475,8 +2474,10 @@ html[data-theme="dark"] .zen-app .zen-catalog-search-shelf {
 html[data-theme="dark"] .zen-app .zen-catalog-search-row {
   background: var(--surface);
   border-color: rgba(255, 255, 255, 0.08);
-  /* Dark theme — stronger filter:drop-shadow alpha. См. light выше. */
-  filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.6));
+  /* Dark theme — stronger inset depth. См. light выше. */
+  box-shadow:
+    inset 0 -2px 6px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 .zen-app .zen-catalog-search-row:focus-within:not(.zen-catalog-search-row--filter-open) {
   border-color: var(--accent);
