@@ -149,26 +149,57 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
     };
   }, [open]);
 
-  // Body management — lock scroll пока sheet open. zen-input-focused
-  // класс отдельно — на focus/blur textarea'и (скрывает nav только
-  // когда юзер действительно печатает).
+  // Body management — POSITION lock пока sheet open. Раньше был только
+  // overflow:hidden — но iOS на focus в textarea всё равно auto-scroll'ит
+  // body чтобы вернуть input в viewport. Этот scroll сдвигает контент,
+  // backdrop-filter пересчитывается → юзер видит «мерцание» под blur'ом
+  // при открытии клавиатуры.
+  //
+  // position:fixed + top:-scrollY полностью замораживает страницу.
+  // App.tsx делает то же самое для non-keyboard-aware inputs (см. lockBody
+  // там). Для нашего sheet'а (data-keyboard-aware=true) App пропускает
+  // lockBody — поэтому делаем сами.
+  //
+  // Dep [mounted] (не [open]) — чтобы body оставался locked всю close-
+  // анимацию. Иначе на open=false body unlocks мгновенно → за 400ms
+  // close-анима страница может прыгнуть.
   useEffect(() => {
-    if (!open) return;
+    if (!mounted) return;
     refHeightRef.current = window.innerHeight;
+
+    const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+    const prevPosition = document.body.style.position;
+    const prevTop = document.body.style.top;
+    const prevLeft = document.body.style.left;
+    const prevRight = document.body.style.right;
+    const prevWidth = document.body.style.width;
     const prevOverflow = document.body.style.overflow;
     const prevHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
     document.body.style.overflow = "hidden";
     document.documentElement.style.overflow = "hidden";
+
     return () => {
+      document.body.style.position = prevPosition;
+      document.body.style.top = prevTop;
+      document.body.style.left = prevLeft;
+      document.body.style.right = prevRight;
+      document.body.style.width = prevWidth;
       document.body.style.overflow = prevOverflow;
       document.documentElement.style.overflow = prevHtmlOverflow;
+      window.scrollTo(0, scrollY);
       document.body.classList.remove("zen-input-focused");
       if (textareaUnlockTimerRef.current != null) {
         clearTimeout(textareaUnlockTimerRef.current);
         textareaUnlockTimerRef.current = null;
       }
     };
-  }, [open]);
+  }, [mounted]);
 
   // Predictive shrink на focus — сетим overlayHeight СРАЗУ к
   // predicted post-kb значению, не дожидаясь vv.resize. На iOS первый
@@ -330,23 +361,22 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
   // только закроет kb. Next tap откроет picker (как в CustomOrderPage).
   const paperclipDisabled = kbOpen || photos.length >= MAX_PHOTOS;
 
-  // Во время close (mounted && !visible) используем frozenHeight чтобы
-  // overlay не дрейфовал из-за параллельного kb-close. Плюс отключаем
-  // height/max-height transitions — даже если frozen-fallback не сработал
-  // и overlayHeight скакнул, height change приклеится instant без
-  // competing animation.
-  const isClosing = mounted && !visible;
-  const effectiveHeight = isClosing && frozenHeight != null ? frozenHeight : overlayHeight;
-
-  // Combined transition: background-color + backdrop-filter + (height
-  // когда не closing) — все плавные, синхронизированы с sheet'ом.
-  // background-color и backdrop-filter всегда transition'ятся (даже
-  // во время close), чтобы blur плавно уходил вместе с overlay'ем.
-  const overlayTransition =
-    `background-color ${SHEET_ANIM}ms ${EASING}, ` +
-    `backdrop-filter ${SHEET_ANIM}ms ${EASING}, ` +
-    `-webkit-backdrop-filter ${SHEET_ANIM}ms ${EASING}` +
-    (isClosing ? "" : `, height 260ms ${EASING}`);
+  // isClosing = frozenHeight != null. Завязали на frozenHeight, а не
+  // на (mounted && !visible), потому что на первом mount-frame'е visible
+  // ещё false (rAF chain ставит true позже) — это совпало бы с
+  // close-state'ом и engine применил бы close-стили на open-frame'е.
+  // frozenHeight ставится ТОЛЬКО на close (open сбрасывает в null).
+  const isClosing = frozenHeight != null;
+  const screenHeight = typeof window !== "undefined" ? window.innerHeight : 800;
+  // Во время close НЕ растим overlay — оставляем как есть (frozenHeight).
+  // Раньше пробовали растить до screenHeight, но при close с kb-open
+  // overlay рос параллельно с kb-retract → sheet visible как sliver
+  // в момент когда kb открыл новое visible-пространство быстрее, чем
+  // sheet успел оттуда уехать.
+  // Вместо grow используем БОЛЬШУЮ translate distance (см. closeTranslate
+  // ниже) — sheet'у гарантированно хватит чтобы уйти ниже экрана
+  // независимо от kb state.
+  const effectiveHeight = overlayHeight;
 
   const overlayStyle: React.CSSProperties = {
     ...styles.overlay,
@@ -357,12 +387,26 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
     // pop'ал мгновенно когда overlay появлялся.
     backdropFilter: visible ? `blur(${BLUR_AMOUNT}px)` : "blur(0px)",
     WebkitBackdropFilter: visible ? `blur(${BLUR_AMOUNT}px)` : "blur(0px)",
-    transition: overlayTransition,
+    transition:
+      `background-color ${SHEET_ANIM}ms ${EASING}, ` +
+      `backdrop-filter ${SHEET_ANIM}ms ${EASING}, ` +
+      `-webkit-backdrop-filter ${SHEET_ANIM}ms ${EASING}` +
+      // Height transition только при open — на close height не меняется
+      // (overlayHeight остаётся frozenHeight value т.к. vv listener снят).
+      (isClosing ? "" : `, height 260ms ${EASING}`),
   };
+  // Sheet translate на close — большая фиксированная дистанция
+  // (= screenHeight) чтобы sheet ушёл ЗА экран независимо от того где
+  // он стартовал (kb open / closed). translateY(100%) = sheet height
+  // часто не хватало (особенно с kb-open: sheet bottom уже у kb top,
+  // 100% перемещает только в kb area, не за экран). Когда kb потом
+  // ретракируется, sheet оказывается видимым в новом revealed-space.
+  // Большой translate fix'ит это — sheet всегда ниже viewport edge.
+  const closeTranslate = `${screenHeight}px`;
   const sheetStyle: React.CSSProperties = {
     ...styles.sheet,
     maxHeight: Math.max(280, effectiveHeight - SHEET_TOP_GAP),
-    transform: visible ? "translateY(0)" : "translateY(100%)",
+    transform: visible ? "translateY(0)" : `translateY(${closeTranslate})`,
     transition: isClosing
       ? `transform ${SHEET_ANIM}ms ${EASING}`
       : `transform ${SHEET_ANIM}ms ${EASING}, max-height 260ms ${EASING}`,
