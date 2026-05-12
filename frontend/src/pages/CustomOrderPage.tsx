@@ -603,14 +603,15 @@ const styles: Record<string, React.CSSProperties> = {
     backdropFilter: "blur(4px)",
   },
 
-  /* Composer парит над футером — paddingBottom: 12 создаёт чёткий
-     визуальный зазор между пилюлей и низом wrap'а / nav top. */
+  /* Composer слегка приподнят: paddingBottom: 4 — минимальный зазор
+     чтобы пилюля не лип к nav-border, но без заметной полосы
+     var(--bg) под пилюлей. */
   composerWrap: {
     display: "flex",
     flexDirection: "column",
     gap: 8,
     paddingTop: 6,
-    paddingBottom: 12,
+    paddingBottom: 4,
     flexShrink: 0,
   },
   // Compact chat-input pill (~36-38px высота total). Раньше выглядела
