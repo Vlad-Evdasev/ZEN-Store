@@ -711,7 +711,7 @@ const styles: Record<string, React.CSSProperties> = {
      Только сама пилюля (composer) имеет solid bg. */
   composerWrap: {
     position: "absolute",
-    bottom: 6,
+    bottom: 14,
     left: 0,
     right: 0,
     display: "flex",
