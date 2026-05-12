@@ -28,9 +28,11 @@ import {
   updateAdminHandle,
   getCartSellerHandle,
   updateCartSellerHandle,
-  getAdminComments,
-  deleteAdminComment,
-  type AdminComment,
+  getAdminReviews,
+  deleteAdminReview,
+  deleteAdminReviewComment,
+  type AdminReview,
+  type AdminReviewComment,
   getCurrencyRateAdmin,
   updateCurrencyRateAdmin,
   refreshCurrencyRateFromNbrb,
@@ -102,7 +104,7 @@ function StatusPill({ status }: { status: string }) {
   return <span className={`admin-status admin-status--${c.variant}`}>{c.label}</span>;
 }
 
-function NavIcon({ tab }: { tab: "home" | "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" | "analytics" | "maintenance" | "messages" | "comments" }) {
+function NavIcon({ tab }: { tab: "home" | "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" | "analytics" | "maintenance" | "messages" | "reviews" }) {
   switch (tab) {
     case "home":
       return (<svg viewBox="0 0 24 24" aria-hidden><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="5" rx="1"/><rect x="13" y="10" width="8" height="11" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/></svg>);
@@ -128,7 +130,7 @@ function NavIcon({ tab }: { tab: "home" | "products" | "categories" | "orders" |
       return (<svg viewBox="0 0 24 24" aria-hidden><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-7"/></svg>);
     case "messages":
       return (<svg viewBox="0 0 24 24" aria-hidden><path d="M4 4h16a2 2 0 012 2v10a2 2 0 01-2 2H8l-4 4V6a2 2 0 012-2z"/><path d="M8 9h8M8 13h5"/></svg>);
-    case "comments":
+    case "reviews":
       return (<svg viewBox="0 0 24 24" aria-hidden><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>);
     case "maintenance":
       return (<svg viewBox="0 0 24 24" aria-hidden><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>);
@@ -145,7 +147,7 @@ function telegramChatLink(username?: string | null, userId?: string): string {
   return "#";
 }
 
-type Tab = "home" | "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" | "analytics" | "maintenance" | "messages" | "comments";
+type Tab = "home" | "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" | "analytics" | "maintenance" | "messages" | "reviews";
 
 /** Хедер-eyebrow в topbar: показывает раздел в стиле «OPS / ORDERS». */
 function tabEyebrow(tab: Tab): string {
@@ -163,7 +165,7 @@ function tabEyebrow(tab: Tab): string {
     case "support": return "CONTENT / SUPPORT";
     case "maintenance": return "SYSTEM / MAINTENANCE";
     case "messages": return "MARKETING / PUSH";
-    case "comments": return "CONTENT / COMMENTS";
+    case "reviews": return "CONTENT / REVIEWS";
   }
 }
 
@@ -382,8 +384,8 @@ export function Admin() {
           <button type="button" onClick={() => setTabAndReset("support")} className={`admin-nav-btn ${tab === "support" ? "active" : ""}`}>
             <NavIcon tab="support" /> Поддержка
           </button>
-          <button type="button" onClick={() => setTabAndReset("comments")} className={`admin-nav-btn ${tab === "comments" ? "active" : ""}`}>
-            <NavIcon tab="comments" /> Комментарии
+          <button type="button" onClick={() => setTabAndReset("reviews")} className={`admin-nav-btn ${tab === "reviews" ? "active" : ""}`}>
+            <NavIcon tab="reviews" /> Отзывы
           </button>
 
           <div className="admin-nav-section">System</div>
@@ -493,8 +495,8 @@ export function Admin() {
         <MessagesTab adminSecret={adminSecret} />
       )}
 
-      {tab === "comments" && (
-        <CommentsTab adminSecret={adminSecret} />
+      {tab === "reviews" && (
+        <ReviewsTab adminSecret={adminSecret} />
       )}
 
       {tab === "maintenance" && (
@@ -3865,14 +3867,12 @@ function MessagesTab({ adminSecret }: { adminSecret: string }) {
   );
 }
 
-// ── Комментарии (review_comments + post_comments) ────────────────────
-// Одна лента: видны коменты к отзывам и к постам, сортировка — свежие
-// сверху. На каждом — кнопка перейти в чат с автором (если у него есть
-// TG-username) и удалить. Контекст (отзыв-текст / caption поста)
-// показывается одной строкой над текстом коммента, чтобы админ не
-// гадал, к чему оставили.
+// ── Отзывы (reviews + nested review_comments) ────────────────────────
+// Лента отзывов: rating, текст, фото, sub-comments. Под каждым автором —
+// кнопка «Написать в Telegram» (если у юзера есть @username из bot_users)
+// и кнопка «Удалить». Удаление отзыва cascade убирает все его комменты.
 
-function formatCommentDate(s: string): string {
+function formatReviewDate(s: string): string {
   try {
     return new Date(s).toLocaleString("ru-RU", {
       day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
@@ -3880,17 +3880,38 @@ function formatCommentDate(s: string): string {
   } catch { return s; }
 }
 
-function CommentsTab({ adminSecret }: { adminSecret: string }) {
-  const [comments, setComments] = useState<AdminComment[]>([]);
+function tgWriteButton(username: string | null) {
+  const u = username ? username.trim().replace(/^@/, "") : "";
+  if (!u) {
+    return (
+      <span style={{ ...styles.smallBtn, opacity: 0.5, cursor: "not-allowed" }} title="У автора нет @username — нельзя открыть чат">
+        ✉ Нет @username
+      </span>
+    );
+  }
+  return (
+    <a
+      href={`https://t.me/${u}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{ ...styles.smallBtn, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}
+    >
+      ✉ Написать в Telegram
+    </a>
+  );
+}
+
+function ReviewsTab({ adminSecret }: { adminSecret: string }) {
+  const [reviews, setReviews] = useState<AdminReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
-  const [busyKey, setBusyKey] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"all" | "review" | "post">("all");
+  const [busyReviewId, setBusyReviewId] = useState<number | null>(null);
+  const [busyCommentId, setBusyCommentId] = useState<number | null>(null);
 
   const load = () => {
     setLoading(true);
-    getAdminComments(adminSecret)
-      .then(setComments)
+    getAdminReviews(adminSecret)
+      .then(setReviews)
       .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")))
       .finally(() => setLoading(false));
   };
@@ -3899,143 +3920,202 @@ function CommentsTab({ adminSecret }: { adminSecret: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adminSecret]);
 
-  const handleDelete = async (c: AdminComment) => {
-    if (!confirm(`Удалить комментарий от ${c.user_name || "Гость"}? Это нельзя отменить.`)) return;
-    const key = `${c.kind}-${c.id}`;
-    setBusyKey(key);
+  const handleDeleteReview = async (r: AdminReview) => {
+    const cmtNote = r.comments.length > 0 ? ` (вместе с ${r.comments.length} комментариями под ним)` : "";
+    if (!confirm(`Удалить отзыв от ${r.user_name || "Гость"}${cmtNote}? Это нельзя отменить.`)) return;
+    setBusyReviewId(r.id);
     setMessage("");
     try {
-      await deleteAdminComment(c.kind, c.id, adminSecret);
-      setComments((prev) => prev.filter((x) => !(x.kind === c.kind && x.id === c.id)));
+      await deleteAdminReview(r.id, adminSecret);
+      setReviews((prev) => prev.filter((x) => x.id !== r.id));
     } catch (e) {
       setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
     } finally {
-      setBusyKey(null);
+      setBusyReviewId(null);
     }
   };
 
-  const filtered = filter === "all" ? comments : comments.filter((c) => c.kind === filter);
-  const reviewCount = comments.filter((c) => c.kind === "review").length;
-  const postCount = comments.filter((c) => c.kind === "post").length;
+  const handleDeleteComment = async (c: AdminReviewComment) => {
+    if (!confirm(`Удалить комментарий от ${c.user_name || "Гость"}?`)) return;
+    setBusyCommentId(c.id);
+    setMessage("");
+    try {
+      await deleteAdminReviewComment(c.id, adminSecret);
+      setReviews((prev) =>
+        prev.map((r) =>
+          r.id === c.review_id
+            ? { ...r, comments: r.comments.filter((x) => x.id !== c.id) }
+            : r
+        )
+      );
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    } finally {
+      setBusyCommentId(null);
+    }
+  };
+
+  const totalComments = reviews.reduce((sum, r) => sum + r.comments.length, 0);
 
   return (
     <>
       <div className="admin-page-head">
         <div className="admin-page-head-text">
-          <h2>Комментарии</h2>
+          <h2>Отзывы</h2>
           <p className="admin-page-head-sub">
-            Что подписчики пишут под отзывами и постами. Можно удалить или нажать «Написать» — откроется чат в Telegram (если у автора есть username).
+            Всё, что пользователи оставили в разделе «Отзывы». Можно удалить отзыв (вместе с комментариями под ним) или отдельный комментарий, и сразу открыть чат с автором в Telegram, если у него есть username.
           </p>
         </div>
       </div>
       {message && <p style={styles.message}>{message}</p>}
 
-      <div className="admin-toolbar">
-        <span className="admin-toolbar-label">Источник</span>
-        <select
-          value={filter}
-          onChange={(e) => setFilter(e.target.value as typeof filter)}
-          style={styles.statusSelect}
-        >
-          <option value="all">Все ({comments.length})</option>
-          <option value="review">Отзывы ({reviewCount})</option>
-          <option value="post">Посты ({postCount})</option>
-        </select>
-      </div>
+      {!loading && reviews.length > 0 && (
+        <div className="admin-toolbar">
+          <span className="admin-toolbar-label">Всего</span>
+          <span style={{ fontWeight: 600 }}>
+            {reviews.length} {reviews.length === 1 ? "отзыв" : "отзывов"}
+            {totalComments > 0 && ` · ${totalComments} комм.`}
+          </span>
+        </div>
+      )}
 
       {loading ? (
-        <p style={styles.hint}>Загрузка комментариев…</p>
-      ) : filtered.length === 0 ? (
+        <p style={styles.hint}>Загрузка отзывов…</p>
+      ) : reviews.length === 0 ? (
         <div className="admin-empty">
-          <p className="admin-empty-title">Комментариев пока нет</p>
-          <p className="admin-empty-sub">Когда подписчики начнут писать под отзывами или постами — они появятся здесь.</p>
+          <p className="admin-empty-title">Отзывов пока нет</p>
+          <p className="admin-empty-sub">Когда пользователи начнут писать отзывы из меню — они появятся здесь.</p>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {filtered.map((c) => {
-            const key = `${c.kind}-${c.id}`;
-            const isBusy = busyKey === key;
-            const tgUrl = c.username ? `https://t.me/${c.username.replace(/^@/, "")}` : null;
-            const sourceLabel = c.kind === "review" ? `отзыв #${c.parent_id}` : `пост #${c.parent_id}`;
-            const excerpt = (c.parent_excerpt || "").trim();
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {reviews.map((r) => {
+            const isBusy = busyReviewId === r.id;
+            const rating = Math.min(5, Math.max(1, r.rating));
             return (
               <article
-                key={key}
+                key={r.id}
                 style={{
-                  padding: 14,
+                  padding: 16,
                   borderRadius: "var(--radius-sm)",
                   border: "1px solid var(--border)",
                   background: "var(--surface)",
                   display: "flex",
                   flexDirection: "column",
-                  gap: 10,
+                  gap: 12,
                   opacity: isBusy ? 0.5 : 1,
                   transition: "opacity 0.18s ease",
                 }}
               >
                 <header style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                   <strong style={{ fontWeight: 600, fontSize: 14 }}>
-                    {c.user_name || "Гость"}
+                    {r.user_name || "Гость"}
                   </strong>
-                  {c.username && (
+                  {r.username && (
                     <code style={{ fontSize: 11, color: "var(--muted)", background: "var(--surface-2)", padding: "2px 6px", borderRadius: 4 }}>
-                      @{c.username.replace(/^@/, "")}
+                      @{r.username.replace(/^@/, "")}
                     </code>
                   )}
-                  <span style={{ fontSize: 11, color: "var(--muted)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
-                    {sourceLabel}
+                  <span style={{
+                    display: "inline-flex", alignItems: "center", gap: 3,
+                    padding: "3px 9px", borderRadius: 999,
+                    background: "rgba(165,42,42,0.10)", color: "var(--accent)",
+                    fontSize: 12, fontWeight: 700, fontFamily: "Georgia, serif",
+                  }}>
+                    <span aria-hidden>★</span>
+                    <span>{rating}</span>
                   </span>
                   <span style={{ flex: 1 }} />
                   <span style={{ fontSize: 11.5, color: "var(--muted)", fontVariantNumeric: "tabular-nums" }}>
-                    {formatCommentDate(c.created_at)}
+                    {formatReviewDate(r.created_at)}
                   </span>
                 </header>
 
-                {excerpt && (
-                  <div style={{
-                    fontSize: 12, color: "var(--muted)", lineHeight: 1.45,
-                    paddingLeft: 10, borderLeft: "2px solid var(--border)",
-                    overflow: "hidden", display: "-webkit-box",
-                    WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const,
-                  }}>
-                    {excerpt}
+                <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: "var(--text)", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                  {r.text}
+                </p>
+
+                {r.image_urls.length > 0 && (
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {r.image_urls.map((src, i) => (
+                      <a key={i} href={src} target="_blank" rel="noopener noreferrer" style={{ display: "block", width: 92, height: 92, borderRadius: 8, overflow: "hidden" }}>
+                        <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                      </a>
+                    ))}
                   </div>
                 )}
 
-                <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: "var(--text)", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                  {c.text}
-                </p>
-
-                {c.image_url && (
-                  <a href={c.image_url} target="_blank" rel="noopener noreferrer" style={{ display: "block", maxWidth: 160 }}>
-                    <img src={c.image_url} alt="" style={{ width: "100%", borderRadius: 8, display: "block" }} />
-                  </a>
-                )}
-
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  {tgUrl ? (
-                    <a
-                      href={tgUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ ...styles.smallBtn, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}
-                    >
-                      ✉ Написать в Telegram
-                    </a>
-                  ) : (
-                    <span style={{ ...styles.smallBtn, opacity: 0.5, cursor: "not-allowed" }} title="У автора нет @username — нельзя открыть чат">
-                      ✉ Нет @username
-                    </span>
-                  )}
+                  {tgWriteButton(r.username)}
                   <button
                     type="button"
-                    onClick={() => handleDelete(c)}
+                    onClick={() => handleDeleteReview(r)}
                     disabled={isBusy}
                     style={{ ...styles.smallBtn, color: "var(--accent)" }}
                   >
-                    {isBusy ? "Удаляю…" : "Удалить"}
+                    {isBusy ? "Удаляю…" : r.comments.length > 0 ? `Удалить отзыв + ${r.comments.length} комм.` : "Удалить отзыв"}
                   </button>
                 </div>
+
+                {r.comments.length > 0 && (
+                  <div style={{
+                    marginTop: 4, paddingTop: 12, paddingLeft: 14,
+                    borderTop: "1px solid var(--border)",
+                    borderLeft: "2px solid var(--border)",
+                    display: "flex", flexDirection: "column", gap: 10,
+                  }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)" }}>
+                      Комментарии под отзывом · {r.comments.length}
+                    </span>
+                    {r.comments.map((c) => {
+                      const isCBusy = busyCommentId === c.id;
+                      return (
+                        <div
+                          key={c.id}
+                          style={{
+                            padding: "10px 12px",
+                            borderRadius: 8,
+                            background: "var(--surface-2)",
+                            display: "flex", flexDirection: "column", gap: 6,
+                            opacity: isCBusy ? 0.5 : 1,
+                            transition: "opacity 0.18s ease",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                            <strong style={{ fontSize: 13, fontWeight: 600 }}>{c.user_name || "Гость"}</strong>
+                            {c.username && (
+                              <code style={{ fontSize: 10.5, color: "var(--muted)", background: "var(--surface)", padding: "1px 5px", borderRadius: 4 }}>
+                                @{c.username.replace(/^@/, "")}
+                              </code>
+                            )}
+                            <span style={{ flex: 1 }} />
+                            <span style={{ fontSize: 11, color: "var(--muted)" }}>
+                              {formatReviewDate(c.created_at)}
+                            </span>
+                          </div>
+                          <p style={{ margin: 0, fontSize: 13, lineHeight: 1.45, color: "var(--text)", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                            {c.text}
+                          </p>
+                          {c.image_url && (
+                            <a href={c.image_url} target="_blank" rel="noopener noreferrer" style={{ display: "block", maxWidth: 120 }}>
+                              <img src={c.image_url} alt="" style={{ width: "100%", borderRadius: 6, display: "block" }} />
+                            </a>
+                          )}
+                          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                            {tgWriteButton(c.username)}
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteComment(c)}
+                              disabled={isCBusy}
+                              style={{ ...styles.smallBtn, color: "var(--accent)", padding: "4px 9px", fontSize: 11 }}
+                            >
+                              {isCBusy ? "Удаляю…" : "Удалить коммент"}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </article>
             );
           })}

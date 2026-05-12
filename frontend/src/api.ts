@@ -1238,13 +1238,11 @@ export async function deleteBroadcastPost(id: number, adminSecret: string): Prom
   }
 }
 
-// ─── Admin comments (unified review + post) ──────────────────────────
+// ─── Admin reviews (with nested comments) ────────────────────────────
 
-export interface AdminComment {
-  kind: "review" | "post";
+export interface AdminReviewComment {
   id: number;
-  parent_id: number;
-  parent_excerpt: string | null;
+  review_id: number;
   user_id: string;
   user_name: string | null;
   username: string | null;
@@ -1253,8 +1251,20 @@ export interface AdminComment {
   created_at: string;
 }
 
-export async function getAdminComments(adminSecret: string): Promise<AdminComment[]> {
-  const res = await fetch(`${API_URL}/api/admin/comments`, {
+export interface AdminReview {
+  id: number;
+  user_id: string;
+  user_name: string | null;
+  username: string | null;
+  rating: number;
+  text: string;
+  image_urls: string[];
+  created_at: string;
+  comments: AdminReviewComment[];
+}
+
+export async function getAdminReviews(adminSecret: string): Promise<AdminReview[]> {
+  const res = await fetch(`${API_URL}/api/admin/reviews`, {
     headers: { "X-Admin-Secret": adminSecret },
   });
   if (!res.ok) {
@@ -1264,12 +1274,19 @@ export async function getAdminComments(adminSecret: string): Promise<AdminCommen
   return res.json();
 }
 
-export async function deleteAdminComment(
-  kind: "review" | "post",
-  id: number,
-  adminSecret: string
-): Promise<void> {
-  const res = await fetch(`${API_URL}/api/admin/comments/${kind}/${id}`, {
+export async function deleteAdminReview(id: number, adminSecret: string): Promise<void> {
+  const res = await fetch(`${API_URL}/api/admin/reviews/${id}`, {
+    method: "DELETE",
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+}
+
+export async function deleteAdminReviewComment(id: number, adminSecret: string): Promise<void> {
+  const res = await fetch(`${API_URL}/api/admin/reviews/comments/${id}`, {
     method: "DELETE",
     headers: { "X-Admin-Secret": adminSecret },
   });

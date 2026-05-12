@@ -373,19 +373,27 @@ adminRouter.post("/conversations/:userId/reply", requireAdmin, async (req, res) 
   res.json({ ok: true, message_id: result.messageId, image_url: result.imageUrl });
 });
 
-// ── Комментарии (review + post) — unified admin view ─────────────────
-// Объединяет два источника комментов (отзывы + посты) в одну ленту.
-// Поле kind различает источник; parent_excerpt — короткая выжимка
-// объекта (отзыв-текст или caption поста) чтобы админ видел контекст
-// без перехода на сам отзыв/пост. username берём из bot_users (мог
-// быть подтянут на /start или из user_settings) — фронт строит из
-// него https://t.me/<username> для прямого DM-а автору.
+// ── Отзывы (reviews + nested review_comments) ────────────────────────
+// Админская лента всех отзывов. Каждый отзыв — карточка с автором,
+// rating, текстом, фотками. Под ним — sub-comments из review_comments
+// (если их кто-то оставил). username берём из bot_users → фронт строит
+// https://t.me/<username> для DM-а автору. Admin может удалить отзыв
+// целиком (cascade удалит и его комменты) или отдельный sub-comment.
 
-interface AdminCommentRow {
-  kind: "review" | "post";
+interface AdminReviewRow {
   id: number;
-  parent_id: number;
-  parent_excerpt: string | null;
+  user_id: string;
+  user_name: string | null;
+  username: string | null;
+  rating: number;
+  text: string;
+  image_urls: string | null;
+  created_at: string;
+}
+
+interface AdminReviewCommentRow {
+  id: number;
+  review_id: number;
   user_id: string;
   user_name: string | null;
   username: string | null;
@@ -394,61 +402,71 @@ interface AdminCommentRow {
   created_at: string;
 }
 
-adminRouter.get("/comments", requireAdmin, (_req, res) => {
+adminRouter.get("/reviews", requireAdmin, (_req, res) => {
   const reviewRows = db.prepare(`
     SELECT
-      'review' AS kind,
-      rc.id AS id,
-      rc.review_id AS parent_id,
-      r.text AS parent_excerpt,
-      rc.user_id AS user_id,
-      rc.user_name AS user_name,
-      bu.username AS username,
-      rc.text AS text,
-      rc.image_url AS image_url,
-      rc.created_at AS created_at
-    FROM review_comments rc
-    LEFT JOIN reviews r ON r.id = rc.review_id
-    LEFT JOIN bot_users bu ON bu.user_id = rc.user_id
-  `).all() as AdminCommentRow[];
+      r.id, r.user_id, r.user_name, bu.username, r.rating, r.text,
+      r.image_urls, r.created_at
+    FROM reviews r
+    LEFT JOIN bot_users bu ON bu.user_id = r.user_id
+    ORDER BY r.created_at DESC
+  `).all() as AdminReviewRow[];
 
-  const postRows = db.prepare(`
+  const commentRows = db.prepare(`
     SELECT
-      'post' AS kind,
-      pc.id AS id,
-      pc.post_id AS parent_id,
-      p.caption AS parent_excerpt,
-      pc.user_id AS user_id,
-      pc.user_name AS user_name,
-      bu.username AS username,
-      pc.text AS text,
-      NULL AS image_url,
-      pc.created_at AS created_at
-    FROM post_comments pc
-    LEFT JOIN posts p ON p.id = pc.post_id
-    LEFT JOIN bot_users bu ON bu.user_id = pc.user_id
-  `).all() as AdminCommentRow[];
+      rc.id, rc.review_id, rc.user_id, rc.user_name, bu.username,
+      rc.text, rc.image_url, rc.created_at
+    FROM review_comments rc
+    LEFT JOIN bot_users bu ON bu.user_id = rc.user_id
+    ORDER BY rc.created_at ASC
+  `).all() as AdminReviewCommentRow[];
 
-  const all = [...reviewRows, ...postRows].sort((a, b) => {
-    const ta = new Date(a.created_at).getTime();
-    const tb = new Date(b.created_at).getTime();
-    return tb - ta;
+  const byReview = new Map<number, AdminReviewCommentRow[]>();
+  for (const c of commentRows) {
+    const list = byReview.get(c.review_id) ?? [];
+    list.push(c);
+    byReview.set(c.review_id, list);
+  }
+
+  const result = reviewRows.map((r) => {
+    let images: string[] = [];
+    try {
+      if (r.image_urls) {
+        const parsed = JSON.parse(r.image_urls);
+        if (Array.isArray(parsed)) images = parsed.filter((x) => typeof x === "string");
+      }
+    } catch {}
+    return {
+      id: r.id,
+      user_id: r.user_id,
+      user_name: r.user_name,
+      username: r.username,
+      rating: r.rating,
+      text: r.text,
+      image_urls: images,
+      created_at: r.created_at,
+      comments: byReview.get(r.id) ?? [],
+    };
   });
-  res.json(all);
+  res.json(result);
 });
 
-adminRouter.delete("/comments/:kind/:id", requireAdmin, (req, res) => {
-  const kind = req.params.kind;
+adminRouter.delete("/reviews/:id", requireAdmin, (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(400).json({ error: "Bad id" });
-  let result;
-  if (kind === "review") {
-    result = db.prepare("DELETE FROM review_comments WHERE id = ?").run(id);
-  } else if (kind === "post") {
-    result = db.prepare("DELETE FROM post_comments WHERE id = ?").run(id);
-  } else {
-    return res.status(400).json({ error: "kind must be review or post" });
-  }
+  const tx = db.transaction((rid: number) => {
+    db.prepare("DELETE FROM review_comments WHERE review_id = ?").run(rid);
+    return db.prepare("DELETE FROM reviews WHERE id = ?").run(rid);
+  });
+  const result = tx(id);
+  if (result.changes === 0) return res.status(404).json({ error: "Review not found" });
+  res.json({ ok: true });
+});
+
+adminRouter.delete("/reviews/comments/:id", requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: "Bad id" });
+  const result = db.prepare("DELETE FROM review_comments WHERE id = ?").run(id);
   if (result.changes === 0) return res.status(404).json({ error: "Comment not found" });
   res.json({ ok: true });
 });
