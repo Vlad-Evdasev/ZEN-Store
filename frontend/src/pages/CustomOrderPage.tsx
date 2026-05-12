@@ -57,22 +57,20 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
-  const paperclipRef = useRef<HTMLDivElement>(null);
 
-  // Native non-passive MOUSEDOWN preventDefault на скрепке.
-  // ТОЛЬКО mousedown, НЕ touchstart — touchstart preventDefault блокирует
-  // синтетический click (iOS не дойдёт до onClick handler'а). mousedown
-  // preventDefault блокирует focus shift на кнопку, но click продолжает
-  // firing'ить нормально. Textarea сохраняет focus → keyboard остаётся.
-  useEffect(() => {
-    const el = paperclipRef.current;
-    if (!el) return;
-    const handler = (e: Event) => {
-      e.preventDefault();
-    };
-    el.addEventListener("mousedown", handler, { passive: false });
-    return () => el.removeEventListener("mousedown", handler);
-  }, []);
+  // Textarea-blur защита: если blur произошёл потому что юзер кликнул
+  // элемент с data-keep-focus (скрепка) — refocus textarea, чтобы
+  // клавиатура НЕ закрылась на iOS Telegram WebView.
+  const onTextareaBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
+    handleBlur();
+    const next = e.relatedTarget as HTMLElement | null;
+    if (next && next.closest('[data-keep-focus="true"]')) {
+      // Refocus синхронно — iOS должна сохранить keyboard open.
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+      });
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -287,6 +285,7 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
           <div style={styles.composer}>
             <input
               ref={fileInputRef}
+              id="custom-order-photo-input"
               type="file"
               accept="image/*"
               onChange={onPhotoChange}
@@ -294,24 +293,18 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
               aria-hidden
             />
 
-            {/* DIV role=button + native mousedown preventDefault (см.
-                useEffect). НЕ refocus'им textarea искусственно — если
-                юзер тапнул скрепку без открытой клавиатуры, не надо
-                триггерить handleFocus → wrap shrink (input подскакивал).
-                Если клавиатура была — mousedown preventDefault сохраняет
-                focus на textarea. */}
-            <div
-              ref={paperclipRef}
-              role="button"
-              tabIndex={-1}
-              onClick={() => {
-                fileInputRef.current?.click();
-              }}
+            {/* <label htmlFor=…> — нативный browser-механизм клика для
+                file input. data-keep-focus сигнализирует textarea-blur
+                handler'у что blur был из-за скрепки → refocus синхронно
+                чтобы клавиатура НЕ закрылась. */}
+            <label
+              htmlFor="custom-order-photo-input"
+              data-keep-focus="true"
               style={{ ...styles.composerIconBtn, cursor: "pointer" }}
               aria-label={t(lang, "customOrderPhotoAdd")}
             >
               <PaperclipIcon />
-            </div>
+            </label>
 
             <textarea
               ref={textareaRef}
@@ -320,7 +313,7 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
               onChange={(e) => setCustomDesc(e.target.value)}
               onKeyDown={onComposerKeyDown}
               onFocus={handleFocus}
-              onBlur={handleBlur}
+              onBlur={onTextareaBlur}
               placeholder={t(lang, "customOrderPlaceholderDesc")}
               rows={1}
               style={styles.composerTextarea}

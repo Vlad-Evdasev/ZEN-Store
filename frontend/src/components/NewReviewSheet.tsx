@@ -25,24 +25,19 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
   const [localError, setLocalError] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const paperclipRef = useRef<HTMLDivElement | null>(null);
   const [mounted, setMounted] = useState(open);
   const [visible, setVisible] = useState(false);
 
-  // Native non-passive MOUSEDOWN preventDefault на скрепке.
-  // ТОЛЬКО mousedown — touchstart preventDefault блокирует синтетический
-  // click. mousedown preventDefault блокирует focus shift на кнопку,
-  // textarea сохраняет focus, click продолжает firing'ить.
-  useEffect(() => {
-    if (!open) return;
-    const el = paperclipRef.current;
-    if (!el) return;
-    const handler = (e: Event) => {
-      e.preventDefault();
-    };
-    el.addEventListener("mousedown", handler, { passive: false });
-    return () => el.removeEventListener("mousedown", handler);
-  }, [open, mounted]);
+  // Textarea-blur защита: refocus если blur был из-за скрепки.
+  const onTextareaBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
+    handleTextareaBlur();
+    const next = e.relatedTarget as HTMLElement | null;
+    if (next && next.closest('[data-keep-focus="true"]')) {
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+      });
+    }
+  };
 
   const [vvHeight, setVvHeight] = useState<number | null>(
     typeof window !== "undefined" && window.visualViewport ? window.visualViewport.height : null
@@ -291,6 +286,7 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
 
         <input
           ref={fileInputRef}
+          id="new-review-photo-input"
           type="file"
           accept="image/*"
           multiple
@@ -301,35 +297,32 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
         {/* Pill composer — paperclip / textarea / send (как CustomOrderPage). */}
         <div style={styles.composerWrap}>
           <div style={styles.composer}>
-            {/* DIV role=button + native mousedown preventDefault.
-                Textarea сохраняет focus на iOS, искусственный refocus
-                не нужен. */}
-            <div
-              ref={paperclipRef}
-              role="button"
-              tabIndex={-1}
+            {/* <label htmlFor=…> — нативный click через association.
+                data-keep-focus сигнализирует textarea-blur handler'у
+                что blur был из-за скрепки → refocus синхронно чтобы
+                клавиатура не закрылась на iOS. */}
+            <label
+              htmlFor="new-review-photo-input"
+              data-keep-focus="true"
               aria-label="add photo"
-              onClick={() => {
-                if (photos.length >= MAX_PHOTOS) return;
-                fileInputRef.current?.click();
-              }}
               style={{
                 ...styles.composerIconBtn,
                 cursor: photos.length >= MAX_PHOTOS ? "not-allowed" : "pointer",
                 opacity: photos.length >= MAX_PHOTOS ? 0.35 : 1,
+                pointerEvents: photos.length >= MAX_PHOTOS ? "none" : "auto",
               }}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
               </svg>
-            </div>
+            </label>
             <textarea
               ref={textareaRef}
               className="zen-textarea"
               value={text}
               onChange={(e) => setText(e.target.value)}
               onFocus={handleTextareaFocus}
-              onBlur={handleTextareaBlur}
+              onBlur={onTextareaBlur}
               placeholder={t(lang, "reviewsPlaceholder")}
               rows={1}
               style={styles.composerTextarea}
