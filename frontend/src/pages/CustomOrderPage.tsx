@@ -92,20 +92,11 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
     el.style.height = Math.min(el.scrollHeight, 180) + "px";
   }, [customDesc]);
 
-  // refHeight captured at mount — используется и в visualViewport
-  // effect, и в handleFocus для prediction'а keyboard size.
+  // refHeight captured at mount — используется в visualViewport effect
+  // для определения «kb открыта» и для post-picker height reset.
   const refHeightRef = useRef<number>(typeof window !== "undefined" ? window.innerHeight : 800);
   const HEADER = 62;
   const NAV = 64;
-  // Прогноз клавиатуры iOS — 280-350px зависит от модели/QuickType bar.
-  // Берём ВЕРХНЮЮ границу (360) специально: composer rises чуть выше
-  // чем актуальный keyboard, hint-row («Ответим от @…») сразу остаётся
-  // ВИДИМЫМ над клавиатурой. Когда vv.resize fires с реальным
-  // значением (обычно меньше) — wrap чуть-чуть растёт, composer
-  // опускается на пару пикселей — почти не заметно. Если бы prediction
-  // был меньше реального — hint оказывался бы ПОД клавиатурой и
-  // потом «дёргался» вверх когда vv.resize.
-  const PREDICTED_KB = 360;
 
   useEffect(() => {
     const vv = window.visualViewport;
@@ -131,21 +122,15 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
     };
   }, []);
 
-  // Body management + предсказание keyboard'а. Focus event firing'ит
-  // ДО keyboard slide-up — здесь мгновенно адаптируем wrap.height под
-  // прогнозируемый keyboard size, и CSS transition стартует синхронно
-  // с iOS keyboard animation, а не после её окончания.
+  // wrap.height не трогаем здесь — visualViewport.resize драйвит height
+  // frame-by-frame во время kb slide, и без CSS transition composer
+  // едет в синхрон с клавиатурой. Раньше предиктивный set создавал
+  // визуальный 2-stage jump (predicted shrink → settle к actual).
   const handleFocus = () => {
     setKbOpen(true);
     document.body.classList.add("zen-input-focused");
     document.body.style.overflow = "hidden";
     document.documentElement.style.overflow = "hidden";
-    const wrap = wrapRef.current;
-    if (wrap) {
-      const predicted = Math.max(200, refHeightRef.current - HEADER - PREDICTED_KB);
-      wrap.style.bottom = "auto";
-      wrap.style.height = `${predicted}px`;
-    }
   };
   const handleBlur = () => {
     setKbOpen(false);
@@ -410,9 +395,11 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "16px max(16px, env(safe-area-inset-left)) 0 max(16px, env(safe-area-inset-right))",
     background: "var(--bg)",
     zIndex: 5,
-    // Smooth resize вместе с keyboard. CSS animates height — composer
-    // (внизу flex-column) плавно поднимается с клавиатурой.
-    transition: "height 280ms cubic-bezier(0.32, 0.72, 0, 1)",
+    // НЕТ transition на height — visualViewport.resize fires каждый
+    // frame во время kb slide. С CSS transition (280ms) каждый fire
+    // re-target'ил бы анимацию, wrap.height всегда лагал бы за vv.
+    // Без transition: wrap.height = vv.height frame-perfect, composer
+    // едет синхронно с клавиатурой.
   },
   headerBlock: {
     padding: "0 4px 6px",
@@ -663,10 +650,16 @@ const styles: Record<string, React.CSSProperties> = {
     border: "1px solid var(--border)",
     color: "var(--muted)",
     display: "flex",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
     padding: 0,
+    // override global .zen-app form label { margin-bottom: 6px } —
+    // иначе margin делает label выше centerline ряда на 3px и пилюли
+    // выглядят рассинхронизированными.
+    margin: 0,
+    gap: 0,
     boxShadow: "0 4px 18px rgba(0,0,0,0.06)",
     transition: "opacity 0.15s",
     pointerEvents: "auto",
