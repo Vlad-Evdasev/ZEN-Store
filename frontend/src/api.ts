@@ -667,6 +667,7 @@ export interface Review {
   user_name: string;
   rating: number;
   text: string;
+  image_urls?: string[];
   created_at: string;
   comments: ReviewComment[];
 }
@@ -689,7 +690,7 @@ export async function getReviews(): Promise<Review[]> {
 
 export async function addReview(
   userId: string,
-  data: { user_name?: string; rating?: number; text: string }
+  data: { user_name?: string; rating?: number; text: string; image_urls?: string[] }
 ) {
   const res = await fetch(`${API_URL}/api/reviews`, {
     method: "POST",

@@ -152,6 +152,12 @@ try {
   db.exec("ALTER TABLE review_comments ADD COLUMN image_url TEXT");
 } catch {}
 
+// image_urls в reviews — JSON-массив data-URL'ов (до 10 фоток). Юзеры
+// прикладывают фотки покупки/распаковки, делают отзыв визуально богаче.
+try {
+  db.exec("ALTER TABLE reviews ADD COLUMN image_urls TEXT");
+} catch {}
+
 try {
   db.exec(`
     CREATE TABLE IF NOT EXISTS app_settings (

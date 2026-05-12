@@ -51,11 +51,11 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
     return sum / reviews.length;
   }, [reviews]);
 
-  const handleAddReview = async (rating: number, text: string) => {
+  const handleAddReview = async (rating: number, text: string, photos: string[]) => {
     setSubmitting(true);
     setError("");
     try {
-      await addReview(userId, { user_name: firstName, rating, text });
+      await addReview(userId, { user_name: firstName, rating, text, image_urls: photos });
       setSheetOpen(false);
       refresh();
     } catch (err) {
@@ -129,7 +129,9 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
       )}
 
       <div style={styles.list}>
-        {reviews.map((r) => (
+        {reviews.map((r) => {
+          const images = r.image_urls ?? [];
+          return (
           <article key={r.id} style={styles.card}>
             <header style={styles.cardHead}>
               <div style={styles.av}>{(r.user_name?.[0] || "?").toUpperCase()}</div>
@@ -142,6 +144,11 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
               </div>
             </header>
             <p style={styles.text}>{r.text}</p>
+
+            {/* Photo collage — масштабируется по количеству фоток. */}
+            {images.length > 0 && (
+              <PhotoCollage images={images} onClick={(src) => setLightbox(src)} />
+            )}
 
             {r.comments?.map((c: ReviewComment) => (
               <div key={c.id} style={styles.reply}>
@@ -226,7 +233,8 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
               </button>
             )}
           </article>
-        ))}
+          );
+        })}
       </div>
 
       <button
@@ -254,6 +262,98 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
     </div>
   );
 }
+
+// PhotoCollage — динамическая сетка фоток в отзыве.
+// 1 фото — full-width 4:5; 2 — 2 столбца квадратами; 3+ — 3 столбца
+// квадратами + индикатор «+N» на 4-й ячейке если фоток больше 4.
+function PhotoCollage({ images, onClick }: { images: string[]; onClick: (src: string) => void }) {
+  if (images.length === 0) return null;
+  if (images.length === 1) {
+    return (
+      <button type="button" onClick={() => onClick(images[0])} style={collageStyles.singleBtn} aria-label="фото">
+        <img src={images[0]} alt="" style={collageStyles.singleImg} />
+      </button>
+    );
+  }
+  const cols = images.length === 2 ? 2 : 3;
+  const visible = images.slice(0, 4);
+  const extra = images.length - visible.length;
+  return (
+    <div style={{ ...collageStyles.grid, gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+      {visible.map((src, i) => {
+        const isLastVisible = i === visible.length - 1 && extra > 0;
+        return (
+          <button
+            key={i}
+            type="button"
+            onClick={() => onClick(isLastVisible ? images[i] : src)}
+            style={collageStyles.cellBtn}
+            aria-label="фото"
+          >
+            <img src={src} alt="" style={collageStyles.cellImg} />
+            {isLastVisible && (
+              <span style={collageStyles.extraOverlay}>+{extra}</span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+const collageStyles: Record<string, React.CSSProperties> = {
+  singleBtn: {
+    display: "block",
+    width: "100%",
+    aspectRatio: "4 / 5",
+    background: "none",
+    border: "none",
+    padding: 0,
+    borderRadius: 12,
+    overflow: "hidden",
+    cursor: "pointer",
+    WebkitTapHighlightColor: "transparent",
+  },
+  singleImg: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    display: "block",
+  },
+  grid: {
+    display: "grid",
+    gap: 4,
+  },
+  cellBtn: {
+    position: "relative",
+    aspectRatio: "1",
+    background: "none",
+    border: "none",
+    padding: 0,
+    borderRadius: 8,
+    overflow: "hidden",
+    cursor: "pointer",
+    WebkitTapHighlightColor: "transparent",
+  },
+  cellImg: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    display: "block",
+  },
+  extraOverlay: {
+    position: "absolute",
+    inset: 0,
+    background: "rgba(0,0,0,0.55)",
+    color: "#fff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 22,
+    fontWeight: 700,
+    letterSpacing: "-0.02em",
+  },
+};
 
 const styles: Record<string, React.CSSProperties> = {
   wrap: { maxWidth: 420, margin: "0 auto", padding: "8px 0 96px", position: "relative" },
@@ -305,24 +405,56 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: 1.4,
     letterSpacing: "-0.01em",
   },
-  list: { display: "flex", flexDirection: "column", gap: 12 },
+  list: { display: "flex", flexDirection: "column", gap: 18 },
+  // Карточка отзыва — editorial-стиль: больше воздуха, крупная
+  // типографика, фото-collage. Border убран — отзывы разделяются
+  // hairline снизу (как в журналах), card-as-background исчезает.
   card: {
-    background: "var(--surface)", border: "1px solid var(--border)",
-    borderRadius: 16, padding: 12,
-    display: "flex", flexDirection: "column", gap: 8,
+    background: "transparent",
+    border: "none",
+    borderBottom: "1px solid var(--border)",
+    borderRadius: 0,
+    padding: "0 0 18px",
+    display: "flex",
+    flexDirection: "column",
+    gap: 12,
   },
-  cardHead: { display: "flex", alignItems: "center", gap: 8 },
+  cardHead: { display: "flex", alignItems: "center", gap: 10 },
   av: {
-    width: 32, height: 32, borderRadius: "50%",
-    background: "rgba(165,42,42,0.15)", color: "var(--accent)",
-    fontWeight: 700, fontSize: 13,
+    width: 40, height: 40, borderRadius: "50%",
+    background: "rgba(165,42,42,0.12)", color: "var(--accent)",
+    fontWeight: 700, fontSize: 15,
     display: "flex", alignItems: "center", justifyContent: "center",
     flexShrink: 0,
+    fontFamily: 'Georgia, "Times New Roman", serif',
   },
-  reviewName: { fontSize: 13, fontWeight: 700, margin: 0 },
-  reviewDate: { fontSize: 11, color: "var(--muted)" },
-  starsRight: { color: "var(--accent)", fontSize: 12, letterSpacing: 1 },
-  text: { fontSize: 13, lineHeight: 1.5, margin: 0, color: "var(--text)" },
+  reviewName: {
+    fontSize: 14,
+    fontWeight: 600,
+    margin: 0,
+    letterSpacing: "-0.01em",
+    color: "var(--text)",
+  },
+  reviewDate: {
+    fontSize: 11,
+    color: "var(--muted)",
+    letterSpacing: "0.02em",
+    marginTop: 2,
+  },
+  starsRight: {
+    color: "var(--accent)",
+    fontSize: 13,
+    letterSpacing: 1.5,
+    flexShrink: 0,
+  },
+  text: {
+    fontSize: 15,
+    lineHeight: 1.55,
+    margin: 0,
+    color: "var(--text)",
+    fontFamily: 'Georgia, "Times New Roman", serif',
+    letterSpacing: "0.01em",
+  },
   reply: {
     background: "var(--bg)", borderLeft: "3px solid var(--accent)",
     padding: "8px 10px", borderRadius: 10,

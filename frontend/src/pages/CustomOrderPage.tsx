@@ -82,6 +82,38 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
     el.style.height = Math.min(el.scrollHeight, 180) + "px";
   }, [customDesc]);
 
+  // visualViewport-aware height — при открытии клавиатуры wrapper
+  // сжимается под доступную область, composer остаётся сразу над
+  // клавиатурой без визуального jump'а.
+  const [vvHeight, setVvHeight] = useState<number | null>(
+    typeof window !== "undefined" && window.visualViewport ? window.visualViewport.height : null
+  );
+  const [vvOffsetTop, setVvOffsetTop] = useState<number>(
+    typeof window !== "undefined" && window.visualViewport ? window.visualViewport.offsetTop : 0
+  );
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      setVvHeight(vv.height);
+      setVvOffsetTop(vv.offsetTop);
+    };
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, []);
+
+  // preventFocusSteal — на mobile тап по кнопке (paperclip, ✕, send)
+  // блюрит textarea → клавиатура схлопывается. preventDefault на
+  // pointerdown/mousedown не даёт кнопке стать focus target.
+  const preventFocusSteal = (e: React.MouseEvent | React.TouchEvent | React.PointerEvent) => {
+    e.preventDefault();
+  };
+
   const canSend = customDesc.trim().length > 0 && !customSubmitting;
 
   const handleSubmit = async (e?: React.FormEvent) => {
@@ -122,10 +154,24 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
     }
   };
 
+  // Динамический wrap-style: при открытии клавиатуры используем
+  // visualViewport.height для bottom-offset (composer прижимается к
+  // клавиатуре без jump'а). header 62 + bottom-nav 64 в обычном
+  // режиме; при keyboard — компенсируем разницу.
+  const layoutBottom = vvHeight != null
+    ? Math.max(0, window.innerHeight - (vvHeight + vvOffsetTop))
+    : 0;
+  const dynamicWrap: React.CSSProperties = {
+    ...styles.wrap,
+    // Когда keyboard открыта (layoutBottom > 0) — НЕ резервируем
+    // место под bottom-nav (она скрыта classом zen-input-focused).
+    bottom: layoutBottom > 0 ? layoutBottom : 64,
+  };
+
   if (customSuccess) {
     return (
-      <div style={styles.wrap}>
-        <div style={styles.threadCentered}>
+      <div style={dynamicWrap}>
+        <div style={styles.threadSuccess}>
           <BotBubble>
             <div style={styles.successInner}>
               <CheckCircleIcon />
@@ -147,7 +193,7 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   }
 
   return (
-    <div style={styles.wrap}>
+    <div style={dynamicWrap}>
       <form onSubmit={handleSubmit} style={styles.form}>
         {/* Chat thread */}
         <div style={styles.thread}>
@@ -164,6 +210,8 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
                 <button
                   type="button"
                   onClick={() => setCustomPhoto(null)}
+                  onMouseDown={preventFocusSteal}
+                  onTouchStart={preventFocusSteal}
                   style={styles.photoBubbleRemove}
                   aria-label={t(lang, "close")}
                 >
@@ -191,6 +239,8 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
+              onMouseDown={preventFocusSteal}
+              onTouchStart={preventFocusSteal}
               style={styles.composerIconBtn}
               aria-label={t(lang, "customOrderPhotoAdd")}
             >
@@ -283,6 +333,18 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: "center",
     gap: 12,
     paddingTop: 32,
+    paddingBottom: 24,
+  },
+  // Success-блок прижимается ближе к верху (а не центрируется по
+  // вертикали), чтобы не висел низко. flex-start + умеренный top-padding.
+  threadSuccess: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    gap: 12,
+    paddingTop: 48,
     paddingBottom: 24,
   },
   title: {
