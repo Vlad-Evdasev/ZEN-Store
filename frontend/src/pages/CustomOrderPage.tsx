@@ -62,24 +62,12 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
-  const paperclipLabelRef = useRef<HTMLLabelElement>(null);
 
-  // Native non-passive MOUSEDOWN preventDefault на скрепке.
-  // Если клавиатура открыта (textarea в focus'е), тап по label иначе
-  // переводит focus → textarea blur → клавиатура схлопывается.
-  // mousedown preventDefault блокирует focus shift, но click продолжает
-  // firing'ить нормально → label → file input открывает picker.
-  // ВАЖНО: НЕ touchstart — touchstart preventDefault на iOS блокирует
-  // синтетический click, picker перестанет открываться.
-  useEffect(() => {
-    const el = paperclipLabelRef.current;
-    if (!el) return;
-    const handler = (e: Event) => {
-      e.preventDefault();
-    };
-    el.addEventListener("mousedown", handler, { passive: false });
-    return () => el.removeEventListener("mousedown", handler);
-  }, []);
+  // Tracks keyboard state to disable the paperclip while textarea is
+  // focused. Reason: iOS native file picker UI dismisses the keyboard
+  // when it appears — that's unavoidable. So we only allow opening the
+  // picker when keyboard is already collapsed; nothing to lose then.
+  const [kbOpen, setKbOpen] = useState(false);
 
 
   useEffect(() => {
@@ -151,6 +139,7 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   // прогнозируемый keyboard size, и CSS transition стартует синхронно
   // с iOS keyboard animation, а не после её окончания.
   const handleFocus = () => {
+    setKbOpen(true);
     document.body.classList.add("zen-input-focused");
     document.body.style.overflow = "hidden";
     document.documentElement.style.overflow = "hidden";
@@ -162,6 +151,7 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
     }
   };
   const handleBlur = () => {
+    setKbOpen(false);
     document.body.classList.remove("zen-input-focused");
     document.body.style.overflow = "";
     document.documentElement.style.overflow = "";
@@ -188,6 +178,7 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   };
 
   const canSend = customDesc.trim().length > 0 && !customSubmitting;
+  const paperclipDisabled = kbOpen || customPhotos.length >= MAX_PHOTOS;
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -328,18 +319,23 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
 
         {/* Composer */}
         <div style={styles.composerWrap}>
-          <div style={styles.composer}>
-            {/* <label> wraps <input> — нативный HTML паттерн, клик
-                по label автоматически активирует input. Самый надёжный
-                способ открыть file picker на iOS Telegram WebView. */}
+          <div style={styles.composerRow}>
+            {/* Paperclip pill — отдельная круглая кнопка слева от пилюли
+                ввода (как в Telegram). Активна только когда клавиатура
+                свёрнута. Если kb открыта — opacity 0.35, file input
+                disabled, picker не откроется. Тап в этом состоянии
+                делает textarea.blur() → клавиатура закрывается →
+                повторным тапом юзер открывает picker. */}
             <label
-              ref={paperclipLabelRef}
               style={{
-                ...styles.composerIconBtn,
-                cursor: customPhotos.length >= MAX_PHOTOS ? "not-allowed" : "pointer",
-                opacity: customPhotos.length >= MAX_PHOTOS ? 0.35 : 1,
+                ...styles.paperclipPill,
+                cursor: paperclipDisabled ? "not-allowed" : "pointer",
+                opacity: paperclipDisabled ? 0.35 : 1,
               }}
               aria-label={t(lang, "customOrderPhotoAdd")}
+              onClick={() => {
+                if (kbOpen) textareaRef.current?.blur();
+              }}
             >
               <input
                 ref={fileInputRef}
@@ -347,38 +343,40 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
                 accept="image/*"
                 multiple
                 onChange={onPhotoChange}
-                disabled={customPhotos.length >= MAX_PHOTOS}
+                disabled={paperclipDisabled}
                 style={{ display: "none" }}
                 aria-hidden
               />
               <PaperclipIcon />
             </label>
 
-            <textarea
-              ref={textareaRef}
-              className="zen-textarea"
-              value={customDesc}
-              onChange={(e) => setCustomDesc(e.target.value)}
-              onKeyDown={onComposerKeyDown}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
-              placeholder={t(lang, "customOrderPlaceholderDesc")}
-              rows={1}
-              style={styles.composerTextarea}
-              required
-            />
+            <div style={styles.composer}>
+              <textarea
+                ref={textareaRef}
+                className="zen-textarea"
+                value={customDesc}
+                onChange={(e) => setCustomDesc(e.target.value)}
+                onKeyDown={onComposerKeyDown}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                placeholder={t(lang, "customOrderPlaceholderDesc")}
+                rows={1}
+                style={styles.composerTextarea}
+                required
+              />
 
-            <button
-              type="submit"
-              disabled={!canSend}
-              style={{
-                ...styles.composerSendBtn,
-                ...(canSend ? {} : styles.composerSendBtnDisabled),
-              }}
-              aria-label={t(lang, "customOrderSubmit")}
-            >
-              <SendArrowIcon />
-            </button>
+              <button
+                type="submit"
+                disabled={!canSend}
+                style={{
+                  ...styles.composerSendBtn,
+                  ...(canSend ? {} : styles.composerSendBtnDisabled),
+                }}
+                aria-label={t(lang, "customOrderSubmit")}
+              >
+                <SendArrowIcon />
+              </button>
+            </div>
           </div>
 
           {/* Hint «Ответим от @…» перенесён в bot-bubble (см. ниже
@@ -644,6 +642,31 @@ const styles: Record<string, React.CSSProperties> = {
     background: "transparent",
     pointerEvents: "none",
   },
+  // Horizontal row: paperclip-pill + composer-pill (как Telegram).
+  // composerWrap имеет pointer-events: none, его потомки нужно явно
+  // ставить в auto чтобы быть кликабельными.
+  composerRow: {
+    display: "flex",
+    alignItems: "flex-end",
+    gap: 6,
+  },
+  // Standalone round paperclip button to the left of the composer pill.
+  paperclipPill: {
+    width: 38,
+    height: 38,
+    borderRadius: "50%",
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    color: "var(--muted)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    padding: 0,
+    boxShadow: "0 4px 18px rgba(0,0,0,0.06)",
+    transition: "opacity 0.15s",
+    pointerEvents: "auto",
+  },
   // Compact chat-input pill. pointer-events: auto восстанавливает
   // interactivity (composerWrap родитель имеет pointer-events: none
   // чтобы тапы по transparent зоне проваливались в thread).
@@ -651,6 +674,8 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     gap: 4,
+    flex: 1,
+    minWidth: 0,
     background: "var(--surface)",
     border: "1px solid var(--border)",
     borderRadius: 22,
