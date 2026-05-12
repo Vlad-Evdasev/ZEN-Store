@@ -204,9 +204,15 @@ export function ReviewLightbox({ images, startIndex, startRect, thumbRects, onCl
   // Darker bg + larger active dot (18×6 vs 6×6) для лучшей видимости
   // на чёрном backdrop'е, чем была раньше (slight white tint plus
   // 5px dots). z-index 2 — выше img в DOM order.
+  //
+  // Bottom-offset: 64px (.zen-bottom-nav height) + 20px gap + safe-area.
+  // Bottom-nav (z-index 1250/1300) рендерится ПОВЕРХ overlay (1100) — это
+  // by design для FLIP-эффекта «image проходит за nav». Если оставить
+  // dots на bottom: 28 — они уходят под nav и не видны. Поэтому
+  // поднимаем их РОВНО над nav'ом.
   const dotsStyle: React.CSSProperties = {
     position: "absolute",
-    bottom: 28,
+    bottom: "calc(64px + 20px + env(safe-area-inset-bottom))",
     left: "50%",
     transform: "translateX(-50%)",
     display: "flex",
