@@ -14,19 +14,26 @@ interface NewReviewSheetProps {
 
 const MAX_PHOTOS = 10;
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
-// SHEET_ANIM — продолжительность open/close transition. Bumped 400→520
-// для ещё более плавного feel'а: sheet выезжает/уезжает медленнее, blur
-// мягче градирует, transform даёт время easing'у «осесть» в конце.
-const SHEET_ANIM = 520;
+// SHEET_OPEN_ANIM — открытие. Front-loaded easing (sheet быстро
+// «появляется», затем плавно оседает). 520ms feel'ит снэппи но
+// не резко.
+const SHEET_OPEN_ANIM = 520;
+const OPEN_EASING = "cubic-bezier(0.25, 1, 0.5, 1)"; // ~easeOutQuart
+// SHEET_CLOSE_ANIM — закрытие. Дольше + ease-in-out: sheet начинает
+// двигаться плавно (премиальное замешательство), середина — ровный
+// glide, в конце мягко оседает за экраном. Без ease-in-out close
+// казался слишком резким — front-loaded easing зашвыривал sheet
+// быстро вниз и большую часть anim не было видно ничего.
+const SHEET_CLOSE_ANIM = 720;
+const CLOSE_EASING = "cubic-bezier(0.4, 0, 0.4, 1)"; // smooth in-out
 // Backdrop blur amount. Animated 0px→BLUR_AMOUNT при open, обратно при
 // close. Раньше блюр был статичный (всегда 6px пока overlay в DOM) →
 // при open/close виден мгновенный «pop» blur'а. Animated → fade.
 const BLUR_AMOUNT = 8;
-// Easing — easeOutQuart-ish curve. Слегка более pronounced decel чем
-// iOS keyboard cubic-bezier(0.32, 0.72, 0, 1) — sheet начинает чуть
-// быстрее, затухает мягче в конце. На длинной 520ms duration это даёт
-// «премиальное» оседание без feel'а sluggish.
-const EASING = "cubic-bezier(0.25, 1, 0.5, 1)";
+// EASING для не-open/close transitions (kb padding-bottom etc).
+// iOS-keyboard-style curve — лучше всего трекается с реальной
+// клавиатурой когда юзер фокусирует/блюрит textarea.
+const EASING = "cubic-bezier(0.32, 0.72, 0, 1)";
 // Upper-bound предикат высоты iOS-клавиатуры (см. CustomOrderPage).
 // Лучше overshoot чем undershoot — overshoot ощущается как settling,
 // undershoot как jump вверх когда vv.resize корректирует.
@@ -265,7 +272,7 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
       // и sheet прыгнет вниз mid-animation.
       setFrozenHeight((prev) => prev ?? overlayHeight);
       setVisible(false);
-      const t = setTimeout(() => setMounted(false), SHEET_ANIM);
+      const t = setTimeout(() => setMounted(false), SHEET_CLOSE_ANIM);
       return () => clearTimeout(t);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -284,7 +291,7 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
         setText("");
         setPhotos([]);
         setLocalError("");
-      }, SHEET_ANIM);
+      }, SHEET_CLOSE_ANIM);
       return () => clearTimeout(t);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -418,6 +425,16 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
   // закрыта = 0, когда открыта = высота клавиатуры.
   const kbHeight = Math.max(0, fullHeight - overlayHeight);
 
+  // Direction-specific transition timing:
+  // - open: SHEET_OPEN_ANIM + OPEN_EASING (front-loaded ~easeOutQuart)
+  // - close: SHEET_CLOSE_ANIM + CLOSE_EASING (smooth ease-in-out)
+  // Close дольше потому что sheet уезжает на гораздо большую дистанцию
+  // (closeTranslate ≈ fullHeight+80 vs open's translateY(100%) = sheetHeight).
+  // С одинаковой длительностью close по velocity получался 2-3x быстрее
+  // open'а → юзер чувствовал что закрытие резкое.
+  const animDur = isClosing ? SHEET_CLOSE_ANIM : SHEET_OPEN_ANIM;
+  const animEasing = isClosing ? CLOSE_EASING : OPEN_EASING;
+
   // Overlay теперь ВСЕГДА full-screen (height: fullHeight). Раньше
   // overlay shrink'ался до vv.height (выше kb), и между bottom overlay'я
   // и top клавиатуры мог появиться un-blurred gap во время kb-open
@@ -434,12 +451,13 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
     backdropFilter: visible ? `blur(${BLUR_AMOUNT}px)` : "blur(0px)",
     WebkitBackdropFilter: visible ? `blur(${BLUR_AMOUNT}px)` : "blur(0px)",
     transition:
-      `background-color ${SHEET_ANIM}ms ${EASING}, ` +
-      `backdrop-filter ${SHEET_ANIM}ms ${EASING}, ` +
-      `-webkit-backdrop-filter ${SHEET_ANIM}ms ${EASING}` +
+      `background-color ${animDur}ms ${animEasing}, ` +
+      `backdrop-filter ${animDur}ms ${animEasing}, ` +
+      `-webkit-backdrop-filter ${animDur}ms ${animEasing}` +
       // padding-bottom transition только при open — на close padding
       // фиксирован (overlayHeight не меняется т.к. vv listener снят
       // на close). Sheet не дрейфует от kb-retract во время close.
+      // 260ms + iOS-easing — это привязано к kb rise/fall, не к sheet.
       (isClosing ? "" : `, padding-bottom 260ms ${EASING}`),
   };
 
@@ -461,8 +479,8 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
     maxHeight: Math.max(280, overlayHeight - SHEET_TOP_GAP),
     transform: sheetTransform,
     transition: isClosing
-      ? `transform ${SHEET_ANIM}ms ${EASING}`
-      : `transform ${SHEET_ANIM}ms ${EASING}, max-height 260ms ${EASING}`,
+      ? `transform ${animDur}ms ${animEasing}`
+      : `transform ${animDur}ms ${animEasing}, max-height 260ms ${EASING}`,
   };
 
   return (
