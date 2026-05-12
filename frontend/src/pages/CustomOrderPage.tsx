@@ -395,11 +395,16 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "16px max(16px, env(safe-area-inset-left)) 0 max(16px, env(safe-area-inset-right))",
     background: "var(--bg)",
     zIndex: 5,
-    // НЕТ transition на height — visualViewport.resize fires каждый
-    // frame во время kb slide. С CSS transition (280ms) каждый fire
-    // re-target'ил бы анимацию, wrap.height всегда лагал бы за vv.
-    // Без transition: wrap.height = vv.height frame-perfect, composer
-    // едет синхронно с клавиатурой.
+    // height transition нужен по двум причинам:
+    //  1) На iOS первый visualViewport.resize часто fire'ит с финальным
+    //     значением ДО того как kb визуально начинает sliding up.
+    //     Без transition wrap мгновенно snap'ается к kb-open layout
+    //     ДО появления клавиатуры → ощущается как «прыжок страницы».
+    //  2) Subsequent vv.resize события приходят дискретно (50-100ms
+     //    apart), без transition каждый виден как ступенчатый jump.
+    // 260ms cubic-bezier(0.32, 0.72, 0, 1) close to iOS keyboard
+    // easing → composer едет плавно вместе с kb.
+    transition: "height 260ms cubic-bezier(0.32, 0.72, 0, 1)",
   },
   headerBlock: {
     padding: "0 4px 6px",
