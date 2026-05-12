@@ -318,25 +318,25 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
     onSubmit(rating, text.trim(), photos);
   };
 
-  // paperclip behaviour (matches CustomOrderPage):
-  // - kb open: paperclip визуально disabled (paperclipDisabled = kbOpen
-  //   || atMaxPhotos). Тап → blur textarea (kb closes), picker НЕ
-  //   открывается. Юзер тапнет повторно когда kb уже закрыта — это
-  //   нормальный flow с picker'ом.
-  // - kb closed: обычный flow — label синхронно дёргает input.click(),
-  //   picker открывается сразу. После клика блокируем textarea на 1.5s
-  //   чтобы быстрая sequence paperclip → dismiss picker → tap textarea
-  //   не сломала iOS state machine (kb открывается и сразу закрывается).
-  const handlePaperclipClick = (e: React.MouseEvent<HTMLLabelElement>) => {
+  // paperclip behaviour (matches CustomOrderPage UX):
+  // - kb open: paperclip визуально disabled (opacity 0.35, not-allowed).
+  //   Тап → blur textarea (kb closes), picker НЕ открывается. Юзер
+  //   тапнет повторно когда kb закрыта.
+  // - kb closed: тап → блокируем textarea на 1.5s + программно дёргаем
+  //   input.click() → picker открывается синхронно в user gesture.
+  //
+  // Реализовано через <button> + sibling <input>. Раньше использовали
+  // <label>-wrapped-<input> с disabled-управлением — в iOS Telegram
+  // WebView label-input synthetic click мог обходить и disabled, и
+  // e.preventDefault(), и picker открывался при kbOpen=true. Button
+  // даёт явный контроль: input.click() вызывается ТОЛЬКО когда мы
+  // явно так решили в handler'е.
+  const handlePaperclipClick = () => {
     if (kbOpen) {
-      // Блокируем default label→input click. iOS всё равно требует
-      // отдельный gesture для picker'а после kb-close — auto-fire
-      // не работает надёжно. Лучше явный 2-tap: blur → юзер видит
-      // что kb закрылась → tap скрепки снова → picker.
-      e.preventDefault();
       textareaRef.current?.blur();
       return;
     }
+    if (photos.length >= MAX_PHOTOS) return;
     setTextareaLocked(true);
     if (textareaUnlockTimerRef.current != null) {
       clearTimeout(textareaUnlockTimerRef.current);
@@ -345,6 +345,9 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
       setTextareaLocked(false);
       textareaUnlockTimerRef.current = null;
     }, 1500);
+    // input.click() синхронный в onClick → user gesture context
+    // сохраняется → iOS откроет picker.
+    fileInputRef.current?.click();
   };
 
   const preventFocusSteal = (e: React.MouseEvent | React.TouchEvent) => {
@@ -508,7 +511,17 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
         {/* Composer pill — paperclip / textarea / send. */}
         <div style={styles.composerWrap} onClick={stopPropClick}>
           <div style={styles.composerRow}>
-            <label
+            {/* Paperclip — button, не label-wrapped-input. В iOS Telegram
+                WebView label-input synthetic click мог обходить disabled
+                и preventDefault и открывать picker при kbOpen. Button +
+                programmatic input.click() даёт явный контроль: picker
+                открывается только когда handler решает.
+                preventFocusSteal на mousedown/touchstart предотвращает
+                кражу focus'а с textarea — иначе textarea теряла бы
+                focus, kbOpen flippаs to false, и handler пропускал бы
+                kb-open ветку. */}
+            <button
+              type="button"
               style={{
                 ...styles.paperclipPill,
                 cursor: paperclipDisabled ? "not-allowed" : "pointer",
@@ -516,22 +529,25 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
               }}
               aria-label="add photo"
               onClick={handlePaperclipClick}
+              onMouseDown={preventFocusSteal}
+              onTouchStart={preventFocusSteal}
             >
-              {/* НЕТ `multiple` атрибута — критично. С `multiple` iOS
-                  показывает action sheet, dismiss которого оставляет
-                  dirty state и ломает следующий focus textarea
-                  (см. длинный comment в CustomOrderPage). */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={onPhotoChange}
-                disabled={paperclipDisabled}
-                style={{ display: "none" }}
-                aria-hidden
-              />
               <PaperclipIcon />
-            </label>
+            </button>
+            {/* Hidden file input — sibling, не wrapped. picker triggered
+                ТОЛЬКО programmatically через fileInputRef.current?.click()
+                из handlePaperclipClick. НЕТ `multiple` атрибута — с ним
+                iOS показывает action sheet, dismiss которого оставляет
+                dirty state и ломает следующий focus textarea (см.
+                длинный comment в CustomOrderPage). */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={onPhotoChange}
+              style={{ display: "none" }}
+              aria-hidden
+            />
 
             <div style={styles.composer}>
               <textarea
