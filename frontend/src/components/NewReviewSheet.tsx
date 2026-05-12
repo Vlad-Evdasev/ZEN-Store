@@ -106,6 +106,12 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
   const refHeightRef = useRef<number>(
     typeof window !== "undefined" ? window.innerHeight : 800
   );
+  // kbClosingUntil — timestamp до которого vv.resize updates ограничены
+  // monotonic-grow'ом. На iOS Telegram WebView во время kb-close может
+  // прилететь vv.resize с DIPPED vv.height (даже меньше pre-close
+  // значения) — без guard'а это shrink'нуло бы overlayHeight, padding-
+  // bottom (overlay) скакнул бы вверх, sheet «подпрыгнул» бы.
+  const kbClosingUntilRef = useRef<number>(0);
 
   const [overlayHeight, setOverlayHeight] = useState<number>(
     typeof window !== "undefined" && window.visualViewport
@@ -142,7 +148,15 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
     if (!vv) return;
     let raf: number | null = null;
     const apply = () => {
-      setOverlayHeight(vv.height);
+      const now = Date.now();
+      if (now < kbClosingUntilRef.current) {
+        // Во время kb-close (500ms после blur) — только grow, не shrink.
+        // Это устраняет up-jump формы когда vv.resize прилетает с
+        // intermediate/dipped значением во время iOS kb-close animation.
+        setOverlayHeight((prev) => Math.max(prev, vv.height));
+      } else {
+        setOverlayHeight(vv.height);
+      }
     };
     const schedule = () => {
       if (raf != null) cancelAnimationFrame(raf);
@@ -215,14 +229,23 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
   const handleTextareaFocus = () => {
     document.body.classList.add("zen-input-focused");
     setKbOpen(true);
+    kbClosingUntilRef.current = 0; // отменяем close-guard если был
     const predicted = Math.max(280, refHeightRef.current - PREDICTED_KB);
     setOverlayHeight(predicted);
   };
   const handleTextareaBlur = () => {
     document.body.classList.remove("zen-input-focused");
     setKbOpen(false);
-    // overlayHeight восстановится через vv.resize listener когда
-    // клавиатура реально закроется.
+    // Predictive grow: сразу сетим overlayHeight на fullHeight,
+    // CSS transition (260ms) плавно тянет padding-bottom к 0. БЕЗ
+    // предикта vv.resize прилетал бы с intermediate vv.height и
+    // дёргал бы значение (включая возможные dip'ы — iOS Telegram
+    // может в первый momentum kb-close'а отрепортить vv.height
+    // МЕНЬШЕ pre-close значения → padding-bottom вверх → форма
+    // подпрыгивает). Plus monotonic-grow guard (см. vv listener)
+    // на 500ms блокирует любые shrinks от vv.resize.
+    kbClosingUntilRef.current = Date.now() + 500;
+    setOverlayHeight(refHeightRef.current);
   };
 
   // Sheet mount/unmount animation
