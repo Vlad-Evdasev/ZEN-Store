@@ -97,12 +97,14 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   const refHeightRef = useRef<number>(typeof window !== "undefined" ? window.innerHeight : 800);
   const HEADER = 62;
   const NAV = 64;
-  // Точечный предикат высоты клавиатуры iOS (без overshoot). Используется
-  // в handleFocus, чтобы стартовать height-transition синхронно с focus
-  // event'ом (а не позже, когда первый vv.resize прилетит). На iPhone
-  // ~290px включая QuickType bar; vv.resize потом подтянет точное
-  // значение (разница в пределах 20-40px, заметно меньше с предиктом).
-  const PREDICTED_KB = 290;
+  // Upper-bound предикат высоты iOS-клавиатуры (включая QuickType bar
+  // на большом iPhone Pro Max). Лучше overshoot чем undershoot:
+  //   undershoot → composer кончает анимацию НИЖЕ актуальной kb-top,
+  //     vv.resize потом «вытягивает» его вверх → виден jump вверх.
+  //   overshoot → composer кончает анимацию НАД актуальной kb-top,
+  //     vv.resize потом «опускает» его вниз на 30-60px → ощущается
+  //     как settling, естественнее.
+  const PREDICTED_KB = 360;
 
   useEffect(() => {
     const vv = window.visualViewport;
@@ -164,6 +166,21 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
       document.body.style.overflow = "";
       document.documentElement.style.overflow = "";
     };
+  }, []);
+
+  // Pre-lock body.overflow на touchstart textarea (до того как iOS
+  // среагирует на upcoming focus). Без этого iOS успевает кратко
+  // сдвинуть layout до того как handleFocus поставит overflow:hidden
+  // → виден «прыжок страницы» при открытии клавиатуры.
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const onTouchStart = () => {
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+    };
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    return () => el.removeEventListener("touchstart", onTouchStart);
   }, []);
 
   // preventFocusSteal — на mobile тап по кнопке (paperclip, ✕, send)
