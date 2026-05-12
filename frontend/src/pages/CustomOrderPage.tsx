@@ -151,7 +151,18 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   const handleBlur = () => {
     setKbOpen(false);
     document.body.classList.remove("zen-input-focused");
-    // wrap height вернётся к full размеру через vv.resize.
+    // Симметрично focus'у: предиктивно возвращаем wrap.height на
+    // full размер СРАЗУ. Без этого на iOS vv.resize приходит с
+    // задержкой ~50-100ms после старта kb slide-down → 260ms
+    // height transition стартует поздно и composer едет «вслед»
+    // за клавиатурой с visible lag. С предиктом transition
+    // стартует ровно когда iOS начинает opening kb-collapse →
+    // composer и kb едут синхронно.
+    const wrap = wrapRef.current;
+    if (wrap) {
+      wrap.style.bottom = "auto";
+      wrap.style.height = `${refHeightRef.current - HEADER - NAV}px`;
+    }
   };
   // body.overflow=hidden ставим на МОНТАЖЕ страницы и держим на всё
   // время пока юзер на CustomOrderPage. Раньше overflow ставился в
