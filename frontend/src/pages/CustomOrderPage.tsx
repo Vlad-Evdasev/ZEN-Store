@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from "react";
-import { flushSync } from "react-dom";
 import { submitCustomOrder, getAdminHandle } from "../api";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
@@ -194,40 +193,22 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
     };
   }, []);
 
-  // Cleanup stale file-input state после dismiss action sheet'а.
-  // БАГ: paperclip-тап → action sheet → outside-tap для dismiss → тап
-  // на textarea (всё быстро, <1s) → kb открывается на ~1 sec и сама
-  // закрывается. Если ждать пару секунд после paperclip — бага нет.
-  // ПРИЧИНА: iOS планирует callback, привязанный к DOM-node file input'а,
-  // через ~1 sec после клика по label. Этот callback fires вне
-  // зависимости от того, dismiss'нул юзер picker или нет. Если callback
-  // ещё не fired к моменту когда юзер focus'ит textarea, он сработает
-  // ПОСЛЕ focus event'а и стрельнёт blur по textarea → kb схлопывается.
-  // Просто input.value="" и blur не отменяют callback — он привязан
-  // к DOM-node, не к value.
-  // ФИКС: на первый touchstart после paperclip-клика РАЗРУШАЕМ И
-  // ПЕРЕСОЗДАЁМ DOM-node file input'а через React key. Старый node
-  // выкидывается из дерева → iOS callback fires на removed-from-DOM
-  // элемент → no-op. flushSync гарантирует что unmount произойдёт
-  // СИНХРОННО внутри touchstart handler'а, ДО того как React 18
-  // соберётся batch'ить и до focus event'а на textarea.
+  // БАГ: paperclip-тап → outside-tap dismiss action sheet → быстрый
+  // тап на textarea (всё <1s) → kb открывается на ~1s и сама
+  // схлопывается. Если ждать пару секунд после paperclip — бага нет.
+  // ПРИЧИНА: iOS dispatches отложенный focus/blur event через ~1s
+  // после label-клика. Когда event fires ПОСЛЕ focus textarea, он
+  // отбирает фокус у textarea → kb закрывается. Programmatic refocus
+  // не возвращает kb (без user gesture).
+  // ФИКС: после paperclip-клика на 3 секунды РАЗРУШАЕМ весь label
+  // целиком (и input внутри). На это окно paperclip рендерится как
+  // обычный <div> без file input. iOS-event летит на removed DOM →
+  // no-op → textarea сохраняет фокус → kb остаётся открытой.
+  // 3 секунды покрывают ~1s iOS-delay + запас на пользовательские
+  // действия между dismiss и tap textarea.
   const paperclipClickAtRef = useRef<number>(0);
-  const [fileInputKey, setFileInputKey] = useState(0);
-  useEffect(() => {
-    const onDocTouchStart = () => {
-      if (!paperclipClickAtRef.current) return;
-      if (Date.now() - paperclipClickAtRef.current > 60000) {
-        paperclipClickAtRef.current = 0;
-        return;
-      }
-      paperclipClickAtRef.current = 0;
-      flushSync(() => {
-        setFileInputKey((k) => k + 1);
-      });
-    };
-    document.addEventListener("touchstart", onDocTouchStart, true);
-    return () => document.removeEventListener("touchstart", onDocTouchStart, true);
-  }, []);
+  const [paperclipHideUntil, setPaperclipHideUntil] = useState<number>(0);
+  const paperclipHidden = paperclipHideUntil > 0 && Date.now() < paperclipHideUntil;
 
   // preventFocusSteal — на mobile тап по кнопке (paperclip, ✕, send)
   // блюрит textarea → клавиатура схлопывается. preventDefault на
@@ -392,41 +373,62 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
                 disabled, picker не откроется. Тап в этом состоянии
                 делает textarea.blur() → клавиатура закрывается →
                 повторным тапом юзер открывает picker. */}
-            <label
-              style={{
-                ...styles.paperclipPill,
-                cursor: paperclipDisabled ? "not-allowed" : "pointer",
-                opacity: paperclipDisabled ? 0.35 : 1,
-              }}
-              aria-label={t(lang, "customOrderPhotoAdd")}
-              onClick={() => {
-                if (paperclipDisabled) {
-                  if (kbOpen) textareaRef.current?.blur();
-                  return;
-                }
-                // Помечаем тайм клика на скрепку — следующий touchstart
-                // на document (либо outside-tap dismiss, либо тап на
-                // textarea) триггерит cleanup stale file-input state.
-                paperclipClickAtRef.current = Date.now();
-                // 3-секундное defense окно: если textarea получит blur
-                // (от spurious iOS-event'а из пайплайна action sheet'а),
-                // handleBlur refocus'нет её обратно.
-                paperclipDefenseUntilRef.current = Date.now() + 3000;
-              }}
-            >
-              <input
-                key={fileInputKey}
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={onPhotoChange}
-                disabled={paperclipDisabled}
-                style={{ display: "none" }}
+            {paperclipHidden ? (
+              // На 3 секунды после клика на скрепку рендерим обычный
+              // div вместо label с file input'ом. Это убирает весь
+              // <label>+<input> из DOM на окно, в которое iOS может
+              // выстрелить отложенный focus/blur event и сбросить kb.
+              <div
+                style={{
+                  ...styles.paperclipPill,
+                  cursor: "not-allowed",
+                  opacity: 0.35,
+                }}
                 aria-hidden
-              />
-              <PaperclipIcon />
-            </label>
+              >
+                <PaperclipIcon />
+              </div>
+            ) : (
+              <label
+                style={{
+                  ...styles.paperclipPill,
+                  cursor: paperclipDisabled ? "not-allowed" : "pointer",
+                  opacity: paperclipDisabled ? 0.35 : 1,
+                }}
+                aria-label={t(lang, "customOrderPhotoAdd")}
+                onClick={() => {
+                  if (paperclipDisabled) {
+                    if (kbOpen) textareaRef.current?.blur();
+                    return;
+                  }
+                  // Открываем 3-секундное окно «скрепки нет в DOM»
+                  // (см. JSX выше) и refocus-defense, чтобы перекрыть
+                  // spurious iOS-event из пайплайна action sheet'а.
+                  paperclipClickAtRef.current = Date.now();
+                  paperclipDefenseUntilRef.current = Date.now() + 3000;
+                  const until = Date.now() + 3000;
+                  setPaperclipHideUntil(until);
+                  // Возвращаем label/input обратно через 3.1s (с запасом).
+                  setTimeout(() => {
+                    setPaperclipHideUntil((curr) =>
+                      Date.now() >= curr ? 0 : curr,
+                    );
+                  }, 3100);
+                }}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={onPhotoChange}
+                  disabled={paperclipDisabled}
+                  style={{ display: "none" }}
+                  aria-hidden
+                />
+                <PaperclipIcon />
+              </label>
+            )}
 
             <div style={styles.composer}>
               <textarea
