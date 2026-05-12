@@ -25,27 +25,8 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
   const [localError, setLocalError] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const paperclipRef = useRef<HTMLDivElement | null>(null);
   const [mounted, setMounted] = useState(open);
   const [visible, setVisible] = useState(false);
-
-  // Native non-passive touchstart/mousedown на paperclip — гарантированно
-  // блокирует focus shift на iOS Telegram WebView (React passive
-  // events не всегда работают). Textarea сохраняет фокус.
-  useEffect(() => {
-    if (!open) return;
-    const el = paperclipRef.current;
-    if (!el) return;
-    const handler = (e: Event) => {
-      e.preventDefault();
-    };
-    el.addEventListener("touchstart", handler, { passive: false });
-    el.addEventListener("mousedown", handler, { passive: false });
-    return () => {
-      el.removeEventListener("touchstart", handler);
-      el.removeEventListener("mousedown", handler);
-    };
-  }, [open, mounted]);
 
   const [vvHeight, setVvHeight] = useState<number | null>(
     typeof window !== "undefined" && window.visualViewport ? window.visualViewport.height : null
@@ -304,18 +285,15 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
         {/* Pill composer — paperclip / textarea / send (как CustomOrderPage). */}
         <div style={styles.composerWrap}>
           <div style={styles.composer}>
-            {/* div role=button + native non-passive touchstart/mousedown
-                listener (см. useEffect выше). Гарантированно блокирует
-                focus shift на iOS Telegram WebView. Textarea сохраняет
-                focus → keyboard остаётся открытой. */}
+            {/* DIV role=button + tabIndex=-1: не focusable, не блюрит
+                textarea при тапе. onClick refocus'ит textarea
+                синхронно (user gesture) и открывает file picker. */}
             <div
-              ref={paperclipRef}
               role="button"
               tabIndex={-1}
               aria-label="add photo"
-              onClick={(e) => {
+              onClick={() => {
                 if (photos.length >= MAX_PHOTOS) return;
-                e.preventDefault();
                 textareaRef.current?.focus();
                 fileInputRef.current?.click();
               }}

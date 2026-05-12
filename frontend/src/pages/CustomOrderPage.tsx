@@ -57,26 +57,6 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
-  const paperclipRef = useRef<HTMLDivElement>(null);
-
-  // Native non-passive touchstart на скрепке — React's synthetic
-  // touchstart на iOS Telegram WebView иногда не блокирует focus shift
-  // даже с preventDefault (события могут быть passive). Native listener
-  // с {passive: false} железно блокирует default touch action включая
-  // focus shift на саму кнопку. Textarea сохраняет focus.
-  useEffect(() => {
-    const el = paperclipRef.current;
-    if (!el) return;
-    const handler = (e: TouchEvent) => {
-      e.preventDefault();
-    };
-    el.addEventListener("touchstart", handler, { passive: false });
-    el.addEventListener("mousedown", handler as unknown as EventListener, { passive: false });
-    return () => {
-      el.removeEventListener("touchstart", handler);
-      el.removeEventListener("mousedown", handler as unknown as EventListener);
-    };
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -298,15 +278,15 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
               aria-hidden
             />
 
-            {/* DIV вместо button + native non-passive touchstart
-                listener (см. useEffect выше) — гарантированно блокирует
-                focus shift на iOS Telegram WebView. */}
+            {/* DIV role=button с tabIndex=-1 — div не focusable,
+                не забирает focus у textarea на iOS. onClick refocus'ит
+                textarea СИНХРОННО (в user gesture context) — клавиатура
+                остаётся открытой пока file picker не открылся (после
+                — закроется системно iOS-ом, не можем обойти). */}
             <div
-              ref={paperclipRef}
               role="button"
               tabIndex={-1}
-              onClick={(e) => {
-                e.preventDefault();
+              onClick={() => {
                 textareaRef.current?.focus();
                 fileInputRef.current?.click();
               }}
