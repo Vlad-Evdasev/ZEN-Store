@@ -128,6 +128,14 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
   // плавно опускается. Без monotonic shrink: естественное поведение
   // (как в CustomOrderPage). height transition сглаживает дискретные
   // vv.resize события в smooth animation.
+  //
+  // ВАЖНО: НЕ обновляем kbOpen из этого листенера. kbOpen tracked
+  // ИСКЛЮЧИТЕЛЬНО через focus/blur handlers — это совпадает с
+  // CustomOrderPage. На iOS Telegram WebApp vv.height может вести
+  // себя нестандартно (не shrink'аться с kb или давать false-trigger'ы
+  // > refHeight - 50), и vv-listener устанавливал бы kbOpen=false
+  // даже когда textarea has focus и kb actually open → paperclip
+  // переставал быть disabled и picker открывался при кb-open.
   useEffect(() => {
     if (!open) return;
     const vv = window.visualViewport;
@@ -135,7 +143,6 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
     let raf: number | null = null;
     const apply = () => {
       setOverlayHeight(vv.height);
-      setKbOpen(vv.height < refHeightRef.current - 50);
     };
     const schedule = () => {
       if (raf != null) cancelAnimationFrame(raf);
