@@ -3689,8 +3689,6 @@ const MESSAGES_CATEGORY_LABEL: Record<string, string> = {
   order_status: "Статус заказа",
   custom_status: "Статус кастом-заявки",
   payment: "Оплата",
-  engagement: "Вовлечение",
-  drop: "Дропы",
 };
 
 function MessagesTab({ adminSecret }: { adminSecret: string }) {
@@ -3764,7 +3762,7 @@ function MessagesTab({ adminSecret }: { adminSecret: string }) {
     (acc[tpl.category] ||= []).push(tpl);
     return acc;
   }, {});
-  const categoryOrder = ["start", "order_status", "custom_status", "payment", "engagement", "drop"];
+  const categoryOrder = ["start", "order_status", "custom_status", "payment"];
   const categories = categoryOrder.filter((c) => byCategory[c]).concat(
     Object.keys(byCategory).filter((c) => !categoryOrder.includes(c))
   );
@@ -3777,7 +3775,7 @@ function MessagesTab({ adminSecret }: { adminSecret: string }) {
         <div className="admin-page-head-text">
           <h2>Пуш-сообщения</h2>
           <p className="admin-page-head-sub">
-            Шаблоны автоматических сообщений бота — приветствие, смены статуса заказа, оплата, дропы. Изменения применяются сразу, без редеплоя. Плейсхолдеры в фигурных скобках (например, <code>{"{id}"}</code>, <code>{"{name}"}</code>) подставляются автоматически.
+            Шаблоны автоматических сообщений бота — приветствие, смены статуса заказа, оплата. Изменения применяются сразу, без редеплоя. Плейсхолдер <code>{"{name}"}</code> подставляется автоматически — это название заказа (первая позиция или описание заявки).
           </p>
         </div>
       </div>
@@ -3855,7 +3853,7 @@ function MessagesTab({ adminSecret }: { adminSecret: string }) {
                           onChange={(e) => setEditBody(e.target.value)}
                           rows={6}
                           style={{ ...styles.input, minHeight: 120, height: "auto", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 13 }}
-                          placeholder="Заказ #{id} оформлен&#10;&#10;Мы получили запрос — скоро свяжемся."
+                          placeholder="Заказ «{name}» оформлен&#10;&#10;Мы получили запрос — скоро свяжемся."
                         />
                       </label>
                       <div style={{ display: "flex", gap: 8 }}>

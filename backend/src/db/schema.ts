@@ -537,6 +537,10 @@ try {
   `);
 } catch {}
 try { db.exec("ALTER TABLE custom_orders ADD COLUMN group_id TEXT"); } catch {}
+// TON-сумма (nano) для custom-group invoice. Считается на момент отправки
+// инвойса по текущему курсу, хранится чтобы verifier мог сматчить
+// транзакцию по точной сумме. Симметрично orders.payment_amount_nano.
+try { db.exec("ALTER TABLE custom_order_groups ADD COLUMN payment_amount_nano TEXT"); } catch {}
 
 // Backfill: каждый existing custom_order без group_id получает свою
 // уникальную группу (single-item group). Это для legacy data — новые
@@ -576,24 +580,21 @@ if (tplCount.c === 0) {
   const insertTpl = db.prepare(
     "INSERT INTO bot_message_templates (template_id, category, title, emoji, body) VALUES (?, ?, ?, ?, ?)"
   );
-  // Variables in {placeholders}: {id}, {hi}, {name}, {amount}, {item}, {category}, etc.
+  // Variables in {placeholders}: {name} = название заказа (первый товар
+  // для catalog / первое описание для custom), {hi}, {item} и т.д.
+  // {id} больше не используется — мы отошли от номеров заказов и везде
+  // показываем название (первая позиция / описание).
   const defaults: Array<[string, string, string, string, string]> = [
     ["welcome", "start", "Приветствие /start", "", "{hi}, ты в <b>RAW</b>.\n\nБез посредников. Только то, что носим сами."],
-    ["order_pending", "order_status", "Заказ оформлен", "✅", "Заказ #{id} оформлен\n\nМы получили запрос — скоро свяжемся для уточнения деталей."],
-    ["order_in_transit", "order_status", "Заказ в пути", "🚚", "Заказ #{id} в пути\n\nУже едет к тебе. Отслеживай статус в /track."],
-    ["order_delivered", "order_status", "Заказ доставлен", "📦", "Заказ #{id} доставлен\n\nЗабирай! Если что-то не так — пиши, поможем."],
-    ["order_completed", "order_status", "Заказ завершён", "💚", "Заказ #{id} завершён\n\nСпасибо за покупку! Будем рады видеть тебя снова 🤍"],
-    ["custom_pending", "custom_status", "Кастом одобрен", "✅", "Кастом-заявка #{id} одобрена\n\nПринята в работу. Свяжемся для уточнений."],
-    ["custom_in_transit", "custom_status", "Кастом в пути", "🚚", "Кастом-заявка #{id} в пути\n\nУже едет к тебе."],
-    ["custom_delivered", "custom_status", "Кастом доставлен", "📦", "Кастом-заявка #{id} доставлена\n\nЗабирай!"],
-    ["custom_completed", "custom_status", "Кастом завершён", "💚", "Кастом-заявка #{id} завершена\n\nСпасибо!"],
+    ["order_pending", "order_status", "Заказ оформлен", "✅", "Заказ «{name}» оформлен\n\nМы получили запрос — скоро свяжемся для уточнения деталей."],
+    ["order_in_transit", "order_status", "Заказ в пути", "🚚", "Заказ «{name}» в пути\n\nУже едет к тебе. Отслеживай статус в /track."],
+    ["order_delivered", "order_status", "Заказ доставлен", "📦", "Заказ «{name}» доставлен\n\nЗабирай! Если что-то не так — пиши, поможем."],
+    ["order_completed", "order_status", "Заказ завершён", "💚", "Заказ «{name}» завершён\n\nСпасибо за покупку! Будем рады видеть тебя снова 🤍"],
+    ["custom_pending", "custom_status", "Кастом одобрен", "✅", "Заявка «{name}» одобрена\n\nПринята в работу. Свяжемся для уточнений."],
+    ["custom_in_transit", "custom_status", "Кастом в пути", "🚚", "Заявка «{name}» в пути\n\nУже едет к тебе."],
+    ["custom_delivered", "custom_status", "Кастом доставлен", "📦", "Заявка «{name}» доставлена\n\nЗабирай!"],
+    ["custom_completed", "custom_status", "Кастом завершён", "💚", "Заявка «{name}» завершена\n\nСпасибо!"],
     ["payment_received", "payment", "Оплата подтверждена", "💚", "Оплата подтверждена\n{item}\n\nЗаказ ушёл в сборку. Когда отправим — пришлём трек-номер."],
-    ["cart_abandoned", "engagement", "Корзина ждёт", "🛒", "Твоя корзина ждёт\n\n{count} {noun} на сумму <b>{total} $</b>. Готов оформить?"],
-    ["new_arrival", "engagement", "Новинка в категории", "🔥", "Новинка в категории «{category}»\n\n{name} — только что добавили в каталог. Залетай первым."],
-    ["drop_24h", "drop", "Drop через 24 часа", "🔥", "Drop через 24 часа: {title}\n\n{description}"],
-    ["drop_1h", "drop", "Drop через 1 час", "⏰", "Drop через 1 час: {title}\n\n{description}"],
-    ["drop_5min", "drop", "5 минут до дропа", "🚨", "5 минут до дропа: {title}\n\n{description}"],
-    ["drop_live", "drop", "Drop LIVE", "⚡", "{title} — LIVE сейчас\n\n{description}"],
   ];
   for (const tpl of defaults) insertTpl.run(...tpl);
 }
@@ -602,9 +603,29 @@ if (tplCount.c === 0) {
 // (ручная отметка + автоматическая TON-верификация) отправляют один и тот
 // же payment_received. Удаляем legacy template если он остался от
 // предыдущей версии — иначе в админке висит «мёртвый» шаблон.
-// Также чистим 'welcome_invited' — реферальная система удалена.
+// Также чистим 'welcome_invited' (реферальная система удалена) и
+// engagement / drop шаблоны (дропы + вовлечение убраны из продукта).
 try {
   db.prepare(
-    "DELETE FROM bot_message_templates WHERE template_id IN ('payment_ton_verified', 'welcome_invited')"
+    "DELETE FROM bot_message_templates WHERE template_id IN " +
+      "('payment_ton_verified', 'welcome_invited', " +
+      "'cart_abandoned', 'new_arrival', " +
+      "'drop_24h', 'drop_1h', 'drop_5min', 'drop_live')"
+  ).run();
+  // Старые админ-кастомизации могут остаться с категорией 'drop' или
+  // 'engagement' — добиваем by-category, чтобы в админке не висели.
+  db.prepare(
+    "DELETE FROM bot_message_templates WHERE category IN ('drop', 'engagement')"
+  ).run();
+} catch {}
+
+// Migration: ранние шаблоны статусов писали «Заказ #{id} …». Мы отошли
+// от номеров — везде показываем название (первая позиция). Подменяем
+// плейсхолдер в существующих DB-строках. REPLACE — no-op если юзер уже
+// поправил руками и подстроки нет.
+try {
+  db.prepare(
+    "UPDATE bot_message_templates SET body = REPLACE(body, '#{id}', '«{name}»') " +
+      "WHERE category IN ('order_status', 'custom_status')"
   ).run();
 } catch {}
