@@ -442,27 +442,28 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: 1.4,
   },
 
+  // form — positioning context для absolute composerWrap. Thread
+  // занимает весь form height; composerWrap floating над ним.
   form: {
     flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    gap: 10,
     minHeight: 0,
+    position: "relative",
   },
-  // Thread теперь scrollable (flex: 1, overflow-y: auto). Раньше был
-  // flex-shrink: 0 + spacer flex:1 — но когда юзер добавлял фото
-  // thread рос, превышал available height (при keyboard prediction),
-  // overflow:hidden wrap'а скрывал composer. Теперь thread занимает
-  // всё свободное место, при необходимости скроллит, composer всегда
-  // visible внизу.
+  // Thread скроллит на полный height формы. paddingBottom оставляет
+  // место под composer pill — содержимое не залипает за ним при
+  // прокрутке к низу. Когда юзер прокручивает thread выше — фото и
+  // bubbles ПРОХОДЯТ ПОД composer pill (composerWrap прозрачный).
   thread: {
-    flex: 1,
-    minHeight: 0,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     overflowY: "auto",
     display: "flex",
     flexDirection: "column",
     gap: 10,
-    padding: "8px 0 2px",
+    padding: "8px 0 60px",
     WebkitOverflowScrolling: "touch",
   },
   replyHint: {
@@ -607,18 +608,23 @@ const styles: Record<string, React.CSSProperties> = {
     backdropFilter: "blur(4px)",
   },
 
-  /* paddingBottom: 0 — пилюля впритык к низу wrap'а, никакой полосы
-     var(--bg) под ней. Гэп до nav формируется только nav.borderTop. */
+  /* composerWrap — absolute bottom, ПРОЗРАЧНЫЙ. Thread скроллится
+     ПОД пилюлей, без var(--bg) полосы перекрывающей контент.
+     Только сама пилюля (composer) имеет solid bg. */
   composerWrap: {
+    position: "absolute",
+    bottom: 6,
+    left: 0,
+    right: 0,
     display: "flex",
     flexDirection: "column",
     gap: 8,
-    paddingTop: 6,
-    paddingBottom: 0,
-    flexShrink: 0,
+    background: "transparent",
+    pointerEvents: "none",
   },
-  // Compact chat-input pill (~36-38px высота total). Раньше выглядела
-  // «жирной» из-за избыточного padding'а и больших buttons.
+  // Compact chat-input pill. pointer-events: auto восстанавливает
+  // interactivity (composerWrap родитель имеет pointer-events: none
+  // чтобы тапы по transparent зоне проваливались в thread).
   composer: {
     display: "flex",
     alignItems: "center",
@@ -628,6 +634,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 22,
     padding: "3px 4px",
     boxShadow: "0 4px 18px rgba(0,0,0,0.06)",
+    pointerEvents: "auto",
   },
   composerIconBtn: {
     width: 30,

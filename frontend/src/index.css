@@ -1781,13 +1781,6 @@ body.zen-input-focused .zen-bottom-nav {
   visibility: hidden;
   pointer-events: none;
 }
-
-/* На CustomOrderPage убираем border-top у bottom-nav — он рисовал
-   линию между пилюлей и nav-icons, создавая «прямоугольный фон»
-   эффект под пилюлей. Без линии нав и wrap сливаются по цвету. */
-body.zen-customorder-active .zen-bottom-nav {
-  border-top: none;
-}
 body.zen-input-focused .zen-app main.zen-main--catalog,
 body.zen-input-focused .zen-app main.zen-main--edge,
 body.zen-input-focused .zen-app main.zen-main--inspire {
