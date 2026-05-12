@@ -367,46 +367,59 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
   // close-state'ом и engine применил бы close-стили на open-frame'е.
   // frozenHeight ставится ТОЛЬКО на close (open сбрасывает в null).
   const isClosing = frozenHeight != null;
-  const screenHeight = typeof window !== "undefined" ? window.innerHeight : 800;
-  // Во время close НЕ растим overlay — оставляем как есть (frozenHeight).
-  // Раньше пробовали растить до screenHeight, но при close с kb-open
-  // overlay рос параллельно с kb-retract → sheet visible как sliver
-  // в момент когда kb открыл новое visible-пространство быстрее, чем
-  // sheet успел оттуда уехать.
-  // Вместо grow используем БОЛЬШУЮ translate distance (см. closeTranslate
-  // ниже) — sheet'у гарантированно хватит чтобы уйти ниже экрана
-  // независимо от kb state.
-  const effectiveHeight = overlayHeight;
+  // fullHeight — снэпшот window.innerHeight на момент монтирования
+  // sheet'а (до того как откроется kb). Не пересчитывается, потому что
+  // на iOS Telegram WebView window.innerHeight МОЖЕТ shrink'нуться
+  // когда kb открыта (разные платформы ведут себя по-разному). Если бы
+  // использовали current window.innerHeight, closeTranslate был бы
+  // недостаточным при kb-open → sheet не уезжал бы за экран.
+  const fullHeight = refHeightRef.current;
+  // kbHeight — разница между full screen и текущим vv.height. Когда kb
+  // закрыта = 0, когда открыта = высота клавиатуры.
+  const kbHeight = Math.max(0, fullHeight - overlayHeight);
 
+  // Overlay теперь ВСЕГДА full-screen (height: fullHeight). Раньше
+  // overlay shrink'ался до vv.height (выше kb), и между bottom overlay'я
+  // и top клавиатуры мог появиться un-blurred gap во время kb-open
+  // animation (CSS height transition не синхронен с iOS kb-rise).
+  // Теперь overlay покрывает весь экран → blur'а зона тоже всегда
+  // полная → нет un-blurred области под формой при kb-open.
+  // Sheet остаётся выше kb за счёт padding-bottom: kbHeight (sheet
+  // на flex-end → align к inner-area bottom = fullHeight - kbHeight).
   const overlayStyle: React.CSSProperties = {
     ...styles.overlay,
-    height: effectiveHeight,
+    height: fullHeight,
+    paddingBottom: kbHeight,
     background: visible ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0)",
-    // backdrop-filter теперь animatable — fade в blur при open, fade
-    // обратно в 0 при close. Раньше blur был статичный (всегда 6px) →
-    // pop'ал мгновенно когда overlay появлялся.
     backdropFilter: visible ? `blur(${BLUR_AMOUNT}px)` : "blur(0px)",
     WebkitBackdropFilter: visible ? `blur(${BLUR_AMOUNT}px)` : "blur(0px)",
     transition:
       `background-color ${SHEET_ANIM}ms ${EASING}, ` +
       `backdrop-filter ${SHEET_ANIM}ms ${EASING}, ` +
       `-webkit-backdrop-filter ${SHEET_ANIM}ms ${EASING}` +
-      // Height transition только при open — на close height не меняется
-      // (overlayHeight остаётся frozenHeight value т.к. vv listener снят).
-      (isClosing ? "" : `, height 260ms ${EASING}`),
+      // padding-bottom transition только при open — на close padding
+      // фиксирован (overlayHeight не меняется т.к. vv listener снят
+      // на close). Sheet не дрейфует от kb-retract во время close.
+      (isClosing ? "" : `, padding-bottom 260ms ${EASING}`),
   };
-  // Sheet translate на close — большая фиксированная дистанция
-  // (= screenHeight) чтобы sheet ушёл ЗА экран независимо от того где
-  // он стартовал (kb open / closed). translateY(100%) = sheet height
-  // часто не хватало (особенно с kb-open: sheet bottom уже у kb top,
-  // 100% перемещает только в kb area, не за экран). Когда kb потом
-  // ретракируется, sheet оказывается видимым в новом revealed-space.
-  // Большой translate fix'ит это — sheet всегда ниже viewport edge.
-  const closeTranslate = `${screenHeight}px`;
+
+  // Close translate distance:
+  // - При open initial (визибл ещё false, isClosing false): translateY(100%)
+  //   — sheet ниже своего natural-position на свою высоту, готов к slide-up.
+  // - При close (isClosing): translateY(fullHeight + 80) — sheet уходит
+  //   полностью за нижний край экрана (с запасом 80px на округление).
+  //   Использует fullHeight (captured at mount, full-screen pre-kb size),
+  //   а не текущий window.innerHeight — на iOS Telegram WebView innerHeight
+  //   может сжиматься с kb-open → закрытие при kb-open уезжало неполностью.
+  const closeTranslate = `${fullHeight + 80}px`;
+  const sheetTransform = visible
+    ? "translateY(0)"
+    : (isClosing ? `translateY(${closeTranslate})` : "translateY(100%)");
+
   const sheetStyle: React.CSSProperties = {
     ...styles.sheet,
-    maxHeight: Math.max(280, effectiveHeight - SHEET_TOP_GAP),
-    transform: visible ? "translateY(0)" : `translateY(${closeTranslate})`,
+    maxHeight: Math.max(280, overlayHeight - SHEET_TOP_GAP),
+    transform: sheetTransform,
     transition: isClosing
       ? `transform ${SHEET_ANIM}ms ${EASING}`
       : `transform ${SHEET_ANIM}ms ${EASING}, max-height 260ms ${EASING}`,
@@ -556,12 +569,13 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
 const styles: Record<string, React.CSSProperties> = {
   overlay: {
     position: "fixed",
-    // top + height (не inset:0 → bottom:0) — overlay занимает доступную
-    // над-клавиатурой область, его bottom edge движется вверх когда
-    // vvHeight уменьшается → sheet внутри (flex-end) автоматически
-    // прижимается к keyboard top.
-    // background + backdropFilter применяются динамически в overlayStyle
-    // выше (animated fade-in/out при open/close).
+    // Overlay ВСЕГДА full-screen (height: fullHeight применяется выше).
+    // Padding-bottom: kbHeight адаптируется к клавиатуре → sheet (flex-
+    // end в inner area) автоматически выше kb-top. Это устраняет
+    // un-blurred gap, который раньше появлялся при kb-open transition
+    // (overlay height shrink не успевал за kb-rise).
+    // background + backdropFilter применяются динамически (animated
+    // fade-in/out при open/close).
     top: 0,
     left: 0,
     right: 0,
