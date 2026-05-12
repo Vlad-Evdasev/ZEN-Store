@@ -5,7 +5,7 @@ import { t } from "../i18n";
 
 function SendArrowIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M12 19V5M5 12l7-7 7 7" />
     </svg>
   );
@@ -13,7 +13,7 @@ function SendArrowIcon() {
 
 function PaperclipIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
     </svg>
   );
@@ -732,13 +732,13 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 6,
   },
   // Standalone round paperclip button to the left of the composer pill.
-  // box-sizing: border-box → external height = 38px, matches composer
-  // pill (30 content + 6 padding + 2 border = 38). Both pills sit
+  // box-sizing: border-box → external height = 44px, matches composer
+  // pill (36 content + 6 padding + 2 border = 44). Both pills sit
   // bottom-aligned in composerRow.
   paperclipPill: {
     boxSizing: "border-box",
-    width: 38,
-    height: 38,
+    width: 44,
+    height: 44,
     borderRadius: "50%",
     background: "var(--surface)",
     border: "1px solid var(--border)",
@@ -769,7 +769,7 @@ const styles: Record<string, React.CSSProperties> = {
     minWidth: 0,
     background: "var(--surface)",
     border: "1px solid var(--border)",
-    borderRadius: 22,
+    borderRadius: 24,
     padding: "3px 4px",
     boxShadow: "0 4px 18px rgba(0,0,0,0.06)",
     pointerEvents: "auto",
@@ -790,10 +790,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
   composerTextarea: {
     flex: 1,
-    minHeight: 30,
+    minHeight: 36,
     maxHeight: 180,
-    padding: "5px 6px",
-    fontSize: 14,
+    padding: "7px 8px",
+    fontSize: 15,
     lineHeight: 1.4,
     background: "transparent",
     border: "1px solid transparent",
@@ -802,8 +802,8 @@ const styles: Record<string, React.CSSProperties> = {
     outline: "none",
   },
   composerSendBtn: {
-    width: 30,
-    height: 30,
+    width: 36,
+    height: 36,
     borderRadius: "50%",
     background: "var(--accent)",
     color: "#fff",
