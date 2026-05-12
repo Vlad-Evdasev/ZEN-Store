@@ -58,19 +58,6 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  // Textarea-blur защита: если blur произошёл потому что юзер кликнул
-  // элемент с data-keep-focus (скрепка) — refocus textarea, чтобы
-  // клавиатура НЕ закрылась на iOS Telegram WebView.
-  const onTextareaBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
-    handleBlur();
-    const next = e.relatedTarget as HTMLElement | null;
-    if (next && next.closest('[data-keep-focus="true"]')) {
-      // Refocus синхронно — iOS должна сохранить keyboard open.
-      requestAnimationFrame(() => {
-        textareaRef.current?.focus();
-      });
-    }
-  };
 
   useEffect(() => {
     let cancelled = false;
@@ -204,13 +191,20 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
     const reader = new FileReader();
     reader.onload = () => setCustomPhoto((reader.result as string) || null);
     reader.readAsDataURL(file);
-    // Множественные попытки refocus после file picker'а на iOS.
-    // change event сам по себе user-initiated → focus() внутри него
-    // может открыть keyboard. Доп. попытки через rAF и setTimeout —
-    // на случай если первая не сработала (iOS варианты).
-    textareaRef.current?.focus();
-    requestAnimationFrame(() => textareaRef.current?.focus());
-    setTimeout(() => textareaRef.current?.focus(), 100);
+    // КРИТИЧНО: после file picker'а keyboard был закрыт iOS-ом.
+    // Сбрасываем «keyboard-aware» состояние страницы:
+    //  · body class / overflow lock убираем (иначе nav остаётся скрыт)
+    //  · wrap.height возвращаем на full (иначе остаётся в predicted
+    //    shrink'нутом состоянии → photo bubble + composer + хвост
+    //    оказываются за пределами overflow:hidden wrap'а → визуально
+    //    исчезают)
+    document.body.classList.remove("zen-input-focused");
+    document.body.style.overflow = "";
+    document.documentElement.style.overflow = "";
+    const wrap = wrapRef.current;
+    if (wrap) {
+      wrap.style.height = `${refHeightRef.current - HEADER - NAV}px`;
+    }
   };
 
   const onComposerKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -285,7 +279,6 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
           <div style={styles.composer}>
             <input
               ref={fileInputRef}
-              id="custom-order-photo-input"
               type="file"
               accept="image/*"
               onChange={onPhotoChange}
@@ -293,18 +286,15 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
               aria-hidden
             />
 
-            {/* <label htmlFor=…> — нативный browser-механизм клика для
-                file input. data-keep-focus сигнализирует textarea-blur
-                handler'у что blur был из-за скрепки → refocus синхронно
-                чтобы клавиатура НЕ закрылась. */}
-            <label
-              htmlFor="custom-order-photo-input"
-              data-keep-focus="true"
+            <div
+              role="button"
+              tabIndex={-1}
+              onClick={() => fileInputRef.current?.click()}
               style={{ ...styles.composerIconBtn, cursor: "pointer" }}
               aria-label={t(lang, "customOrderPhotoAdd")}
             >
               <PaperclipIcon />
-            </label>
+            </div>
 
             <textarea
               ref={textareaRef}
@@ -313,7 +303,7 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
               onChange={(e) => setCustomDesc(e.target.value)}
               onKeyDown={onComposerKeyDown}
               onFocus={handleFocus}
-              onBlur={onTextareaBlur}
+              onBlur={handleBlur}
               placeholder={t(lang, "customOrderPlaceholderDesc")}
               rows={1}
               style={styles.composerTextarea}
