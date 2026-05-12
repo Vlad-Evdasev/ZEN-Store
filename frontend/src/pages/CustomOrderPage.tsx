@@ -44,7 +44,9 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
 
   const customName = firstName || "";
   const [customDesc, setCustomDesc] = useState("");
-  const [customPhoto, setCustomPhoto] = useState<string | null>(null);
+  // Несколько фоток (до 5). Раньше был single customPhoto.
+  const [customPhotos, setCustomPhotos] = useState<string[]>([]);
+  const MAX_PHOTOS = 5;
   const [customSubmitting, setCustomSubmitting] = useState(false);
   const [customSuccess, setCustomSuccess] = useState(false);
   // Handle админа: lazy-инициализация из localStorage кэша, чтобы при
@@ -172,11 +174,11 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
         user_username: userName ?? undefined,
         description: customDesc.trim(),
         size: "",
-        image_data: customPhoto || undefined,
+        image_urls: customPhotos,
       });
       setCustomSuccess(true);
       setCustomDesc("");
-      setCustomPhoto(null);
+      setCustomPhotos([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (err) {
       console.error(err);
@@ -186,11 +188,22 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   };
 
   const onPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || file.size > 2 * 1024 * 1024) return;
-    const reader = new FileReader();
-    reader.onload = () => setCustomPhoto((reader.result as string) || null);
-    reader.readAsDataURL(file);
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0) return;
+    const remaining = MAX_PHOTOS - customPhotos.length;
+    const accepted = files.slice(0, remaining);
+    accepted.forEach((file) => {
+      if (!file.type.startsWith("image/") || file.size > 2 * 1024 * 1024) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const v = reader.result;
+        if (typeof v === "string") {
+          setCustomPhotos((prev) => prev.length >= MAX_PHOTOS ? prev : [...prev, v]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
     // КРИТИЧНО: после file picker'а keyboard был закрыт iOS-ом.
     // Сбрасываем «keyboard-aware» состояние страницы:
     //  · body class / overflow lock убираем (иначе nav остаётся скрыт)
@@ -252,14 +265,14 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
             <div style={styles.botBubbleSubtitle}>{t(lang, "customOrderSubtitleHint")}</div>
           </BotBubble>
 
-          {/* Photo preview bubble (if attached) */}
-          {customPhoto && (
-            <div style={styles.userBubbleRow}>
+          {/* Photo preview bubbles (multiple, до 5) */}
+          {customPhotos.map((photo, i) => (
+            <div key={i} style={styles.userBubbleRow}>
               <div style={styles.photoBubble}>
-                <img src={customPhoto} alt="" style={styles.photoBubbleImg} />
+                <img src={photo} alt="" style={styles.photoBubbleImg} />
                 <button
                   type="button"
-                  onClick={() => setCustomPhoto(null)}
+                  onClick={() => setCustomPhotos((prev) => prev.filter((_, idx) => idx !== i))}
                   onMouseDown={preventFocusSteal}
                   onTouchStart={preventFocusSteal}
                   style={styles.photoBubbleRemove}
@@ -269,10 +282,11 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
                 </button>
               </div>
             </div>
-          )}
+          ))}
         </div>
 
-        <div style={styles.spacer} />
+        {/* Spacer убран — thread теперь flex:1 сам занимает всё
+            свободное место выше composer'а. */}
 
         {/* Composer */}
         <div style={styles.composerWrap}>
@@ -281,6 +295,7 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
               ref={fileInputRef}
               type="file"
               accept="image/*"
+              multiple
               onChange={onPhotoChange}
               style={styles.fileHidden}
               aria-hidden
@@ -289,8 +304,15 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
             <div
               role="button"
               tabIndex={-1}
-              onClick={() => fileInputRef.current?.click()}
-              style={{ ...styles.composerIconBtn, cursor: "pointer" }}
+              onClick={() => {
+                if (customPhotos.length >= MAX_PHOTOS) return;
+                fileInputRef.current?.click();
+              }}
+              style={{
+                ...styles.composerIconBtn,
+                cursor: customPhotos.length >= MAX_PHOTOS ? "not-allowed" : "pointer",
+                opacity: customPhotos.length >= MAX_PHOTOS ? 0.35 : 1,
+              }}
               aria-label={t(lang, "customOrderPhotoAdd")}
             >
               <PaperclipIcon />
@@ -424,12 +446,21 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 10,
     minHeight: 0,
   },
+  // Thread теперь scrollable (flex: 1, overflow-y: auto). Раньше был
+  // flex-shrink: 0 + spacer flex:1 — но когда юзер добавлял фото
+  // thread рос, превышал available height (при keyboard prediction),
+  // overflow:hidden wrap'а скрывал composer. Теперь thread занимает
+  // всё свободное место, при необходимости скроллит, composer всегда
+  // visible внизу.
   thread: {
+    flex: 1,
+    minHeight: 0,
+    overflowY: "auto",
     display: "flex",
     flexDirection: "column",
     gap: 10,
     padding: "8px 0 2px",
-    flexShrink: 0,
+    WebkitOverflowScrolling: "touch",
   },
   replyHint: {
     fontSize: 11,

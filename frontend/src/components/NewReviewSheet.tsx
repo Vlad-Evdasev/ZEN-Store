@@ -32,21 +32,15 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
   const [vvHeight, setVvHeight] = useState<number | null>(
     typeof window !== "undefined" && window.visualViewport ? window.visualViewport.height : null
   );
-  // keyboardOffset — на сколько px поднять sheet ВЫШЕ viewport-bottom'а
-  // чтобы он встал над keyboard. Высчитывается из (innerHeight - vv.height)
-  // — это и есть высота keyboard в layout-координатах. С meta
-  // interactive-widget=overlays-content position:fixed элементы НЕ
-  // репозиционируются автоматически, делаем это вручную через transform.
-  const [keyboardOffset, setKeyboardOffset] = useState(0);
+  // vvHeight = доступная над-клавиатурой область. Применяем как
+  // overlay.height — sheet внутри сидит на flex-end и автоматически
+  // прижимается к keyboard top без marginBottom manipulations.
   useEffect(() => {
     if (!open) return;
     const vv = window.visualViewport;
     if (!vv) return;
-    const refHeight = window.innerHeight;
     const update = () => {
       setVvHeight(vv.height);
-      const overlap = Math.max(0, refHeight - vv.height - vv.offsetTop);
-      setKeyboardOffset(overlap);
     };
     update();
     vv.addEventListener("resize", update);
@@ -73,16 +67,18 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
 
   const handleTextareaFocus = () => {
     document.body.classList.add("zen-input-focused");
-    // KEYBOARD PREDICTION: 290 — типовая высота iOS keyboard без
-    // QuickType bar. Раньше брал 360 — sheet «улетал» сильно выше
-    // фактической keyboard top'ы, потом резко опускался к ней.
-    // 290 — sheet встаёт чуть НИЖЕ реальной keyboard (если у юзера
-    // keyboard 340 с QuickType), после vv.resize sheet поднимется
-    // ещё на 50 — менее раздражающе чем «упасть» с 360 → 290.
-    if (keyboardOffset === 0) {
-      setKeyboardOffset(290);
-      if (vvHeight) {
-        setVvHeight(Math.max(280, vvHeight - 290));
+    // KEYBOARD PREDICTION: сразу уменьшаем vvHeight на типовую высоту
+    // iOS keyboard (290px без QuickType bar). overlay.height = vvHeight
+    // → overlay сжимается → sheet (flex-end) автоматически встаёт на
+    // bottom edge = top будущей клавиатуры. Когда vv.resize firing-нет
+    // с реальным значением, overlay скорректируется с small CSS
+    // transition'ом.
+    if (vvHeight) {
+      const refHeight = window.innerHeight;
+      // Применяем prediction ТОЛЬКО если vvHeight ещё на «полную»
+      // высоту (keyboard не открыта). Иначе iOS уже вернул actual.
+      if (vvHeight > refHeight - 50) {
+        setVvHeight(Math.max(280, refHeight - 290));
       }
     }
   };
@@ -177,27 +173,28 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
   };
 
   const canSubmit = text.trim().length > 0 && !submitting;
-  const sheetMaxHeight = vvHeight ? Math.max(280, vvHeight - 24) : "85vh";
   const isEdit = !!initial;
 
+  // OVERLAY height = доступная над-клавиатурой область (vvHeight).
+  // Sheet внутри сидит на flex-end, его bottom edge = bottom overlay'а
+  // = top клавиатуры. Никаких marginBottom манипуляций — sheet
+  // позиционируется естественно через flex layout.
+  // Это эквивалент height-based подхода из CustomOrderPage.
+  const overlayHeight = vvHeight ?? (typeof window !== "undefined" ? window.innerHeight : 0);
   const overlayStyle: React.CSSProperties = {
     ...styles.overlay,
+    height: overlayHeight,
     background: visible ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0)",
-    transition: `background-color ${SHEET_ANIM}ms cubic-bezier(0.32, 0.72, 0, 1)`,
+    transition:
+      `background-color ${SHEET_ANIM}ms cubic-bezier(0.32, 0.72, 0, 1), ` +
+      `height 280ms cubic-bezier(0.32, 0.72, 0, 1)`,
   };
-  // Slide-in: transform translateY 100% → 0.
-  // Keyboard offset: margin-bottom (поднимает sheet над клавиатурой).
-  // Эти две анимации НЕЗАВИСИМЫ — раньше комбинировались в одном
-  // transform и при keyboard prediction → vv.resize получали
-  // конфликтующие transition'ы (sheet «улетал куда-то»).
   const sheetStyle: React.CSSProperties = {
     ...styles.sheet,
-    maxHeight: sheetMaxHeight,
-    marginBottom: keyboardOffset,
+    maxHeight: overlayHeight - 24,
     transform: visible ? "translateY(0)" : "translateY(100%)",
     transition:
       `transform ${SHEET_ANIM}ms cubic-bezier(0.32, 0.72, 0, 1), ` +
-      `margin-bottom 280ms cubic-bezier(0.32, 0.72, 0, 1), ` +
       `max-height 240ms cubic-bezier(0.32, 0.72, 0, 1)`,
   };
 
@@ -346,7 +343,13 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
 const styles: Record<string, React.CSSProperties> = {
   overlay: {
     position: "fixed",
-    inset: 0,
+    // top + height (вместо inset:0 → bottom:0) — overlay занимает
+    // доступную над-клавиатурой область, его bottom edge движется
+    // вверх когда vvHeight уменьшается → sheet внутри (flex-end)
+    // автоматически прижимается к keyboard top.
+    top: 0,
+    left: 0,
+    right: 0,
     background: "rgba(0,0,0,0.55)",
     backdropFilter: "blur(4px)",
     WebkitBackdropFilter: "blur(4px)",

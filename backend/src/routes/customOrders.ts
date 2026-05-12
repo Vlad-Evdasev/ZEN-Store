@@ -177,15 +177,20 @@ customOrdersRouter.patch("/admin/group/:groupId/mark-paid", (req, res) => {
 });
 
 customOrdersRouter.post("/", (req, res) => {
-  const { user_id, user_name, user_username, user_address, description, size, image_data } = req.body;
+  const { user_id, user_name, user_username, user_address, description, size, image_data, image_urls } = req.body;
   if (!user_id) return res.status(400).json({ error: "user_id required" });
-  // Новая заявка — создаём свою группу (single-item group). Если админ
-  // потом duplicate-нёт карточку, duplicate унаследует этот group_id.
+  // Multi-photo: image_urls — JSON массив data URL'ов (до 5).
+  // image_data остаётся для backward compat (первая фотка).
+  const photos: string[] = Array.isArray(image_urls)
+    ? image_urls.filter((x: unknown) => typeof x === "string" && x.startsWith("data:image/")).slice(0, 5)
+    : (typeof image_data === "string" && image_data ? [image_data] : []);
+  const firstPhoto = photos[0] || null;
+  const photosJson = photos.length > 0 ? JSON.stringify(photos) : null;
+
   const groupId = makeGroupId();
   db.prepare("INSERT INTO custom_order_groups (id, user_id) VALUES (?, ?)").run(groupId, user_id);
-  // Статус 'review' — пока админ не одобрит, заявка не видна у пользователя.
   db.prepare(
-    "INSERT INTO custom_orders (user_id, user_name, user_username, user_address, description, size, image_data, status, group_id) VALUES (?, ?, ?, ?, ?, ?, ?, 'review', ?)"
+    "INSERT INTO custom_orders (user_id, user_name, user_username, user_address, description, size, image_data, image_urls, status, group_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'review', ?)"
   ).run(
     user_id,
     user_name ?? null,
@@ -193,7 +198,8 @@ customOrdersRouter.post("/", (req, res) => {
     user_address ?? null,
     description || "",
     size || "",
-    image_data || null,
+    firstPhoto,
+    photosJson,
     groupId
   );
   res.status(201).json({ ok: true, group_id: groupId });

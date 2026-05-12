@@ -158,6 +158,13 @@ try {
   db.exec("ALTER TABLE reviews ADD COLUMN image_urls TEXT");
 } catch {}
 
+// image_urls в custom_orders — JSON-массив до 5 фоток. image_data
+// остаётся для backward compat (первая фотка). Боты и админка
+// предпочитают image_urls если есть.
+try {
+  db.exec("ALTER TABLE custom_orders ADD COLUMN image_urls TEXT");
+} catch {}
+
 try {
   db.exec(`
     CREATE TABLE IF NOT EXISTS app_settings (

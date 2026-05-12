@@ -635,7 +635,7 @@ export async function updateBotMessageTemplate(
 
 export async function submitCustomOrder(
   userId: string,
-  data: { user_name?: string; user_username?: string; user_address?: string; description: string; size: string; image_data?: string | null }
+  data: { user_name?: string; user_username?: string; user_address?: string; description: string; size: string; image_data?: string | null; image_urls?: string[] }
 ) {
   const res = await fetch(`${API_URL}/api/custom-orders`, {
     method: "POST",
