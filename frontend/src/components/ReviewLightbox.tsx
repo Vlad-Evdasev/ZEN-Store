@@ -29,46 +29,42 @@ export function ReviewLightbox({ images, startIndex, startRect, onClose }: Revie
   const touchDy = useRef(0);
   const wheelLocked = useRef(false);
 
-  // Body-scroll lock — иначе при свайпе/wheel на лайтбоксе под ним
-  // скроллится список отзывов. Сохраняем prev value, восстанавливаем
-  // при close (вместе с body class для z-index хедера/футера).
+  // Body-scroll lock + body class для z-index хедера/футера. Header
+  // и nav остаются ВИДИМЫ (как в catalog product page) — просто на
+  // z-index 1300 (выше overlay 1100), чтобы image при FLIP «уходила
+  // под них», а не накрывала их. Никакого visibility:hidden.
   useEffect(() => {
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    document.body.classList.add("zen-review-lightbox-clipped");
+    document.body.classList.add("zen-review-lightbox-open");
     return () => {
       document.body.style.overflow = prevOverflow;
-      document.body.classList.remove("zen-review-lightbox-clipped");
-      document.body.classList.remove("zen-review-lightbox-fullscreen");
+      document.body.classList.remove("zen-review-lightbox-open");
     };
   }, []);
 
-  // Phase-based body class: во время opening/closing лайтбокс под
-  // header/nav (clipped by them) — image «улетает за header» как в
-  // catalog FLIP. Когда фаза open — header/nav возвращаются к
-  // дефолтному z-index, лайтбокс полностью виден.
-  useEffect(() => {
-    if (phase === "open") {
-      document.body.classList.add("zen-review-lightbox-fullscreen");
-      document.body.classList.remove("zen-review-lightbox-clipped");
-    } else {
-      document.body.classList.add("zen-review-lightbox-clipped");
-      document.body.classList.remove("zen-review-lightbox-fullscreen");
-    }
-  }, [phase]);
-
   // FLIP-open: image starts at startRect position+size, animates to natural.
+  // Retry-loop через rAF если getBoundingClientRect() ещё не отдаёт
+  // финальные размеры (data-URL картинки могут на первом frame показать
+  // 0x0 пока браузер не уложил layout).
   useLayoutEffect(() => {
-    const img = imgRef.current;
-    if (!img) return;
     if (!startRect) {
-      // No thumbRect — простой fade-in.
       requestAnimationFrame(() => setPhase("open"));
       return;
     }
-    const apply = () => {
+    let applied = false;
+    let raf: number | null = null;
+    const tryApply = () => {
+      if (applied) return;
+      const img = imgRef.current;
+      if (!img) return;
       const final = img.getBoundingClientRect();
-      if (final.width === 0 || final.height === 0) return;
+      if (final.width < 10 || final.height < 10) {
+        // Layout ещё не готов — пробуем на следующем frame.
+        raf = requestAnimationFrame(tryApply);
+        return;
+      }
+      applied = true;
       const dx = startRect.left - final.left;
       const dy = startRect.top - final.top;
       const sx = startRect.width / final.width;
@@ -76,19 +72,16 @@ export function ReviewLightbox({ images, startIndex, startRect, onClose }: Revie
       img.style.transformOrigin = "top left";
       img.style.transition = "none";
       img.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
+      // Force reflow чтобы initial transform применился ДО transition.
       void img.offsetWidth;
       img.style.transition = `transform ${ANIM}ms ${EASING}`;
       img.style.transform = "translate3d(0, 0, 0) scale(1, 1)";
       setPhase("open");
     };
-    if (img.complete && img.naturalWidth > 0) {
-      apply();
-    } else {
-      const onLoad = () => { img.removeEventListener("load", onLoad); apply(); };
-      img.addEventListener("load", onLoad);
-      const t = setTimeout(apply, 80);
-      return () => { img.removeEventListener("load", onLoad); clearTimeout(t); };
-    }
+    raf = requestAnimationFrame(tryApply);
+    return () => {
+      if (raf != null) cancelAnimationFrame(raf);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

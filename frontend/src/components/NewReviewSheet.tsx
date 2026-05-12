@@ -6,31 +6,28 @@ interface NewReviewSheetProps {
   open: boolean;
   submitting: boolean;
   error: string;
+  /** Если есть — sheet в edit-режиме: pre-fill значениями отзыва. */
+  initial?: { rating: number; text: string; image_urls: string[] };
   onClose: () => void;
   onSubmit: (rating: number, text: string, photos: string[]) => void;
 }
 
 const MAX_PHOTOS = 10;
-const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB per photo
-
+const MAX_FILE_SIZE = 2 * 1024 * 1024;
 const SHEET_ANIM = 320;
 
-export function NewReviewSheet({ open, submitting, error, onClose, onSubmit }: NewReviewSheetProps) {
+export function NewReviewSheet({ open, submitting, error, initial, onClose, onSubmit }: NewReviewSheetProps) {
   const { settings } = useSettings();
   const lang = settings.lang;
-  const [rating, setRating] = useState(5);
-  const [text, setText] = useState("");
-  const [photos, setPhotos] = useState<string[]>([]);
+  const [rating, setRating] = useState(initial?.rating ?? 5);
+  const [text, setText] = useState(initial?.text ?? "");
+  const [photos, setPhotos] = useState<string[]>(initial?.image_urls ?? []);
   const [localError, setLocalError] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  // mounted — компонент в DOM (для slide-out до unmount).
-  // visible — current visual state (slide-in/out), управляется через
-  // двойной rAF чтобы CSS transition triggered.
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [mounted, setMounted] = useState(open);
   const [visible, setVisible] = useState(false);
 
-  // visualViewport.height — при открытии клавиатуры sheet остаётся
-  // полностью видимым (max-height сжимается под доступную область).
   const [vvHeight, setVvHeight] = useState<number | null>(
     typeof window !== "undefined" && window.visualViewport ? window.visualViewport.height : null
   );
@@ -44,29 +41,29 @@ export function NewReviewSheet({ open, submitting, error, onClose, onSubmit }: N
     return () => vv.removeEventListener("resize", update);
   }, [open]);
 
-  // Slide-in / slide-out lifecycle.
   useEffect(() => {
     if (open) {
       setMounted(true);
-      // Двойной rAF — гарантирует что browser отрисовал начальное
-      // состояние (visible=false → translateY 100%), потом меняем на
-      // visible=true → translateY 0 с transition.
       const raf = requestAnimationFrame(() => {
         requestAnimationFrame(() => setVisible(true));
       });
       return () => cancelAnimationFrame(raf);
     } else if (mounted) {
       setVisible(false);
-      // Ждём окончания transition, потом unmount.
       const t = setTimeout(() => setMounted(false), SHEET_ANIM);
       return () => clearTimeout(t);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  // Hydrate fields when sheet opens (handles edit/new transitions).
   useEffect(() => {
-    if (!open) {
-      // Reset fields после полного закрытия (через SHEET_ANIM delay).
+    if (open) {
+      setRating(initial?.rating ?? 5);
+      setText(initial?.text ?? "");
+      setPhotos(initial?.image_urls ?? []);
+      setLocalError("");
+    } else {
       const t = setTimeout(() => {
         setRating(5);
         setText("");
@@ -75,7 +72,16 @@ export function NewReviewSheet({ open, submitting, error, onClose, onSubmit }: N
       }, SHEET_ANIM);
       return () => clearTimeout(t);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Textarea auto-grow up to 140px.
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 140) + "px";
+  }, [text]);
 
   if (!mounted) return null;
 
@@ -85,16 +91,10 @@ export function NewReviewSheet({ open, submitting, error, onClose, onSubmit }: N
     if (files.length === 0) return;
     const remaining = MAX_PHOTOS - photos.length;
     const accepted = files.slice(0, remaining);
-    const errors: string[] = [];
+    let lastErr = "";
     accepted.forEach((file) => {
-      if (!file.type.startsWith("image/")) {
-        errors.push("only images");
-        return;
-      }
-      if (file.size > MAX_FILE_SIZE) {
-        errors.push("max 2 MB");
-        return;
-      }
+      if (!file.type.startsWith("image/")) { lastErr = "only images"; return; }
+      if (file.size > MAX_FILE_SIZE) { lastErr = "max 2 MB"; return; }
       const reader = new FileReader();
       reader.onload = () => {
         const v = reader.result;
@@ -104,8 +104,7 @@ export function NewReviewSheet({ open, submitting, error, onClose, onSubmit }: N
       };
       reader.readAsDataURL(file);
     });
-    if (errors.length > 0) setLocalError(errors[0]);
-    else setLocalError("");
+    setLocalError(lastErr);
   };
 
   const removePhoto = (idx: number) => {
@@ -117,16 +116,13 @@ export function NewReviewSheet({ open, submitting, error, onClose, onSubmit }: N
     onSubmit(rating, text.trim(), photos);
   };
 
-  // preventFocusSteal: на mobile тап по кнопке убирает фокус с textarea
-  // → клавиатура схлопывается. preventDefault на mousedown/touchstart
-  // не даёт кнопке стать focus target — textarea сохраняет фокус,
-  // клавиатура остаётся открытой.
   const preventFocusSteal = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
   };
 
   const canSubmit = text.trim().length > 0 && !submitting;
   const sheetMaxHeight = vvHeight ? Math.max(280, vvHeight - 24) : "85vh";
+  const isEdit = !!initial;
 
   const overlayStyle: React.CSSProperties = {
     ...styles.overlay,
@@ -150,10 +146,27 @@ export function NewReviewSheet({ open, submitting, error, onClose, onSubmit }: N
       >
         <div style={styles.handle} aria-hidden />
         <div style={styles.scrollArea}>
-          <h3 style={styles.title}>{t(lang, "reviewsFabNew")}</h3>
+          {/* Header: title + close + stars в одной композиции */}
+          <div style={styles.headerRow}>
+            <h3 style={styles.title}>
+              {isEdit ? t(lang, "reviewsEditTitle") : t(lang, "reviewsFabNew")}
+            </h3>
+            <button
+              type="button"
+              onClick={onClose}
+              onMouseDown={preventFocusSteal}
+              onTouchStart={preventFocusSteal}
+              style={styles.closeBtn}
+              aria-label={t(lang, "close")}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="6" y1="6" x2="18" y2="18" />
+                <line x1="18" y1="6" x2="6" y2="18" />
+              </svg>
+            </button>
+          </div>
 
-          <div style={styles.row}>
-            <span style={styles.label}>{t(lang, "reviewsRatingLabel")}</span>
+          <div style={styles.starsRow}>
             {[1, 2, 3, 4, 5].map((r) => (
               <button
                 key={r}
@@ -169,86 +182,88 @@ export function NewReviewSheet({ open, submitting, error, onClose, onSubmit }: N
             ))}
           </div>
 
-          <textarea
-            className="zen-textarea"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder={t(lang, "reviewsPlaceholder")}
-            rows={4}
-            style={styles.textarea}
-          />
-
-          {/* Photo grid + add button */}
-          <div style={styles.photoGrid}>
-            {photos.map((p, i) => (
-              <div key={i} style={styles.photoCell}>
-                <img src={p} alt="" style={styles.photoImg} />
-                <button
-                  type="button"
-                  onClick={() => removePhoto(i)}
-                  onMouseDown={preventFocusSteal}
-                  onTouchStart={preventFocusSteal}
-                  style={styles.photoRemove}
-                  aria-label="remove"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-            {photos.length < MAX_PHOTOS && (
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                onMouseDown={preventFocusSteal}
-                onTouchStart={preventFocusSteal}
-                style={styles.photoAdd}
-                aria-label="add photo"
-              >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <circle cx="8.5" cy="8.5" r="1.5" />
-                  <polyline points="21 15 16 10 5 21" />
-                </svg>
-                <span style={styles.photoAddLabel}>
-                  {photos.length === 0 ? "Фото" : `+${photos.length}/${MAX_PHOTOS}`}
-                </span>
-              </button>
-            )}
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handlePickPhotos}
-            style={{ display: "none" }}
-          />
+          {/* Photo previews — 3-col grid, max 10. Add-btn внутри grid'а. */}
+          {(photos.length > 0 || isEdit) && (
+            <div style={styles.photoGrid}>
+              {photos.map((p, i) => (
+                <div key={i} style={styles.photoCell}>
+                  <img src={p} alt="" style={styles.photoImg} />
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(i)}
+                    onMouseDown={preventFocusSteal}
+                    onTouchStart={preventFocusSteal}
+                    style={styles.photoRemove}
+                    aria-label="remove"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
 
           {(error || localError) && (
             <p style={styles.error}>{error || localError}</p>
           )}
         </div>
 
-        <div style={styles.actions}>
-          <button
-            type="button"
-            onClick={onClose}
-            onMouseDown={preventFocusSteal}
-            onTouchStart={preventFocusSteal}
-            style={styles.cancel}
-          >
-            {t(lang, "reviewsCancel")}
-          </button>
-          <button
-            type="button"
-            disabled={!canSubmit}
-            onClick={handleSubmit}
-            onMouseDown={preventFocusSteal}
-            onTouchStart={preventFocusSteal}
-            style={{ ...styles.submit, opacity: canSubmit ? 1 : 0.5 }}
-          >
-            {submitting ? "..." : t(lang, "reviewsSubmit")}
-          </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handlePickPhotos}
+          style={{ display: "none" }}
+        />
+
+        {/* Pill composer — paperclip / textarea / send (как CustomOrderPage). */}
+        <div style={styles.composerWrap}>
+          <div style={styles.composer}>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              onMouseDown={preventFocusSteal}
+              onTouchStart={preventFocusSteal}
+              disabled={photos.length >= MAX_PHOTOS}
+              style={{ ...styles.composerIconBtn, opacity: photos.length >= MAX_PHOTOS ? 0.35 : 1 }}
+              aria-label="add photo"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+              </svg>
+            </button>
+            <textarea
+              ref={textareaRef}
+              className="zen-textarea"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder={t(lang, "reviewsPlaceholder")}
+              rows={1}
+              style={styles.composerTextarea}
+            />
+            <button
+              type="button"
+              onClick={handleSubmit}
+              onMouseDown={preventFocusSteal}
+              onTouchStart={preventFocusSteal}
+              disabled={!canSubmit}
+              style={{
+                ...styles.composerSendBtn,
+                opacity: canSubmit ? 1 : 0.35,
+                cursor: canSubmit ? "pointer" : "not-allowed",
+              }}
+              aria-label={t(lang, "reviewsSubmit")}
+            >
+              {submitting ? (
+                <span style={{ fontSize: 14, color: "#fff" }}>...</span>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M12 19V5M5 12l7-7 7 7" />
+                </svg>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -265,8 +280,6 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "flex-end",
     justifyContent: "center",
-    // z-index выше bottom-nav (10-30), header (1300 он чужой), но
-    // overlay sheets обычно 100-1500. 1500 — safe.
     zIndex: 1500,
   },
   sheet: {
@@ -293,12 +306,43 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     minHeight: 0,
     overflowY: "auto",
-    padding: "8px 20px 0",
+    padding: "8px 20px 16px",
     WebkitOverflowScrolling: "touch",
   },
-  title: { margin: "6px 0 14px", fontSize: 18, fontWeight: 700, letterSpacing: "-0.01em" },
-  row: { display: "flex", alignItems: "center", gap: 4, marginBottom: 12, flexWrap: "wrap" },
-  label: { fontSize: 13, color: "var(--muted)", marginRight: 6 },
+  headerRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 14,
+    gap: 10,
+  },
+  title: {
+    margin: 0,
+    fontSize: 18,
+    fontWeight: 700,
+    letterSpacing: "-0.01em",
+  },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: "50%",
+    background: "transparent",
+    border: "none",
+    color: "var(--muted)",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    padding: 0,
+    WebkitTapHighlightColor: "transparent",
+  },
+  starsRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 2,
+    marginBottom: 14,
+  },
   star: {
     background: "none",
     border: "none",
@@ -308,23 +352,6 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: 1,
     WebkitTapHighlightColor: "transparent",
   },
-  textarea: {
-    width: "100%",
-    padding: 14,
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: 12,
-    color: "var(--text)",
-    fontSize: 14,
-    lineHeight: 1.5,
-    fontFamily: "inherit",
-    resize: "vertical",
-    marginBottom: 12,
-    boxSizing: "border-box",
-    minHeight: 92,
-  },
-
-  // Photo grid: автоматическая сетка 3 столбца, квадратные ячейки.
   photoGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(3, 1fr)",
@@ -359,64 +386,68 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: "center",
     WebkitTapHighlightColor: "transparent",
   },
-  photoAdd: {
-    aspectRatio: "1",
-    borderRadius: 10,
-    background: "var(--surface)",
-    border: "1px dashed var(--border)",
-    color: "var(--muted)",
-    cursor: "pointer",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
-    padding: 0,
-    fontFamily: "inherit",
-    WebkitTapHighlightColor: "transparent",
-  },
-  photoAddLabel: {
-    fontSize: 11,
-    fontWeight: 600,
-    letterSpacing: "0.04em",
-    textTransform: "uppercase",
-  },
-
   error: { color: "var(--accent)", fontSize: 13, margin: "4px 0 12px" },
 
-  // Action bar — приклеена к низу sheet'а, ВНЕ scrollArea, всегда видна.
-  actions: {
-    display: "flex",
-    gap: 8,
-    padding: "12px 20px 16px",
-    borderTop: "1px solid var(--border)",
+  // Pill composer внизу sheet'а (как в CustomOrderPage).
+  composerWrap: {
+    padding: "8px 16px 14px",
     background: "var(--bg)",
+    borderTop: "1px solid var(--border)",
     flexShrink: 0,
   },
-  cancel: {
-    flex: 1,
-    padding: 13,
-    background: "transparent",
+  composer: {
+    display: "flex",
+    alignItems: "flex-end",
+    gap: 2,
+    background: "var(--surface)",
     border: "1px solid var(--border)",
-    borderRadius: 12,
+    borderRadius: 22,
+    padding: "4px 6px 4px 4px",
+    boxShadow: "0 4px 18px rgba(0,0,0,0.06)",
+  },
+  composerIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: "50%",
+    background: "transparent",
+    border: "none",
     color: "var(--muted)",
-    fontSize: 14,
-    fontWeight: 600,
     cursor: "pointer",
-    fontFamily: "inherit",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    padding: 0,
     WebkitTapHighlightColor: "transparent",
   },
-  submit: {
-    flex: 1.4,
-    padding: 13,
-    background: "var(--accent)",
-    border: "none",
-    borderRadius: 12,
-    color: "#fff",
+  composerTextarea: {
+    flex: 1,
+    minHeight: 36,
+    maxHeight: 140,
+    padding: "8px 4px",
     fontSize: 14,
-    fontWeight: 700,
-    cursor: "pointer",
+    lineHeight: 1.45,
+    background: "transparent",
+    border: "1px solid transparent",
+    borderRadius: 0,
+    resize: "none",
+    outline: "none",
     fontFamily: "inherit",
+    color: "var(--text)",
+  },
+  composerSendBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: "50%",
+    background: "var(--accent)",
+    color: "#fff",
+    border: "none",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    padding: 0,
+    transition: "opacity 0.15s, transform 0.15s",
     WebkitTapHighlightColor: "transparent",
   },
 };

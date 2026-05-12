@@ -57,6 +57,30 @@ reviewsRouter.post("/", (req, res) => {
   res.status(201).json({ id: id.id, ok: true });
 });
 
+// PATCH /reviews/:id — owner-only update (rating, text, image_urls).
+// Юзер может править ТОЛЬКО свой отзыв (проверка user_id из body).
+reviewsRouter.patch("/:id", (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const { user_id, rating, text, image_urls } = req.body;
+  if (!user_id || !text) return res.status(400).json({ error: "user_id and text required" });
+  const existing = db.prepare("SELECT user_id FROM reviews WHERE id = ?").get(id) as { user_id: string } | undefined;
+  if (!existing) return res.status(404).json({ error: "Review not found" });
+  if (existing.user_id !== String(user_id)) return res.status(403).json({ error: "Not your review" });
+  const r = Number(rating) || 5;
+  const finalRating = Math.min(5, Math.max(1, r));
+  const images = Array.isArray(image_urls)
+    ? image_urls.filter((x: unknown) => typeof x === "string" && x.startsWith("data:image/")).slice(0, 10)
+    : [];
+  const imagesJson = images.length > 0 ? JSON.stringify(images) : null;
+  db.prepare("UPDATE reviews SET rating = ?, text = ?, image_urls = ? WHERE id = ?").run(
+    finalRating,
+    String(text),
+    imagesJson,
+    id
+  );
+  res.json({ ok: true });
+});
+
 reviewsRouter.post("/:reviewId/comments", (req, res) => {
   const reviewId = parseInt(req.params.reviewId, 10);
   const { user_id, user_name, text, image_url } = req.body;

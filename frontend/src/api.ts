@@ -700,6 +700,22 @@ export async function addReview(
   if (!res.ok) throw new Error("Failed to add review");
 }
 
+export async function updateReview(
+  reviewId: number,
+  userId: string,
+  data: { rating?: number; text: string; image_urls?: string[] }
+) {
+  const res = await fetch(`${API_URL}/api/reviews/${reviewId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId, ...data }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || "Failed to update review");
+  }
+}
+
 export async function addReviewComment(
   reviewId: number,
   userId: string,

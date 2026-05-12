@@ -1,10 +1,9 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   getReviews,
   addReview,
-  addReviewComment,
+  updateReview,
   type Review,
-  type ReviewComment,
 } from "../api";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
@@ -31,21 +30,16 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [sheetOpen, setSheetOpen] = useState(false);
+  // editingReview — если задан, sheet открывается в edit-режиме с
+  // pre-fill значениями. submit идёт через updateReview API.
+  const [editingReview, setEditingReview] = useState<Review | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [commentFor, setCommentFor] = useState<number | null>(null);
-  const [commentText, setCommentText] = useState("");
-  const [commentPhoto, setCommentPhoto] = useState<string | null>(null);
-  // Comment-image lightbox (single, без свайпа) — для прикреплённых
-  // фото в reply'ях. Photo lightbox в самом отзыве — отдельный state
-  // с поддержкой свайпа и FLIP.
-  const [commentLightbox, setCommentLightbox] = useState<string | null>(null);
   const [reviewLightbox, setReviewLightbox] = useState<{
     images: string[];
     startIndex: number;
     rect: DOMRect | null;
   } | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const refresh = () => {
     setLoading(true);
@@ -60,12 +54,17 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
     return sum / reviews.length;
   }, [reviews]);
 
-  const handleAddReview = async (rating: number, text: string, photos: string[]) => {
+  const handleSubmitReview = async (rating: number, text: string, photos: string[]) => {
     setSubmitting(true);
     setError("");
     try {
-      await addReview(userId, { user_name: firstName, rating, text, image_urls: photos });
+      if (editingReview) {
+        await updateReview(editingReview.id, userId, { rating, text, image_urls: photos });
+      } else {
+        await addReview(userId, { user_name: firstName, rating, text, image_urls: photos });
+      }
       setSheetOpen(false);
+      setEditingReview(null);
       refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : t(lang, "reviewsAddError"));
@@ -74,38 +73,14 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
     }
   };
 
-  const resetCommentForm = () => {
-    setCommentFor(null);
-    setCommentText("");
-    setCommentPhoto(null);
+  const openEdit = (r: Review) => {
+    setEditingReview(r);
+    setSheetOpen(true);
   };
 
-  const handleAddComment = async (reviewId: number) => {
-    if (!commentText.trim() && !commentPhoto) return;
-    setSubmitting(true);
-    try {
-      await addReviewComment(reviewId, userId, {
-        user_name: firstName,
-        text: commentText.trim(),
-        image_url: commentPhoto,
-      });
-      resetCommentForm();
-      refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t(lang, "reviewsCommentError"));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handlePickPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    if (file.size > 2 * 1024 * 1024) return;
-    const reader = new FileReader();
-    reader.onload = () => setCommentPhoto((reader.result as string) || null);
-    reader.readAsDataURL(file);
+  const closeSheet = () => {
+    setSheetOpen(false);
+    setEditingReview(null);
   };
 
   if (loading) {
@@ -162,98 +137,10 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
               />
             )}
 
-            {r.comments?.map((c: ReviewComment) => (
-              <div key={c.id} style={styles.reply}>
-                <b style={styles.replyName}>{c.user_name || t(lang, "guest")}</b>
-                <span style={styles.replyDate}>{formatDate(c.created_at, lang)}</span>
-                {c.text && <p style={styles.replyText}>{c.text}</p>}
-                {c.image_url && (
-                  <button
-                    type="button"
-                    onClick={() => setCommentLightbox(c.image_url || null)}
-                    style={styles.replyImgBtn}
-                    aria-label="image"
-                  >
-                    <img src={c.image_url} alt="" style={styles.replyImg} />
-                  </button>
-                )}
-              </div>
-            ))}
-
-            {commentFor === r.id ? (
-              <div style={styles.commentForm}>
-                {commentPhoto && (
-                  <div style={styles.previewWrap}>
-                    <img src={commentPhoto} alt="" style={styles.preview} />
-                    <button
-                      type="button"
-                      onClick={() => setCommentPhoto(null)}
-                      onMouseDown={(e) => e.preventDefault()}
-                      onTouchStart={(e) => e.preventDefault()}
-                      style={styles.previewRemove}
-                      aria-label={t(lang, "reviewsRemovePhoto")}
-                    >
-                      ×
-                    </button>
-                  </div>
-                )}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePickPhoto}
-                  style={{ display: "none" }}
-                />
-                {/* Chat-style composer (как в CustomOrderPage):
-                    скрепка слева — textarea в центре — send справа. */}
-                <div style={styles.composer}>
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    onMouseDown={(e) => e.preventDefault()}
-                    onTouchStart={(e) => e.preventDefault()}
-                    style={styles.composerIconBtn}
-                    aria-label={t(lang, "reviewsAttachPhoto")}
-                    title={t(lang, "reviewsAttachPhoto")}
-                  >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-                    </svg>
-                  </button>
-                  <textarea
-                    value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
-                    placeholder={t(lang, "reviewsCommentPlaceholder")}
-                    rows={1}
-                    style={styles.composerTextarea}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleAddComment(r.id)}
-                    onMouseDown={(e) => e.preventDefault()}
-                    onTouchStart={(e) => e.preventDefault()}
-                    disabled={submitting || (!commentText.trim() && !commentPhoto)}
-                    style={{
-                      ...styles.composerSendBtn,
-                      opacity: submitting || (!commentText.trim() && !commentPhoto) ? 0.35 : 1,
-                      cursor: submitting || (!commentText.trim() && !commentPhoto) ? "not-allowed" : "pointer",
-                    }}
-                    aria-label={t(lang, "reviewsSend")}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                      <path d="M12 19V5M5 12l7-7 7 7" />
-                    </svg>
-                  </button>
-                </div>
-                <div style={styles.composerCancelRow}>
-                  <button type="button" onClick={resetCommentForm} style={styles.commentCancel}>
-                    {t(lang, "reviewsCancel")}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button type="button" onClick={() => setCommentFor(r.id)} style={styles.replyBtn}>
-                {t(lang, "reviewsReply")}
+            {/* Edit-кнопка показывается ТОЛЬКО на своём отзыве. */}
+            {r.user_id === userId && (
+              <button type="button" onClick={() => openEdit(r)} style={styles.editBtn}>
+                {t(lang, "reviewsEdit")}
               </button>
             )}
           </article>
@@ -274,15 +161,14 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
         open={sheetOpen}
         submitting={submitting}
         error={error}
-        onClose={() => setSheetOpen(false)}
-        onSubmit={handleAddReview}
+        initial={editingReview ? {
+          rating: editingReview.rating,
+          text: editingReview.text,
+          image_urls: editingReview.image_urls ?? [],
+        } : undefined}
+        onClose={closeSheet}
+        onSubmit={handleSubmitReview}
       />
-
-      {commentLightbox && (
-        <div style={styles.lightbox} onClick={() => setCommentLightbox(null)}>
-          <img src={commentLightbox} alt="" style={styles.lightboxImg} />
-        </div>
-      )}
 
       {reviewLightbox && (
         <ReviewLightbox
@@ -506,92 +392,20 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "inherit",
     letterSpacing: "0.01em",
   },
-  reply: {
-    background: "var(--bg)", borderLeft: "3px solid var(--accent)",
-    padding: "8px 10px", borderRadius: 10,
-  },
-  replyName: { fontSize: 11, fontWeight: 700 },
-  replyDate: { fontSize: 10, color: "var(--muted)", marginLeft: 8 },
-  replyText: { fontSize: 12, margin: "4px 0 0" },
-  replyImgBtn: {
-    display: "block", marginTop: 6, padding: 0,
-    background: "none", border: "none", cursor: "pointer",
-  },
-  replyImg: {
-    maxWidth: "100%", maxHeight: 180,
-    borderRadius: 8, display: "block",
-  },
-  commentForm: { marginTop: 8, display: "flex", flexDirection: "column", gap: 8 },
-  previewWrap: {
-    position: "relative", display: "inline-block",
-  },
-  preview: {
-    maxHeight: 120, maxWidth: "100%",
-    borderRadius: 10, display: "block",
-    border: "1px solid var(--border)",
-  },
-  previewRemove: {
-    position: "absolute", top: 4, right: 4,
-    width: 22, height: 22, borderRadius: "50%",
-    background: "rgba(0,0,0,0.65)", color: "#fff",
-    border: "none", cursor: "pointer",
-    fontSize: 16, lineHeight: "20px",
-    display: "flex", alignItems: "center", justifyContent: "center",
+  // Edit-кнопка для своего отзыва — accent-цвет, под текстом отзыва.
+  editBtn: {
+    alignSelf: "flex-start",
+    background: "none",
+    border: "none",
+    color: "var(--accent)",
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
     padding: 0,
+    fontFamily: "inherit",
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
     WebkitTapHighlightColor: "transparent",
-  },
-  // Chat-style composer — pill с paperclip / textarea / send.
-  // Идентичен CustomOrderPage composer style.
-  composer: {
-    display: "flex",
-    alignItems: "flex-end",
-    gap: 2,
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: 22,
-    padding: "4px 6px 4px 4px",
-    boxShadow: "0 4px 18px rgba(0,0,0,0.06)",
-  },
-  composerIconBtn: {
-    width: 36, height: 36, borderRadius: "50%",
-    background: "transparent", border: "none",
-    color: "var(--muted)", cursor: "pointer",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    flexShrink: 0, padding: 0,
-    WebkitTapHighlightColor: "transparent",
-  },
-  composerTextarea: {
-    flex: 1, minHeight: 36, maxHeight: 140,
-    padding: "8px 4px",
-    fontSize: 14, lineHeight: 1.45,
-    background: "transparent", border: "1px solid transparent",
-    borderRadius: 0, resize: "none", outline: "none",
-    fontFamily: "inherit", color: "var(--text)",
-  },
-  composerSendBtn: {
-    width: 36, height: 36, borderRadius: "50%",
-    background: "var(--accent)", color: "#fff",
-    border: "none", display: "flex",
-    alignItems: "center", justifyContent: "center",
-    flexShrink: 0, padding: 0,
-    transition: "opacity 0.15s, transform 0.15s",
-    WebkitTapHighlightColor: "transparent",
-  },
-  composerCancelRow: {
-    display: "flex", justifyContent: "flex-end",
-    paddingRight: 8,
-  },
-  commentCancel: {
-    padding: "4px 12px", background: "transparent",
-    border: "none", borderRadius: 10,
-    color: "var(--muted)", fontSize: 12, cursor: "pointer",
-    fontFamily: "inherit", letterSpacing: "0.02em",
-    WebkitTapHighlightColor: "transparent",
-  },
-  replyBtn: {
-    alignSelf: "flex-start", background: "none", border: "none",
-    color: "var(--accent)", fontSize: 12, cursor: "pointer",
-    padding: 0, fontFamily: "inherit",
   },
   fab: {
     position: "fixed",

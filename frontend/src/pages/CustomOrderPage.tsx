@@ -84,21 +84,26 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   }, [customDesc]);
 
   // visualViewport → direct DOM (без React state). State updates во
-  // время keyboard animation вызывали re-render, который иногда
-  // приводил к «исчезновению» контента (1 sec задержка). Тут пишем
-  // прямо в wrap.style.bottom — браузер сразу применяет, без React
-  // reconciliation. Плюс CSS transition на bottom для smooth slide
-  // вместе с keyboard.
+  // время keyboard animation вызывали re-render, который приводил к
+  // «исчезновению» контента. Прямой запись в wrap.style.bottom +
+  // CSS transition даёт smooth slide без re-render'ов.
   useEffect(() => {
     const vv = window.visualViewport;
     const wrap = wrapRef.current;
     if (!vv || !wrap) return;
+    // Фиксируем reference height на mount. window.innerHeight на iOS
+    // Telegram WebView может меняться при keyboard animation — не
+    // используем его в формуле, иначе offset вычисляется неправильно.
+    const refHeight = window.innerHeight;
     let raf: number | null = null;
     const apply = () => {
-      const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-      // offset > 0 = keyboard открыта → bottom = keyboard height.
-      // offset === 0 → bottom = 64 (резерв под bottom-nav).
-      wrap.style.bottom = offset > 0 ? `${offset}px` : "64px";
+      const visible = vv.height + vv.offsetTop;
+      // Clamp: предотвращаем «вылет» wrap'а за пределы viewport если
+      // визуальный viewport вдруг отдал странные значения.
+      const overlap = Math.max(0, Math.min(refHeight - 200, refHeight - visible));
+      // overlap > 0 → клавиатура открыта → bottom прижимаем к её
+      // верхнему краю. = 0 → дефолт 64 (резерв под bottom-nav).
+      wrap.style.bottom = overlap > 0 ? `${overlap}px` : "64px";
     };
     const schedule = () => {
       if (raf != null) cancelAnimationFrame(raf);

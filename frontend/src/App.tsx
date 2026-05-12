@@ -329,17 +329,21 @@ function App() {
       } catch {}
     };
     // Если фокус оказался внутри keyboard-aware контейнера (CustomOrderPage,
-    // NewReviewSheet) — body НЕ блокируется. Эти страницы сами управляют
-    // позиционированием composer через visualViewport и position:fixed.
-    // Body-lock внутри них вызывал repaint и «исчезновение» контента на
-    // время keyboard animation.
+    // NewReviewSheet) — body НЕ блокируется (position:fixed). Эти страницы
+    // сами управляют позиционированием composer через visualViewport.
+    // НО bottom-nav прячется через class zen-input-focused — иначе iOS
+    // авто-репозиционирует его НАД клавиатуру (баг «футер всплывает»).
     const isInsideKeyboardAware = (el: EventTarget | null): boolean => {
       if (!el || !(el instanceof Element)) return false;
       return !!el.closest('[data-keyboard-aware="true"]');
     };
     const onFocusIn = (e: FocusEvent) => {
       if (!isInputEl(e.target)) return;
-      if (isInsideKeyboardAware(e.target)) return;
+      if (isInsideKeyboardAware(e.target)) {
+        // Скрываем nav (через CSS class) — но body НЕ блокируем.
+        document.body.classList.add("zen-input-focused");
+        return;
+      }
       lockBody();
     };
     const onFocusOut = (e: FocusEvent) => {
