@@ -97,6 +97,12 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   const refHeightRef = useRef<number>(typeof window !== "undefined" ? window.innerHeight : 800);
   const HEADER = 62;
   const NAV = 64;
+  // Точечный предикат высоты клавиатуры iOS (без overshoot). Используется
+  // в handleFocus, чтобы стартовать height-transition синхронно с focus
+  // event'ом (а не позже, когда первый vv.resize прилетит). На iPhone
+  // ~290px включая QuickType bar; vv.resize потом подтянет точное
+  // значение (разница в пределах 20-40px, заметно меньше с предиктом).
+  const PREDICTED_KB = 290;
 
   useEffect(() => {
     const vv = window.visualViewport;
@@ -122,15 +128,23 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
     };
   }, []);
 
-  // wrap.height не трогаем здесь — visualViewport.resize драйвит height
-  // frame-by-frame во время kb slide, и без CSS transition composer
-  // едет в синхрон с клавиатурой. Раньше предиктивный set создавал
-  // визуальный 2-stage jump (predicted shrink → settle к actual).
+  // ВАЖНО: предиктивно сетим wrap.height СРАЗУ на focus event'е,
+  // не дожидаясь vv.resize. Иначе на iOS первый vv.resize fire'ит
+  // с задержкой ~50-100ms, transition стартует поздно, composer
+  // визуально едет ПОСЛЕ того как клавиатура уже наполовину поднялась.
+  // С предиктом transition стартует ровно в момент когда iOS начинает
+  // slide-up клавиатуры → они идут синхронно.
   const handleFocus = () => {
     setKbOpen(true);
     document.body.classList.add("zen-input-focused");
     document.body.style.overflow = "hidden";
     document.documentElement.style.overflow = "hidden";
+    const wrap = wrapRef.current;
+    if (wrap) {
+      const predicted = Math.max(200, refHeightRef.current - HEADER - PREDICTED_KB);
+      wrap.style.bottom = "auto";
+      wrap.style.height = `${predicted}px`;
+    }
   };
   const handleBlur = () => {
     setKbOpen(false);
@@ -261,19 +275,26 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
           <BotBubble>
             <div style={styles.botBubbleTitle}>{t(lang, "customOrderSubtitle")}</div>
             <div style={styles.botBubbleSubtitle}>{t(lang, "customOrderSubtitleHint")}</div>
-            {sellerHandle && (
-              <div style={styles.botBubbleHint}>
-                {t(lang, "customOrderReplyFrom")}{" "}
-                <a
-                  href={SELLER_TG_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={styles.replyHintLink}
-                >
-                  {SELLER_HANDLE}
-                </a>
-              </div>
-            )}
+            {/* Hint всегда рендерится (даже когда sellerHandle ещё не
+                загружен) с visibility: hidden — резервирует место в
+                bot-bubble, чтобы при resolve'е API bubble не вырос и
+                не сдвинул layout на ~0.5s после открытия клавиатуры. */}
+            <div
+              style={{
+                ...styles.botBubbleHint,
+                visibility: sellerHandle ? "visible" : "hidden",
+              }}
+            >
+              {t(lang, "customOrderReplyFrom")}{" "}
+              <a
+                href={SELLER_TG_URL || "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={styles.replyHintLink}
+              >
+                {SELLER_HANDLE || "@krot_eno"}
+              </a>
+            </div>
           </BotBubble>
 
           {/* Photo preview bubbles (multiple, до 5) */}
