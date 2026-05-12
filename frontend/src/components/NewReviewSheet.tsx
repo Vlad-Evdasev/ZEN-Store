@@ -25,8 +25,27 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
   const [localError, setLocalError] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const paperclipRef = useRef<HTMLDivElement | null>(null);
   const [mounted, setMounted] = useState(open);
   const [visible, setVisible] = useState(false);
+
+  // Native non-passive touchstart/mousedown на paperclip — гарантированно
+  // блокирует focus shift на iOS Telegram WebView (React passive
+  // events не всегда работают). Textarea сохраняет фокус.
+  useEffect(() => {
+    if (!open) return;
+    const el = paperclipRef.current;
+    if (!el) return;
+    const handler = (e: Event) => {
+      e.preventDefault();
+    };
+    el.addEventListener("touchstart", handler, { passive: false });
+    el.addEventListener("mousedown", handler, { passive: false });
+    return () => {
+      el.removeEventListener("touchstart", handler);
+      el.removeEventListener("mousedown", handler);
+    };
+  }, [open, mounted]);
 
   const [vvHeight, setVvHeight] = useState<number | null>(
     typeof window !== "undefined" && window.visualViewport ? window.visualViewport.height : null
@@ -156,8 +175,11 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
       reader.readAsDataURL(file);
     });
     setLocalError(lastErr);
-    // Refocus textarea — file picker на iOS забирает фокус.
-    setTimeout(() => textareaRef.current?.focus(), 60);
+    // Множественные refocus попытки. change event user-initiated →
+    // focus() внутри может открыть keyboard на iOS.
+    textareaRef.current?.focus();
+    requestAnimationFrame(() => textareaRef.current?.focus());
+    setTimeout(() => textareaRef.current?.focus(), 100);
   };
 
   const removePhoto = (idx: number) => {
@@ -282,17 +304,15 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
         {/* Pill composer — paperclip / textarea / send (как CustomOrderPage). */}
         <div style={styles.composerWrap}>
           <div style={styles.composer}>
-            {/* div role=button (не focusable) — не забирает focus у
-                textarea при клике на скрепку. + refocus textarea перед
-                file picker, keyboard остаётся открытой. Симметрично
-                CustomOrderPage. */}
+            {/* div role=button + native non-passive touchstart/mousedown
+                listener (см. useEffect выше). Гарантированно блокирует
+                focus shift на iOS Telegram WebView. Textarea сохраняет
+                focus → keyboard остаётся открытой. */}
             <div
+              ref={paperclipRef}
               role="button"
               tabIndex={-1}
               aria-label="add photo"
-              onMouseDown={preventFocusSteal}
-              onTouchStart={preventFocusSteal}
-              onPointerDown={(e) => e.preventDefault()}
               onClick={(e) => {
                 if (photos.length >= MAX_PHOTOS) return;
                 e.preventDefault();

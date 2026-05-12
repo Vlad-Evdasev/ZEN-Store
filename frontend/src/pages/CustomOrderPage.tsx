@@ -57,6 +57,26 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const paperclipRef = useRef<HTMLDivElement>(null);
+
+  // Native non-passive touchstart на скрепке — React's synthetic
+  // touchstart на iOS Telegram WebView иногда не блокирует focus shift
+  // даже с preventDefault (события могут быть passive). Native listener
+  // с {passive: false} железно блокирует default touch action включая
+  // focus shift на саму кнопку. Textarea сохраняет focus.
+  useEffect(() => {
+    const el = paperclipRef.current;
+    if (!el) return;
+    const handler = (e: TouchEvent) => {
+      e.preventDefault();
+    };
+    el.addEventListener("touchstart", handler, { passive: false });
+    el.addEventListener("mousedown", handler as unknown as EventListener, { passive: false });
+    return () => {
+      el.removeEventListener("touchstart", handler);
+      el.removeEventListener("mousedown", handler as unknown as EventListener);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -190,9 +210,13 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
     const reader = new FileReader();
     reader.onload = () => setCustomPhoto((reader.result as string) || null);
     reader.readAsDataURL(file);
-    // После выбора фото — refocus textarea чтобы клавиатура вернулась
-    // (file picker на iOS забирает фокус и закрывает клавиатуру).
-    setTimeout(() => textareaRef.current?.focus(), 60);
+    // Множественные попытки refocus после file picker'а на iOS.
+    // change event сам по себе user-initiated → focus() внутри него
+    // может открыть keyboard. Доп. попытки через rAF и setTimeout —
+    // на случай если первая не сработала (iOS варианты).
+    textareaRef.current?.focus();
+    requestAnimationFrame(() => textareaRef.current?.focus());
+    setTimeout(() => textareaRef.current?.focus(), 100);
   };
 
   const onComposerKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -274,17 +298,13 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
               aria-hidden
             />
 
-            {/* DIV вместо button — div НЕ focusable, не забирает focus
-                у textarea при клике. На iOS button.preventDefault()
-                ненадёжно блокирует focus shift, div работает чище.
-                + явно refocus textarea ПЕРЕД file picker — keyboard
-                остаётся открытой когда юзер тапает скрепку. */}
+            {/* DIV вместо button + native non-passive touchstart
+                listener (см. useEffect выше) — гарантированно блокирует
+                focus shift на iOS Telegram WebView. */}
             <div
+              ref={paperclipRef}
               role="button"
               tabIndex={-1}
-              onMouseDown={preventFocusSteal}
-              onTouchStart={preventFocusSteal}
-              onPointerDown={preventFocusSteal}
               onClick={(e) => {
                 e.preventDefault();
                 textareaRef.current?.focus();
