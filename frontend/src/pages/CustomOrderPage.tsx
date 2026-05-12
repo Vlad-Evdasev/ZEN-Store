@@ -291,31 +291,37 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
         {/* Composer */}
         <div style={styles.composerWrap}>
           <div style={styles.composer}>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={onPhotoChange}
-              style={styles.fileHidden}
-              aria-hidden
-            />
-
+            {/* File input лежит ПРЯМО под paperclip icon (overlay-input
+                approach). Юзер тапает на иконку → клик идёт ДИРЕКТНО
+                в input (не через programmatic .click() которое iOS
+                Telegram WebView иногда блокирует). Picker открывается
+                надёжно. */}
             <div
-              role="button"
-              tabIndex={-1}
-              onClick={() => {
-                if (customPhotos.length >= MAX_PHOTOS) return;
-                fileInputRef.current?.click();
-              }}
               style={{
                 ...styles.composerIconBtn,
+                position: "relative",
                 cursor: customPhotos.length >= MAX_PHOTOS ? "not-allowed" : "pointer",
                 opacity: customPhotos.length >= MAX_PHOTOS ? 0.35 : 1,
               }}
               aria-label={t(lang, "customOrderPhotoAdd")}
             >
               <PaperclipIcon />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={onPhotoChange}
+                disabled={customPhotos.length >= MAX_PHOTOS}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  opacity: 0,
+                  cursor: customPhotos.length >= MAX_PHOTOS ? "not-allowed" : "pointer",
+                  fontSize: 0,
+                }}
+                aria-hidden
+              />
             </div>
 
             <textarea
@@ -594,13 +600,14 @@ const styles: Record<string, React.CSSProperties> = {
     backdropFilter: "blur(4px)",
   },
 
-  /* Composer */
+  /* Composer — paddingBottom убран, чтобы var(--bg) полоса под пилюлей
+     не торчала. Пилюля прижата к низу wrap'а (= top клавиатуры). */
   composerWrap: {
     display: "flex",
     flexDirection: "column",
     gap: 8,
     paddingTop: 6,
-    paddingBottom: 10,
+    paddingBottom: "max(2px, env(safe-area-inset-bottom, 0))",
     flexShrink: 0,
   },
   composer: {

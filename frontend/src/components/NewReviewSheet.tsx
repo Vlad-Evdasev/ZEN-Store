@@ -33,14 +33,24 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
     typeof window !== "undefined" && window.visualViewport ? window.visualViewport.height : null
   );
   // vvHeight = доступная над-клавиатурой область. Применяем как
-  // overlay.height — sheet внутри сидит на flex-end и автоматически
-  // прижимается к keyboard top без marginBottom manipulations.
+  // overlay.height — sheet внутри сидит на flex-end и прижимается
+  // к keyboard top без marginBottom manipulations.
+  // ВАЖНО: vvHeight МОНОТОННО УМЕНЬШАЕТСЯ пока sheet open. Когда
+  // юзер blur'нет textarea и keyboard закроется — НЕ растим vvHeight
+  // обратно (иначе sheet drops dramatically вниз и юзер думает что
+  // он закрылся «вместе с клавиатурой»). Sheet остаётся в raised
+  // позиции пока юзер явно не закроет.
   useEffect(() => {
     if (!open) return;
     const vv = window.visualViewport;
     if (!vv) return;
     const update = () => {
-      setVvHeight(vv.height);
+      setVvHeight((prev) => {
+        // Shrink (keyboard opening) — apply. Grow (keyboard closing) —
+        // ignore, sheet stays at minimum reached.
+        if (prev == null) return vv.height;
+        return Math.min(prev, vv.height);
+      });
     };
     update();
     vv.addEventListener("resize", update);
@@ -270,29 +280,17 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
           )}
         </div>
 
-        <input
-          ref={fileInputRef}
-          id="new-review-photo-input"
-          type="file"
-          accept="image/*"
-          multiple
-          onChange={handlePickPhotos}
-          style={{ display: "none" }}
-        />
 
         {/* Pill composer — paperclip / textarea / send (как CustomOrderPage). */}
         <div style={styles.composerWrap}>
           <div style={styles.composer}>
+            {/* File input лежит ПРЯМО под paperclip icon (direct-click
+                avoids programmatic .click() issues on iOS Telegram). */}
             <div
-              role="button"
-              tabIndex={-1}
               aria-label="add photo"
-              onClick={() => {
-                if (photos.length >= MAX_PHOTOS) return;
-                fileInputRef.current?.click();
-              }}
               style={{
                 ...styles.composerIconBtn,
+                position: "relative",
                 cursor: photos.length >= MAX_PHOTOS ? "not-allowed" : "pointer",
                 opacity: photos.length >= MAX_PHOTOS ? 0.35 : 1,
               }}
@@ -300,6 +298,22 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
               </svg>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handlePickPhotos}
+                disabled={photos.length >= MAX_PHOTOS}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  opacity: 0,
+                  cursor: photos.length >= MAX_PHOTOS ? "not-allowed" : "pointer",
+                  fontSize: 0,
+                }}
+                aria-hidden
+              />
             </div>
             <textarea
               ref={textareaRef}
