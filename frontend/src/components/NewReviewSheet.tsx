@@ -14,7 +14,17 @@ interface NewReviewSheetProps {
 
 const MAX_PHOTOS = 10;
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
-const SHEET_ANIM = 320;
+// SHEET_ANIM — продолжительность open/close transition. Bumped 320→400
+// для более «нежного» feel'а: чуть медленнее sheet выезжает, blur
+// плавно растёт, content не «всплывает» резко.
+const SHEET_ANIM = 400;
+// Backdrop blur amount. Animated 0px→BLUR_AMOUNT при open, обратно при
+// close. Раньше блюр был статичный (всегда 6px пока overlay в DOM) →
+// при open/close виден мгновенный «pop» blur'а. Animated → fade.
+const BLUR_AMOUNT = 8;
+// Easing iOS-style — сглаживает discrete vv.resize и transform changes
+// в один continuous flow.
+const EASING = "cubic-bezier(0.32, 0.72, 0, 1)";
 // Upper-bound предикат высоты iOS-клавиатуры (см. CustomOrderPage).
 // Лучше overshoot чем undershoot — overshoot ощущается как settling,
 // undershoot как jump вверх когда vv.resize корректирует.
@@ -328,23 +338,34 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
   const isClosing = mounted && !visible;
   const effectiveHeight = isClosing && frozenHeight != null ? frozenHeight : overlayHeight;
 
+  // Combined transition: background-color + backdrop-filter + (height
+  // когда не closing) — все плавные, синхронизированы с sheet'ом.
+  // background-color и backdrop-filter всегда transition'ятся (даже
+  // во время close), чтобы blur плавно уходил вместе с overlay'ем.
+  const overlayTransition =
+    `background-color ${SHEET_ANIM}ms ${EASING}, ` +
+    `backdrop-filter ${SHEET_ANIM}ms ${EASING}, ` +
+    `-webkit-backdrop-filter ${SHEET_ANIM}ms ${EASING}` +
+    (isClosing ? "" : `, height 260ms ${EASING}`);
+
   const overlayStyle: React.CSSProperties = {
     ...styles.overlay,
     height: effectiveHeight,
     background: visible ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0)",
-    transition: isClosing
-      ? `background-color ${SHEET_ANIM}ms cubic-bezier(0.32, 0.72, 0, 1)`
-      : `background-color ${SHEET_ANIM}ms cubic-bezier(0.32, 0.72, 0, 1), ` +
-        `height 260ms cubic-bezier(0.32, 0.72, 0, 1)`,
+    // backdrop-filter теперь animatable — fade в blur при open, fade
+    // обратно в 0 при close. Раньше blur был статичный (всегда 6px) →
+    // pop'ал мгновенно когда overlay появлялся.
+    backdropFilter: visible ? `blur(${BLUR_AMOUNT}px)` : "blur(0px)",
+    WebkitBackdropFilter: visible ? `blur(${BLUR_AMOUNT}px)` : "blur(0px)",
+    transition: overlayTransition,
   };
   const sheetStyle: React.CSSProperties = {
     ...styles.sheet,
     maxHeight: Math.max(280, effectiveHeight - SHEET_TOP_GAP),
     transform: visible ? "translateY(0)" : "translateY(100%)",
     transition: isClosing
-      ? `transform ${SHEET_ANIM}ms cubic-bezier(0.32, 0.72, 0, 1)`
-      : `transform ${SHEET_ANIM}ms cubic-bezier(0.32, 0.72, 0, 1), ` +
-        `max-height 260ms cubic-bezier(0.32, 0.72, 0, 1)`,
+      ? `transform ${SHEET_ANIM}ms ${EASING}`
+      : `transform ${SHEET_ANIM}ms ${EASING}, max-height 260ms ${EASING}`,
   };
 
   return (
@@ -495,16 +516,19 @@ const styles: Record<string, React.CSSProperties> = {
     // над-клавиатурой область, его bottom edge движется вверх когда
     // vvHeight уменьшается → sheet внутри (flex-end) автоматически
     // прижимается к keyboard top.
+    // background + backdropFilter применяются динамически в overlayStyle
+    // выше (animated fade-in/out при open/close).
     top: 0,
     left: 0,
     right: 0,
-    background: "rgba(0,0,0,0.55)",
-    backdropFilter: "blur(6px)",
-    WebkitBackdropFilter: "blur(6px)",
     display: "flex",
     alignItems: "flex-end",
     justifyContent: "center",
     zIndex: 1500,
+    // willChange — даём браузеру шанс promote'нуть overlay в свой
+    // compositing layer, чтобы animation backdrop-filter была smooth
+    // (особенно важно на iOS Safari).
+    willChange: "backdrop-filter, background-color",
   },
   sheet: {
     // Прозрачный sheet — содержимое (rating-card, bot-bubble, photo
