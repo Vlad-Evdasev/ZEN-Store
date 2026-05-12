@@ -390,7 +390,7 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
                 textareaUnlockTimerRef.current = window.setTimeout(() => {
                   setTextareaLocked(false);
                   textareaUnlockTimerRef.current = null;
-                }, 1200);
+                }, 1500);
               }}
             >
               {/* НЕТ `multiple` атрибута — это критично. С `multiple`
