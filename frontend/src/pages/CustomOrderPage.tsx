@@ -603,14 +603,14 @@ const styles: Record<string, React.CSSProperties> = {
     backdropFilter: "blur(4px)",
   },
 
-  /* Composer прижат к низу wrap'а. paddingBottom: 0 — никакого
-     var(--bg) фона между пилюлей и keyboard top'ом. */
+  /* Composer слегка приподнят над низом wrap'а — 2px зазора чтобы
+     пилюля «парила» над футером, не лип к низу. */
   composerWrap: {
     display: "flex",
     flexDirection: "column",
     gap: 8,
     paddingTop: 6,
-    paddingBottom: 0,
+    paddingBottom: 2,
     flexShrink: 0,
   },
   composer: {
@@ -624,8 +624,9 @@ const styles: Record<string, React.CSSProperties> = {
     boxShadow: "0 4px 18px rgba(0,0,0,0.06)",
   },
   composerIconBtn: {
-    width: 36,
-    height: 36,
+    // 32×32 (было 36×36) — пилюля компактнее, выглядит как chat input.
+    width: 32,
+    height: 32,
     borderRadius: "50%",
     background: "transparent",
     border: "none",
@@ -639,9 +640,11 @@ const styles: Record<string, React.CSSProperties> = {
   },
   composerTextarea: {
     flex: 1,
-    minHeight: 36,
+    // minHeight 32 (было 36) + padding 6 (было 8) → пилюля компактнее
+    // на 8px по высоте. Выглядит как chat input pill, не как textarea.
+    minHeight: 32,
     maxHeight: 180,
-    padding: "8px 4px",
+    padding: "6px 4px",
     fontSize: 14,
     lineHeight: 1.45,
     background: "transparent",
@@ -651,8 +654,9 @@ const styles: Record<string, React.CSSProperties> = {
     outline: "none",
   },
   composerSendBtn: {
-    width: 36,
-    height: 36,
+    // 32×32 (было 36×36).
+    width: 32,
+    height: 32,
     borderRadius: "50%",
     background: "var(--accent)",
     color: "#fff",
