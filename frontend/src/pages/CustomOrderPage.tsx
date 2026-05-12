@@ -172,6 +172,10 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
       document.body.classList.remove("zen-input-focused");
       document.body.style.overflow = "";
       document.documentElement.style.overflow = "";
+      if (textareaUnlockTimerRef.current != null) {
+        clearTimeout(textareaUnlockTimerRef.current);
+        textareaUnlockTimerRef.current = null;
+      }
     };
   }, []);
 
@@ -193,6 +197,15 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   // нет outside-tap dismiss сценария → нет бага. Trade-off: юзер
   // выбирает 1 фото за тап. Для несколько фото тапает скрепку
   // несколько раз (до MAX_PHOTOS = 5).
+  // Дополнительно блокируем textarea на 1.2s после paperclip-клика
+  // (pointer-events: none + opacity dim). Без этого быстрый тап
+  // textarea после dismiss picker'а ловит iOS-state machine quirk:
+  // kb открывается и сразу сама закрывается. iOS нужно ~1s чтобы
+  // очистить state после file-input-клика; programmatic focus не
+  // возвращает kb. Единственное надёжное решение — не дать юзеру
+  // фокусить textarea до того как iOS очистит state.
+  const [textareaLocked, setTextareaLocked] = useState(false);
+  const textareaUnlockTimerRef = useRef<number | null>(null);
 
   // preventFocusSteal — на mobile тап по кнопке (paperclip, ✕, send)
   // блюрит textarea → клавиатура схлопывается. preventDefault на
@@ -362,7 +375,22 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
               }}
               aria-label={t(lang, "customOrderPhotoAdd")}
               onClick={() => {
-                if (kbOpen) textareaRef.current?.blur();
+                if (kbOpen) {
+                  textareaRef.current?.blur();
+                  return;
+                }
+                // Блокируем textarea на 1.2s. Без этого быстрая
+                // последовательность paperclip → dismiss picker →
+                // tap textarea ловит iOS-state-machine баг (kb
+                // открывается и сразу сама закрывается).
+                setTextareaLocked(true);
+                if (textareaUnlockTimerRef.current != null) {
+                  clearTimeout(textareaUnlockTimerRef.current);
+                }
+                textareaUnlockTimerRef.current = window.setTimeout(() => {
+                  setTextareaLocked(false);
+                  textareaUnlockTimerRef.current = null;
+                }, 1200);
               }}
             >
               {/* НЕТ `multiple` атрибута — это критично. С `multiple`
@@ -396,7 +424,15 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
                 onBlur={handleBlur}
                 placeholder={t(lang, "customOrderPlaceholderDesc")}
                 rows={1}
-                style={styles.composerTextarea}
+                style={{
+                  ...styles.composerTextarea,
+                  // Lock на 1.2s после paperclip-клика чтобы iOS успел
+                  // очистить state machine. pointer-events:none делает
+                  // tap'ы прозрачными, opacity показывает «погоди».
+                  pointerEvents: textareaLocked ? "none" : "auto",
+                  opacity: textareaLocked ? 0.55 : 1,
+                  transition: "opacity 0.15s",
+                }}
                 required
               />
 
