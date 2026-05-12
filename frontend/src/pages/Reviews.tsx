@@ -9,6 +9,7 @@ import {
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 import { NewReviewSheet } from "../components/NewReviewSheet";
+import { ReviewLightbox } from "../components/ReviewLightbox";
 
 interface ReviewsProps {
   userId: string;
@@ -35,7 +36,15 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
   const [commentFor, setCommentFor] = useState<number | null>(null);
   const [commentText, setCommentText] = useState("");
   const [commentPhoto, setCommentPhoto] = useState<string | null>(null);
-  const [lightbox, setLightbox] = useState<string | null>(null);
+  // Comment-image lightbox (single, без свайпа) — для прикреплённых
+  // фото в reply'ях. Photo lightbox в самом отзыве — отдельный state
+  // с поддержкой свайпа и FLIP.
+  const [commentLightbox, setCommentLightbox] = useState<string | null>(null);
+  const [reviewLightbox, setReviewLightbox] = useState<{
+    images: string[];
+    startIndex: number;
+    rect: DOMRect | null;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const refresh = () => {
@@ -147,7 +156,10 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
 
             {/* Photo collage — масштабируется по количеству фоток. */}
             {images.length > 0 && (
-              <PhotoCollage images={images} onClick={(src) => setLightbox(src)} />
+              <PhotoCollage
+                images={images}
+                onOpen={(idx, rect) => setReviewLightbox({ images, startIndex: idx, rect })}
+              />
             )}
 
             {r.comments?.map((c: ReviewComment) => (
@@ -158,7 +170,7 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
                 {c.image_url && (
                   <button
                     type="button"
-                    onClick={() => setLightbox(c.image_url || null)}
+                    onClick={() => setCommentLightbox(c.image_url || null)}
                     style={styles.replyImgBtn}
                     aria-label="image"
                   >
@@ -254,23 +266,41 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
         onSubmit={handleAddReview}
       />
 
-      {lightbox && (
-        <div style={styles.lightbox} onClick={() => setLightbox(null)}>
-          <img src={lightbox} alt="" style={styles.lightboxImg} />
+      {commentLightbox && (
+        <div style={styles.lightbox} onClick={() => setCommentLightbox(null)}>
+          <img src={commentLightbox} alt="" style={styles.lightboxImg} />
         </div>
+      )}
+
+      {reviewLightbox && (
+        <ReviewLightbox
+          images={reviewLightbox.images}
+          startIndex={reviewLightbox.startIndex}
+          startRect={reviewLightbox.rect}
+          onClose={() => setReviewLightbox(null)}
+        />
       )}
     </div>
   );
 }
 
-// PhotoCollage — динамическая сетка фоток в отзыве.
-// 1 фото — full-width 4:5; 2 — 2 столбца квадратами; 3+ — 3 столбца
+// PhotoCollage — компактная сетка фоток в отзыве.
+// onOpen передаёт thumbRect для FLIP-анимации лайтбокса.
+// 1 фото — 60% ширины 4:5; 2 — 2 столбца квадратами; 3+ — 3 столбца
 // квадратами + индикатор «+N» на 4-й ячейке если фоток больше 4.
-function PhotoCollage({ images, onClick }: { images: string[]; onClick: (src: string) => void }) {
+function PhotoCollage({ images, onOpen }: { images: string[]; onOpen: (idx: number, rect: DOMRect | null) => void }) {
   if (images.length === 0) return null;
   if (images.length === 1) {
     return (
-      <button type="button" onClick={() => onClick(images[0])} style={collageStyles.singleBtn} aria-label="фото">
+      <button
+        type="button"
+        onClick={(e) => {
+          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          onOpen(0, rect);
+        }}
+        style={collageStyles.singleBtn}
+        aria-label="фото"
+      >
         <img src={images[0]} alt="" style={collageStyles.singleImg} />
       </button>
     );
@@ -286,7 +316,10 @@ function PhotoCollage({ images, onClick }: { images: string[]; onClick: (src: st
           <button
             key={i}
             type="button"
-            onClick={() => onClick(isLastVisible ? images[i] : src)}
+            onClick={(e) => {
+              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+              onOpen(i, rect);
+            }}
             style={collageStyles.cellBtn}
             aria-label="фото"
           >
@@ -302,14 +335,17 @@ function PhotoCollage({ images, onClick }: { images: string[]; onClick: (src: st
 }
 
 const collageStyles: Record<string, React.CSSProperties> = {
+  // Single image — 60% ширины, центр, 4:5 ratio. Раньше full-width
+  // 4:5 — занимало пол-экрана и доминировало над текстом отзыва.
   singleBtn: {
     display: "block",
-    width: "100%",
+    width: "60%",
+    maxWidth: 240,
     aspectRatio: "4 / 5",
     background: "none",
     border: "none",
     padding: 0,
-    borderRadius: 12,
+    borderRadius: 10,
     overflow: "hidden",
     cursor: "pointer",
     WebkitTapHighlightColor: "transparent",
@@ -322,7 +358,8 @@ const collageStyles: Record<string, React.CSSProperties> = {
   },
   grid: {
     display: "grid",
-    gap: 4,
+    gap: 3,
+    maxWidth: 320,
   },
   cellBtn: {
     position: "relative",
@@ -330,7 +367,7 @@ const collageStyles: Record<string, React.CSSProperties> = {
     background: "none",
     border: "none",
     padding: 0,
-    borderRadius: 8,
+    borderRadius: 6,
     overflow: "hidden",
     cursor: "pointer",
     WebkitTapHighlightColor: "transparent",
@@ -349,7 +386,7 @@ const collageStyles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 700,
     letterSpacing: "-0.02em",
   },
@@ -448,11 +485,13 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0,
   },
   text: {
-    fontSize: 15,
-    lineHeight: 1.55,
+    fontSize: 14,
+    lineHeight: 1.5,
     margin: 0,
     color: "var(--text)",
-    fontFamily: 'Georgia, "Times New Roman", serif',
+    // Inherit от .zen-app — Proxima Nova / system. Раньше Georgia
+    // serif выбивался из общей типографики приложения.
+    fontFamily: "inherit",
     letterSpacing: "0.01em",
   },
   reply: {

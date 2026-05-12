@@ -56,6 +56,7 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -82,28 +83,32 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
     el.style.height = Math.min(el.scrollHeight, 180) + "px";
   }, [customDesc]);
 
-  // visualViewport-aware height — при открытии клавиатуры wrapper
-  // сжимается под доступную область, composer остаётся сразу над
-  // клавиатурой без визуального jump'а.
-  const [vvHeight, setVvHeight] = useState<number | null>(
-    typeof window !== "undefined" && window.visualViewport ? window.visualViewport.height : null
-  );
-  const [vvOffsetTop, setVvOffsetTop] = useState<number>(
-    typeof window !== "undefined" && window.visualViewport ? window.visualViewport.offsetTop : 0
-  );
+  // visualViewport → direct DOM (без React state). State updates во
+  // время keyboard animation вызывали re-render, который иногда
+  // приводил к «исчезновению» контента (1 sec задержка). Тут пишем
+  // прямо в wrap.style.bottom — браузер сразу применяет, без React
+  // reconciliation. Плюс CSS transition на bottom для smooth slide
+  // вместе с keyboard.
   useEffect(() => {
     const vv = window.visualViewport;
-    if (!vv) return;
-    const update = () => {
-      setVvHeight(vv.height);
-      setVvOffsetTop(vv.offsetTop);
+    const wrap = wrapRef.current;
+    if (!vv || !wrap) return;
+    let raf: number | null = null;
+    const apply = () => {
+      const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      // offset > 0 = keyboard открыта → bottom = keyboard height.
+      // offset === 0 → bottom = 64 (резерв под bottom-nav).
+      wrap.style.bottom = offset > 0 ? `${offset}px` : "64px";
     };
-    update();
-    vv.addEventListener("resize", update);
-    vv.addEventListener("scroll", update);
+    const schedule = () => {
+      if (raf != null) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(apply);
+    };
+    apply();
+    vv.addEventListener("resize", schedule);
     return () => {
-      vv.removeEventListener("resize", update);
-      vv.removeEventListener("scroll", update);
+      if (raf != null) cancelAnimationFrame(raf);
+      vv.removeEventListener("resize", schedule);
     };
   }, []);
 
@@ -154,23 +159,13 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
     }
   };
 
-  // Динамический wrap-style: при открытии клавиатуры используем
-  // visualViewport.height для bottom-offset (composer прижимается к
-  // клавиатуре без jump'а). header 62 + bottom-nav 64 в обычном
-  // режиме; при keyboard — компенсируем разницу.
-  const layoutBottom = vvHeight != null
-    ? Math.max(0, window.innerHeight - (vvHeight + vvOffsetTop))
-    : 0;
-  const dynamicWrap: React.CSSProperties = {
-    ...styles.wrap,
-    // Когда keyboard открыта (layoutBottom > 0) — НЕ резервируем
-    // место под bottom-nav (она скрыта classом zen-input-focused).
-    bottom: layoutBottom > 0 ? layoutBottom : 64,
-  };
+  // wrap.style.bottom управляется напрямую через visualViewport effect
+  // (см. выше) — без React state, без re-render'ов во время keyboard
+  // animation.
 
   if (customSuccess) {
     return (
-      <div style={dynamicWrap}>
+      <div ref={wrapRef} style={styles.wrap}>
         <div style={styles.threadSuccess}>
           <BotBubble>
             <div style={styles.successInner}>
@@ -193,7 +188,7 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   }
 
   return (
-    <div style={dynamicWrap}>
+    <div ref={wrapRef} style={styles.wrap}>
       <form onSubmit={handleSubmit} style={styles.form}>
         {/* Chat thread */}
         <div style={styles.thread}>
@@ -316,6 +311,11 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "16px max(16px, env(safe-area-inset-left)) 0 max(16px, env(safe-area-inset-right))",
     background: "var(--bg)",
     zIndex: 5,
+    // Smooth slide вместе с keyboard. ease-out 280ms — visualViewport
+    // на iOS обновляет height каждые ~16ms во время keyboard animation,
+    // но React rendering может «отстать». CSS transition сгладит
+    // любой gap между real keyboard position и bottom-property.
+    transition: "bottom 280ms cubic-bezier(0.32, 0.72, 0, 1)",
   },
   headerBlock: {
     padding: "0 4px 6px",

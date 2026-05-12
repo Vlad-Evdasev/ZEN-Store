@@ -13,6 +13,8 @@ interface NewReviewSheetProps {
 const MAX_PHOTOS = 10;
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB per photo
 
+const SHEET_ANIM = 320;
+
 export function NewReviewSheet({ open, submitting, error, onClose, onSubmit }: NewReviewSheetProps) {
   const { settings } = useSettings();
   const lang = settings.lang;
@@ -21,6 +23,11 @@ export function NewReviewSheet({ open, submitting, error, onClose, onSubmit }: N
   const [photos, setPhotos] = useState<string[]>([]);
   const [localError, setLocalError] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  // mounted — компонент в DOM (для slide-out до unmount).
+  // visible — current visual state (slide-in/out), управляется через
+  // двойной rAF чтобы CSS transition triggered.
+  const [mounted, setMounted] = useState(open);
+  const [visible, setVisible] = useState(false);
 
   // visualViewport.height — при открытии клавиатуры sheet остаётся
   // полностью видимым (max-height сжимается под доступную область).
@@ -37,16 +44,40 @@ export function NewReviewSheet({ open, submitting, error, onClose, onSubmit }: N
     return () => vv.removeEventListener("resize", update);
   }, [open]);
 
+  // Slide-in / slide-out lifecycle.
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+      // Двойной rAF — гарантирует что browser отрисовал начальное
+      // состояние (visible=false → translateY 100%), потом меняем на
+      // visible=true → translateY 0 с transition.
+      const raf = requestAnimationFrame(() => {
+        requestAnimationFrame(() => setVisible(true));
+      });
+      return () => cancelAnimationFrame(raf);
+    } else if (mounted) {
+      setVisible(false);
+      // Ждём окончания transition, потом unmount.
+      const t = setTimeout(() => setMounted(false), SHEET_ANIM);
+      return () => clearTimeout(t);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   useEffect(() => {
     if (!open) {
-      setRating(5);
-      setText("");
-      setPhotos([]);
-      setLocalError("");
+      // Reset fields после полного закрытия (через SHEET_ANIM delay).
+      const t = setTimeout(() => {
+        setRating(5);
+        setText("");
+        setPhotos([]);
+        setLocalError("");
+      }, SHEET_ANIM);
+      return () => clearTimeout(t);
     }
   }, [open]);
 
-  if (!open) return null;
+  if (!mounted) return null;
 
   const handlePickPhotos = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -97,10 +128,22 @@ export function NewReviewSheet({ open, submitting, error, onClose, onSubmit }: N
   const canSubmit = text.trim().length > 0 && !submitting;
   const sheetMaxHeight = vvHeight ? Math.max(280, vvHeight - 24) : "85vh";
 
+  const overlayStyle: React.CSSProperties = {
+    ...styles.overlay,
+    background: visible ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0)",
+    transition: `background-color ${SHEET_ANIM}ms cubic-bezier(0.32, 0.72, 0, 1)`,
+  };
+  const sheetStyle: React.CSSProperties = {
+    ...styles.sheet,
+    maxHeight: sheetMaxHeight,
+    transform: visible ? "translateY(0)" : "translateY(100%)",
+    transition: `transform ${SHEET_ANIM}ms cubic-bezier(0.32, 0.72, 0, 1)`,
+  };
+
   return (
-    <div style={styles.overlay} onClick={onClose}>
+    <div style={overlayStyle} onClick={onClose}>
       <div
-        style={{ ...styles.sheet, maxHeight: sheetMaxHeight }}
+        style={sheetStyle}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
