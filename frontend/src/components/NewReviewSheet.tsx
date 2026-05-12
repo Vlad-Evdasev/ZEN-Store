@@ -102,6 +102,14 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
       ? window.visualViewport.height
       : (typeof window !== "undefined" ? window.innerHeight : 800)
   );
+  // frozenHeight — snapshot overlayHeight в момент когда sheet начинает
+  // closing-анимацию. Если kb закрывается параллельно с sheet-close
+  // (юзер тапает outside пока печатал), vv.resize может прилететь
+  // mid-anim → overlayHeight скакнёт → CSS height transition будет
+  // competить с translateY анимацией sheet'а → визуальный jank.
+  // Frozen height отключает реакцию overlay'а на vv.resize пока sheet
+  // уезжает вниз. После unmount всё сбрасывается.
+  const [frozenHeight, setFrozenHeight] = useState<number | null>(null);
 
   // visualViewport listener — overlay.height = vv.height. Когда
   // клавиатура открывается, vv.height shrinks → overlay shrinks →
@@ -172,12 +180,17 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
   // Sheet mount/unmount animation
   useEffect(() => {
     if (open) {
+      setFrozenHeight(null);
       setMounted(true);
       const raf = requestAnimationFrame(() => {
         requestAnimationFrame(() => setVisible(true));
       });
       return () => cancelAnimationFrame(raf);
     } else if (mounted) {
+      // Snapshot текущей overlayHeight ДО setVisible(false) — иначе
+      // vv.resize в kb-close моменте может вырастить overlayHeight,
+      // и sheet прыгнет вниз mid-animation.
+      setFrozenHeight((prev) => prev ?? overlayHeight);
       setVisible(false);
       const t = setTimeout(() => setMounted(false), SHEET_ANIM);
       return () => clearTimeout(t);
@@ -268,9 +281,9 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
       textareaRef.current?.blur();
       return;
     }
-    // Блокируем textarea на 1.2s — без этого быстрая sequence
-    // paperclip → dismiss picker → tap textarea ловит iOS-state-machine
-    // bug (kb открывается и сразу сама закрывается).
+    // Блокируем textarea на 1.5s (matches CustomOrderPage) — без этого
+    // быстрая sequence paperclip → dismiss picker → tap textarea ловит
+    // iOS-state-machine bug (kb открывается и сразу сама закрывается).
     setTextareaLocked(true);
     if (textareaUnlockTimerRef.current != null) {
       clearTimeout(textareaUnlockTimerRef.current);
@@ -278,7 +291,7 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
     textareaUnlockTimerRef.current = window.setTimeout(() => {
       setTextareaLocked(false);
       textareaUnlockTimerRef.current = null;
-    }, 1200);
+    }, 1500);
   };
 
   const preventFocusSteal = (e: React.MouseEvent | React.TouchEvent) => {
@@ -307,21 +320,31 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
   // только закроет kb. Next tap откроет picker (как в CustomOrderPage).
   const paperclipDisabled = kbOpen || photos.length >= MAX_PHOTOS;
 
+  // Во время close (mounted && !visible) используем frozenHeight чтобы
+  // overlay не дрейфовал из-за параллельного kb-close. Плюс отключаем
+  // height/max-height transitions — даже если frozen-fallback не сработал
+  // и overlayHeight скакнул, height change приклеится instant без
+  // competing animation.
+  const isClosing = mounted && !visible;
+  const effectiveHeight = isClosing && frozenHeight != null ? frozenHeight : overlayHeight;
+
   const overlayStyle: React.CSSProperties = {
     ...styles.overlay,
-    height: overlayHeight,
+    height: effectiveHeight,
     background: visible ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0)",
-    transition:
-      `background-color ${SHEET_ANIM}ms cubic-bezier(0.32, 0.72, 0, 1), ` +
-      `height 260ms cubic-bezier(0.32, 0.72, 0, 1)`,
+    transition: isClosing
+      ? `background-color ${SHEET_ANIM}ms cubic-bezier(0.32, 0.72, 0, 1)`
+      : `background-color ${SHEET_ANIM}ms cubic-bezier(0.32, 0.72, 0, 1), ` +
+        `height 260ms cubic-bezier(0.32, 0.72, 0, 1)`,
   };
   const sheetStyle: React.CSSProperties = {
     ...styles.sheet,
-    maxHeight: Math.max(280, overlayHeight - SHEET_TOP_GAP),
+    maxHeight: Math.max(280, effectiveHeight - SHEET_TOP_GAP),
     transform: visible ? "translateY(0)" : "translateY(100%)",
-    transition:
-      `transform ${SHEET_ANIM}ms cubic-bezier(0.32, 0.72, 0, 1), ` +
-      `max-height 260ms cubic-bezier(0.32, 0.72, 0, 1)`,
+    transition: isClosing
+      ? `transform ${SHEET_ANIM}ms cubic-bezier(0.32, 0.72, 0, 1)`
+      : `transform ${SHEET_ANIM}ms cubic-bezier(0.32, 0.72, 0, 1), ` +
+        `max-height 260ms cubic-bezier(0.32, 0.72, 0, 1)`,
   };
 
   return (

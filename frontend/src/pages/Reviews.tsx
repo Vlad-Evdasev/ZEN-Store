@@ -403,18 +403,18 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "flex-end",
     gap: 10,
   },
-  // Avatar — современный flat-look с inset-ring (вместо border):
-  // ring рисуется внутри circle, не съедая внешний radius и не
-  // создавая «двойного контура» с bg. Serif initial (Georgia) — в
-  // стилистике серифных rating-цифр в hero-блоке выше.
+  // Avatar — small neutral badge. Surface bg + accent letter в Georgia
+  // serif (в стилистике серифных rating-цифр выше). Inset ring (1px
+  // border-tinted) + лёгкая drop-shadow для depth. Намного спокойнее
+  // и компактнее предыдущего solid-accent варианта.
   av: {
-    width: 42,
-    height: 42,
+    width: 32,
+    height: 32,
     borderRadius: "50%",
-    background: "rgba(165,42,42,0.10)",
+    background: "var(--surface)",
     color: "var(--accent)",
     fontWeight: 700,
-    fontSize: 15,
+    fontSize: 13,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -422,22 +422,20 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'Georgia, "Times New Roman", serif',
     letterSpacing: "0.02em",
     border: "none",
-    boxShadow: "inset 0 0 0 1.5px rgba(165,42,42,0.18)",
-    // marginBottom 0 — но visually avatar центрирован относительно
-    // bubble bottom edge (alignItems flex-end в bubbleRow).
+    boxShadow:
+      "inset 0 0 0 1px var(--border), " +
+      "0 1px 3px rgba(0,0,0,0.04)",
     marginBottom: 0,
   },
-  // Own-review avatar: solid accent fill + soft glow + edge-light
-  // inset (внутренний highlight сверху делает avatar «объёмным»
-  // без тяжёлого gradient'а).
+  // Own-review avatar: чуть более выраженный accent-tint (вместо
+  // прежнего solid-fill) — субтильный signal ownership, без
+  // визуального крика.
   avOwn: {
-    background: "var(--accent)",
-    color: "#fff",
-    border: "none",
+    background: "rgba(165,42,42,0.08)",
+    color: "var(--accent)",
     boxShadow:
-      "0 4px 14px rgba(165,42,42,0.32), " +
-      "inset 0 1px 0 rgba(255,255,255,0.18), " +
-      "inset 0 0 0 1px rgba(255,255,255,0.05)",
+      "inset 0 0 0 1.5px rgba(165,42,42,0.30), " +
+      "0 1px 4px rgba(165,42,42,0.08)",
   },
   bubble: {
     flex: 1,
