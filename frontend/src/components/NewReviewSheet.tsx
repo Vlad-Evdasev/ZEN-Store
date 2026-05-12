@@ -55,15 +55,6 @@ function PaperclipIcon() {
   );
 }
 
-function CloseIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <line x1="6" y1="6" x2="18" y2="18" />
-      <line x1="18" y1="6" x2="6" y2="18" />
-    </svg>
-  );
-}
-
 function ratingLabel(lang: string, r: number): string {
   if (lang === "ru") {
     return ["", "Плохо", "Так себе", "Нормально", "Хорошо", "Отлично!"][r] || "";
@@ -71,7 +62,12 @@ function ratingLabel(lang: string, r: number): string {
   return ["", "Bad", "So-so", "OK", "Good", "Excellent!"][r] || "";
 }
 
-function botPrompt(lang: string): string {
+function botPrompt(lang: string, isEdit: boolean): string {
+  if (isEdit) {
+    return lang === "ru"
+      ? "Поправьте отзыв, если что-то изменилось."
+      : "Update your review if anything changed.";
+  }
   return lang === "ru"
     ? "Поделитесь впечатлениями. Можно приложить фото."
     : "Share your impression. You can attach photos.";
@@ -262,12 +258,13 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
   };
 
   // paperclip: при kb-open сначала закрываем kb (blur textarea),
-  // повторный тап откроет picker. Этот UX взят из CustomOrderPage —
-  // iOS всё равно закрывает kb когда показывает file picker, так
-  // что лучше предотвратить openpicker во время kb-открыта чем ловить
-  // jarring state machine race.
-  const handlePaperclipClick = () => {
+  // picker НЕ открываем. preventDefault блокирует default label
+  // behaviour (синхронный synthetic click на input → file picker).
+  // Плюс input disabled когда kbOpen — belt-and-suspenders.
+  // Повторный тап (когда kb уже закрыта) откроет picker нормально.
+  const handlePaperclipClick = (e: React.MouseEvent<HTMLLabelElement>) => {
     if (kbOpen) {
+      e.preventDefault();
       textareaRef.current?.blur();
       return;
     }
@@ -295,9 +292,20 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
     }
   };
 
+  // Click stops on visible surface — не закрываем sheet при тапе на
+  // rating-card, bot-bubble, фото или composer. Тап в «пустую» зону
+  // sheet'а (gaps между surfaces, dimmed backdrop сверху) пропускает
+  // event до overlay.onClick → sheet закрывается.
+  const stopPropClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
   const canSubmit = text.trim().length > 0 && !submitting;
   const isEdit = !!initial;
-  const paperclipDisabled = photos.length >= MAX_PHOTOS;
+  // kbOpen в paperclipDisabled — input disabled пока kb открыта, label
+  // не сможет триггернуть picker через synthetic click. Single-tap
+  // только закроет kb. Next tap откроет picker (как в CustomOrderPage).
+  const paperclipDisabled = kbOpen || photos.length >= MAX_PHOTOS;
 
   const overlayStyle: React.CSSProperties = {
     ...styles.overlay,
@@ -320,33 +328,13 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
     <div style={overlayStyle} onClick={onClose} data-keyboard-aware="true">
       <div
         style={sheetStyle}
-        onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
       >
-        <div style={styles.handleArea} aria-hidden>
-          <div style={styles.handle} />
-        </div>
-
-        <div style={styles.headerRow}>
-          <h3 style={styles.title}>
-            {isEdit ? t(lang, "reviewsEditTitle") : t(lang, "reviewsFabNew")}
-          </h3>
-          <button
-            type="button"
-            onClick={onClose}
-            onMouseDown={preventFocusSteal}
-            onTouchStart={preventFocusSteal}
-            style={styles.closeBtn}
-            aria-label={t(lang, "close")}
-          >
-            <CloseIcon />
-          </button>
-        </div>
-
+        {/* НЕТ handle / header / close X — тап в dimmed зону закрывает sheet. */}
         <div ref={threadRef} style={styles.thread}>
           {/* Rating hero block — большие интерактивные звёзды + label */}
-          <div style={styles.ratingBlock}>
+          <div style={styles.ratingBlock} onClick={stopPropClick}>
             <div style={styles.starsRow}>
               {[1, 2, 3, 4, 5].map((r) => {
                 const active = r <= rating;
@@ -374,15 +362,15 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
             </div>
           </div>
 
-          {/* Bot bubble — friendly explainer (как CustomOrderPage). */}
-          <div style={styles.botBubbleRow}>
+          {/* Bot bubble — friendly explainer / edit hint */}
+          <div style={styles.botBubbleRow} onClick={stopPropClick}>
             <div style={styles.botAvatar}>R</div>
-            <div style={styles.botBubble}>{botPrompt(lang)}</div>
+            <div style={styles.botBubble}>{botPrompt(lang, isEdit)}</div>
           </div>
 
           {/* Photo bubbles (user-side, chat-style). */}
           {photos.map((p, i) => (
-            <div key={i} style={styles.userBubbleRow}>
+            <div key={i} style={styles.userBubbleRow} onClick={stopPropClick}>
               <div style={styles.photoBubble}>
                 <img src={p} alt="" style={styles.photoBubbleImg} />
                 <button
@@ -404,8 +392,8 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
           )}
         </div>
 
-        {/* Composer pill — paperclip / textarea / send (как CustomOrderPage). */}
-        <div style={styles.composerWrap}>
+        {/* Composer pill — paperclip / textarea / send. */}
+        <div style={styles.composerWrap} onClick={stopPropClick}>
           <div style={styles.composerRow}>
             <label
               style={{
@@ -496,59 +484,20 @@ const styles: Record<string, React.CSSProperties> = {
     zIndex: 1500,
   },
   sheet: {
+    // Прозрачный sheet — содержимое (rating-card, bot-bubble, photo
+    // bubbles, composer) плавает на dimmed/blurred backdrop как
+    // независимые элементы. Без bg, border-radius, тени — sheet это
+    // только layout-контейнер. Тап в dim-зону (НЕ на visible surface)
+    // пропускается до overlay.onClick → закрывает форму.
+    // safe-area-inset-bottom уехал внутрь composerWrap (часть его
+    // tap-area со stopPropagation), чтобы тап в home-indicator зону
+    // не закрывал случайно форму.
     width: "100%",
     maxWidth: 520,
-    background: "var(--bg)",
-    borderRadius: "24px 24px 0 0",
+    background: "transparent",
     padding: 0,
-    boxShadow: "0 -12px 40px rgba(0,0,0,0.28)",
     display: "flex",
     flexDirection: "column",
-    overflow: "hidden",
-    paddingBottom: "env(safe-area-inset-bottom, 0)",
-  },
-  handleArea: {
-    flexShrink: 0,
-    display: "flex",
-    justifyContent: "center",
-    padding: "8px 0 4px",
-  },
-  handle: {
-    width: 42,
-    height: 4,
-    borderRadius: 2,
-    background: "var(--border)",
-  },
-
-  headerRow: {
-    flexShrink: 0,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "4px 20px 8px",
-    gap: 10,
-  },
-  title: {
-    margin: 0,
-    fontSize: 17,
-    fontWeight: 700,
-    letterSpacing: "-0.02em",
-    color: "var(--text)",
-  },
-  closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: "50%",
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    color: "var(--muted)",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-    padding: 0,
-    WebkitTapHighlightColor: "transparent",
   },
 
   thread: {
@@ -558,7 +507,8 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: 12,
-    padding: "8px 20px 14px",
+    // Padding-top больше — сверху видна dimmed зона (тапаешь = закрываешь).
+    padding: "20px 16px 14px",
     WebkitOverflowScrolling: "touch",
   },
 
@@ -670,11 +620,16 @@ const styles: Record<string, React.CSSProperties> = {
 
   error: { color: "var(--accent)", fontSize: 13, margin: "2px 0 0" },
 
-  /* Composer — bottom pill row (paperclip + composer + send). */
+  /* Composer — bottom pill row (paperclip + composer + send). bg
+     transparent чтобы вся форма «плавала» на dimmed-backdrop. Сами
+     pills (paperclip + composer) имеют surface bg → visible.
+     safe-area-inset-bottom включён в padding-bottom — tap в home-
+     indicator зону регистрируется на composerWrap (со stopProp)
+     → не закрывает форму случайно. */
   composerWrap: {
     flexShrink: 0,
-    padding: "8px 16px 14px",
-    background: "var(--bg)",
+    padding: "8px 16px calc(14px + env(safe-area-inset-bottom, 0))",
+    background: "transparent",
   },
   composerRow: {
     display: "flex",

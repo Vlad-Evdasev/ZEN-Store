@@ -115,34 +115,41 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
       <div style={styles.list}>
         {reviews.map((r) => {
           const images = r.image_urls ?? [];
+          const isOwn = r.user_id === userId;
           return (
-          <article key={r.id} style={styles.card}>
-            <header style={styles.cardHead}>
-              <div style={styles.av}>{(r.user_name?.[0] || "?").toUpperCase()}</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={styles.reviewName}>{r.user_name || t(lang, "guest")}</div>
-                <div style={styles.reviewDate}>{formatDate(r.created_at, lang)}</div>
-              </div>
-              <div style={styles.starsRight} aria-label={`${r.rating} / 5`}>
-                {"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}
-              </div>
-            </header>
-            <p style={styles.text}>{r.text}</p>
+          <article key={r.id} style={styles.bubbleRow}>
+            <div style={{ ...styles.av, ...(isOwn ? styles.avOwn : {}) }}>
+              {(r.user_name?.[0] || "?").toUpperCase()}
+            </div>
+            <div style={styles.bubble}>
+              <header style={styles.cardHead}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={styles.reviewName}>{r.user_name || t(lang, "guest")}</div>
+                  <div style={styles.reviewDate}>{formatDate(r.created_at, lang)}</div>
+                </div>
+                <div style={styles.starsPill} aria-label={`${r.rating} / 5`}>
+                  <span style={styles.starsPillStar} aria-hidden>★</span>
+                  <span>{r.rating}</span>
+                </div>
+              </header>
 
-            {/* Photo collage — масштабируется по количеству фоток. */}
-            {images.length > 0 && (
-              <PhotoCollage
-                images={images}
-                onOpen={(idx, rect) => setReviewLightbox({ images, startIndex: idx, rect })}
-              />
-            )}
+              <p style={styles.text}>{r.text}</p>
 
-            {/* Edit-кнопка показывается ТОЛЬКО на своём отзыве. */}
-            {r.user_id === userId && (
-              <button type="button" onClick={() => openEdit(r)} style={styles.editBtn}>
-                {t(lang, "reviewsEdit")}
-              </button>
-            )}
+              {/* Photo collage — масштабируется по количеству фоток. */}
+              {images.length > 0 && (
+                <PhotoCollage
+                  images={images}
+                  onOpen={(idx, rect) => setReviewLightbox({ images, startIndex: idx, rect })}
+                />
+              )}
+
+              {/* Edit-кнопка показывается ТОЛЬКО на своём отзыве. */}
+              {isOwn && (
+                <button type="button" onClick={() => openEdit(r)} style={styles.editBtn}>
+                  {t(lang, "reviewsEdit")}
+                </button>
+              )}
+            </div>
           </article>
           );
         })}
@@ -340,71 +347,112 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: 1.4,
     letterSpacing: "-0.01em",
   },
-  list: { display: "flex", flexDirection: "column", gap: 18 },
-  // Карточка отзыва — editorial-стиль: больше воздуха, крупная
-  // типографика, фото-collage. Border убран — отзывы разделяются
-  // hairline снизу (как в журналах), card-as-background исчезает.
-  card: {
-    background: "transparent",
-    border: "none",
-    borderBottom: "1px solid var(--border)",
-    borderRadius: 0,
-    padding: "0 0 18px",
+  list: { display: "flex", flexDirection: "column", gap: 14 },
+  // Chat-bubble layout: avatar плавает слева, bubble справа.
+  // Tail радиуса top-left (4px) направлен к avatar'у — визуально
+  // bubble «говорит» от лица автора. Cohesive с CustomOrderPage,
+  // где такая же логика для bot bubble.
+  bubbleRow: {
     display: "flex",
-    flexDirection: "column",
-    gap: 12,
+    alignItems: "flex-start",
+    gap: 10,
   },
-  cardHead: { display: "flex", alignItems: "center", gap: 10 },
   av: {
-    width: 40, height: 40, borderRadius: "50%",
-    background: "rgba(165,42,42,0.12)", color: "var(--accent)",
-    fontWeight: 700, fontSize: 15,
+    width: 38, height: 38, borderRadius: "50%",
+    background: "rgba(165,42,42,0.10)", color: "var(--accent)",
+    fontWeight: 700, fontSize: 14,
     display: "flex", alignItems: "center", justifyContent: "center",
     flexShrink: 0,
     fontFamily: 'Georgia, "Times New Roman", serif',
+    border: "1px solid rgba(165,42,42,0.16)",
+    marginTop: 2,
+  },
+  // Own-review avatar: чуть сильнее accent — едва заметный signal
+  // что это «ваш» отзыв (вместе с Изменить-кнопкой ниже).
+  avOwn: {
+    background: "var(--accent)",
+    color: "#fff",
+    border: "1px solid var(--accent)",
+    boxShadow: "0 2px 8px rgba(165,42,42,0.25)",
+  },
+  bubble: {
+    flex: 1,
+    minWidth: 0,
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    // Asymmetric radius — tail (4px) top-left → к avatar'у. Остальные
+    // углы 18 для мягкого card-look.
+    borderRadius: "4px 18px 18px 18px",
+    padding: "12px 14px 14px",
+    display: "flex",
+    flexDirection: "column",
+    gap: 10,
+    boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
+  },
+  cardHead: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
   },
   reviewName: {
     fontSize: 14,
-    fontWeight: 600,
+    fontWeight: 700,
     margin: 0,
     letterSpacing: "-0.01em",
     color: "var(--text)",
+    lineHeight: 1.2,
   },
   reviewDate: {
     fontSize: 11,
     color: "var(--muted)",
-    letterSpacing: "0.02em",
-    marginTop: 2,
+    letterSpacing: "0.04em",
+    marginTop: 3,
   },
-  starsRight: {
+  // Stars pill — компактный accent-pill справа. Цифра rating рядом
+  // со звездой → информативно, не перегружено.
+  starsPill: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 3,
+    padding: "3px 9px 3px 7px",
+    borderRadius: 999,
+    background: "rgba(165,42,42,0.10)",
     color: "var(--accent)",
-    fontSize: 13,
-    letterSpacing: 1.5,
+    fontSize: 12,
+    fontWeight: 700,
+    fontFamily: 'Georgia, "Times New Roman", serif',
+    lineHeight: 1,
     flexShrink: 0,
+    letterSpacing: "0.02em",
+  },
+  starsPillStar: {
+    fontSize: 13,
+    lineHeight: 1,
   },
   text: {
     fontSize: 14,
     lineHeight: 1.5,
     margin: 0,
     color: "var(--text)",
-    // Inherit от .zen-app — Proxima Nova / system. Раньше Georgia
-    // serif выбивался из общей типографики приложения.
     fontFamily: "inherit",
-    letterSpacing: "0.01em",
+    letterSpacing: "0.005em",
+    wordBreak: "break-word",
   },
-  // Edit-кнопка для своего отзыва — accent-цвет, под текстом отзыва.
+  // Edit-кнопка для своего отзыва — small accent pill.
   editBtn: {
     alignSelf: "flex-start",
-    background: "none",
-    border: "none",
+    background: "rgba(165,42,42,0.08)",
+    border: "1px solid rgba(165,42,42,0.18)",
     color: "var(--accent)",
-    fontSize: 12,
-    fontWeight: 600,
+    fontSize: 10.5,
+    fontWeight: 700,
     cursor: "pointer",
-    padding: 0,
+    padding: "5px 11px",
+    borderRadius: 999,
     fontFamily: "inherit",
-    letterSpacing: "0.04em",
+    letterSpacing: "0.08em",
     textTransform: "uppercase",
+    marginTop: 2,
     WebkitTapHighlightColor: "transparent",
   },
   fab: {
