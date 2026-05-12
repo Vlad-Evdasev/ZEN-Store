@@ -295,18 +295,21 @@ export async function replyAsBot(
 // Тихо игнорируем 403 / blocked-by-user (помечаем юзера как blocked).
 
 // Hardcoded defaults — fallback если template отсутствует/is_active=0 в БД.
+// {name} = название заказа (первая позиция). Мы ушли от номеров #ID
+// в пушах — везде показываем по имени товара / заявки. Для backward-compat
+// {id} тоже подставляется (если кто-то редактировал template и оставил его).
 const ORDER_STATUS_TEXT: Record<string, { emoji: string; title: string; sub?: string }> = {
-  pending: { emoji: "✅", title: "Заказ #{id} оформлен", sub: "Мы получили запрос — скоро свяжемся для уточнения деталей." },
-  in_transit: { emoji: "🚚", title: "Заказ #{id} в пути", sub: "Уже едет к тебе. Отслеживай статус в /track." },
-  delivered: { emoji: "📦", title: "Заказ #{id} доставлен", sub: "Забирай! Если что-то не так — пиши, поможем." },
-  completed: { emoji: "💚", title: "Заказ #{id} завершён", sub: "Спасибо за покупку! Будем рады видеть тебя снова 🤍" },
+  pending: { emoji: "✅", title: "Заказ «{name}» оформлен", sub: "Мы получили запрос — скоро свяжемся для уточнения деталей." },
+  in_transit: { emoji: "🚚", title: "Заказ «{name}» в пути", sub: "Уже едет к тебе. Отслеживай статус в /track." },
+  delivered: { emoji: "📦", title: "Заказ «{name}» доставлен", sub: "Забирай! Если что-то не так — пиши, поможем." },
+  completed: { emoji: "💚", title: "Заказ «{name}» завершён", sub: "Спасибо за покупку! Будем рады видеть тебя снова 🤍" },
 };
 
 const CUSTOM_STATUS_TEXT: Record<string, { emoji: string; title: string; sub?: string }> = {
-  pending: { emoji: "✅", title: "Кастом-заявка #{id} одобрена", sub: "Принята в работу. Свяжемся для уточнений." },
-  in_transit: { emoji: "🚚", title: "Кастом-заявка #{id} в пути", sub: "Уже едет к тебе." },
-  delivered: { emoji: "📦", title: "Кастом-заявка #{id} доставлена", sub: "Забирай!" },
-  completed: { emoji: "💚", title: "Кастом-заявка #{id} завершена", sub: "Спасибо!" },
+  pending: { emoji: "✅", title: "Заявка «{name}» одобрена", sub: "Принята в работу. Свяжемся для уточнений." },
+  in_transit: { emoji: "🚚", title: "Заявка «{name}» в пути", sub: "Уже едет к тебе." },
+  delivered: { emoji: "📦", title: "Заявка «{name}» доставлена", sub: "Забирай!" },
+  completed: { emoji: "💚", title: "Заявка «{name}» завершена", sub: "Спасибо!" },
 };
 
 // Загружает шаблон из bot_message_templates, либо возвращает fallback.
@@ -336,12 +339,22 @@ function loadTemplate(
   }
 }
 
+// Подставляет {id} (legacy) и {name} (актуальный) плейсхолдеры. {name}
+// заворачиваем в HTML-escape — текст пришёл из user-input (название
+// товара / описание заявки) и идёт в parse_mode: HTML.
+function fillPlaceholders(s: string, id: number, name: string): string {
+  return s.replace(/\{id\}/g, String(id)).replace(/\{name\}/g, escapeHtml(name));
+}
+
 async function sendStatusNotification(
   userId: string | number,
   cfg: { emoji: string; title: string; sub?: string },
-  id: number
+  id: number,
+  name: string
 ): Promise<void> {
-  const text = `${cfg.emoji} <b>${cfg.title.replace("{id}", String(id))}</b>${cfg.sub ? `\n\n${cfg.sub.replace("{id}", String(id))}` : ""}`;
+  const title = fillPlaceholders(cfg.title, id, name);
+  const sub = cfg.sub ? fillPlaceholders(cfg.sub, id, name) : "";
+  const text = `${cfg.emoji} <b>${title}</b>${sub ? `\n\n${sub}` : ""}`;
   try {
     await bot.api.sendMessage(userId, text, {
       parse_mode: "HTML",
@@ -358,18 +371,56 @@ async function sendStatusNotification(
   }
 }
 
+// Достаёт «название заказа» — имя первого товара из items JSON.
+// Фолбэк «Заказ #<id>», чтобы push никогда не уходил с дыркой в тексте.
+function getOrderName(orderId: number): string {
+  try {
+    const row = db
+      .prepare("SELECT items FROM orders WHERE id = ?")
+      .get(orderId) as { items: string | null } | undefined;
+    if (row?.items) {
+      const parsed = typeof row.items === "string" ? JSON.parse(row.items) : row.items;
+      if (Array.isArray(parsed) && parsed[0]?.name) return String(parsed[0].name);
+    }
+  } catch {}
+  return `Заказ #${orderId}`;
+}
+
+// Достаёт «название кастом-заявки» — description первой карточки в группе,
+// в которую входит этот custom_order. Группа может содержать несколько
+// карточек; берём ту же, что лидирует в инвойсе.
+function getCustomOrderName(customOrderId: number): string {
+  try {
+    const src = db
+      .prepare("SELECT group_id, description FROM custom_orders WHERE id = ?")
+      .get(customOrderId) as { group_id: string | null; description: string | null } | undefined;
+    if (!src) return `Заявка #${customOrderId}`;
+    const groupId = src.group_id;
+    if (groupId) {
+      const first = db
+        .prepare("SELECT description FROM custom_orders WHERE group_id = ? ORDER BY id ASC LIMIT 1")
+        .get(groupId) as { description: string | null } | undefined;
+      const desc = (first?.description || "").trim();
+      if (desc) return desc;
+    }
+    const own = (src.description || "").trim();
+    if (own) return own;
+  } catch {}
+  return `Заявка #${customOrderId}`;
+}
+
 export async function notifyOrderStatusChange(userId: string | number, orderId: number, status: string): Promise<void> {
   const fallback = ORDER_STATUS_TEXT[status];
   if (!fallback) return;
   const cfg = loadTemplate(`order_${status}`, fallback);
-  await sendStatusNotification(userId, cfg, orderId);
+  await sendStatusNotification(userId, cfg, orderId, getOrderName(orderId));
 }
 
 export async function notifyCustomOrderStatusChange(userId: string | number, customOrderId: number, status: string): Promise<void> {
   const fallback = CUSTOM_STATUS_TEXT[status];
   if (!fallback) return;
   const cfg = loadTemplate(`custom_${status}`, fallback);
-  await sendStatusNotification(userId, cfg, customOrderId);
+  await sendStatusNotification(userId, cfg, customOrderId, getCustomOrderName(customOrderId));
 }
 
 // ── Cart abandonment reminder ────────────────────────────────────────────
@@ -532,15 +583,17 @@ export async function notifyOrderInvoice(
   }
 }
 
-// Invoice для custom_order группы — multi-item заказ, который не из
-// каталога. Группа содержит список cards (description/size/image),
-// total ставится на уровне группы. Format похож на notifyOrderInvoice
-// для catalog: первый item с фото-якорем, остальные «+ Item N».
+// Invoice для custom_order группы — multi-item заявка не из каталога.
+// Симметрично notifyOrderInvoice (catalog): первый item с фото-якорем,
+// остальные «+ Item N», сумма в USD + TON, кнопка «Оплатить» под
+// сообщением. Без TON-параметров кнопка не рисуется (fallback на ручные
+// реквизиты от админа в чате).
 export async function notifyCustomOrderInvoice(
   userId: string | number,
   groupId: string,
   items: Array<{ id: number; description: string | null; size: string | null; image_data: string | null }>,
-  total: number
+  total: number,
+  ton: { receiveAddress: string; amountNano: string; payload: string; amountTon: number; rateUsd: number } | null
 ): Promise<void> {
   const lines: string[] = [];
   const [first, ...rest] = items;
@@ -555,11 +608,28 @@ export async function notifyCustomOrderInvoice(
     lines.push(`+ ${escapeHtml(desc)}${sz}`);
   }
   lines.push("");
-  lines.push(`<b>${total} $</b>`);
+  if (ton) {
+    lines.push(`<b>${total} $</b>  ≈ ${ton.amountTon.toFixed(2)} TON`);
+    lines.push(`Курс ${ton.rateUsd.toFixed(2)} $`);
+    lines.push("");
+    lines.push("Жми <b>«Оплатить»</b> — кошелёк откроется с готовой суммой и адресом, останется только подтвердить транзакцию.");
+  } else {
+    lines.push(`<b>${total} $</b>`);
+  }
   lines.push("");
   lines.push((() => { const h = adminHandle(); return `<a href="https://t.me/${h}">@${h}</a>`; })());
 
   const caption = lines.join("\n");
+
+  const payUrl = ton
+    ? `https://app.tonkeeper.com/transfer/${ton.receiveAddress}` +
+      `?amount=${ton.amountNano}` +
+      `&text=${encodeURIComponent(ton.payload)}`
+    : null;
+
+  const replyMarkup = payUrl
+    ? { inline_keyboard: [[{ text: "Оплатить", url: payUrl }]] }
+    : undefined;
 
   // Берём первое фото из группы (image_data hex/data: URL).
   const firstPhoto = items
@@ -571,11 +641,13 @@ export async function notifyCustomOrderInvoice(
       await bot.api.sendPhoto(userId, toPhotoSource(firstPhoto), {
         caption,
         parse_mode: "HTML",
+        reply_markup: replyMarkup,
       });
     } else {
       await bot.api.sendMessage(userId, caption, {
         parse_mode: "HTML",
         link_preview_options: { is_disabled: true },
+        reply_markup: replyMarkup,
       });
     }
   } catch (e) {

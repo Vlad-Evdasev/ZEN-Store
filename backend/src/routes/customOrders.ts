@@ -1,10 +1,14 @@
 import { Router } from "express";
+import { randomBytes } from "crypto";
 import { db } from "../db/schema.js";
 import { notifyCustomOrderStatusChange, notifyCustomOrderInvoice } from "../bot.js";
 
 export const customOrdersRouter = Router();
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET || "";
+const TON_RECEIVE_ADDRESS = process.env.TON_RECEIVE_ADDRESS || "";
+const TON_API_TOKEN = process.env.TON_API_TOKEN || "";
+
 const isAdmin = (req: import("express").Request): boolean => {
   const secret = req.headers["x-admin-secret"] as string | undefined;
   return !ADMIN_SECRET || secret === ADMIN_SECRET;
@@ -13,6 +17,22 @@ const isAdmin = (req: import("express").Request): boolean => {
 // Generate a unique group_id для нового custom order.
 function makeGroupId(): string {
   return `cg_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+// Дублирует логику из routes/orders.ts. Падаем мягко на null — инвойс
+// уйдёт без TON-кнопки (admin в чате сам пришлёт реквизиты).
+async function getTonUsdRateOrNull(): Promise<number | null> {
+  try {
+    const r = await fetch("https://tonapi.io/v2/rates?tokens=ton&currencies=usd", {
+      headers: TON_API_TOKEN ? { Authorization: `Bearer ${TON_API_TOKEN}` } : {},
+    });
+    if (!r.ok) return null;
+    const data = (await r.json()) as { rates?: { TON?: { prices?: { USD?: number } } } };
+    const rate = data.rates?.TON?.prices?.USD;
+    return typeof rate === "number" && Number.isFinite(rate) && rate > 0 ? rate : null;
+  } catch {
+    return null;
+  }
 }
 
 customOrdersRouter.get("/admin/all", (req, res) => {
@@ -147,18 +167,58 @@ customOrdersRouter.post("/admin/group/:groupId/send-invoice", async (req, res) =
   if (!isAdmin(req)) return res.status(401).json({ error: "Unauthorized" });
   const groupId = req.params.groupId;
   const group = db.prepare(
-    "SELECT id, user_id, total, payment_status FROM custom_order_groups WHERE id = ?"
-  ).get(groupId) as { id: string; user_id: string; total: number | null; payment_status: string | null } | undefined;
+    "SELECT id, user_id, total, payment_status, payment_method, payment_payload " +
+      "FROM custom_order_groups WHERE id = ?"
+  ).get(groupId) as {
+    id: string;
+    user_id: string;
+    total: number | null;
+    payment_status: string | null;
+    payment_method: string | null;
+    payment_payload: string | null;
+  } | undefined;
   if (!group) return res.status(404).json({ error: "Group not found" });
   if (!group.total || group.total <= 0) return res.status(400).json({ error: "Set total before sending invoice" });
   const items = db.prepare(
     "SELECT id, description, size, image_data FROM custom_orders WHERE group_id = ? ORDER BY id ASC"
   ).all(groupId) as Array<{ id: number; description: string | null; size: string | null; image_data: string | null }>;
   if (items.length === 0) return res.status(400).json({ error: "Group has no items" });
+
+  // Готовим TON-блок симметрично catalog-инвойсу (routes/orders.ts).
+  // Генерируем payload, если ещё не было (первая отправка инвойса).
+  // Считаем сумму по текущему курсу, сохраняем для verifier'а.
+  let tonInfo: Parameters<typeof notifyCustomOrderInvoice>[4] = null;
+  if (TON_RECEIVE_ADDRESS) {
+    const rate = await getTonUsdRateOrNull();
+    if (rate) {
+      let payload = group.payment_payload;
+      if (!payload) {
+        payload = `RAWC-${Date.now().toString(36)}-${randomBytes(3).toString("hex")}`;
+        db.prepare(
+          "UPDATE custom_order_groups SET payment_method = 'ton', payment_payload = ? WHERE id = ?"
+        ).run(payload, groupId);
+      } else if (group.payment_method !== "ton") {
+        db.prepare("UPDATE custom_order_groups SET payment_method = 'ton' WHERE id = ?").run(groupId);
+      }
+      const amountTon = Number(group.total) / rate;
+      const amountNano = BigInt(Math.round(amountTon * 1e9)).toString();
+      db.prepare(
+        "UPDATE custom_order_groups SET payment_amount_nano = ? WHERE id = ?"
+      ).run(amountNano, groupId);
+      tonInfo = {
+        receiveAddress: TON_RECEIVE_ADDRESS,
+        amountNano,
+        payload,
+        amountTon,
+        rateUsd: rate,
+      };
+    }
+  }
+
   try {
-    await notifyCustomOrderInvoice(group.user_id, groupId, items, group.total);
+    await notifyCustomOrderInvoice(group.user_id, groupId, items, group.total, tonInfo);
     db.prepare("UPDATE custom_order_groups SET invoice_sent_at = CURRENT_TIMESTAMP WHERE id = ?").run(groupId);
-    res.json({ ok: true });
+    res.json({ ok: true, ton: !!tonInfo });
   } catch (e) {
     console.error("[custom send-invoice]", e);
     res.status(500).json({ error: "Failed to send invoice" });
