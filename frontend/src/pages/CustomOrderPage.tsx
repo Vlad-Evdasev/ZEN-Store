@@ -146,9 +146,13 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
     document.documentElement.style.overflow = "";
     // wrap height вернётся к full размеру через vv.resize.
   };
-  // Safety cleanup при unmount страницы.
+  // Safety cleanup при unmount страницы + body class маркер для CSS
+  // (убирает borderTop у bottom-nav на этой странице — иначе под
+  // пилюлей видна полоса как «чёрный прямоугольник»).
   useEffect(() => {
+    document.body.classList.add("zen-customorder-active");
     return () => {
+      document.body.classList.remove("zen-customorder-active");
       document.body.classList.remove("zen-input-focused");
       document.body.style.overflow = "";
       document.documentElement.style.overflow = "";
@@ -603,15 +607,14 @@ const styles: Record<string, React.CSSProperties> = {
     backdropFilter: "blur(4px)",
   },
 
-  /* Composer слегка приподнят: paddingBottom: 4 — минимальный зазор
-     чтобы пилюля не лип к nav-border, но без заметной полосы
-     var(--bg) под пилюлей. */
+  /* paddingBottom: 0 — пилюля впритык к низу wrap'а, никакой полосы
+     var(--bg) под ней. Гэп до nav формируется только nav.borderTop. */
   composerWrap: {
     display: "flex",
     flexDirection: "column",
     gap: 8,
     paddingTop: 6,
-    paddingBottom: 4,
+    paddingBottom: 0,
     flexShrink: 0,
   },
   // Compact chat-input pill (~36-38px высота total). Раньше выглядела
