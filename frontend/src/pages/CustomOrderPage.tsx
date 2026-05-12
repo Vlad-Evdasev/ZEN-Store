@@ -83,27 +83,29 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
     el.style.height = Math.min(el.scrollHeight, 180) + "px";
   }, [customDesc]);
 
-  // visualViewport → direct DOM (без React state). State updates во
-  // время keyboard animation вызывали re-render, который приводил к
-  // «исчезновению» контента. Прямой запись в wrap.style.bottom +
-  // CSS transition даёт smooth slide без re-render'ов.
+  // Height-based positioning через visualViewport.
+  // Раньше использовали `top: 62, bottom: dynamic` — iOS Telegram WebView
+  // коллапсировал wrap (top + bottom > новый visible viewport → 0-height).
+  // Теперь `top: 62, bottom: auto, height: vv.height - 62 (-64 для nav)`
+  // — wrap всегда занимает корректную видимую область, не зависит от
+  // bottom-anchor который iOS может рассчитать неправильно.
   useEffect(() => {
     const vv = window.visualViewport;
     const wrap = wrapRef.current;
     if (!vv || !wrap) return;
-    // Фиксируем reference height на mount. window.innerHeight на iOS
-    // Telegram WebView может меняться при keyboard animation — не
-    // используем его в формуле, иначе offset вычисляется неправильно.
     const refHeight = window.innerHeight;
+    const HEADER = 62;
+    const NAV = 64;
     let raf: number | null = null;
     const apply = () => {
-      const visible = vv.height + vv.offsetTop;
-      // Clamp: предотвращаем «вылет» wrap'а за пределы viewport если
-      // визуальный viewport вдруг отдал странные значения.
-      const overlap = Math.max(0, Math.min(refHeight - 200, refHeight - visible));
-      // overlap > 0 → клавиатура открыта → bottom прижимаем к её
-      // верхнему краю. = 0 → дефолт 64 (резерв под bottom-nav).
-      wrap.style.bottom = overlap > 0 ? `${overlap}px` : "64px";
+      // Keyboard open detected by vv shrunk vs refHeight.
+      const kbOpen = vv.height < refHeight - 50;
+      // When keyboard open, nav скрыт через class — резервировать
+      // место не надо. wrap занимает весь vv.height минус header.
+      const navReserve = kbOpen ? 0 : NAV;
+      const h = Math.max(200, vv.height - HEADER - navReserve);
+      wrap.style.bottom = "auto";
+      wrap.style.height = `${h}px`;
     };
     const schedule = () => {
       if (raf != null) cancelAnimationFrame(raf);
@@ -114,6 +116,19 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
     return () => {
       if (raf != null) cancelAnimationFrame(raf);
       vv.removeEventListener("resize", schedule);
+    };
+  }, []);
+
+  // Body management: класс для скрытия nav + overflow lock против page
+  // jump'а от iOS scroll-to-input. Управляем в самом компоненте —
+  // гарантированный cleanup при unmount, не зависит от focus events.
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    document.body.classList.add("zen-input-focused");
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.classList.remove("zen-input-focused");
+      document.body.style.overflow = prevOverflow;
     };
   }, []);
 
@@ -304,7 +319,8 @@ const styles: Record<string, React.CSSProperties> = {
   wrap: {
     position: "fixed",
     top: 62,
-    bottom: 64,
+    // bottom НЕ задан — позиционируем через top+height в JS-effect'е.
+    // Раньше top+bottom коллапсировали wrap на iOS при keyboard.
     left: 0,
     right: 0,
     maxWidth: 460,
@@ -316,11 +332,9 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "16px max(16px, env(safe-area-inset-left)) 0 max(16px, env(safe-area-inset-right))",
     background: "var(--bg)",
     zIndex: 5,
-    // Smooth slide вместе с keyboard. ease-out 280ms — visualViewport
-    // на iOS обновляет height каждые ~16ms во время keyboard animation,
-    // но React rendering может «отстать». CSS transition сгладит
-    // любой gap между real keyboard position и bottom-property.
-    transition: "bottom 280ms cubic-bezier(0.32, 0.72, 0, 1)",
+    // Smooth resize вместе с keyboard. CSS animates height — composer
+    // (внизу flex-column) плавно поднимается с клавиатурой.
+    transition: "height 280ms cubic-bezier(0.32, 0.72, 0, 1)",
   },
   headerBlock: {
     padding: "0 4px 6px",

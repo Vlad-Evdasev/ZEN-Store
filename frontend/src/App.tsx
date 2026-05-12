@@ -329,21 +329,18 @@ function App() {
       } catch {}
     };
     // Если фокус оказался внутри keyboard-aware контейнера (CustomOrderPage,
-    // NewReviewSheet) — body НЕ блокируется (position:fixed). Эти страницы
-    // сами управляют позиционированием composer через visualViewport.
-    // НО bottom-nav прячется через class zen-input-focused — иначе iOS
-    // авто-репозиционирует его НАД клавиатуру (баг «футер всплывает»).
+    // NewReviewSheet) — App.tsx НЕ управляет ни body-классом, ни scroll-
+    // lock'ом. Сам компонент в useEffect ставит body.zen-input-focused
+    // (скрыть nav) и body.overflow=hidden (запретить page jump). Это
+    // гарантирует чистый cleanup при unmount/close без зависимости от
+    // focusout events которые на iOS Telegram WebView могут не сработать.
     const isInsideKeyboardAware = (el: EventTarget | null): boolean => {
       if (!el || !(el instanceof Element)) return false;
       return !!el.closest('[data-keyboard-aware="true"]');
     };
     const onFocusIn = (e: FocusEvent) => {
       if (!isInputEl(e.target)) return;
-      if (isInsideKeyboardAware(e.target)) {
-        // Скрываем nav (через CSS class) — но body НЕ блокируем.
-        document.body.classList.add("zen-input-focused");
-        return;
-      }
+      if (isInsideKeyboardAware(e.target)) return;
       lockBody();
     };
     const onFocusOut = (e: FocusEvent) => {

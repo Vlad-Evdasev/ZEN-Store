@@ -41,6 +41,21 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
     return () => vv.removeEventListener("resize", update);
   }, [open]);
 
+  // Body management: добавляем zen-input-focused класс (скрывает nav)
+  // и body.overflow=hidden (предотвращает iOS page-jump на focus).
+  // Управляем здесь же, гарантированный cleanup при close — никакой
+  // зависимости от focusout events, которые иногда не firing на iOS.
+  useEffect(() => {
+    if (!open) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.classList.add("zen-input-focused");
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.classList.remove("zen-input-focused");
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [open]);
+
   useEffect(() => {
     if (open) {
       setMounted(true);
@@ -133,7 +148,10 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
     ...styles.sheet,
     maxHeight: sheetMaxHeight,
     transform: visible ? "translateY(0)" : "translateY(100%)",
-    transition: `transform ${SHEET_ANIM}ms cubic-bezier(0.32, 0.72, 0, 1)`,
+    // transform — slide-in/out; max-height — smooth resize при keyboard.
+    transition:
+      `transform ${SHEET_ANIM}ms cubic-bezier(0.32, 0.72, 0, 1), ` +
+      `max-height 240ms cubic-bezier(0.32, 0.72, 0, 1)`,
   };
 
   return (
