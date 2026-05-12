@@ -1184,7 +1184,7 @@ export async function getBotUsersCount(adminSecret: string): Promise<{ count: nu
 }
 
 export async function sendBroadcast(
-  data: { text: string; image_urls?: string[]; segment?: SegmentKey },
+  data: { text: string; image_urls?: string[] },
   adminSecret: string
 ): Promise<BroadcastPost> {
   const res = await fetch(`${API_URL}/api/admin/broadcast`, {
@@ -1306,20 +1306,6 @@ export async function getTogetherProducts(productId: number): Promise<{ product_
   const res = await fetchWithRetry(`${API_URL}/api/engagement/together/${productId}`);
   if (!res.ok) throw new Error("Failed to fetch together products");
   return res.json();
-}
-
-export type SegmentKey = "all" | "vip" | "loyal" | "new" | "dormant" | "cart_abandoners";
-
-export async function getSegmentCount(
-  segment: SegmentKey,
-  adminSecret: string
-): Promise<number> {
-  const res = await fetch(`${API_URL}/api/engagement/segments/${segment}/count`, {
-    headers: { "X-Admin-Secret": adminSecret },
-  });
-  if (!res.ok) throw new Error("Failed to fetch segment count");
-  const data = (await res.json()) as { count: number };
-  return data.count;
 }
 
 export interface BotAnalytics {

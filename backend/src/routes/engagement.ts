@@ -204,60 +204,6 @@ export async function runDropTeaserSweep(): Promise<{ sent: number }> {
   return { sent };
 }
 
-// ── Customer segments (для targeted broadcasts, Phase 5) ─────────────
-
-export type SegmentKey =
-  | "all"
-  | "vip"            // 5+ completed orders
-  | "loyal"          // 2-4 completed orders
-  | "new"            // нет заказов
-  | "dormant"        // нет активности 30+ дней
-  | "cart_abandoners"; // есть cart_items > 24h без заказа
-
-export function getSegmentRecipients(segment: SegmentKey): string[] {
-  const all = db
-    .prepare(
-      "SELECT user_id FROM bot_users WHERE blocked_at IS NULL"
-    )
-    .all() as { user_id: string }[];
-  if (segment === "all") return all.map((r) => r.user_id);
-  const out: string[] = [];
-  for (const { user_id } of all) {
-    const cnt = db
-      .prepare("SELECT COUNT(*) as c FROM orders WHERE user_id = ? AND status = 'completed'")
-      .get(user_id) as { c: number };
-    if (segment === "vip" && cnt.c >= 5) out.push(user_id);
-    else if (segment === "loyal" && cnt.c >= 2 && cnt.c < 5) out.push(user_id);
-    else if (segment === "new" && cnt.c === 0) {
-      // Дополнительно: проверяем последнюю активность — пока всё, считаем «новым».
-      out.push(user_id);
-    } else if (segment === "dormant") {
-      const last = db
-        .prepare(
-          "SELECT MAX(created_at) as last_at FROM orders WHERE user_id = ?"
-        )
-        .get(user_id) as { last_at: string | null };
-      if (!last.last_at) continue;
-      const days = (Date.now() - new Date(last.last_at).getTime()) / 86400000;
-      if (days >= 30) out.push(user_id);
-    } else if (segment === "cart_abandoners") {
-      const has = db
-        .prepare(
-          "SELECT 1 FROM cart_items WHERE user_id = ? AND datetime(created_at) <= datetime('now', '-24 hours') LIMIT 1"
-        )
-        .get(user_id);
-      if (has) out.push(user_id);
-    }
-  }
-  return out;
-}
-
-engagementRouter.get("/segments/:key/count", requireAdmin, (req, res) => {
-  const key = req.params.key as SegmentKey;
-  const ids = getSegmentRecipients(key);
-  res.json({ count: ids.length });
-});
-
 // ── Frequently bought together (Phase 7) ─────────────────────────────
 
 engagementRouter.get("/together/:productId", (req, res) => {

@@ -194,20 +194,12 @@ adminRouter.post("/broadcast", requireAdmin, async (req, res) => {
   const images: string[] = Array.isArray(rawImages)
     ? rawImages.filter((x): x is string => typeof x === "string" && x.trim().length > 0).map((x) => x.trim())
     : [];
-  const segment = typeof req.body?.segment === "string" ? req.body.segment : "all";
   if (!text.trim() && images.length === 0) {
     return res.status(400).json({ error: "Укажи текст или хотя бы одну картинку" });
   }
-  // Получатели: если segment != "all", фильтруем через getSegmentRecipients
-  let recipients: string[];
-  if (segment !== "all") {
-    const { getSegmentRecipients } = await import("./engagement.js");
-    recipients = getSegmentRecipients(segment as Parameters<typeof getSegmentRecipients>[0]);
-  } else {
-    recipients = getBroadcastRecipients();
-  }
+  const recipients = getBroadcastRecipients();
   if (recipients.length === 0) {
-    return res.status(400).json({ error: `Нет получателей в сегменте «${segment}». Попробуй другой.` });
+    return res.status(400).json({ error: "Нет подписчиков для рассылки." });
   }
   const result = await broadcastToUsers(text, images, recipients);
   const firstHttp = images.find((s) => /^https?:\/\//i.test(s)) ?? null;
