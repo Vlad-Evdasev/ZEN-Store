@@ -29,6 +29,34 @@ export function ReviewLightbox({ images, startIndex, startRect, onClose }: Revie
   const touchDy = useRef(0);
   const wheelLocked = useRef(false);
 
+  // Body-scroll lock — иначе при свайпе/wheel на лайтбоксе под ним
+  // скроллится список отзывов. Сохраняем prev value, восстанавливаем
+  // при close (вместе с body class для z-index хедера/футера).
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.body.classList.add("zen-review-lightbox-clipped");
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.classList.remove("zen-review-lightbox-clipped");
+      document.body.classList.remove("zen-review-lightbox-fullscreen");
+    };
+  }, []);
+
+  // Phase-based body class: во время opening/closing лайтбокс под
+  // header/nav (clipped by them) — image «улетает за header» как в
+  // catalog FLIP. Когда фаза open — header/nav возвращаются к
+  // дефолтному z-index, лайтбокс полностью виден.
+  useEffect(() => {
+    if (phase === "open") {
+      document.body.classList.add("zen-review-lightbox-fullscreen");
+      document.body.classList.remove("zen-review-lightbox-clipped");
+    } else {
+      document.body.classList.add("zen-review-lightbox-clipped");
+      document.body.classList.remove("zen-review-lightbox-fullscreen");
+    }
+  }, [phase]);
+
   // FLIP-open: image starts at startRect position+size, animates to natural.
   useLayoutEffect(() => {
     const img = imgRef.current;
@@ -138,18 +166,26 @@ export function ReviewLightbox({ images, startIndex, startRect, onClose }: Revie
 
   if (typeof document === "undefined") return null;
 
+  // z-index 1100: ВЫШЕ default header (10) и nav (30), НО body class
+  // zen-review-lightbox-clipped поднимет header/nav до 1300/1200 на
+  // время opening/closing — image будет clipped ими (FLIP проходит
+  // «за хедер»). На phase=open класс снимается, lightbox оказывается
+  // выше всего → image fully visible.
   const overlayStyle: React.CSSProperties = {
     position: "fixed",
     inset: 0,
     background: phase === "opening" ? "rgba(0,0,0,0)" : phase === "open" ? "rgba(0,0,0,0.92)" : "rgba(0,0,0,0)",
     transition: phase === "opening" ? "none" : `background-color ${ANIM}ms ${EASING}`,
-    zIndex: 1600,
+    zIndex: 1100,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     padding: 16,
     cursor: "zoom-out",
-    touchAction: "pan-y",
+    // touch-action: none — блокируем default-скролл body когда юзер
+    // свайпает по лайтбоксу. Все жесты (swipe фото, pull-down close)
+    // обрабатываем сами.
+    touchAction: "none",
   };
 
   const dotsStyle: React.CSSProperties = {

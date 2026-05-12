@@ -141,7 +141,7 @@ export function NewReviewSheet({ open, submitting, error, onClose, onSubmit }: N
   };
 
   return (
-    <div style={overlayStyle} onClick={onClose}>
+    <div style={overlayStyle} onClick={onClose} data-keyboard-aware="true">
       <div
         style={sheetStyle}
         onClick={(e) => e.stopPropagation()}

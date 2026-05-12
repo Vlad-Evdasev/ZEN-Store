@@ -165,7 +165,7 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
 
   if (customSuccess) {
     return (
-      <div ref={wrapRef} style={styles.wrap}>
+      <div ref={wrapRef} style={styles.wrap} data-keyboard-aware="true">
         <div style={styles.threadSuccess}>
           <BotBubble>
             <div style={styles.successInner}>
@@ -188,7 +188,7 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   }
 
   return (
-    <div ref={wrapRef} style={styles.wrap}>
+    <div ref={wrapRef} style={styles.wrap} data-keyboard-aware="true">
       <form onSubmit={handleSubmit} style={styles.form}>
         {/* Chat thread */}
         <div style={styles.thread}>

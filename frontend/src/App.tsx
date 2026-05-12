@@ -328,8 +328,19 @@ function App() {
         tg?.enableVerticalSwipes?.();
       } catch {}
     };
+    // Если фокус оказался внутри keyboard-aware контейнера (CustomOrderPage,
+    // NewReviewSheet) — body НЕ блокируется. Эти страницы сами управляют
+    // позиционированием composer через visualViewport и position:fixed.
+    // Body-lock внутри них вызывал repaint и «исчезновение» контента на
+    // время keyboard animation.
+    const isInsideKeyboardAware = (el: EventTarget | null): boolean => {
+      if (!el || !(el instanceof Element)) return false;
+      return !!el.closest('[data-keyboard-aware="true"]');
+    };
     const onFocusIn = (e: FocusEvent) => {
-      if (isInputEl(e.target)) lockBody();
+      if (!isInputEl(e.target)) return;
+      if (isInsideKeyboardAware(e.target)) return;
+      lockBody();
     };
     const onFocusOut = (e: FocusEvent) => {
       if (isInputEl(e.target)) {
@@ -376,14 +387,14 @@ function App() {
     // низу страницы, когда input под клавиатурой и iOS нужно его
     // подвинуть).
     const onPointerDown = (e: PointerEvent) => {
-      if (isInputEl(e.target) && !isLocked) {
-        pendingScrollY = window.scrollY || document.documentElement.scrollTop || 0;
-      }
+      if (!isInputEl(e.target) || isLocked) return;
+      if (isInsideKeyboardAware(e.target)) return;
+      pendingScrollY = window.scrollY || document.documentElement.scrollTop || 0;
     };
     const onTouchStartCapture = (e: TouchEvent) => {
-      if (isInputEl(e.target) && !isLocked) {
-        pendingScrollY = window.scrollY || document.documentElement.scrollTop || 0;
-      }
+      if (!isInputEl(e.target) || isLocked) return;
+      if (isInsideKeyboardAware(e.target)) return;
+      pendingScrollY = window.scrollY || document.documentElement.scrollTop || 0;
     };
     document.addEventListener("focusin", onFocusIn, true);
     document.addEventListener("focusout", onFocusOut, true);

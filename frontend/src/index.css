@@ -1787,6 +1787,21 @@ body.zen-input-focused .zen-app main.zen-main--inspire {
   padding-bottom: 0 !important;
 }
 
+/* Review lightbox: phase-based z-index для header / bottom-nav.
+   - clipped (opening/closing): header / nav поднимаются на z-index 1300.
+     Image (внутри overlay z-index 1100) clipped ими — FLIP «за хедер»
+     как в catalog product page.
+   - fullscreen (open): header/nav скрыты через display:none, lightbox
+     полностью на весь экран без visual frame. */
+body.zen-review-lightbox-clipped .zen-app > header,
+body.zen-review-lightbox-clipped .zen-bottom-nav {
+  z-index: 1300;
+}
+body.zen-review-lightbox-fullscreen .zen-app > header,
+body.zen-review-lightbox-fullscreen .zen-bottom-nav {
+  visibility: hidden;
+}
+
 
 /* Outgoing back-nav: sheet bg градуально fades to transparent через
    keyframe (применяется через .zen-sheet-force-close). А image внутри

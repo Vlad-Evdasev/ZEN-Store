@@ -182,19 +182,14 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
 
             {commentFor === r.id ? (
               <div style={styles.commentForm}>
-                <textarea
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  placeholder={t(lang, "reviewsCommentPlaceholder")}
-                  rows={2}
-                  style={styles.commentInput}
-                />
                 {commentPhoto && (
                   <div style={styles.previewWrap}>
                     <img src={commentPhoto} alt="" style={styles.preview} />
                     <button
                       type="button"
                       onClick={() => setCommentPhoto(null)}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onTouchStart={(e) => e.preventDefault()}
                       style={styles.previewRemove}
                       aria-label={t(lang, "reviewsRemovePhoto")}
                     >
@@ -209,31 +204,48 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
                   onChange={handlePickPhoto}
                   style={{ display: "none" }}
                 />
-                <div style={styles.commentActions}>
+                {/* Chat-style composer (как в CustomOrderPage):
+                    скрепка слева — textarea в центре — send справа. */}
+                <div style={styles.composer}>
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    style={styles.attachBtn}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onTouchStart={(e) => e.preventDefault()}
+                    style={styles.composerIconBtn}
                     aria-label={t(lang, "reviewsAttachPhoto")}
                     title={t(lang, "reviewsAttachPhoto")}
                   >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                      <circle cx="8.5" cy="8.5" r="1.5" />
-                      <polyline points="21 15 16 10 5 21" />
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
                     </svg>
                   </button>
+                  <textarea
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    placeholder={t(lang, "reviewsCommentPlaceholder")}
+                    rows={1}
+                    style={styles.composerTextarea}
+                  />
                   <button
                     type="button"
                     onClick={() => handleAddComment(r.id)}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onTouchStart={(e) => e.preventDefault()}
                     disabled={submitting || (!commentText.trim() && !commentPhoto)}
                     style={{
-                      ...styles.commentSubmit,
-                      opacity: submitting || (!commentText.trim() && !commentPhoto) ? 0.5 : 1,
+                      ...styles.composerSendBtn,
+                      opacity: submitting || (!commentText.trim() && !commentPhoto) ? 0.35 : 1,
+                      cursor: submitting || (!commentText.trim() && !commentPhoto) ? "not-allowed" : "pointer",
                     }}
+                    aria-label={t(lang, "reviewsSend")}
                   >
-                    {t(lang, "reviewsSend")}
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M12 19V5M5 12l7-7 7 7" />
+                    </svg>
                   </button>
+                </div>
+                <div style={styles.composerCancelRow}>
                   <button type="button" onClick={resetCommentForm} style={styles.commentCancel}>
                     {t(lang, "reviewsCancel")}
                   </button>
@@ -509,49 +521,72 @@ const styles: Record<string, React.CSSProperties> = {
     maxWidth: "100%", maxHeight: 180,
     borderRadius: 8, display: "block",
   },
-  commentForm: { marginTop: 4 },
-  commentInput: {
-    width: "100%", padding: 10,
-    background: "var(--bg)", border: "1px solid var(--border)",
-    borderRadius: 10, color: "var(--text)",
-    fontSize: 13, fontFamily: "inherit",
-    marginBottom: 8, resize: "vertical", boxSizing: "border-box",
-  },
+  commentForm: { marginTop: 8, display: "flex", flexDirection: "column", gap: 8 },
   previewWrap: {
     position: "relative", display: "inline-block",
-    marginBottom: 8,
   },
   preview: {
     maxHeight: 120, maxWidth: "100%",
-    borderRadius: 8, display: "block",
+    borderRadius: 10, display: "block",
     border: "1px solid var(--border)",
   },
   previewRemove: {
     position: "absolute", top: 4, right: 4,
     width: 22, height: 22, borderRadius: "50%",
-    background: "rgba(0,0,0,0.6)", color: "#fff",
+    background: "rgba(0,0,0,0.65)", color: "#fff",
     border: "none", cursor: "pointer",
-    fontSize: 16, lineHeight: 1,
+    fontSize: 16, lineHeight: "20px",
     display: "flex", alignItems: "center", justifyContent: "center",
     padding: 0,
+    WebkitTapHighlightColor: "transparent",
   },
-  commentActions: { display: "flex", gap: 8, alignItems: "center" },
-  attachBtn: {
-    width: 36, height: 36, borderRadius: 10,
-    background: "var(--bg)", border: "1px solid var(--border)",
+  // Chat-style composer — pill с paperclip / textarea / send.
+  // Идентичен CustomOrderPage composer style.
+  composer: {
+    display: "flex",
+    alignItems: "flex-end",
+    gap: 2,
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: 22,
+    padding: "4px 6px 4px 4px",
+    boxShadow: "0 4px 18px rgba(0,0,0,0.06)",
+  },
+  composerIconBtn: {
+    width: 36, height: 36, borderRadius: "50%",
+    background: "transparent", border: "none",
     color: "var(--muted)", cursor: "pointer",
     display: "flex", alignItems: "center", justifyContent: "center",
-    padding: 0,
+    flexShrink: 0, padding: 0,
+    WebkitTapHighlightColor: "transparent",
   },
-  commentSubmit: {
-    padding: "8px 14px", background: "var(--accent)",
-    border: "none", borderRadius: 10, color: "#fff",
-    fontSize: 13, cursor: "pointer", fontFamily: "inherit",
+  composerTextarea: {
+    flex: 1, minHeight: 36, maxHeight: 140,
+    padding: "8px 4px",
+    fontSize: 14, lineHeight: 1.45,
+    background: "transparent", border: "1px solid transparent",
+    borderRadius: 0, resize: "none", outline: "none",
+    fontFamily: "inherit", color: "var(--text)",
+  },
+  composerSendBtn: {
+    width: 36, height: 36, borderRadius: "50%",
+    background: "var(--accent)", color: "#fff",
+    border: "none", display: "flex",
+    alignItems: "center", justifyContent: "center",
+    flexShrink: 0, padding: 0,
+    transition: "opacity 0.15s, transform 0.15s",
+    WebkitTapHighlightColor: "transparent",
+  },
+  composerCancelRow: {
+    display: "flex", justifyContent: "flex-end",
+    paddingRight: 8,
   },
   commentCancel: {
-    padding: "8px 14px", background: "transparent",
-    border: "1px solid var(--border)", borderRadius: 10,
-    color: "var(--muted)", fontSize: 13, cursor: "pointer", fontFamily: "inherit",
+    padding: "4px 12px", background: "transparent",
+    border: "none", borderRadius: 10,
+    color: "var(--muted)", fontSize: 12, cursor: "pointer",
+    fontFamily: "inherit", letterSpacing: "0.02em",
+    WebkitTapHighlightColor: "transparent",
   },
   replyBtn: {
     alignSelf: "flex-start", background: "none", border: "none",
