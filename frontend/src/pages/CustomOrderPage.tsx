@@ -603,30 +603,31 @@ const styles: Record<string, React.CSSProperties> = {
     backdropFilter: "blur(4px)",
   },
 
-  /* Composer слегка приподнят над низом wrap'а — 2px зазора чтобы
-     пилюля «парила» над футером, не лип к низу. */
+  /* Composer парит над футером — paddingBottom: 12 создаёт чёткий
+     визуальный зазор между пилюлей и низом wrap'а / nav top. */
   composerWrap: {
     display: "flex",
     flexDirection: "column",
     gap: 8,
     paddingTop: 6,
-    paddingBottom: 2,
+    paddingBottom: 12,
     flexShrink: 0,
   },
+  // Compact chat-input pill (~36-38px высота total). Раньше выглядела
+  // «жирной» из-за избыточного padding'а и больших buttons.
   composer: {
     display: "flex",
-    alignItems: "flex-end",
-    gap: 2,
+    alignItems: "center",
+    gap: 4,
     background: "var(--surface)",
     border: "1px solid var(--border)",
     borderRadius: 22,
-    padding: "4px 6px 4px 4px",
+    padding: "3px 4px",
     boxShadow: "0 4px 18px rgba(0,0,0,0.06)",
   },
   composerIconBtn: {
-    // 32×32 (было 36×36) — пилюля компактнее, выглядит как chat input.
-    width: 32,
-    height: 32,
+    width: 30,
+    height: 30,
     borderRadius: "50%",
     background: "transparent",
     border: "none",
@@ -640,13 +641,11 @@ const styles: Record<string, React.CSSProperties> = {
   },
   composerTextarea: {
     flex: 1,
-    // minHeight 32 (было 36) + padding 6 (было 8) → пилюля компактнее
-    // на 8px по высоте. Выглядит как chat input pill, не как textarea.
-    minHeight: 32,
+    minHeight: 30,
     maxHeight: 180,
-    padding: "6px 4px",
+    padding: "5px 6px",
     fontSize: 14,
-    lineHeight: 1.45,
+    lineHeight: 1.4,
     background: "transparent",
     border: "1px solid transparent",
     borderRadius: 0,
@@ -654,9 +653,8 @@ const styles: Record<string, React.CSSProperties> = {
     outline: "none",
   },
   composerSendBtn: {
-    // 32×32 (было 36×36).
-    width: 32,
-    height: 32,
+    width: 30,
+    height: 30,
     borderRadius: "50%",
     background: "var(--accent)",
     color: "#fff",
