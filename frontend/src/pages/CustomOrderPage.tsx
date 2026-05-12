@@ -179,31 +179,14 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
     };
   }, []);
 
-  // Раньше тут была куча защит против бага: paperclip → outside-tap
-  // dismiss action sheet → быстрый тап на textarea → kb открывается
-  // и сама закрывается через ~1s. Пробовали:
-  //  - clear input.value + blur — не помогло
-  //  - recreate file input через React key + flushSync — не помогло
-  //  - refocus textarea на spurious blur — programmatic focus на iOS
-  //    не возвращает kb без user gesture
-  //  - убирать label из DOM на 3s — ломало UX (нельзя было быстро
-  //    кликнуть скрепку снова) и баг всё равно повторялся
-  // Корень: iOS native action sheet (Медиатека/Камера/Файлы) для file
-  // input'а с `multiple` атрибутом оставляет грязное состояние state
-  // machine, которое не очищается outside-tap dismiss'ом. Никакая
-  // JS-side защита не убирает этот grace-period полностью.
-  // РЕШЕНИЕ: убрали `multiple` атрибут (см. <input> ниже). Без него
-  // iOS открывает Photos picker напрямую, БЕЗ action sheet'а →
-  // нет outside-tap dismiss сценария → нет бага. Trade-off: юзер
-  // выбирает 1 фото за тап. Для несколько фото тапает скрепку
-  // несколько раз (до MAX_PHOTOS = 5).
-  // Дополнительно блокируем textarea на 1.2s после paperclip-клика
+  // Блокируем textarea на 1.5s после paperclip-клика
   // (pointer-events: none + opacity dim). Без этого быстрый тап
   // textarea после dismiss picker'а ловит iOS-state machine quirk:
   // kb открывается и сразу сама закрывается. iOS нужно ~1s чтобы
   // очистить state после file-input-клика; programmatic focus не
   // возвращает kb. Единственное надёжное решение — не дать юзеру
-  // фокусить textarea до того как iOS очистит state.
+  // фокусить textarea до того как iOS очистит state. Этот же lock
+  // митигирует action-sheet dismiss bug при `multiple` атрибуте.
   const [textareaLocked, setTextareaLocked] = useState(false);
   const textareaUnlockTimerRef = useRef<number | null>(null);
 
@@ -361,28 +344,32 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
         {/* Composer */}
         <div style={styles.composerWrap}>
           <div style={styles.composerRow}>
-            {/* Paperclip pill — отдельная круглая кнопка слева от пилюли
-                ввода (как в Telegram). Активна только когда клавиатура
-                свёрнута. Если kb открыта — opacity 0.35, file input
-                disabled, picker не откроется. Тап в этом состоянии
-                делает textarea.blur() → клавиатура закрывается →
-                повторным тапом юзер открывает picker. */}
-            <label
+            {/* Paperclip pill — <button> + sibling <input>, не label-
+                wrapped. Раньше использовали <label>-wrapped-<input> с
+                disabled-управлением — в iOS Telegram WebView label-
+                input synthetic click мог обходить disabled и открывать
+                picker когда kb открыта. Button даёт явный контроль:
+                input.click() вызывается ТОЛЬКО когда мы явно решили
+                в handler'е. preventFocusSteal на mousedown/touchstart
+                не даёт кнопке украсть focus у textarea — иначе kbOpen
+                flippаs to false до handler'а, и kb-open ветка
+                пропускается. */}
+            <button
+              type="button"
               style={{
                 ...styles.paperclipPill,
                 cursor: paperclipDisabled ? "not-allowed" : "pointer",
                 opacity: paperclipDisabled ? 0.35 : 1,
               }}
               aria-label={t(lang, "customOrderPhotoAdd")}
+              onMouseDown={preventFocusSteal}
+              onTouchStart={preventFocusSteal}
               onClick={() => {
                 if (kbOpen) {
                   textareaRef.current?.blur();
                   return;
                 }
-                // Блокируем textarea на 1.2s. Без этого быстрая
-                // последовательность paperclip → dismiss picker →
-                // tap textarea ловит iOS-state-machine баг (kb
-                // открывается и сразу сама закрывается).
+                if (customPhotos.length >= MAX_PHOTOS) return;
                 setTextareaLocked(true);
                 if (textareaUnlockTimerRef.current != null) {
                   clearTimeout(textareaUnlockTimerRef.current);
@@ -391,27 +378,24 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
                   setTextareaLocked(false);
                   textareaUnlockTimerRef.current = null;
                 }, 1500);
+                fileInputRef.current?.click();
               }}
             >
-              {/* НЕТ `multiple` атрибута — это критично. С `multiple`
-                  iOS показывает action sheet (Медиатека/Камера/Файлы),
-                  у которого outside-tap dismiss оставляет dirty state
-                  → быстрый последующий тап на textarea закрывает kb
-                  через ~1s. Без `multiple` iOS открывает Photos picker
-                  напрямую, без action sheet, без бага.
-                  Trade-off: 1 фото за тап. Юзер тапает скрепку
-                  повторно чтобы добавить ещё (до MAX_PHOTOS = 5). */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={onPhotoChange}
-                disabled={paperclipDisabled}
-                style={{ display: "none" }}
-                aria-hidden
-              />
               <PaperclipIcon />
-            </label>
+            </button>
+            {/* `multiple` позволяет выбрать несколько фото за тап.
+                iOS-state-machine bug (kb сразу закрывается после
+                action sheet dismiss) митигируется textareaLocked
+                на 1.5s после клика. */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={onPhotoChange}
+              style={{ display: "none" }}
+              aria-hidden
+            />
 
             <div style={styles.composer}>
               <textarea
