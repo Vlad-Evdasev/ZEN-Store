@@ -138,14 +138,6 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   // slide-up клавиатуры → они идут синхронно.
   // body.overflow управляется mount/unmount useEffect'ом, здесь не
   // трогаем (иначе на blur разлочим, и следующий focus получит race).
-  // Defense window после paperclip-клика: если в этом окне textarea
-  // получает blur (что НЕ инициировал юзер), мы расцениваем это как
-  // spurious iOS event из пайплайна закрытия action sheet'а и
-  // refocus'им textarea, чтобы клавиатура осталась открытой.
-  // One-shot — после первого refocus гасим, чтобы не уйти в loop
-  // если юзер на самом деле хочет blur'нуть textarea.
-  const paperclipDefenseUntilRef = useRef<number>(0);
-
   const handleFocus = () => {
     setKbOpen(true);
     document.body.classList.add("zen-input-focused");
@@ -157,16 +149,6 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
     }
   };
   const handleBlur = () => {
-    // Defensive refocus против spurious iOS-blur'а после paperclip+dismiss.
-    if (paperclipDefenseUntilRef.current && Date.now() < paperclipDefenseUntilRef.current) {
-      paperclipDefenseUntilRef.current = 0; // one-shot, защита от loop'а
-      // Refocus в следующем frame (синхронный focus внутри onBlur может
-      // привести к recursive blur → focus → blur).
-      requestAnimationFrame(() => {
-        textareaRef.current?.focus();
-      });
-      return;
-    }
     setKbOpen(false);
     document.body.classList.remove("zen-input-focused");
     // wrap height вернётся к full размеру через vv.resize.
@@ -193,22 +175,24 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
     };
   }, []);
 
-  // БАГ: paperclip-тап → outside-tap dismiss action sheet → быстрый
-  // тап на textarea (всё <1s) → kb открывается на ~1s и сама
-  // схлопывается. Если ждать пару секунд после paperclip — бага нет.
-  // ПРИЧИНА: iOS dispatches отложенный focus/blur event через ~1s
-  // после label-клика. Когда event fires ПОСЛЕ focus textarea, он
-  // отбирает фокус у textarea → kb закрывается. Programmatic refocus
-  // не возвращает kb (без user gesture).
-  // ФИКС: после paperclip-клика на 3 секунды РАЗРУШАЕМ весь label
-  // целиком (и input внутри). На это окно paperclip рендерится как
-  // обычный <div> без file input. iOS-event летит на removed DOM →
-  // no-op → textarea сохраняет фокус → kb остаётся открытой.
-  // 3 секунды покрывают ~1s iOS-delay + запас на пользовательские
-  // действия между dismiss и tap textarea.
-  const paperclipClickAtRef = useRef<number>(0);
-  const [paperclipHideUntil, setPaperclipHideUntil] = useState<number>(0);
-  const paperclipHidden = paperclipHideUntil > 0 && Date.now() < paperclipHideUntil;
+  // Раньше тут была куча защит против бага: paperclip → outside-tap
+  // dismiss action sheet → быстрый тап на textarea → kb открывается
+  // и сама закрывается через ~1s. Пробовали:
+  //  - clear input.value + blur — не помогло
+  //  - recreate file input через React key + flushSync — не помогло
+  //  - refocus textarea на spurious blur — programmatic focus на iOS
+  //    не возвращает kb без user gesture
+  //  - убирать label из DOM на 3s — ломало UX (нельзя было быстро
+  //    кликнуть скрепку снова) и баг всё равно повторялся
+  // Корень: iOS native action sheet (Медиатека/Камера/Файлы) для file
+  // input'а с `multiple` атрибутом оставляет грязное состояние state
+  // machine, которое не очищается outside-tap dismiss'ом. Никакая
+  // JS-side защита не убирает этот grace-period полностью.
+  // РЕШЕНИЕ: убрали `multiple` атрибут (см. <input> ниже). Без него
+  // iOS открывает Photos picker напрямую, БЕЗ action sheet'а →
+  // нет outside-tap dismiss сценария → нет бага. Trade-off: юзер
+  // выбирает 1 фото за тап. Для несколько фото тапает скрепку
+  // несколько раз (до MAX_PHOTOS = 5).
 
   // preventFocusSteal — на mobile тап по кнопке (paperclip, ✕, send)
   // блюрит textarea → клавиатура схлопывается. preventDefault на
@@ -244,9 +228,6 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   };
 
   const onPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Picker закрылся через selection (а не outside-tap) — cleanup
-    // через touchstart больше не нужен, гасим маркер.
-    paperclipClickAtRef.current = 0;
     const files = Array.from(e.target.files ?? []);
     e.target.value = "";
     if (files.length === 0) return;
@@ -373,62 +354,36 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
                 disabled, picker не откроется. Тап в этом состоянии
                 делает textarea.blur() → клавиатура закрывается →
                 повторным тапом юзер открывает picker. */}
-            {paperclipHidden ? (
-              // На 3 секунды после клика на скрепку рендерим обычный
-              // div вместо label с file input'ом. Это убирает весь
-              // <label>+<input> из DOM на окно, в которое iOS может
-              // выстрелить отложенный focus/blur event и сбросить kb.
-              <div
-                style={{
-                  ...styles.paperclipPill,
-                  cursor: "not-allowed",
-                  opacity: 0.35,
-                }}
+            <label
+              style={{
+                ...styles.paperclipPill,
+                cursor: paperclipDisabled ? "not-allowed" : "pointer",
+                opacity: paperclipDisabled ? 0.35 : 1,
+              }}
+              aria-label={t(lang, "customOrderPhotoAdd")}
+              onClick={() => {
+                if (kbOpen) textareaRef.current?.blur();
+              }}
+            >
+              {/* НЕТ `multiple` атрибута — это критично. С `multiple`
+                  iOS показывает action sheet (Медиатека/Камера/Файлы),
+                  у которого outside-tap dismiss оставляет dirty state
+                  → быстрый последующий тап на textarea закрывает kb
+                  через ~1s. Без `multiple` iOS открывает Photos picker
+                  напрямую, без action sheet, без бага.
+                  Trade-off: 1 фото за тап. Юзер тапает скрепку
+                  повторно чтобы добавить ещё (до MAX_PHOTOS = 5). */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={onPhotoChange}
+                disabled={paperclipDisabled}
+                style={{ display: "none" }}
                 aria-hidden
-              >
-                <PaperclipIcon />
-              </div>
-            ) : (
-              <label
-                style={{
-                  ...styles.paperclipPill,
-                  cursor: paperclipDisabled ? "not-allowed" : "pointer",
-                  opacity: paperclipDisabled ? 0.35 : 1,
-                }}
-                aria-label={t(lang, "customOrderPhotoAdd")}
-                onClick={() => {
-                  if (paperclipDisabled) {
-                    if (kbOpen) textareaRef.current?.blur();
-                    return;
-                  }
-                  // Открываем 3-секундное окно «скрепки нет в DOM»
-                  // (см. JSX выше) и refocus-defense, чтобы перекрыть
-                  // spurious iOS-event из пайплайна action sheet'а.
-                  paperclipClickAtRef.current = Date.now();
-                  paperclipDefenseUntilRef.current = Date.now() + 3000;
-                  const until = Date.now() + 3000;
-                  setPaperclipHideUntil(until);
-                  // Возвращаем label/input обратно через 3.1s (с запасом).
-                  setTimeout(() => {
-                    setPaperclipHideUntil((curr) =>
-                      Date.now() >= curr ? 0 : curr,
-                    );
-                  }, 3100);
-                }}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={onPhotoChange}
-                  disabled={paperclipDisabled}
-                  style={{ display: "none" }}
-                  aria-hidden
-                />
-                <PaperclipIcon />
-              </label>
-            )}
+              />
+              <PaperclipIcon />
+            </label>
 
             <div style={styles.composer}>
               <textarea
