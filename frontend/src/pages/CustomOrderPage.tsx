@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { flushSync } from "react-dom";
 import { submitCustomOrder, getAdminHandle } from "../api";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
@@ -177,17 +178,23 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
 
   // Cleanup stale file-input state после dismiss action sheet'а.
   // БАГ: paperclip-тап → action sheet → outside-tap для dismiss → тап
-  // на textarea → kb открывается на 1 sec и сама закрывается.
-  // ПРИЧИНА: outside-tap dismiss НЕ fire'ит ни change, ни cancel, ни
-  // window focus на iOS Telegram WebView. iOS оставляет file input в
-  // stale state с queued событием, которое срабатывает через ~1 sec
-  // после focus textarea → textarea blur → kb dismiss.
-  // ФИКС: ловим САМЫЙ ПЕРВЫЙ touchstart после клика на скрепку (capture
-  // phase, document-level). Это первое user-interaction после того как
-  // iOS вернул контроль WebView'у (action sheet capture'ил touch'и
-  // пока был открыт). Cleanup'им file input до того как focus event
-  // на textarea успеет произойти → kb открывается чисто.
+  // на textarea (всё быстро, <1s) → kb открывается на ~1 sec и сама
+  // закрывается. Если ждать пару секунд после paperclip — бага нет.
+  // ПРИЧИНА: iOS планирует callback, привязанный к DOM-node file input'а,
+  // через ~1 sec после клика по label. Этот callback fires вне
+  // зависимости от того, dismiss'нул юзер picker или нет. Если callback
+  // ещё не fired к моменту когда юзер focus'ит textarea, он сработает
+  // ПОСЛЕ focus event'а и стрельнёт blur по textarea → kb схлопывается.
+  // Просто input.value="" и blur не отменяют callback — он привязан
+  // к DOM-node, не к value.
+  // ФИКС: на первый touchstart после paperclip-клика РАЗРУШАЕМ И
+  // ПЕРЕСОЗДАЁМ DOM-node file input'а через React key. Старый node
+  // выкидывается из дерева → iOS callback fires на removed-from-DOM
+  // элемент → no-op. flushSync гарантирует что unmount произойдёт
+  // СИНХРОННО внутри touchstart handler'а, ДО того как React 18
+  // соберётся batch'ить и до focus event'а на textarea.
   const paperclipClickAtRef = useRef<number>(0);
+  const [fileInputKey, setFileInputKey] = useState(0);
   useEffect(() => {
     const onDocTouchStart = () => {
       if (!paperclipClickAtRef.current) return;
@@ -196,10 +203,9 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
         return;
       }
       paperclipClickAtRef.current = 0;
-      const input = fileInputRef.current;
-      if (!input) return;
-      input.value = "";
-      if (document.activeElement === input) input.blur();
+      flushSync(() => {
+        setFileInputKey((k) => k + 1);
+      });
     };
     document.addEventListener("touchstart", onDocTouchStart, true);
     return () => document.removeEventListener("touchstart", onDocTouchStart, true);
@@ -387,6 +393,7 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
               }}
             >
               <input
+                key={fileInputKey}
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
