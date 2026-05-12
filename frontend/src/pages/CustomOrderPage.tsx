@@ -57,6 +57,22 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const paperclipRef = useRef<HTMLDivElement>(null);
+
+  // Native non-passive MOUSEDOWN preventDefault на скрепке.
+  // ТОЛЬКО mousedown, НЕ touchstart — touchstart preventDefault блокирует
+  // синтетический click (iOS не дойдёт до onClick handler'а). mousedown
+  // preventDefault блокирует focus shift на кнопку, но click продолжает
+  // firing'ить нормально. Textarea сохраняет focus → keyboard остаётся.
+  useEffect(() => {
+    const el = paperclipRef.current;
+    if (!el) return;
+    const handler = (e: Event) => {
+      e.preventDefault();
+    };
+    el.addEventListener("mousedown", handler, { passive: false });
+    return () => el.removeEventListener("mousedown", handler);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -278,16 +294,17 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
               aria-hidden
             />
 
-            {/* DIV role=button с tabIndex=-1 — div не focusable,
-                не забирает focus у textarea на iOS. onClick refocus'ит
-                textarea СИНХРОННО (в user gesture context) — клавиатура
-                остаётся открытой пока file picker не открылся (после
-                — закроется системно iOS-ом, не можем обойти). */}
+            {/* DIV role=button + native mousedown preventDefault (см.
+                useEffect). НЕ refocus'им textarea искусственно — если
+                юзер тапнул скрепку без открытой клавиатуры, не надо
+                триггерить handleFocus → wrap shrink (input подскакивал).
+                Если клавиатура была — mousedown preventDefault сохраняет
+                focus на textarea. */}
             <div
+              ref={paperclipRef}
               role="button"
               tabIndex={-1}
               onClick={() => {
-                textareaRef.current?.focus();
                 fileInputRef.current?.click();
               }}
               style={{ ...styles.composerIconBtn, cursor: "pointer" }}

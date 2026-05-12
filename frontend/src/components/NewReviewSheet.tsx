@@ -25,8 +25,24 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
   const [localError, setLocalError] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const paperclipRef = useRef<HTMLDivElement | null>(null);
   const [mounted, setMounted] = useState(open);
   const [visible, setVisible] = useState(false);
+
+  // Native non-passive MOUSEDOWN preventDefault на скрепке.
+  // ТОЛЬКО mousedown — touchstart preventDefault блокирует синтетический
+  // click. mousedown preventDefault блокирует focus shift на кнопку,
+  // textarea сохраняет focus, click продолжает firing'ить.
+  useEffect(() => {
+    if (!open) return;
+    const el = paperclipRef.current;
+    if (!el) return;
+    const handler = (e: Event) => {
+      e.preventDefault();
+    };
+    el.addEventListener("mousedown", handler, { passive: false });
+    return () => el.removeEventListener("mousedown", handler);
+  }, [open, mounted]);
 
   const [vvHeight, setVvHeight] = useState<number | null>(
     typeof window !== "undefined" && window.visualViewport ? window.visualViewport.height : null
@@ -285,16 +301,16 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
         {/* Pill composer — paperclip / textarea / send (как CustomOrderPage). */}
         <div style={styles.composerWrap}>
           <div style={styles.composer}>
-            {/* DIV role=button + tabIndex=-1: не focusable, не блюрит
-                textarea при тапе. onClick refocus'ит textarea
-                синхронно (user gesture) и открывает file picker. */}
+            {/* DIV role=button + native mousedown preventDefault.
+                Textarea сохраняет focus на iOS, искусственный refocus
+                не нужен. */}
             <div
+              ref={paperclipRef}
               role="button"
               tabIndex={-1}
               aria-label="add photo"
               onClick={() => {
                 if (photos.length >= MAX_PHOTOS) return;
-                textareaRef.current?.focus();
                 fileInputRef.current?.click();
               }}
               style={{
