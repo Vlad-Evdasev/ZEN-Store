@@ -322,11 +322,15 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
               }}
               aria-label={t(lang, "customOrderPhotoAdd")}
             >
+              {/* БЕЗ multiple — на iOS это переключает с action-sheet
+                  (Медиатека / Камера / Файлы) на прямое открытие
+                  Photos picker'а. Юзер выбирает 1 фото за раз, но
+                  может повторно тапнуть скрепку для добавления ещё
+                  (до MAX_PHOTOS). */}
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
-                multiple
                 onChange={onPhotoChange}
                 disabled={customPhotos.length >= MAX_PHOTOS}
                 style={{ display: "none" }}
