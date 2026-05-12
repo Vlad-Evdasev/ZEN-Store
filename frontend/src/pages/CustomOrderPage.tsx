@@ -62,6 +62,24 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const paperclipLabelRef = useRef<HTMLLabelElement>(null);
+
+  // Native non-passive MOUSEDOWN preventDefault на скрепке.
+  // Если клавиатура открыта (textarea в focus'е), тап по label иначе
+  // переводит focus → textarea blur → клавиатура схлопывается.
+  // mousedown preventDefault блокирует focus shift, но click продолжает
+  // firing'ить нормально → label → file input открывает picker.
+  // ВАЖНО: НЕ touchstart — touchstart preventDefault на iOS блокирует
+  // синтетический click, picker перестанет открываться.
+  useEffect(() => {
+    const el = paperclipLabelRef.current;
+    if (!el) return;
+    const handler = (e: Event) => {
+      e.preventDefault();
+    };
+    el.addEventListener("mousedown", handler, { passive: false });
+    return () => el.removeEventListener("mousedown", handler);
+  }, []);
 
 
   useEffect(() => {
@@ -315,6 +333,7 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
                 по label автоматически активирует input. Самый надёжный
                 способ открыть file picker на iOS Telegram WebView. */}
             <label
+              ref={paperclipLabelRef}
               style={{
                 ...styles.composerIconBtn,
                 cursor: customPhotos.length >= MAX_PHOTOS ? "not-allowed" : "pointer",
