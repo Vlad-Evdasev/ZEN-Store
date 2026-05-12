@@ -369,50 +369,7 @@ if (storeCount.count === 0) {
 
 // Товары вносятся через админку — никаких sample/seed-данных не подкладываем.
 
-// ─── Engagement / loyalty / referrals tables ────────────────────────────
-
-// Бонусные баллы пользователя (1$ потрачено в completed заказе = 1 балл).
-// Тратятся на следующих чекаутах (см. Phase 3).
-try {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS loyalty_points (
-      user_id TEXT PRIMARY KEY,
-      balance INTEGER NOT NULL DEFAULT 0,
-      lifetime_earned INTEGER NOT NULL DEFAULT 0,
-      lifetime_spent INTEGER NOT NULL DEFAULT 0,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-} catch {}
-
-// Журнал движений баллов — для дебага и отображения в профиле.
-try {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS loyalty_log (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id TEXT NOT NULL,
-      delta INTEGER NOT NULL,
-      reason TEXT NOT NULL,
-      ref_id INTEGER,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-} catch {}
-
-// Реферальные связи. invited_user_id — UNIQUE: один юзер может быть приведён
-// только одним рефером (тот, кто привёл первым).
-try {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS referrals (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      referrer_user_id TEXT NOT NULL,
-      invited_user_id TEXT NOT NULL UNIQUE,
-      first_order_id INTEGER,
-      reward_granted_at DATETIME,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-} catch {}
+// ─── Engagement tables ─────────────────────────────────────────────────
 
 // Подписка юзера на новинки в категории. Когда админ создаёт продукт в этой
 // категории — бот пингует подписчика.
@@ -435,34 +392,6 @@ try {
     CREATE TABLE IF NOT EXISTS cart_reminders (
       user_id TEXT PRIMARY KEY,
       last_sent_at DATETIME NOT NULL
-    )
-  `);
-} catch {}
-
-// Промокоды.
-try {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS promo_codes (
-      code TEXT PRIMARY KEY,
-      discount_percent INTEGER NOT NULL,
-      max_uses INTEGER,
-      used_count INTEGER NOT NULL DEFAULT 0,
-      valid_until DATETIME,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-} catch {}
-
-// Применения промокодов конкретными пользователями.
-try {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS promo_redemptions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      code TEXT NOT NULL,
-      user_id TEXT NOT NULL,
-      order_id INTEGER,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(code, user_id)
     )
   `);
 } catch {}
@@ -507,9 +436,6 @@ try { db.exec("ALTER TABLE orders ADD COLUMN payment_amount_nano TEXT"); } catch
 try { db.exec("ALTER TABLE orders ADD COLUMN payment_verified_at DATETIME"); } catch {}
 try { db.exec("ALTER TABLE orders ADD COLUMN payment_payload TEXT"); } catch {}
 
-// Промо/баллы — записываются прямо в ордер для аудита.
-try { db.exec("ALTER TABLE orders ADD COLUMN promo_code TEXT"); } catch {}
-try { db.exec("ALTER TABLE orders ADD COLUMN points_redeemed INTEGER DEFAULT 0"); } catch {}
 try { db.exec("ALTER TABLE orders ADD COLUMN payment_reminder_sent_at DATETIME"); } catch {}
 
 // Мульти-фото посты во вкладке «Вдохновиться» — JSON-массив URL/data:URL,
@@ -648,7 +574,6 @@ if (tplCount.c === 0) {
   // Variables in {placeholders}: {id}, {hi}, {name}, {amount}, {item}, {category}, etc.
   const defaults: Array<[string, string, string, string, string]> = [
     ["welcome", "start", "Приветствие /start", "", "{hi}, ты в <b>RAW</b>.\n\nБез посредников. Только то, что носим сами."],
-    ["welcome_invited", "start", "Приветствие — приглашён другом", "🎁", "Тебя пригласил друг — после первого заказа оба получите по 10 баллов."],
     ["order_pending", "order_status", "Заказ оформлен", "✅", "Заказ #{id} оформлен\n\nМы получили запрос — скоро свяжемся для уточнения деталей."],
     ["order_in_transit", "order_status", "Заказ в пути", "🚚", "Заказ #{id} в пути\n\nУже едет к тебе. Отслеживай статус в /track."],
     ["order_delivered", "order_status", "Заказ доставлен", "📦", "Заказ #{id} доставлен\n\nЗабирай! Если что-то не так — пиши, поможем."],
@@ -672,6 +597,9 @@ if (tplCount.c === 0) {
 // (ручная отметка + автоматическая TON-верификация) отправляют один и тот
 // же payment_received. Удаляем legacy template если он остался от
 // предыдущей версии — иначе в админке висит «мёртвый» шаблон.
+// Также чистим 'welcome_invited' — реферальная система удалена.
 try {
-  db.prepare("DELETE FROM bot_message_templates WHERE template_id = 'payment_ton_verified'").run();
+  db.prepare(
+    "DELETE FROM bot_message_templates WHERE template_id IN ('payment_ton_verified', 'welcome_invited')"
+  ).run();
 } catch {}

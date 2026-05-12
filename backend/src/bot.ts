@@ -681,7 +681,6 @@ bot.use(async (ctx, next) => {
 
 bot.command("start", async (ctx) => {
   const userId = ctx.from?.id;
-  // /start ref_<USERID> — реферальная ссылка
   const payload = (ctx.match || "").trim();
 
   // /start post_<N> — фолбэк для шер-ссылки на пост из ленты «Вдохновиться».
@@ -701,24 +700,6 @@ bot.command("start", async (ctx) => {
       },
     });
     return;
-  }
-
-  let invitedByRef = false;
-  if (userId && payload.startsWith("ref_")) {
-    const referrer = payload.slice(4);
-    if (referrer && referrer !== String(userId)) {
-      try {
-        const exists = db
-          .prepare("SELECT 1 FROM referrals WHERE invited_user_id = ?")
-          .get(String(userId));
-        if (!exists) {
-          db.prepare(
-            "INSERT INTO referrals (referrer_user_id, invited_user_id) VALUES (?, ?)"
-          ).run(referrer, String(userId));
-          invitedByRef = true;
-        }
-      } catch {}
-    }
   }
 
   // Live-статы для приветствия — оставлены для fallback-режима (если
@@ -749,13 +730,6 @@ bot.command("start", async (ctx) => {
       ).get() as { body: string; is_active: number } | undefined;
     } catch { return undefined; }
   })();
-  const invitedTpl = (() => {
-    try {
-      return db.prepare(
-        "SELECT body, is_active FROM bot_message_templates WHERE template_id = 'welcome_invited'"
-      ).get() as { body: string; is_active: number } | undefined;
-    } catch { return undefined; }
-  })();
 
   const lines: string[] = [];
   if (welcomeTpl && welcomeTpl.is_active) {
@@ -774,14 +748,6 @@ bot.command("start", async (ctx) => {
     }
     lines.push("");
     lines.push("Без посредников. Только то, что носим сами.");
-  }
-  if (invitedByRef) {
-    lines.push("");
-    if (invitedTpl && invitedTpl.is_active) {
-      lines.push(invitedTpl.body.replace(/\{hi\}/g, hi));
-    } else {
-      lines.push("<b>Тебя пригласил друг</b> — после первого заказа оба получите по 10 баллов.");
-    }
   }
 
   await ctx.reply(lines.join("\n"), {
@@ -905,15 +871,11 @@ bot.command("profile", async (ctx) => {
   const totalSpent = db
     .prepare("SELECT COALESCE(SUM(total), 0) as t FROM orders WHERE user_id = ? AND status = 'completed'")
     .get(String(userId)) as { t: number };
-  const points = db
-    .prepare("SELECT COALESCE(balance, 0) as b FROM loyalty_points WHERE user_id = ?")
-    .get(String(userId)) as { b: number } | undefined;
   const totalCount = ordersCount.c + customsCount.c;
   const text =
     `<b>Твой профиль</b>\n\n` +
     `📦 Заказов: <b>${totalCount}</b> (каталог: ${ordersCount.c}, кастом: ${customsCount.c})\n` +
-    `💵 Потрачено: <b>${totalSpent.t} $</b>\n` +
-    `💎 Бонусов: <b>${points?.b ?? 0}</b>`;
+    `💵 Потрачено: <b>${totalSpent.t} $</b>`;
   await ctx.reply(text, {
     parse_mode: "HTML",
     reply_markup: {
@@ -975,24 +937,6 @@ bot.command("help", async (ctx) => {
   );
 });
 
-// /referral — твоя реферальная ссылка (см. Phase 2)
-bot.command("referral", async (ctx) => {
-  const userId = ctx.from?.id;
-  if (!userId) return;
-  const me = await bot.api.getMe();
-  const link = `https://t.me/${me.username}?start=ref_${userId}`;
-  const stats = db
-    .prepare("SELECT COUNT(*) as c FROM referrals WHERE referrer_user_id = ?")
-    .get(String(userId)) as { c: number } | undefined;
-  await ctx.reply(
-    `🎁 <b>Твоя реферальная ссылка</b>\n\n` +
-      `<code>${link}</code>\n\n` +
-      `Кто пройдёт по ней и сделает первый заказ — оба получите <b>10% скидку</b>.\n\n` +
-      `Приглашено друзей: <b>${stats?.c ?? 0}</b>`,
-    { parse_mode: "HTML" }
-  );
-});
-
 // Любое НЕ-командное текстовое сообщение от пользователя — ловим в админ-чат.
 // Команды (/start, /shop) идут отдельными хендлерами выше и не сохраняются как
 // диалог, чтобы не засорять список чатов.
@@ -1023,9 +967,8 @@ async function configureBotMenu(): Promise<void> {
       { command: "start", description: "Главная" },
       { command: "shop", description: "Каталог" },
       { command: "track", description: "Статус заказа" },
-      { command: "profile", description: "Профиль и бонусы" },
+      { command: "profile", description: "Профиль" },
       { command: "size", description: "Твой размер" },
-      { command: "referral", description: "Пригласить друга" },
       { command: "help", description: "Поддержка" },
     ]);
     // Persistent menu button слева от поля ввода — открывает WebApp

@@ -66,7 +66,7 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
   res.status(500).json({ error: err instanceof Error ? err.message : "Internal server error" });
 });
 
-// Cron-задачи: cart-abandonment sweep + drop teasers + apply referral signups.
+// Cron-задачи: cart-abandonment sweep + drop teasers + payment expiry.
 // Запускаем сразу при старте, потом каждый час. Лёгкий setInterval — не для
 // production-cron, но достаточно для одного процесса бэкэнда.
 function startCronJobs() {

@@ -110,10 +110,10 @@ export function History({
 
   const isEmpty = activeEntries.length === 0;
 
-  // Юзер отменяет неоплаченный TON-ордер. Бэк вернёт баллы/промо и
-  // переведёт ордер в cancelled. Перезагружаем список.
+  // Юзер отменяет неоплаченный TON-ордер. Бэк переводит ордер в cancelled.
+  // Перезагружаем список.
   const handleCancelPending = async (orderId: number) => {
-    if (!window.confirm(lang === "ru" ? "Отменить заказ? Бонусы и промокод вернутся." : "Cancel order? Points & promo will be refunded.")) return;
+    if (!window.confirm(lang === "ru" ? "Отменить заказ?" : "Cancel order?")) return;
     try {
       await cancelTonPayment(orderId);
       const fresh = await getOrders(userId);
@@ -203,8 +203,8 @@ function CatalogItemCard({
             </span>
             <span style={styles.pendingPaymentHint}>
               {lang === "ru"
-                ? "TON-транзакция не подтверждена. Если ты передумал — отмени, бонусы вернутся."
-                : "TON transaction not confirmed. Cancel to refund points & promo."}
+                ? "TON-транзакция не подтверждена. Если ты передумал — отмени."
+                : "TON transaction not confirmed. Cancel if you've changed your mind."}
             </span>
           </div>
           {onCancelPending && (

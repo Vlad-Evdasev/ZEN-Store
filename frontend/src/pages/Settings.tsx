@@ -1,8 +1,6 @@
-import { useEffect, useState } from "react";
 import { useSettings } from "../context/SettingsContext";
 import type { Currency } from "../context/SettingsContext";
 import { t } from "../i18n";
-import { getLoyaltyBalance, type LoyaltyBalance } from "../api";
 
 const CURRENCY_OPTIONS: Currency[] = ["BYN", "USD"];
 
@@ -11,72 +9,13 @@ interface SettingsProps {
   userId?: string;
 }
 
-export function Settings({ userId }: SettingsProps) {
+export function Settings(_props: SettingsProps) {
   const { settings, setLang, setTheme, setCurrency } = useSettings();
   const lang = settings.lang;
-  const [loyalty, setLoyalty] = useState<LoyaltyBalance | null>(null);
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    if (!userId) return;
-    getLoyaltyBalance(userId).then(setLoyalty).catch(() => setLoyalty(null));
-  }, [userId]);
-
-  const botUsername = (import.meta.env.VITE_BOT_USERNAME as string | undefined) || "RAW_brand_bot";
-  const referralLink = userId ? `https://t.me/${botUsername}?start=ref_${userId}` : "";
-
-  const handleCopy = async () => {
-    if (!referralLink) return;
-    try {
-      await navigator.clipboard.writeText(referralLink);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1800);
-    } catch {}
-  };
 
   return (
     <div style={styles.wrap}>
       <h2 className="zen-page-title" style={styles.title}>{lang === "ru" ? "Профиль" : "Profile"}</h2>
-
-      {userId && (
-        <>
-          <p style={styles.kicker}>{lang === "ru" ? "Бонусы" : "Points"}</p>
-          <div style={styles.pointsCard}>
-            <div style={styles.pointsValueWrap}>
-              <span style={styles.pointsValue}>{loyalty?.balance ?? 0}</span>
-              <span style={styles.pointsCurrency}>= {loyalty?.balance ?? 0} $</span>
-            </div>
-            <p style={styles.pointsHint}>
-              {lang === "ru"
-                ? "1 балл = 1 $ скидки. Применяется при оформлении."
-                : "1 point = 1 $ off. Apply at checkout."}
-            </p>
-            {loyalty && (loyalty.lifetime_earned > 0 || loyalty.lifetime_spent > 0) && (
-              <div style={styles.pointsMeta}>
-                <span>{lang === "ru" ? "Заработано: " : "Earned: "}<strong>{loyalty.lifetime_earned}</strong></span>
-                <span>{lang === "ru" ? "Потрачено: " : "Spent: "}<strong>{loyalty.lifetime_spent}</strong></span>
-              </div>
-            )}
-          </div>
-
-          <p style={styles.kicker}>{lang === "ru" ? "Пригласи друга" : "Invite a friend"}</p>
-          <div style={styles.refCard}>
-            <p style={styles.refDescription}>
-              {lang === "ru"
-                ? "Поделись ссылкой. Когда друг оформит первый заказ — оба получите по 10 баллов."
-                : "Share your link. When a friend places their first order — you both get 10 points."}
-            </p>
-            <div style={styles.refLinkRow}>
-              <span style={styles.refLink}>{referralLink}</span>
-              <button type="button" onClick={handleCopy} style={styles.refCopyBtn}>
-                {copied
-                  ? (lang === "ru" ? "Скопировано" : "Copied")
-                  : (lang === "ru" ? "Копировать" : "Copy")}
-              </button>
-            </div>
-          </div>
-        </>
-      )}
 
       <p style={styles.kicker}>{t(lang, "settingsTheme")}</p>
       <div style={styles.themeRow}>
@@ -167,91 +106,6 @@ const styles: Record<string, React.CSSProperties> = {
     textTransform: "uppercase",
     letterSpacing: "0.08em",
     margin: "18px 0 10px",
-  },
-  pointsCard: {
-    background: "color-mix(in srgb, var(--accent) 6%, var(--surface))",
-    border: "1px solid color-mix(in srgb, var(--accent) 18%, var(--border))",
-    borderRadius: 16,
-    padding: "16px 18px",
-    marginBottom: 4,
-  },
-  pointsValueWrap: {
-    display: "flex",
-    alignItems: "baseline",
-    gap: 10,
-  },
-  pointsValue: {
-    fontSize: 36,
-    fontWeight: 500,
-    letterSpacing: "-0.012em",
-    fontVariantNumeric: "tabular-nums",
-    color: "var(--text)",
-  },
-  pointsCurrency: {
-    fontSize: 15,
-    fontWeight: 600,
-    color: "var(--accent)",
-    fontVariantNumeric: "tabular-nums",
-  },
-  pointsHint: {
-    margin: "6px 0 0",
-    fontSize: 12.5,
-    color: "var(--muted)",
-    lineHeight: 1.45,
-  },
-  pointsMeta: {
-    marginTop: 12,
-    paddingTop: 10,
-    borderTop: "1px dashed color-mix(in srgb, var(--accent) 22%, var(--border))",
-    display: "flex",
-    gap: 16,
-    fontSize: 12,
-    color: "var(--muted)",
-    fontVariantNumeric: "tabular-nums",
-  },
-  refCard: {
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: 16,
-    padding: "14px 16px 12px",
-  },
-  refDescription: {
-    margin: 0,
-    fontSize: 13,
-    color: "var(--muted)",
-    lineHeight: 1.5,
-    marginBottom: 12,
-  },
-  refLinkRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    background: "var(--surface-elevated)",
-    border: "1px solid var(--border)",
-    borderRadius: 12,
-    padding: "8px 8px 8px 12px",
-  },
-  refLink: {
-    flex: 1,
-    minWidth: 0,
-    fontSize: 12,
-    fontFamily: 'ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace',
-    color: "var(--text)",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-  refCopyBtn: {
-    height: 32,
-    padding: "0 14px",
-    background: "var(--accent)",
-    color: "#fff",
-    border: "none",
-    borderRadius: 8,
-    fontSize: 12.5,
-    fontWeight: 600,
-    cursor: "pointer",
-    flexShrink: 0,
   },
   themeRow: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 },
   themeCard: {

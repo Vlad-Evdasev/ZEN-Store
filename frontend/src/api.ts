@@ -820,8 +820,6 @@ export async function createOrder(
     user_address?: string;
     items: CartItem[];
     total: number;
-    promo_code?: string;
-    points_redeemed?: number;
   }
 ): Promise<{ ok: boolean; orderId?: number }> {
   const res = await fetchWrite(`${API_URL}/api/orders/${userId}`, {
@@ -1216,31 +1214,6 @@ export async function deleteBroadcastPost(id: number, adminSecret: string): Prom
 
 // ─── Engagement API ────────────────────────────────────────────────────
 
-export interface LoyaltyBalance {
-  balance: number;
-  lifetime_earned: number;
-  lifetime_spent: number;
-}
-
-export async function getLoyaltyBalance(userId: string): Promise<LoyaltyBalance> {
-  const res = await fetchWithRetry(`${API_URL}/api/engagement/points/${userId}`);
-  if (!res.ok) throw new Error("Failed to fetch loyalty balance");
-  return res.json();
-}
-
-export async function redeemLoyaltyPoints(
-  userId: string,
-  amount: number
-): Promise<{ ok: true; applied: number }> {
-  const res = await fetch(`${API_URL}/api/engagement/points/${userId}/redeem`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ amount }),
-  });
-  if (!res.ok) throw new Error("Failed to redeem points");
-  return res.json();
-}
-
 export async function getCategorySubscriptions(userId: string): Promise<string[]> {
   const res = await fetchWithRetry(`${API_URL}/api/engagement/subscriptions/${userId}`);
   if (!res.ok) throw new Error("Failed to fetch subscriptions");
@@ -1262,61 +1235,6 @@ export async function unsubscribeFromCategory(userId: string, categoryCode: stri
     { method: "DELETE" }
   );
   if (!res.ok) throw new Error("Failed to unsubscribe");
-}
-
-export interface PromoCode {
-  code: string;
-  discount_percent: number;
-  max_uses: number | null;
-  used_count: number;
-  valid_until: string | null;
-  created_at: string;
-}
-
-export async function getPromoCodes(adminSecret: string): Promise<PromoCode[]> {
-  const res = await fetch(`${API_URL}/api/engagement/promo`, {
-    headers: { "X-Admin-Secret": adminSecret },
-  });
-  if (!res.ok) throw new Error("Failed to fetch promo codes");
-  return res.json();
-}
-
-export async function createPromoCode(
-  data: { code: string; discount_percent: number; max_uses?: number | null; valid_until?: string | null },
-  adminSecret: string
-): Promise<void> {
-  const res = await fetch(`${API_URL}/api/engagement/promo`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { error?: string }).error || res.statusText);
-  }
-}
-
-export async function deletePromoCode(code: string, adminSecret: string): Promise<void> {
-  const res = await fetch(`${API_URL}/api/engagement/promo/${encodeURIComponent(code)}`, {
-    method: "DELETE",
-    headers: { "X-Admin-Secret": adminSecret },
-  });
-  if (!res.ok) throw new Error("Failed to delete promo");
-}
-
-export async function applyPromoCode(
-  code: string,
-  userId: string
-): Promise<{ ok: true; discount_percent: number }> {
-  const res = await fetch(
-    `${API_URL}/api/engagement/promo/${encodeURIComponent(code)}/apply/${userId}`,
-    { method: "POST" }
-  );
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error((data as { error?: string }).error || "Промокод недоступен");
-  }
-  return data as { ok: true; discount_percent: number };
 }
 
 export interface DropItem {
@@ -1424,8 +1342,6 @@ export async function createTonCheckout(data: {
   user_address?: string;
   items: CartItem[];
   total: number;
-  promo_code?: string;
-  points_redeemed?: number;
 }): Promise<TonCheckoutResponse> {
   const res = await fetch(`${API_URL}/api/payments/ton/checkout`, {
     method: "POST",

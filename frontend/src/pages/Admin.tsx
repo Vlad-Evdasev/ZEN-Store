@@ -48,9 +48,6 @@ import {
   createSupportEntry,
   updateSupportEntry,
   deleteSupportEntry,
-  getPromoCodes,
-  createPromoCode,
-  deletePromoCode,
   getBotAnalytics,
   getMaintenanceAdmin,
   setMaintenanceEnabled,
@@ -72,7 +69,6 @@ import {
   type BotConversation,
   type BotMessage,
   type SupportEntry,
-  type PromoCode,
   type BotAnalytics,
 } from "../api";
 
@@ -103,7 +99,7 @@ function StatusPill({ status }: { status: string }) {
   return <span className={`admin-status admin-status--${c.variant}`}>{c.label}</span>;
 }
 
-function NavIcon({ tab }: { tab: "home" | "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" | "promo" | "analytics" | "maintenance" | "messages" }) {
+function NavIcon({ tab }: { tab: "home" | "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" | "analytics" | "maintenance" | "messages" }) {
   switch (tab) {
     case "home":
       return (<svg viewBox="0 0 24 24" aria-hidden><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="5" rx="1"/><rect x="13" y="10" width="8" height="11" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/></svg>);
@@ -125,8 +121,6 @@ function NavIcon({ tab }: { tab: "home" | "products" | "categories" | "orders" |
       return (<svg viewBox="0 0 24 24" aria-hidden><path d="M21 11.5a8.4 8.4 0 01-1.2 4.4 8.5 8.5 0 01-7.4 4.1 8.4 8.4 0 01-4.4-1.2L3 20l1.2-4.9A8.4 8.4 0 013 10.5a8.5 8.5 0 014.2-7.4A8.4 8.4 0 0111.5 2h.5a8.5 8.5 0 018 8z"/></svg>);
     case "support":
       return (<svg viewBox="0 0 24 24" aria-hidden><circle cx="12" cy="12" r="9"/><path d="M9.1 9.5a3 3 0 015.8 1c0 1.5-1.5 2-2.4 2.5-.4.2-.5.5-.5.9V14"/><circle cx="12" cy="17" r="0.5" fill="currentColor"/></svg>);
-    case "promo":
-      return (<svg viewBox="0 0 24 24" aria-hidden><path d="M20.6 11.4 12.7 3.5a1.5 1.5 0 0 0-1-.5H5a2 2 0 0 0-2 2v6.7a1.5 1.5 0 0 0 .4 1l8 8a2 2 0 0 0 2.8 0l6.4-6.4a2 2 0 0 0 0-2.9Z"/><circle cx="7.5" cy="7.5" r="1" fill="currentColor"/></svg>);
     case "analytics":
       return (<svg viewBox="0 0 24 24" aria-hidden><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-7"/></svg>);
     case "messages":
@@ -146,7 +140,7 @@ function telegramChatLink(username?: string | null, userId?: string): string {
   return "#";
 }
 
-type Tab = "home" | "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" | "promo" | "analytics" | "maintenance" | "messages";
+type Tab = "home" | "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" | "analytics" | "maintenance" | "messages";
 
 /** Хедер-eyebrow в topbar: показывает раздел в стиле «OPS / ORDERS». */
 function tabEyebrow(tab: Tab): string {
@@ -161,7 +155,6 @@ function tabEyebrow(tab: Tab): string {
     case "currencyRate": return "CATALOG / FX";
     case "posts": return "MARKETING / POSTS";
     case "channel": return "MARKETING / BROADCAST";
-    case "promo": return "MARKETING / PROMO";
     case "support": return "CONTENT / SUPPORT";
     case "maintenance": return "SYSTEM / MAINTENANCE";
     case "messages": return "MARKETING / PUSH";
@@ -375,9 +368,6 @@ export function Admin() {
           <button type="button" onClick={() => setTabAndReset("channel")} className={`admin-nav-btn ${tab === "channel" ? "active" : ""}`}>
             <NavIcon tab="channel" /> Рассылка
           </button>
-          <button type="button" onClick={() => setTabAndReset("promo")} className={`admin-nav-btn ${tab === "promo" ? "active" : ""}`}>
-            <NavIcon tab="promo" /> Промокоды
-          </button>
           <button type="button" onClick={() => setTabAndReset("messages")} className={`admin-nav-btn ${tab === "messages" ? "active" : ""}`}>
             <NavIcon tab="messages" /> Пуш-сообщения
           </button>
@@ -488,10 +478,6 @@ export function Admin() {
 
       {tab === "support" && (
         <SupportTab adminSecret={adminSecret} />
-      )}
-
-      {tab === "promo" && (
-        <PromoTab adminSecret={adminSecret} />
       )}
 
       {tab === "messages" && (
@@ -3839,145 +3825,6 @@ function MessagesTab({ adminSecret }: { adminSecret: string }) {
           </div>
         </section>
       ))}
-    </>
-  );
-}
-
-// ── Promo codes ──────────────────────────────────────────────────────
-
-function PromoTab({ adminSecret }: { adminSecret: string }) {
-  const [list, setList] = useState<PromoCode[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState("");
-  const [code, setCode] = useState("");
-  const [discount, setDiscount] = useState<string>("10");
-  const [maxUses, setMaxUses] = useState<string>("");
-  const [validUntil, setValidUntil] = useState<string>("");
-
-  const load = () => {
-    setLoading(true);
-    getPromoCodes(adminSecret)
-      .then(setList)
-      .catch((e) => setMessage("Ошибка: " + (e instanceof Error ? e.message : "")))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!code.trim() || !Number(discount)) {
-      setMessage("Заполни код и процент скидки");
-      return;
-    }
-    setMessage("");
-    try {
-      await createPromoCode(
-        {
-          code: code.trim(),
-          discount_percent: Number(discount),
-          max_uses: maxUses ? Number(maxUses) : null,
-          valid_until: validUntil || null,
-        },
-        adminSecret
-      );
-      setMessage("Промокод создан");
-      setCode("");
-      setDiscount("10");
-      setMaxUses("");
-      setValidUntil("");
-      load();
-    } catch (e) {
-      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
-    }
-  };
-
-  const handleDelete = async (codeStr: string) => {
-    if (!confirm(`Удалить промокод ${codeStr}?`)) return;
-    try {
-      await deletePromoCode(codeStr, adminSecret);
-      load();
-    } catch (e) {
-      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
-    }
-  };
-
-  if (loading) return <p style={styles.hint}>Загрузка...</p>;
-
-  return (
-    <>
-      <div className="admin-page-head">
-        <div className="admin-page-head-text">
-          <h2>Промокоды</h2>
-          <p className="admin-page-head-sub">Создавай коды на скидку. Применяются юзером при оформлении заказа.</p>
-        </div>
-      </div>
-      {message && <p style={styles.message}>{message}</p>}
-
-      <section className="admin-card">
-        <div className="admin-card-head"><h3>Новый промокод</h3></div>
-        <form onSubmit={handleCreate} className="admin-card-body" style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end" }}>
-          <label className="admin-field">
-            <span className="admin-field-label">Код</span>
-            <input type="text" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="WELCOME10" style={{ ...styles.input, width: 160 }} />
-          </label>
-          <label className="admin-field">
-            <span className="admin-field-label">Скидка %</span>
-            <input type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} min={1} max={100} style={{ ...styles.input, width: 80 }} />
-          </label>
-          <label className="admin-field">
-            <span className="admin-field-label">Лимит (необяз.)</span>
-            <input type="number" value={maxUses} onChange={(e) => setMaxUses(e.target.value)} placeholder="∞" min={1} style={{ ...styles.input, width: 100 }} />
-          </label>
-          <label className="admin-field">
-            <span className="admin-field-label">До (UTC)</span>
-            <input type="datetime-local" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} style={{ ...styles.input, width: 200 }} />
-          </label>
-          <button type="submit" style={styles.submit}>Создать</button>
-        </form>
-      </section>
-
-      <section className="admin-card">
-        <div className="admin-card-head">
-          <h3>Активные промокоды</h3>
-          <span className="admin-card-head-meta">{list.length}</span>
-        </div>
-        {list.length === 0 ? (
-          <div className="admin-empty" style={{ borderRadius: 0, border: "none" }}>
-            <p className="admin-empty-title">Нет промокодов</p>
-            <p className="admin-empty-sub">Создай первый через форму выше</p>
-          </div>
-        ) : (
-          <table className="admin-table" style={{ borderRadius: 0, border: "none" }}>
-            <thead>
-              <tr>
-                <th>Код</th>
-                <th>Скидка</th>
-                <th>Использовано</th>
-                <th>Истекает</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {list.map((p) => (
-                <tr key={p.code}>
-                  <td style={{ fontWeight: 600 }}>{p.code}</td>
-                  <td>{p.discount_percent}%</td>
-                  <td style={{ fontVariantNumeric: "tabular-nums" }}>
-                    {p.used_count}{p.max_uses != null ? ` / ${p.max_uses}` : ""}
-                  </td>
-                  <td style={{ fontSize: 12.5, color: "var(--muted)" }}>
-                    {p.valid_until ? new Date(p.valid_until).toLocaleString("ru") : "—"}
-                  </td>
-                  <td style={{ textAlign: "right" }}>
-                    <button type="button" onClick={() => handleDelete(p.code)} style={styles.deleteBtn}>Удалить</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
     </>
   );
 }

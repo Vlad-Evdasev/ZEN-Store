@@ -13,42 +13,6 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
 
 export const engagementRouter = Router();
 
-// ── Loyalty points ────────────────────────────────────────────────────
-
-engagementRouter.get("/points/:userId", (req, res) => {
-  const row = db
-    .prepare(
-      "SELECT balance, lifetime_earned, lifetime_spent FROM loyalty_points WHERE user_id = ?"
-    )
-    .get(req.params.userId) as
-    | { balance: number; lifetime_earned: number; lifetime_spent: number }
-    | undefined;
-  res.json(row ?? { balance: 0, lifetime_earned: 0, lifetime_spent: 0 });
-});
-
-// Применить баллы при чекауте: списание происходит только если
-// баланс >= запрошенного. Возвращает фактическую сумму скидки в долларах
-// (1 балл = 1$).
-engagementRouter.post("/points/:userId/redeem", (req, res) => {
-  const userId = req.params.userId;
-  const requested = Math.max(0, Math.floor(Number(req.body?.amount) || 0));
-  if (!requested) return res.json({ ok: true, applied: 0 });
-  const row = db
-    .prepare("SELECT balance FROM loyalty_points WHERE user_id = ?")
-    .get(userId) as { balance: number } | undefined;
-  const balance = row?.balance ?? 0;
-  const applied = Math.min(balance, requested);
-  if (applied > 0) {
-    db.prepare(
-      "UPDATE loyalty_points SET balance = balance - ?, lifetime_spent = lifetime_spent + ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?"
-    ).run(applied, applied, userId);
-    db.prepare(
-      "INSERT INTO loyalty_log (user_id, delta, reason) VALUES (?, ?, 'checkout_redeem')"
-    ).run(userId, -applied);
-  }
-  res.json({ ok: true, applied });
-});
-
 // ── Category subscriptions ───────────────────────────────────────────
 
 engagementRouter.get("/subscriptions/:userId", (req, res) => {
@@ -77,66 +41,6 @@ engagementRouter.delete("/subscriptions/:userId/:code", (req, res) => {
     "DELETE FROM category_subscriptions WHERE user_id = ? AND category_code = ?"
   ).run(req.params.userId, req.params.code);
   res.json({ ok: true });
-});
-
-// ── Promo codes ──────────────────────────────────────────────────────
-
-engagementRouter.get("/promo", requireAdmin, (_req, res) => {
-  const rows = db
-    .prepare(
-      "SELECT code, discount_percent, max_uses, used_count, valid_until, created_at FROM promo_codes ORDER BY created_at DESC"
-    )
-    .all();
-  res.json(rows);
-});
-
-engagementRouter.post("/promo", requireAdmin, (req, res) => {
-  const code = String(req.body?.code ?? "").trim().toUpperCase();
-  const discount = Math.max(1, Math.min(100, Math.floor(Number(req.body?.discount_percent) || 0)));
-  const maxUses = req.body?.max_uses != null ? Math.max(1, Math.floor(Number(req.body.max_uses))) : null;
-  const validUntil = req.body?.valid_until ? String(req.body.valid_until) : null;
-  if (!code || !discount) return res.status(400).json({ error: "code и discount_percent обязательны" });
-  try {
-    db.prepare(
-      "INSERT INTO promo_codes (code, discount_percent, max_uses, valid_until) VALUES (?, ?, ?, ?)"
-    ).run(code, discount, maxUses, validUntil);
-    res.status(201).json({ ok: true });
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Database error";
-    if (/UNIQUE/i.test(msg)) return res.status(409).json({ error: "Промокод уже существует" });
-    res.status(500).json({ error: msg });
-  }
-});
-
-engagementRouter.delete("/promo/:code", requireAdmin, (req, res) => {
-  db.prepare("DELETE FROM promo_codes WHERE code = ?").run(req.params.code.toUpperCase());
-  res.json({ ok: true });
-});
-
-// Применить промокод (валидация при чекауте). Возвращает discount_percent
-// или 400 c понятной причиной.
-engagementRouter.post("/promo/:code/apply/:userId", (req, res) => {
-  const code = String(req.params.code).toUpperCase();
-  const userId = req.params.userId;
-  const row = db
-    .prepare(
-      "SELECT code, discount_percent, max_uses, used_count, valid_until FROM promo_codes WHERE code = ?"
-    )
-    .get(code) as
-    | { code: string; discount_percent: number; max_uses: number | null; used_count: number; valid_until: string | null }
-    | undefined;
-  if (!row) return res.status(404).json({ error: "Промокод не найден" });
-  if (row.valid_until && new Date(row.valid_until).getTime() < Date.now()) {
-    return res.status(400).json({ error: "Промокод истёк" });
-  }
-  if (row.max_uses != null && row.used_count >= row.max_uses) {
-    return res.status(400).json({ error: "Промокод исчерпан" });
-  }
-  const already = db
-    .prepare("SELECT 1 FROM promo_redemptions WHERE code = ? AND user_id = ?")
-    .get(code, userId);
-  if (already) return res.status(400).json({ error: "Ты уже использовал этот промокод" });
-  res.json({ ok: true, discount_percent: row.discount_percent });
 });
 
 // ── Drops (admin-managed) ────────────────────────────────────────────

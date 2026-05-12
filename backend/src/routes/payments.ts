@@ -41,52 +41,16 @@ paymentsRouter.get("/ton/rate", async (req, res) => {
   }
 });
 
-// ─── Refund баллов / промо при отмене ────────────────────────────────
-// Вызывается при auto-cancel (cron expiry sweep) и ручной отмене,
-// и admin mark-refunded. Идемпотентно: проверяем флаг refunded_at
-// в payment_intents.
+// ─── Mark intent as refunded при отмене ──────────────────────────────
+// Вызывается при auto-cancel (cron expiry sweep), ручной отмене и
+// admin mark-refunded. Идемпотентно через статус payment_intents.
 
-function refundOrderArtifacts(orderId: number): void {
-  const order = db.prepare(
-    "SELECT user_id, promo_code, points_redeemed FROM orders WHERE id = ?"
-  ).get(orderId) as { user_id: string; promo_code: string | null; points_redeemed: number } | undefined;
-  if (!order) return;
-
-  // Проверяем не возвращали ли уже
+function markIntentRefunded(orderId: number): void {
   const intent = db.prepare(
     "SELECT id, status FROM payment_intents WHERE order_id = ? ORDER BY id DESC LIMIT 1"
   ).get(orderId) as { id: string; status: string } | undefined;
-  if (intent?.status === "refunded") return;
-
-  db.transaction(() => {
-    // Возврат баллов
-    if (order.points_redeemed > 0) {
-      db.prepare(
-        `INSERT INTO loyalty_points (user_id, balance, lifetime_spent)
-         VALUES (?, ?, 0)
-         ON CONFLICT(user_id) DO UPDATE SET
-           balance = balance + excluded.balance,
-           lifetime_spent = MAX(0, lifetime_spent - excluded.balance),
-           updated_at = CURRENT_TIMESTAMP`
-      ).run(order.user_id, order.points_redeemed);
-      db.prepare(
-        "INSERT INTO loyalty_log (user_id, delta, reason, ref_id) VALUES (?, ?, 'order_refund', ?)"
-      ).run(order.user_id, order.points_redeemed, orderId);
-    }
-    // Откат промокода
-    if (order.promo_code) {
-      db.prepare(
-        "DELETE FROM promo_redemptions WHERE order_id = ? AND code = ?"
-      ).run(orderId, order.promo_code);
-      db.prepare(
-        "UPDATE promo_codes SET used_count = MAX(0, used_count - 1) WHERE code = ?"
-      ).run(order.promo_code);
-    }
-    // Помечаем intent как refunded чтобы не возвращать дважды
-    if (intent) {
-      db.prepare("UPDATE payment_intents SET status = 'refunded' WHERE id = ?").run(intent.id);
-    }
-  })();
+  if (!intent || intent.status === "refunded") return;
+  db.prepare("UPDATE payment_intents SET status = 'refunded' WHERE id = ?").run(intent.id);
 }
 
 // ─── Курс TON/USD ────────────────────────────────────────────────────
@@ -141,8 +105,6 @@ paymentsRouter.post("/ton/checkout", async (req, res) => {
   const userPhone = req.body?.user_phone ?? null;
   const userUsername = req.body?.user_username ?? null;
   const userAddress = req.body?.user_address ?? null;
-  const promoCode = typeof req.body?.promo_code === "string" && req.body.promo_code.trim() ? req.body.promo_code.trim().toUpperCase() : null;
-  const pointsRedeemed = Math.max(0, Math.floor(Number(req.body?.points_redeemed) || 0));
   if (!userId || !items || !Number.isFinite(total) || total <= 0) {
     return res.status(400).json({ error: "user_id, items, total required" });
   }
@@ -163,10 +125,9 @@ paymentsRouter.post("/ton/checkout", async (req, res) => {
       `INSERT INTO orders (
         user_id, user_name, user_phone, user_username, user_address,
         items, total, status,
-        payment_method, payment_status, payment_amount_nano,
-        promo_code, points_redeemed
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending_payment', 'ton', 'unpaid', ?, ?, ?)`
-    ).run(userId, userName, userPhone, userUsername, userAddress, itemsStr, total, expectedNano.toString(), promoCode, pointsRedeemed);
+        payment_method, payment_status, payment_amount_nano
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending_payment', 'ton', 'unpaid', ?)`
+    ).run(userId, userName, userPhone, userUsername, userAddress, itemsStr, total, expectedNano.toString());
     const orderId = Number(orderRes.lastInsertRowid);
 
     const payload = generatePayload(orderId);
@@ -178,32 +139,6 @@ paymentsRouter.post("/ton/checkout", async (req, res) => {
 
     db.prepare("UPDATE orders SET payment_payload = ? WHERE id = ?").run(payload, orderId);
     db.prepare("DELETE FROM cart_items WHERE user_id = ?").run(userId);
-
-    // Промо/баллы фиксируем сразу — пусть будет атомарно с ордером.
-    // Если оплата не состоится, отдельный sweep ничего не вернёт
-    // (баллы остаются на ордере, юзер видит «ты потратил, но не оплатил»);
-    // приемлемо для v1, можно докрутить refund в отдельной задаче.
-    if (promoCode) {
-      try {
-        db.prepare(
-          "INSERT INTO promo_redemptions (code, user_id, order_id) VALUES (?, ?, ?)"
-        ).run(promoCode, userId, orderId);
-        db.prepare("UPDATE promo_codes SET used_count = used_count + 1 WHERE code = ?").run(promoCode);
-      } catch {}
-    }
-    if (pointsRedeemed > 0) {
-      const balRow = db.prepare("SELECT balance FROM loyalty_points WHERE user_id = ?").get(userId) as { balance: number } | undefined;
-      const balance = balRow?.balance ?? 0;
-      const applied = Math.min(balance, pointsRedeemed);
-      if (applied > 0) {
-        db.prepare(
-          "UPDATE loyalty_points SET balance = balance - ?, lifetime_spent = lifetime_spent + ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?"
-        ).run(applied, applied, userId);
-        db.prepare(
-          "INSERT INTO loyalty_log (user_id, delta, reason, ref_id) VALUES (?, ?, 'order_redeem', ?)"
-        ).run(userId, -applied, orderId);
-      }
-    }
 
     return { orderId, payload, expiresAt };
   });
@@ -378,8 +313,7 @@ paymentsRouter.post("/ton/cancel/:orderId", (req, res) => {
       db.prepare("UPDATE payment_intents SET status = 'cancelled' WHERE id = ?").run(order.payment_payload);
     }
   })();
-  // Возвращаем потраченные баллы и откатываем промокод
-  refundOrderArtifacts(id);
+  markIntentRefunded(id);
   res.json({ ok: true });
 });
 
@@ -389,15 +323,14 @@ export function runPaymentExpirySweep(): void {
   db.prepare(
     "UPDATE payment_intents SET status = 'expired' WHERE status = 'pending' AND datetime(expires_at) < CURRENT_TIMESTAMP"
   ).run();
-  // Находим unpaid ордера старше 24h и возвращаем баллы/промо для каждого,
-  // потом отменяем ордер.
+  // Находим unpaid ордера старше 24h и отменяем их.
   const stale = db.prepare(
     `SELECT id FROM orders
      WHERE payment_status = 'unpaid' AND status = 'pending_payment'
      AND datetime(created_at) < datetime('now', '-24 hours')`
   ).all() as { id: number }[];
   for (const { id } of stale) {
-    refundOrderArtifacts(id);
+    markIntentRefunded(id);
     db.prepare(
       "UPDATE orders SET status = 'cancelled', payment_status = 'cancelled' WHERE id = ?"
     ).run(id);
@@ -441,7 +374,6 @@ paymentsRouter.post("/admin/order/:id/mark-paid", requireAdmin, (req, res) => {
 paymentsRouter.post("/admin/order/:id/mark-refunded", requireAdmin, (req, res) => {
   const id = Number(req.params.id);
   db.prepare("UPDATE orders SET payment_status = 'refunded' WHERE id = ?").run(id);
-  // Возврат баллов / промо при ручном refund (если ещё не делали)
-  refundOrderArtifacts(id);
+  markIntentRefunded(id);
   res.json({ ok: true });
 });
