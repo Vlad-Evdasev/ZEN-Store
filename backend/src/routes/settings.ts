@@ -34,6 +34,28 @@ settingsRouter.patch("/admin-handle", (req, res) => {
   res.json({ ok: true, handle: raw });
 });
 
+// Public: контакт продавца для кнопки «Написать продавцу» после
+// заказа из корзины. Отдельный от admin_tg_handle — продавец может
+// меняться. Фолбэк на admin_tg_handle если cart_seller не задан.
+settingsRouter.get("/cart-seller-handle", (_req, res) => {
+  const row = db.prepare("SELECT value FROM app_settings WHERE key = ?").get("cart_seller_handle") as { value: string } | undefined;
+  const fallback = db.prepare("SELECT value FROM app_settings WHERE key = ?").get("admin_tg_handle") as { value: string } | undefined;
+  const value = (row?.value || fallback?.value || "krot_eno").replace(/^@/, "");
+  res.json({ handle: value });
+});
+
+settingsRouter.patch("/cart-seller-handle", (req, res) => {
+  if (!isAdmin(req)) return res.status(401).json({ error: "Unauthorized" });
+  const raw = String(req.body?.handle ?? "").trim().replace(/^@/, "");
+  if (!raw || !/^[A-Za-z0-9_]{3,32}$/.test(raw)) {
+    return res.status(400).json({ error: "handle must be 3–32 chars: latin / digits / underscore" });
+  }
+  db.prepare(
+    "INSERT INTO app_settings (key, value) VALUES ('cart_seller_handle', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
+  ).run(raw);
+  res.json({ ok: true, handle: raw });
+});
+
 settingsRouter.get("/:userId", (req, res) => {
   const { userId } = req.params;
   const row = db.prepare("SELECT lang, theme, currency FROM user_settings WHERE user_id = ?").get(userId) as

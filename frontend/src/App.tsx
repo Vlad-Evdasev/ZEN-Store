@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useTelegram } from "./hooks/useTelegram";
 import { TelegramAuth } from "./components/TelegramAuth";
 import { useWishlist } from "./hooks/useWishlist";
-import { getProducts, getStores, getCategories, getCart, botHeartbeat, getMaintenanceStatus, type Product, type Store, type Category, type CartItem } from "./api";
+import { getProducts, getStores, getCategories, getCart, botHeartbeat, getMaintenanceStatus, getCartSellerHandle, type Product, type Store, type Category, type CartItem } from "./api";
 import { MaintenancePage } from "./pages/MaintenancePage";
 import { Catalog } from "./pages/Catalog";
 import { Cart } from "./pages/Cart";
@@ -107,7 +107,10 @@ function readInitialNav(): InitialNav {
   return { page: "catalog" };
 }
 
-const SELLER_LINK = import.meta.env.VITE_SELLER_LINK || "";
+// Фолбэк-ссылка продавца (если API ещё не ответил). В норме перебивается
+// значением из app_settings.cart_seller_handle, который админ редактирует
+// в админке. ENV-переменная остаётся для совместимости со старыми деплоями.
+const SELLER_LINK_FALLBACK = import.meta.env.VITE_SELLER_LINK || "";
 
 const headerIconSize = 26;
 const headerIconStyle: React.CSSProperties = { width: headerIconSize, height: headerIconSize, flexShrink: 0, color: "currentColor", display: "block" };
@@ -177,6 +180,28 @@ function App() {
   // Если кэш сработал — рисуем товары сразу, фон-обновление не показываем.
   const [productsLoading, setProductsLoading] = useState<boolean>(() => (loadCache<Product[]>("products") ?? []).length === 0);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  // Контакт продавца для кнопки «Написать продавцу» после оформления
+  // заказа из корзины. Тянем из app_settings (можно менять в админке).
+  // Кэшируем в localStorage, чтобы при повторных открытиях не было
+  // flash'а старого значения. Фолбэк — VITE_SELLER_LINK либо t.me/krot_eno.
+  const [sellerLink, setSellerLink] = useState<string>(() => {
+    try {
+      const cached = localStorage.getItem("zen-cart-seller-handle");
+      if (cached) return `https://t.me/${cached}`;
+    } catch {}
+    return SELLER_LINK_FALLBACK;
+  });
+  useEffect(() => {
+    let cancelled = false;
+    getCartSellerHandle()
+      .then((h) => {
+        if (cancelled || !h) return;
+        setSellerLink(`https://t.me/${h}`);
+        try { localStorage.setItem("zen-cart-seller-handle", h); } catch {}
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
   const cartCount = cartItems.reduce((a, i) => a + i.quantity, 0);
   // Кол-во избранного — только те id, что соответствуют реально
   // существующим товарам. Иначе точка-индикатор на сердечке висит,
@@ -686,7 +711,7 @@ function App() {
               onDone={openCatalog}
               onOrderSuccess={refreshCartCount}
               onCartChange={refreshCartCount}
-              sellerLink={SELLER_LINK}
+              sellerLink={sellerLink}
             />
           </Suspense>
         )}

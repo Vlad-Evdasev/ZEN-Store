@@ -26,6 +26,8 @@ import {
   type BotMessageTemplate,
   getAdminHandle,
   updateAdminHandle,
+  getCartSellerHandle,
+  updateCartSellerHandle,
   getCurrencyRateAdmin,
   updateCurrencyRateAdmin,
   refreshCurrencyRateFromNbrb,
@@ -1722,7 +1724,73 @@ function CurrencyRateTab({ adminSecret }: { adminSecret: string }) {
       </section>
 
       <AdminHandleSection adminSecret={adminSecret} />
+      <CartSellerHandleSection adminSecret={adminSecret} />
     </>
+  );
+}
+
+// Контакт продавца для кнопки «Написать продавцу» после оформления
+// заказа из корзины. Хранится в app_settings.cart_seller_handle.
+// Отдельный от admin_tg_handle — продавец может меняться независимо.
+function CartSellerHandleSection({ adminSecret }: { adminSecret: string }) {
+  const [handle, setHandle] = useState("");
+  const [original, setOriginal] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  useEffect(() => {
+    getCartSellerHandle().then((h) => { setHandle(h); setOriginal(h); }).catch(() => {});
+  }, []);
+  const dirty = handle.trim().replace(/^@/, "") !== original;
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const raw = handle.trim().replace(/^@/, "");
+    if (!/^[A-Za-z0-9_]{3,32}$/.test(raw)) {
+      setMessage("3–32 латинских буквы / цифры / подчёркивание");
+      return;
+    }
+    setSaving(true);
+    setMessage("");
+    try {
+      await updateCartSellerHandle(raw, adminSecret);
+      setOriginal(raw);
+      setHandle(raw);
+      setMessage("Продавец обновлён");
+      // Сбрасываем кэш на фронте, чтобы кнопка в корзине сразу подтянула новое.
+      try { localStorage.setItem("zen-cart-seller-handle", raw); } catch {}
+    } catch (e) {
+      setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <section className="admin-card" style={{ marginTop: 16 }}>
+      <div className="admin-card-head">
+        <h3>Продавец (кнопка в корзине)</h3>
+        <span className="admin-card-head-meta">Telegram</span>
+      </div>
+      <form onSubmit={handleSave} className="admin-card-body" style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
+        <label className="admin-field" style={{ flex: "1 1 240px" }}>
+          <span className="admin-field-label">@-handle (без «@»)</span>
+          <input
+            type="text"
+            value={handle}
+            onChange={(e) => setHandle(e.target.value)}
+            placeholder="krot_eno"
+            style={styles.input}
+            autoComplete="off"
+          />
+        </label>
+        <button type="submit" disabled={saving || !dirty} style={styles.submit}>
+          {saving ? "Сохраняю…" : "Сохранить"}
+        </button>
+      </form>
+      {message && <p style={{ ...styles.message, padding: "0 18px 14px" }}>{message}</p>}
+      <div style={{ padding: "0 18px 16px", fontSize: 12, color: "var(--muted)", lineHeight: 1.55 }}>
+        На кого ведёт кнопка «Написать продавцу» после оформления заказа из корзины.
+        Меняется без redeploy — если продавец сменился, просто впиши новый @.
+      </div>
+    </section>
   );
 }
 

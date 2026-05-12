@@ -468,6 +468,32 @@ export async function updateAdminHandle(handle: string, adminSecret: string): Pr
   return res.json();
 }
 
+// Cart seller handle — отдельный продавец для кнопки «Написать продавцу»
+// после заказа из корзины. Может отличаться от admin_tg_handle.
+export async function getCartSellerHandle(): Promise<string> {
+  try {
+    const res = await fetchWithRetry(`${API_URL}/api/settings/cart-seller-handle`);
+    if (!res.ok) return "krot_eno";
+    const data = await res.json();
+    return typeof data.handle === "string" && data.handle ? data.handle : "krot_eno";
+  } catch {
+    return "krot_eno";
+  }
+}
+
+export async function updateCartSellerHandle(handle: string, adminSecret: string): Promise<{ handle: string }> {
+  const res = await fetch(`${API_URL}/api/settings/cart-seller-handle`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
+    body: JSON.stringify({ handle }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+  return res.json();
+}
+
 export async function updateSettings(
   userId: string,
   data: { lang?: string; theme?: string; currency?: string }

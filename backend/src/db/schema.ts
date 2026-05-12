@@ -177,6 +177,11 @@ try {
   // CustomOrderPage и т.д. Дефолт ENV ADMIN_TG_HANDLE → 'krot_eno'.
   db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('admin_tg_handle', ?)")
     .run(process.env.ADMIN_TG_HANDLE || "krot_eno");
+  // Контакт продавца для кнопки «Написать продавцу» после оформления
+  // заказа из корзины. Отдельный от admin_tg_handle: продавец может
+  // меняться, а админ-контакт остаётся. Дефолт = admin_tg_handle.
+  db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('cart_seller_handle', ?)")
+    .run(process.env.CART_SELLER_HANDLE || process.env.ADMIN_TG_HANDLE || "krot_eno");
 } catch {}
 
 // Подписчики бота — тапнули /start, открыли мини-аппу или были замечены в
