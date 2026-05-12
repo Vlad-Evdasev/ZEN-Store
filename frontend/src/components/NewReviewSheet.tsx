@@ -41,20 +41,30 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
     return () => vv.removeEventListener("resize", update);
   }, [open]);
 
-  // Body management: добавляем zen-input-focused класс (скрывает nav)
-  // и body.overflow=hidden (предотвращает iOS page-jump на focus).
-  // Управляем здесь же, гарантированный cleanup при close — никакой
-  // зависимости от focusout events, которые иногда не firing на iOS.
+  // Body management — body.overflow lock пока sheet open (предотвращает
+  // jump страницы за sheet'ом). zen-input-focused класс отдельно — на
+  // focus/blur textarea'и (чтобы nav скрывался только когда юзер
+  // действительно печатает).
   useEffect(() => {
     if (!open) return;
     const prevOverflow = document.body.style.overflow;
-    document.body.classList.add("zen-input-focused");
+    const prevHtmlOverflow = document.documentElement.style.overflow;
     document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
     return () => {
-      document.body.classList.remove("zen-input-focused");
       document.body.style.overflow = prevOverflow;
+      document.documentElement.style.overflow = prevHtmlOverflow;
+      // Безопасный cleanup класса (если blur не успел firing).
+      document.body.classList.remove("zen-input-focused");
     };
   }, [open]);
+
+  const handleTextareaFocus = () => {
+    document.body.classList.add("zen-input-focused");
+  };
+  const handleTextareaBlur = () => {
+    document.body.classList.remove("zen-input-focused");
+  };
 
   useEffect(() => {
     if (open) {
@@ -120,6 +130,8 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
       reader.readAsDataURL(file);
     });
     setLocalError(lastErr);
+    // Refocus textarea — file picker на iOS забирает фокус.
+    setTimeout(() => textareaRef.current?.focus(), 60);
   };
 
   const removePhoto = (idx: number) => {
@@ -256,6 +268,8 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
               className="zen-textarea"
               value={text}
               onChange={(e) => setText(e.target.value)}
+              onFocus={handleTextareaFocus}
+              onBlur={handleTextareaBlur}
               placeholder={t(lang, "reviewsPlaceholder")}
               rows={1}
               style={styles.composerTextarea}

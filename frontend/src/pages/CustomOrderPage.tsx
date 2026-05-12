@@ -83,25 +83,25 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
     el.style.height = Math.min(el.scrollHeight, 180) + "px";
   }, [customDesc]);
 
-  // Height-based positioning через visualViewport.
-  // Раньше использовали `top: 62, bottom: dynamic` — iOS Telegram WebView
-  // коллапсировал wrap (top + bottom > новый visible viewport → 0-height).
-  // Теперь `top: 62, bottom: auto, height: vv.height - 62 (-64 для nav)`
-  // — wrap всегда занимает корректную видимую область, не зависит от
-  // bottom-anchor который iOS может рассчитать неправильно.
+  // refHeight captured at mount — используется и в visualViewport
+  // effect, и в handleFocus для prediction'а keyboard size.
+  const refHeightRef = useRef<number>(typeof window !== "undefined" ? window.innerHeight : 800);
+  const HEADER = 62;
+  const NAV = 64;
+  // Прогноз клавиатуры iOS — usually 280-340px. 300 — золотая
+  // середина. focus прячет nav и сразу адаптирует wrap.height под
+  // прогноз → CSS transition стартует ОДНОВРЕМЕННО с iOS keyboard
+  // slide-up. Когда vv.resize реально fires, корректирует до точного
+  // значения (обычно diff небольшой).
+  const PREDICTED_KB = 300;
+
   useEffect(() => {
     const vv = window.visualViewport;
     const wrap = wrapRef.current;
     if (!vv || !wrap) return;
-    const refHeight = window.innerHeight;
-    const HEADER = 62;
-    const NAV = 64;
     let raf: number | null = null;
     const apply = () => {
-      // Keyboard open detected by vv shrunk vs refHeight.
-      const kbOpen = vv.height < refHeight - 50;
-      // When keyboard open, nav скрыт через class — резервировать
-      // место не надо. wrap занимает весь vv.height минус header.
+      const kbOpen = vv.height < refHeightRef.current - 50;
       const navReserve = kbOpen ? 0 : NAV;
       const h = Math.max(200, vv.height - HEADER - navReserve);
       wrap.style.bottom = "auto";
@@ -119,16 +119,33 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
     };
   }, []);
 
-  // Body management: класс для скрытия nav + overflow lock против page
-  // jump'а от iOS scroll-to-input. Управляем в самом компоненте —
-  // гарантированный cleanup при unmount, не зависит от focus events.
-  useEffect(() => {
-    const prevOverflow = document.body.style.overflow;
+  // Body management + предсказание keyboard'а. Focus event firing'ит
+  // ДО keyboard slide-up — здесь мгновенно адаптируем wrap.height под
+  // прогнозируемый keyboard size, и CSS transition стартует синхронно
+  // с iOS keyboard animation, а не после её окончания.
+  const handleFocus = () => {
     document.body.classList.add("zen-input-focused");
     document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    const wrap = wrapRef.current;
+    if (wrap) {
+      const predicted = Math.max(200, refHeightRef.current - HEADER - PREDICTED_KB);
+      wrap.style.bottom = "auto";
+      wrap.style.height = `${predicted}px`;
+    }
+  };
+  const handleBlur = () => {
+    document.body.classList.remove("zen-input-focused");
+    document.body.style.overflow = "";
+    document.documentElement.style.overflow = "";
+    // wrap height вернётся к full размеру через vv.resize.
+  };
+  // Safety cleanup при unmount страницы.
+  useEffect(() => {
     return () => {
       document.body.classList.remove("zen-input-focused");
-      document.body.style.overflow = prevOverflow;
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
     };
   }, []);
 
@@ -170,6 +187,9 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
     const reader = new FileReader();
     reader.onload = () => setCustomPhoto((reader.result as string) || null);
     reader.readAsDataURL(file);
+    // После выбора фото — refocus textarea чтобы клавиатура вернулась
+    // (file picker на iOS забирает фокус и закрывает клавиатуру).
+    setTimeout(() => textareaRef.current?.focus(), 60);
   };
 
   const onComposerKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -268,6 +288,8 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
               value={customDesc}
               onChange={(e) => setCustomDesc(e.target.value)}
               onKeyDown={onComposerKeyDown}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
               placeholder={t(lang, "customOrderPlaceholderDesc")}
               rows={1}
               style={styles.composerTextarea}
