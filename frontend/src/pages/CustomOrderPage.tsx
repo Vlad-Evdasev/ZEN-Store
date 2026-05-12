@@ -640,11 +640,14 @@ const styles: Record<string, React.CSSProperties> = {
     pointerEvents: "none",
   },
   // Horizontal row: paperclip-pill + composer-pill (как Telegram).
+  // alignItems: center → пилюли выравниваются по вертикальному
+  // центру, даже если их высоты слегка различаются (round vs rounded
+  // rectangle могут отрисовываться чуть по-разному).
   // composerWrap имеет pointer-events: none, его потомки нужно явно
   // ставить в auto чтобы быть кликабельными.
   composerRow: {
     display: "flex",
-    alignItems: "flex-end",
+    alignItems: "center",
     gap: 6,
   },
   // Standalone round paperclip button to the left of the composer pill.
