@@ -77,20 +77,12 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
 
   const handleTextareaFocus = () => {
     document.body.classList.add("zen-input-focused");
-    // KEYBOARD PREDICTION: сразу уменьшаем vvHeight на типовую высоту
-    // iOS keyboard (290px без QuickType bar). overlay.height = vvHeight
-    // → overlay сжимается → sheet (flex-end) автоматически встаёт на
-    // bottom edge = top будущей клавиатуры. Когда vv.resize firing-нет
-    // с реальным значением, overlay скорректируется с small CSS
-    // transition'ом.
-    if (vvHeight) {
-      const refHeight = window.innerHeight;
-      // Применяем prediction ТОЛЬКО если vvHeight ещё на «полную»
-      // высоту (keyboard не открыта). Иначе iOS уже вернул actual.
-      if (vvHeight > refHeight - 50) {
-        setVvHeight(Math.max(280, refHeight - 290));
-      }
-    }
+    // Prediction убрана — sheet поднимается через visualViewport.resize
+    // как только iOS меняет vv.height (на современных iOS — continuously
+    // во время keyboard animation, на старых — в конце). Без prediction
+    // нет ситуации «predicted ≠ actual → дёрг при корректировке».
+    // Monotonic shrink (см. useEffect) держит sheet в самой raised
+    // позиции — НЕ опускается обратно когда keyboard закрывается.
   };
   const handleTextareaBlur = () => {
     document.body.classList.remove("zen-input-focused");
@@ -284,20 +276,17 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
         {/* Pill composer — paperclip / textarea / send (как CustomOrderPage). */}
         <div style={styles.composerWrap}>
           <div style={styles.composer}>
-            {/* File input лежит ПРЯМО под paperclip icon (direct-click
-                avoids programmatic .click() issues on iOS Telegram). */}
-            <div
+            {/* <label> wraps <input> — нативный паттерн, клик по
+                label активирует input → file picker открывается
+                надёжно на iOS Telegram WebView. */}
+            <label
               aria-label="add photo"
               style={{
                 ...styles.composerIconBtn,
-                position: "relative",
                 cursor: photos.length >= MAX_PHOTOS ? "not-allowed" : "pointer",
                 opacity: photos.length >= MAX_PHOTOS ? 0.35 : 1,
               }}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-              </svg>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -305,16 +294,13 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
                 multiple
                 onChange={handlePickPhotos}
                 disabled={photos.length >= MAX_PHOTOS}
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  opacity: 0,
-                  cursor: photos.length >= MAX_PHOTOS ? "not-allowed" : "pointer",
-                  fontSize: 0,
-                }}
+                style={{ display: "none" }}
                 aria-hidden
               />
-            </div>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+              </svg>
+            </label>
             <textarea
               ref={textareaRef}
               className="zen-textarea"

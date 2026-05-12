@@ -263,6 +263,19 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
           <BotBubble>
             <div style={styles.botBubbleTitle}>{t(lang, "customOrderSubtitle")}</div>
             <div style={styles.botBubbleSubtitle}>{t(lang, "customOrderSubtitleHint")}</div>
+            {sellerHandle && (
+              <div style={styles.botBubbleHint}>
+                {t(lang, "customOrderReplyFrom")}{" "}
+                <a
+                  href={SELLER_TG_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={styles.replyHintLink}
+                >
+                  {SELLER_HANDLE}
+                </a>
+              </div>
+            )}
           </BotBubble>
 
           {/* Photo preview bubbles (multiple, до 5) */}
@@ -291,21 +304,17 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
         {/* Composer */}
         <div style={styles.composerWrap}>
           <div style={styles.composer}>
-            {/* File input лежит ПРЯМО под paperclip icon (overlay-input
-                approach). Юзер тапает на иконку → клик идёт ДИРЕКТНО
-                в input (не через programmatic .click() которое iOS
-                Telegram WebView иногда блокирует). Picker открывается
-                надёжно. */}
-            <div
+            {/* <label> wraps <input> — нативный HTML паттерн, клик
+                по label автоматически активирует input. Самый надёжный
+                способ открыть file picker на iOS Telegram WebView. */}
+            <label
               style={{
                 ...styles.composerIconBtn,
-                position: "relative",
                 cursor: customPhotos.length >= MAX_PHOTOS ? "not-allowed" : "pointer",
                 opacity: customPhotos.length >= MAX_PHOTOS ? 0.35 : 1,
               }}
               aria-label={t(lang, "customOrderPhotoAdd")}
             >
-              <PaperclipIcon />
               <input
                 ref={fileInputRef}
                 type="file"
@@ -313,16 +322,11 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
                 multiple
                 onChange={onPhotoChange}
                 disabled={customPhotos.length >= MAX_PHOTOS}
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  opacity: 0,
-                  cursor: customPhotos.length >= MAX_PHOTOS ? "not-allowed" : "pointer",
-                  fontSize: 0,
-                }}
+                style={{ display: "none" }}
                 aria-hidden
               />
-            </div>
+              <PaperclipIcon />
+            </label>
 
             <textarea
               ref={textareaRef}
@@ -351,19 +355,8 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
             </button>
           </div>
 
-          {sellerHandle && (
-            <div style={styles.replyHintRow}>
-              {t(lang, "customOrderReplyFrom")}{" "}
-              <a
-                href={SELLER_TG_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={styles.replyHintLink}
-              >
-                {SELLER_HANDLE}
-              </a>
-            </div>
-          )}
+          {/* Hint «Ответим от @…» перенесён в bot-bubble (см. ниже
+              в thread'е), чтобы под пилюлей не торчал var(--bg) фон. */}
         </div>
       </form>
     </div>
@@ -520,6 +513,16 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: 4,
     lineHeight: 1.4,
   },
+  // Hint в bot-bubble — отделён от подзаголовка тонкой полосой.
+  botBubbleHint: {
+    fontSize: 11.5,
+    color: "var(--muted)",
+    marginTop: 8,
+    paddingTop: 8,
+    borderTop: "1px dashed var(--border)",
+    lineHeight: 1.4,
+    letterSpacing: "0.01em",
+  },
   /* Author row */
   authorRow: {
     display: "flex",
@@ -600,14 +603,14 @@ const styles: Record<string, React.CSSProperties> = {
     backdropFilter: "blur(4px)",
   },
 
-  /* Composer — paddingBottom убран, чтобы var(--bg) полоса под пилюлей
-     не торчала. Пилюля прижата к низу wrap'а (= top клавиатуры). */
+  /* Composer прижат к низу wrap'а. paddingBottom: 0 — никакого
+     var(--bg) фона между пилюлей и keyboard top'ом. */
   composerWrap: {
     display: "flex",
     flexDirection: "column",
     gap: 8,
     paddingTop: 6,
-    paddingBottom: "max(2px, env(safe-area-inset-bottom, 0))",
+    paddingBottom: 0,
     flexShrink: 0,
   },
   composer: {
