@@ -182,15 +182,19 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
     background: visible ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0)",
     transition: `background-color ${SHEET_ANIM}ms cubic-bezier(0.32, 0.72, 0, 1)`,
   };
-  // Transform комбинирует slide-in (translateY 100% → 0) с keyboard
-  // offset (translateY -keyboardOffset). Sheet встаёт ВЫШЕ viewport
-  // bottom'а на величину keyboard'а — над клавиатурой.
+  // Slide-in: transform translateY 100% → 0.
+  // Keyboard offset: margin-bottom (поднимает sheet над клавиатурой).
+  // Эти две анимации НЕЗАВИСИМЫ — раньше комбинировались в одном
+  // transform и при keyboard prediction → vv.resize получали
+  // конфликтующие transition'ы (sheet «улетал куда-то»).
   const sheetStyle: React.CSSProperties = {
     ...styles.sheet,
     maxHeight: sheetMaxHeight,
-    transform: visible ? `translateY(${-keyboardOffset}px)` : "translateY(100%)",
+    marginBottom: keyboardOffset,
+    transform: visible ? "translateY(0)" : "translateY(100%)",
     transition:
       `transform ${SHEET_ANIM}ms cubic-bezier(0.32, 0.72, 0, 1), ` +
+      `margin-bottom 280ms cubic-bezier(0.32, 0.72, 0, 1), ` +
       `max-height 240ms cubic-bezier(0.32, 0.72, 0, 1)`,
   };
 
@@ -278,19 +282,33 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
         {/* Pill composer — paperclip / textarea / send (как CustomOrderPage). */}
         <div style={styles.composerWrap}>
           <div style={styles.composer}>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
+            {/* div role=button (не focusable) — не забирает focus у
+                textarea при клике на скрепку. + refocus textarea перед
+                file picker, keyboard остаётся открытой. Симметрично
+                CustomOrderPage. */}
+            <div
+              role="button"
+              tabIndex={-1}
+              aria-label="add photo"
               onMouseDown={preventFocusSteal}
               onTouchStart={preventFocusSteal}
-              disabled={photos.length >= MAX_PHOTOS}
-              style={{ ...styles.composerIconBtn, opacity: photos.length >= MAX_PHOTOS ? 0.35 : 1 }}
-              aria-label="add photo"
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={(e) => {
+                if (photos.length >= MAX_PHOTOS) return;
+                e.preventDefault();
+                textareaRef.current?.focus();
+                fileInputRef.current?.click();
+              }}
+              style={{
+                ...styles.composerIconBtn,
+                cursor: photos.length >= MAX_PHOTOS ? "not-allowed" : "pointer",
+                opacity: photos.length >= MAX_PHOTOS ? 0.35 : 1,
+              }}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
               </svg>
-            </button>
+            </div>
             <textarea
               ref={textareaRef}
               className="zen-textarea"

@@ -274,16 +274,27 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
               aria-hidden
             />
 
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
+            {/* DIV вместо button — div НЕ focusable, не забирает focus
+                у textarea при клике. На iOS button.preventDefault()
+                ненадёжно блокирует focus shift, div работает чище.
+                + явно refocus textarea ПЕРЕД file picker — keyboard
+                остаётся открытой когда юзер тапает скрепку. */}
+            <div
+              role="button"
+              tabIndex={-1}
               onMouseDown={preventFocusSteal}
               onTouchStart={preventFocusSteal}
-              style={styles.composerIconBtn}
+              onPointerDown={preventFocusSteal}
+              onClick={(e) => {
+                e.preventDefault();
+                textareaRef.current?.focus();
+                fileInputRef.current?.click();
+              }}
+              style={{ ...styles.composerIconBtn, cursor: "pointer" }}
               aria-label={t(lang, "customOrderPhotoAdd")}
             >
               <PaperclipIcon />
-            </button>
+            </div>
 
             <textarea
               ref={textareaRef}
