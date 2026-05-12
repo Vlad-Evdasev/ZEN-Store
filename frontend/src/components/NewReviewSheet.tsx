@@ -536,14 +536,15 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
             </button>
             {/* Hidden file input — sibling, не wrapped. picker triggered
                 ТОЛЬКО programmatically через fileInputRef.current?.click()
-                из handlePaperclipClick. НЕТ `multiple` атрибута — с ним
-                iOS показывает action sheet, dismiss которого оставляет
-                dirty state и ломает следующий focus textarea (см.
-                длинный comment в CustomOrderPage). */}
+                из handlePaperclipClick. `multiple` атрибут позволяет
+                выбрать несколько фото за раз. iOS-state-machine bug
+                (kb сразу закрывается после dismiss action sheet'а)
+                митигируется через textareaLocked 1.5s после клика. */}
             <input
               ref={fileInputRef}
               type="file"
               accept="image/*"
+              multiple
               onChange={onPhotoChange}
               style={{ display: "none" }}
               aria-hidden
@@ -785,6 +786,18 @@ const styles: Record<string, React.CSSProperties> = {
     margin: 0,
     boxShadow: "0 4px 18px rgba(0,0,0,0.06)",
     transition: "opacity 0.15s",
+    // Anti-native-button-feedback: убирает iOS Safari built-in tap
+    // depression (pseudo-inset transform на :active), tap highlight,
+    // text-select на long-press и outline focus-ring. Без этих стилей
+    // нажатие button'а вызывает 1-2px visual shift вверх (iOS-native
+    // press effect) — юзер видит как «sheet подпрыгивает» на тап.
+    outline: "none",
+    WebkitTapHighlightColor: "transparent",
+    WebkitAppearance: "none",
+    appearance: "none",
+    userSelect: "none",
+    WebkitUserSelect: "none",
+    cursor: "pointer",
   },
   composer: {
     display: "flex",
