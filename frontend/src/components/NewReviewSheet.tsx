@@ -100,6 +100,9 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const threadRef = useRef<HTMLDivElement | null>(null);
   const textareaUnlockTimerRef = useRef<number | null>(null);
+  // pendingPickerTimer — для kb-open paperclip-flow: tap → blur (kb
+  // close) → через 320ms программно input.click() (picker open).
+  const pendingPickerTimerRef = useRef<number | null>(null);
   // refHeight — full viewport height на момент открытия sheet'а.
   // Используется для предикта overlay-height при focus event'е и для
   // post-picker reset (см. onPhotoChange).
@@ -197,6 +200,10 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
       if (textareaUnlockTimerRef.current != null) {
         clearTimeout(textareaUnlockTimerRef.current);
         textareaUnlockTimerRef.current = null;
+      }
+      if (pendingPickerTimerRef.current != null) {
+        clearTimeout(pendingPickerTimerRef.current);
+        pendingPickerTimerRef.current = null;
       }
     };
   }, [mounted]);
@@ -311,20 +318,11 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
     onSubmit(rating, text.trim(), photos);
   };
 
-  // paperclip: при kb-open сначала закрываем kb (blur textarea),
-  // picker НЕ открываем. preventDefault блокирует default label
-  // behaviour (синхронный synthetic click на input → file picker).
-  // Плюс input disabled когда kbOpen — belt-and-suspenders.
-  // Повторный тап (когда kb уже закрыта) откроет picker нормально.
-  const handlePaperclipClick = (e: React.MouseEvent<HTMLLabelElement>) => {
-    if (kbOpen) {
-      e.preventDefault();
-      textareaRef.current?.blur();
-      return;
-    }
-    // Блокируем textarea на 1.5s (matches CustomOrderPage) — без этого
-    // быстрая sequence paperclip → dismiss picker → tap textarea ловит
-    // iOS-state-machine bug (kb открывается и сразу сама закрывается).
+  // Локаем textarea на 1.5s после paperclip click (общий helper для kb-
+  // open и kb-closed путей). Без этого быстрая sequence paperclip →
+  // dismiss picker → tap textarea ловит iOS-state-machine bug (kb
+  // открывается и сразу сама закрывается).
+  const lockTextareaForPaperclip = () => {
     setTextareaLocked(true);
     if (textareaUnlockTimerRef.current != null) {
       clearTimeout(textareaUnlockTimerRef.current);
@@ -333,6 +331,41 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
       setTextareaLocked(false);
       textareaUnlockTimerRef.current = null;
     }, 1500);
+  };
+
+  // paperclip:
+  // - kb open: blur textarea, дождаться kb-close (~320ms), затем
+  //   программно input.click() → picker открывается. На iOS Telegram
+  //   WebView programmatic .click() вне user-gesture context может
+  //   игнорироваться security'ой; в этом случае юзеру придётся тапнуть
+  //   повторно (но kb уже закрыта, второй tap пойдёт обычным flow).
+  // - kb closed: обычный flow — label дернёт input click синхронно,
+  //   picker откроется сразу.
+  const handlePaperclipClick = (e: React.MouseEvent<HTMLLabelElement>) => {
+    if (kbOpen) {
+      // Блокируем default label→input click (мгновенный picker open
+      // одновременно с kb-close = плохо выглядит). Вместо этого: blur,
+      // ждём 320ms (= kb close anim ~250ms + запас), потом click().
+      e.preventDefault();
+      textareaRef.current?.blur();
+      lockTextareaForPaperclip();
+      if (pendingPickerTimerRef.current != null) {
+        clearTimeout(pendingPickerTimerRef.current);
+      }
+      pendingPickerTimerRef.current = window.setTimeout(() => {
+        pendingPickerTimerRef.current = null;
+        const input = fileInputRef.current;
+        if (!input) return;
+        // input.disabled может быть всё ещё true: kbOpen state обновляется
+        // через vv.resize (debounced rAF), к 320ms может ещё не успеть.
+        // Force-enable перед click — React следующий re-render выставит
+        // disabled по актуальному state.
+        if (input.disabled) input.disabled = false;
+        input.click();
+      }, 320);
+      return;
+    }
+    lockTextareaForPaperclip();
   };
 
   const preventFocusSteal = (e: React.MouseEvent | React.TouchEvent) => {
