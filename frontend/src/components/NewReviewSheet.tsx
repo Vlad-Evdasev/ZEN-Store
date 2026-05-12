@@ -14,17 +14,19 @@ interface NewReviewSheetProps {
 
 const MAX_PHOTOS = 10;
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
-// SHEET_ANIM — продолжительность open/close transition. Bumped 320→400
-// для более «нежного» feel'а: чуть медленнее sheet выезжает, blur
-// плавно растёт, content не «всплывает» резко.
-const SHEET_ANIM = 400;
+// SHEET_ANIM — продолжительность open/close transition. Bumped 400→520
+// для ещё более плавного feel'а: sheet выезжает/уезжает медленнее, blur
+// мягче градирует, transform даёт время easing'у «осесть» в конце.
+const SHEET_ANIM = 520;
 // Backdrop blur amount. Animated 0px→BLUR_AMOUNT при open, обратно при
 // close. Раньше блюр был статичный (всегда 6px пока overlay в DOM) →
 // при open/close виден мгновенный «pop» blur'а. Animated → fade.
 const BLUR_AMOUNT = 8;
-// Easing iOS-style — сглаживает discrete vv.resize и transform changes
-// в один continuous flow.
-const EASING = "cubic-bezier(0.32, 0.72, 0, 1)";
+// Easing — easeOutQuart-ish curve. Слегка более pronounced decel чем
+// iOS keyboard cubic-bezier(0.32, 0.72, 0, 1) — sheet начинает чуть
+// быстрее, затухает мягче в конце. На длинной 520ms duration это даёт
+// «премиальное» оседание без feel'а sluggish.
+const EASING = "cubic-bezier(0.25, 1, 0.5, 1)";
 // Upper-bound предикат высоты iOS-клавиатуры (см. CustomOrderPage).
 // Лучше overshoot чем undershoot — overshoot ощущается как settling,
 // undershoot как jump вверх когда vv.resize корректирует.
