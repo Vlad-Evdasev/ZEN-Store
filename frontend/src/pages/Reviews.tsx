@@ -59,6 +59,21 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
     return sum / reviews.length;
   }, [reviews]);
 
+  // Свои отзывы пользователя сверху, остальные ниже по дате (новее → старее).
+  // Без mutate исходного массива: сортируем копию.
+  const sortedReviews = useMemo(() => {
+    const ts = (s: string) => {
+      const t = new Date(s).getTime();
+      return Number.isFinite(t) ? t : 0;
+    };
+    return [...reviews].sort((a, b) => {
+      const aOwn = a.user_id === userId ? 0 : 1;
+      const bOwn = b.user_id === userId ? 0 : 1;
+      if (aOwn !== bOwn) return aOwn - bOwn;
+      return ts(b.created_at) - ts(a.created_at);
+    });
+  }, [reviews, userId]);
+
   const handleSubmitReview = async (rating: number, text: string, photos: string[]) => {
     setSubmitting(true);
     setError("");
@@ -118,7 +133,7 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
       )}
 
       <div style={styles.list}>
-        {reviews.map((r) => {
+        {sortedReviews.map((r) => {
           const images = r.image_urls ?? [];
           const isOwn = r.user_id === userId;
           return (
