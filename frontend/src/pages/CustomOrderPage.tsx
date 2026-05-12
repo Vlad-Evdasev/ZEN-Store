@@ -139,6 +139,14 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   // slide-up клавиатуры → они идут синхронно.
   // body.overflow управляется mount/unmount useEffect'ом, здесь не
   // трогаем (иначе на blur разлочим, и следующий focus получит race).
+  // Defense window после paperclip-клика: если в этом окне textarea
+  // получает blur (что НЕ инициировал юзер), мы расцениваем это как
+  // spurious iOS event из пайплайна закрытия action sheet'а и
+  // refocus'им textarea, чтобы клавиатура осталась открытой.
+  // One-shot — после первого refocus гасим, чтобы не уйти в loop
+  // если юзер на самом деле хочет blur'нуть textarea.
+  const paperclipDefenseUntilRef = useRef<number>(0);
+
   const handleFocus = () => {
     setKbOpen(true);
     document.body.classList.add("zen-input-focused");
@@ -150,6 +158,16 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
     }
   };
   const handleBlur = () => {
+    // Defensive refocus против spurious iOS-blur'а после paperclip+dismiss.
+    if (paperclipDefenseUntilRef.current && Date.now() < paperclipDefenseUntilRef.current) {
+      paperclipDefenseUntilRef.current = 0; // one-shot, защита от loop'а
+      // Refocus в следующем frame (синхронный focus внутри onBlur может
+      // привести к recursive blur → focus → blur).
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+      });
+      return;
+    }
     setKbOpen(false);
     document.body.classList.remove("zen-input-focused");
     // wrap height вернётся к full размеру через vv.resize.
@@ -390,6 +408,10 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
                 // на document (либо outside-tap dismiss, либо тап на
                 // textarea) триггерит cleanup stale file-input state.
                 paperclipClickAtRef.current = Date.now();
+                // 3-секундное defense окно: если textarea получит blur
+                // (от spurious iOS-event'а из пайплайна action sheet'а),
+                // handleBlur refocus'нет её обратно.
+                paperclipDefenseUntilRef.current = Date.now() + 3000;
               }}
             >
               <input
