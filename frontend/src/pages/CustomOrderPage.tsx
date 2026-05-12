@@ -12,11 +12,8 @@ function SendArrowIcon() {
 }
 
 function PaperclipIcon() {
-  // Path несимметричен — визуальный центр смещён ВВЕРХ от центра
-  // viewBox. translateY(3px) даёт оптическое равноудаление от
-  // верхней и нижней границ пилюли.
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ transform: "translateY(3px)" }}>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
     </svg>
   );
@@ -651,7 +648,11 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 6,
   },
   // Standalone round paperclip button to the left of the composer pill.
+  // box-sizing: border-box → external height = 38px, matches composer
+  // pill (30 content + 6 padding + 2 border = 38). Both pills sit
+  // bottom-aligned in composerRow.
   paperclipPill: {
+    boxSizing: "border-box",
     width: 38,
     height: 38,
     borderRadius: "50%",
