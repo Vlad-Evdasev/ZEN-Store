@@ -136,11 +136,11 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   // визуально едет ПОСЛЕ того как клавиатура уже наполовину поднялась.
   // С предиктом transition стартует ровно в момент когда iOS начинает
   // slide-up клавиатуры → они идут синхронно.
+  // body.overflow управляется mount/unmount useEffect'ом, здесь не
+  // трогаем (иначе на blur разлочим, и следующий focus получит race).
   const handleFocus = () => {
     setKbOpen(true);
     document.body.classList.add("zen-input-focused");
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overflow = "hidden";
     const wrap = wrapRef.current;
     if (wrap) {
       const predicted = Math.max(200, refHeightRef.current - HEADER - PREDICTED_KB);
@@ -151,36 +151,28 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   const handleBlur = () => {
     setKbOpen(false);
     document.body.classList.remove("zen-input-focused");
-    document.body.style.overflow = "";
-    document.documentElement.style.overflow = "";
     // wrap height вернётся к full размеру через vv.resize.
   };
-  // Safety cleanup при unmount страницы + body class маркер для CSS
-  // (убирает borderTop у bottom-nav на этой странице — иначе под
-  // пилюлей видна полоса как «чёрный прямоугольник»).
+  // body.overflow=hidden ставим на МОНТАЖЕ страницы и держим на всё
+  // время пока юзер на CustomOrderPage. Раньше overflow ставился в
+  // handleFocus (поздно — iOS успевал сдвинуть layout → «прыжок»),
+  // потом я пробовал pre-lock на touchstart textarea — но изменение
+  // overflow во время touch-event'а на iOS иногда вмешивалось в focus
+  // sequence, особенно после взаимодействия с file picker'ом → kb
+  // не открывалась.
+  // Mount-lock: стабильное состояние всё время на странице. Никаких
+  // focus-time race conditions, никаких прыжков. body scroll на этой
+  // странице и так не нужен (wrap fixed, thread скроллит отдельно).
   useEffect(() => {
     document.body.classList.add("zen-customorder-active");
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
     return () => {
       document.body.classList.remove("zen-customorder-active");
       document.body.classList.remove("zen-input-focused");
       document.body.style.overflow = "";
       document.documentElement.style.overflow = "";
     };
-  }, []);
-
-  // Pre-lock body.overflow на touchstart textarea (до того как iOS
-  // среагирует на upcoming focus). Без этого iOS успевает кратко
-  // сдвинуть layout до того как handleFocus поставит overflow:hidden
-  // → виден «прыжок страницы» при открытии клавиатуры.
-  useEffect(() => {
-    const el = textareaRef.current;
-    if (!el) return;
-    const onTouchStart = () => {
-      document.body.style.overflow = "hidden";
-      document.documentElement.style.overflow = "hidden";
-    };
-    el.addEventListener("touchstart", onTouchStart, { passive: true });
-    return () => el.removeEventListener("touchstart", onTouchStart);
   }, []);
 
   // preventFocusSteal — на mobile тап по кнопке (paperclip, ✕, send)
@@ -233,16 +225,13 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
       };
       reader.readAsDataURL(file);
     });
-    // КРИТИЧНО: после file picker'а keyboard был закрыт iOS-ом.
-    // Сбрасываем «keyboard-aware» состояние страницы:
-    //  · body class / overflow lock убираем (иначе nav остаётся скрыт)
-    //  · wrap.height возвращаем на full (иначе остаётся в predicted
-    //    shrink'нутом состоянии → photo bubble + composer + хвост
-    //    оказываются за пределами overflow:hidden wrap'а → визуально
-    //    исчезают)
+    // После file picker'а iOS закрыл клавиатуру. Сбрасываем body class
+    // (показываем nav обратно) и wrap.height возвращаем на full размер
+    // (иначе остаётся в predicted shrink'нутом состоянии → photo
+    // bubble + composer + хвост оказываются за пределами overflow:hidden
+    // wrap'а → визуально исчезают). body.overflow НЕ трогаем — он
+    // под mount-lock'ом весь lifetime страницы.
     document.body.classList.remove("zen-input-focused");
-    document.body.style.overflow = "";
-    document.documentElement.style.overflow = "";
     const wrap = wrapRef.current;
     if (wrap) {
       wrap.style.height = `${refHeightRef.current - HEADER - NAV}px`;
