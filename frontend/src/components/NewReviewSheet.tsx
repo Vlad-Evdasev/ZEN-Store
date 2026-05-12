@@ -31,11 +31,22 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
   const [vvHeight, setVvHeight] = useState<number | null>(
     typeof window !== "undefined" && window.visualViewport ? window.visualViewport.height : null
   );
+  // keyboardOffset — на сколько px поднять sheet ВЫШЕ viewport-bottom'а
+  // чтобы он встал над keyboard. Высчитывается из (innerHeight - vv.height)
+  // — это и есть высота keyboard в layout-координатах. С meta
+  // interactive-widget=overlays-content position:fixed элементы НЕ
+  // репозиционируются автоматически, делаем это вручную через transform.
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
   useEffect(() => {
     if (!open) return;
     const vv = window.visualViewport;
     if (!vv) return;
-    const update = () => setVvHeight(vv.height);
+    const refHeight = window.innerHeight;
+    const update = () => {
+      setVvHeight(vv.height);
+      const overlap = Math.max(0, refHeight - vv.height - vv.offsetTop);
+      setKeyboardOffset(overlap);
+    };
     update();
     vv.addEventListener("resize", update);
     return () => vv.removeEventListener("resize", update);
@@ -61,9 +72,24 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
 
   const handleTextareaFocus = () => {
     document.body.classList.add("zen-input-focused");
+    // KEYBOARD PREDICTION: на focus сразу поднимаем sheet на
+    // прогнозируемую высоту keyboard'а (360px — верхняя граница iOS
+    // с QuickType bar). Без prediction sheet остаётся внизу пока
+    // vv.resize не firing-нет (на iOS только в конце keyboard
+    // animation) → визуально sheet «не поднимается с клавиатурой».
+    if (keyboardOffset === 0) {
+      setKeyboardOffset(360);
+      // Также shrink'аем vvHeight — sheet maxHeight уменьшается чтобы
+      // sheet не уходил за верх viewport-а.
+      if (vvHeight) {
+        setVvHeight(Math.max(280, vvHeight - 360));
+      }
+    }
   };
   const handleTextareaBlur = () => {
     document.body.classList.remove("zen-input-focused");
+    // vv.resize firing-нет с актуальным значением (keyboard hide)
+    // и сбросит offset обратно в 0.
   };
 
   useEffect(() => {
@@ -156,11 +182,13 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
     background: visible ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0)",
     transition: `background-color ${SHEET_ANIM}ms cubic-bezier(0.32, 0.72, 0, 1)`,
   };
+  // Transform комбинирует slide-in (translateY 100% → 0) с keyboard
+  // offset (translateY -keyboardOffset). Sheet встаёт ВЫШЕ viewport
+  // bottom'а на величину keyboard'а — над клавиатурой.
   const sheetStyle: React.CSSProperties = {
     ...styles.sheet,
     maxHeight: sheetMaxHeight,
-    transform: visible ? "translateY(0)" : "translateY(100%)",
-    // transform — slide-in/out; max-height — smooth resize при keyboard.
+    transform: visible ? `translateY(${-keyboardOffset}px)` : "translateY(100%)",
     transition:
       `transform ${SHEET_ANIM}ms cubic-bezier(0.32, 0.72, 0, 1), ` +
       `max-height 240ms cubic-bezier(0.32, 0.72, 0, 1)`,

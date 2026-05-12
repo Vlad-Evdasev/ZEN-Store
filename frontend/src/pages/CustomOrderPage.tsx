@@ -88,12 +88,15 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   const refHeightRef = useRef<number>(typeof window !== "undefined" ? window.innerHeight : 800);
   const HEADER = 62;
   const NAV = 64;
-  // Прогноз клавиатуры iOS — usually 280-340px. 300 — золотая
-  // середина. focus прячет nav и сразу адаптирует wrap.height под
-  // прогноз → CSS transition стартует ОДНОВРЕМЕННО с iOS keyboard
-  // slide-up. Когда vv.resize реально fires, корректирует до точного
-  // значения (обычно diff небольшой).
-  const PREDICTED_KB = 300;
+  // Прогноз клавиатуры iOS — 280-350px зависит от модели/QuickType bar.
+  // Берём ВЕРХНЮЮ границу (360) специально: composer rises чуть выше
+  // чем актуальный keyboard, hint-row («Ответим от @…») сразу остаётся
+  // ВИДИМЫМ над клавиатурой. Когда vv.resize fires с реальным
+  // значением (обычно меньше) — wrap чуть-чуть растёт, composer
+  // опускается на пару пикселей — почти не заметно. Если бы prediction
+  // был меньше реального — hint оказывался бы ПОД клавиатурой и
+  // потом «дёргался» вверх когда vv.resize.
+  const PREDICTED_KB = 360;
 
   useEffect(() => {
     const vv = window.visualViewport;
