@@ -178,28 +178,31 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   // Cleanup stale file-input state после dismiss action sheet'а.
   // БАГ: paperclip-тап → action sheet → outside-tap для dismiss → тап
   // на textarea → kb открывается на 1 sec и сама закрывается.
-  // ПРИЧИНА: outside-tap dismiss НЕ fire'ит change event на file input,
-  // поэтому наш onPhotoChange cleanup не запускается. iOS оставляет
-  // input в stale state (с queued событием), которое срабатывает
-  // через ~1 sec ПОСЛЕ focus textarea → textarea blur → kb dismiss.
-  // ФИКС: явно сбрасываем file input value + blur на двух сигналах:
-  //   · cancel event (iOS 16+ fires при dismiss picker без выбора)
-  //   · window focus event (fires когда picker/sheet закрывается —
-  //     работает на старых iOS где cancel не fires)
+  // ПРИЧИНА: outside-tap dismiss НЕ fire'ит ни change, ни cancel, ни
+  // window focus на iOS Telegram WebView. iOS оставляет file input в
+  // stale state с queued событием, которое срабатывает через ~1 sec
+  // после focus textarea → textarea blur → kb dismiss.
+  // ФИКС: ловим САМЫЙ ПЕРВЫЙ touchstart после клика на скрепку (capture
+  // phase, document-level). Это первое user-interaction после того как
+  // iOS вернул контроль WebView'у (action sheet capture'ил touch'и
+  // пока был открыт). Cleanup'им file input до того как focus event
+  // на textarea успеет произойти → kb открывается чисто.
+  const paperclipClickAtRef = useRef<number>(0);
   useEffect(() => {
-    const cleanupFileInput = () => {
+    const onDocTouchStart = () => {
+      if (!paperclipClickAtRef.current) return;
+      if (Date.now() - paperclipClickAtRef.current > 60000) {
+        paperclipClickAtRef.current = 0;
+        return;
+      }
+      paperclipClickAtRef.current = 0;
       const input = fileInputRef.current;
       if (!input) return;
       input.value = "";
       if (document.activeElement === input) input.blur();
     };
-    const input = fileInputRef.current;
-    window.addEventListener("focus", cleanupFileInput);
-    input?.addEventListener("cancel", cleanupFileInput);
-    return () => {
-      window.removeEventListener("focus", cleanupFileInput);
-      input?.removeEventListener("cancel", cleanupFileInput);
-    };
+    document.addEventListener("touchstart", onDocTouchStart, true);
+    return () => document.removeEventListener("touchstart", onDocTouchStart, true);
   }, []);
 
   // preventFocusSteal — на mobile тап по кнопке (paperclip, ✕, send)
@@ -236,6 +239,9 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   };
 
   const onPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Picker закрылся через selection (а не outside-tap) — cleanup
+    // через touchstart больше не нужен, гасим маркер.
+    paperclipClickAtRef.current = 0;
     const files = Array.from(e.target.files ?? []);
     e.target.value = "";
     if (files.length === 0) return;
@@ -370,7 +376,14 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
               }}
               aria-label={t(lang, "customOrderPhotoAdd")}
               onClick={() => {
-                if (kbOpen) textareaRef.current?.blur();
+                if (paperclipDisabled) {
+                  if (kbOpen) textareaRef.current?.blur();
+                  return;
+                }
+                // Помечаем тайм клика на скрепку — следующий touchstart
+                // на document (либо outside-tap dismiss, либо тап на
+                // textarea) триггерит cleanup stale file-input state.
+                paperclipClickAtRef.current = Date.now();
               }}
             >
               <input
