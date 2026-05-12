@@ -175,6 +175,33 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
     };
   }, []);
 
+  // Cleanup stale file-input state после dismiss action sheet'а.
+  // БАГ: paperclip-тап → action sheet → outside-tap для dismiss → тап
+  // на textarea → kb открывается на 1 sec и сама закрывается.
+  // ПРИЧИНА: outside-tap dismiss НЕ fire'ит change event на file input,
+  // поэтому наш onPhotoChange cleanup не запускается. iOS оставляет
+  // input в stale state (с queued событием), которое срабатывает
+  // через ~1 sec ПОСЛЕ focus textarea → textarea blur → kb dismiss.
+  // ФИКС: явно сбрасываем file input value + blur на двух сигналах:
+  //   · cancel event (iOS 16+ fires при dismiss picker без выбора)
+  //   · window focus event (fires когда picker/sheet закрывается —
+  //     работает на старых iOS где cancel не fires)
+  useEffect(() => {
+    const cleanupFileInput = () => {
+      const input = fileInputRef.current;
+      if (!input) return;
+      input.value = "";
+      if (document.activeElement === input) input.blur();
+    };
+    const input = fileInputRef.current;
+    window.addEventListener("focus", cleanupFileInput);
+    input?.addEventListener("cancel", cleanupFileInput);
+    return () => {
+      window.removeEventListener("focus", cleanupFileInput);
+      input?.removeEventListener("cancel", cleanupFileInput);
+    };
+  }, []);
+
   // preventFocusSteal — на mobile тап по кнопке (paperclip, ✕, send)
   // блюрит textarea → клавиатура схлопывается. preventDefault на
   // pointerdown/mousedown не даёт кнопке стать focus target.
