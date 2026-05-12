@@ -4,9 +4,14 @@ import { createPortal } from "react-dom";
 interface ReviewLightboxProps {
   images: string[];
   startIndex: number;
-  /** Rect of the thumbnail at click moment — for FLIP-open / FLIP-close
-   *  animation (image grows from thumb to fullscreen and shrinks back). */
+  /** Rect of the thumbnail at click moment — for FLIP-open animation
+   *  (image grows from clicked thumb to fullscreen). */
   startRect: DOMRect | null;
+  /** Rects ВСЕХ thumb'ов в коллаже в момент открытия (по индексам).
+   *  Используется для FLIP-close: после swipe на photo N close идёт
+   *  обратно в thumb N, а не в thumb с которого открыли. Для скрытых
+   *  фото (4+ в +N case) item = null → fallback на last visible. */
+  thumbRects?: (DOMRect | null)[];
   onClose: () => void;
 }
 
@@ -18,7 +23,7 @@ const EASING = "cubic-bezier(0.45, 0, 0.55, 1)";
  * полный экран. Horizontal swipe / wheel переключает между фото.
  * FLIP-close обратно в thumbRect (того изображения которое сейчас видно).
  */
-export function ReviewLightbox({ images, startIndex, startRect, onClose }: ReviewLightboxProps) {
+export function ReviewLightbox({ images, startIndex, startRect, thumbRects, onClose }: ReviewLightboxProps) {
   const [currentIdx, setCurrentIdx] = useState(Math.min(startIndex, Math.max(images.length - 1, 0)));
   const [phase, setPhase] = useState<"opening" | "open" | "closing">("opening");
   const imgRef = useRef<HTMLImageElement>(null);
@@ -89,18 +94,32 @@ export function ReviewLightbox({ images, startIndex, startRect, onClose }: Revie
     if (phase === "closing") return;
     setPhase("closing");
     const img = imgRef.current;
-    if (img && startRect) {
+    // FLIP-close target: rect TEКУЩЕЙ свайпнутой картинки, не той с
+    // которой открыли. Если thumbRects переданы и items[currentIdx]
+    // существует — используем его. Если currentIdx указывает на
+    // скрытое фото (null в thumbRects) — walk back до last visible
+    // rect (так close animates к видимому +N thumb'у в коллаже).
+    // Если всё null — fallback на startRect (старое поведение).
+    let closeRect: DOMRect | null = null;
+    if (thumbRects && thumbRects.length > 0) {
+      let idx = currentIdx;
+      while (idx >= 0 && !thumbRects[idx]) idx--;
+      closeRect = idx >= 0 ? thumbRects[idx] : null;
+    }
+    if (!closeRect) closeRect = startRect;
+
+    if (img && closeRect) {
       const final = img.getBoundingClientRect();
-      const dx = startRect.left - final.left;
-      const dy = startRect.top - final.top;
-      const sx = startRect.width / Math.max(final.width, 1);
-      const sy = startRect.height / Math.max(final.height, 1);
+      const dx = closeRect.left - final.left;
+      const dy = closeRect.top - final.top;
+      const sx = closeRect.width / Math.max(final.width, 1);
+      const sy = closeRect.height / Math.max(final.height, 1);
       img.style.transformOrigin = "top left";
       img.style.transition = `transform ${ANIM}ms ${EASING}`;
       img.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
     }
     setTimeout(onClose, ANIM);
-  }, [phase, startRect, onClose]);
+  }, [phase, startRect, thumbRects, currentIdx, onClose]);
 
   // Escape closes.
   useEffect(() => {
@@ -181,22 +200,27 @@ export function ReviewLightbox({ images, startIndex, startRect, onClose }: Revie
     touchAction: "none",
   };
 
+  // Dots indicator — match catalog product gallery (.product-v2__gallery-dots).
+  // Darker bg + larger active dot (18×6 vs 6×6) для лучшей видимости
+  // на чёрном backdrop'е, чем была раньше (slight white tint plus
+  // 5px dots). z-index 2 — выше img в DOM order.
   const dotsStyle: React.CSSProperties = {
     position: "absolute",
-    bottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)",
+    bottom: 28,
     left: "50%",
     transform: "translateX(-50%)",
     display: "flex",
     alignItems: "center",
-    gap: 4,
-    padding: "5px 8px",
+    gap: 6,
+    padding: "6px 10px",
     borderRadius: 999,
-    background: "rgba(255,255,255,0.18)",
-    backdropFilter: "blur(6px)",
-    WebkitBackdropFilter: "blur(6px)",
+    background: "rgba(0,0,0,0.45)",
+    backdropFilter: "blur(10px)",
+    WebkitBackdropFilter: "blur(10px)",
     opacity: phase === "open" && images.length > 1 ? 1 : 0,
     transition: `opacity ${ANIM}ms ${EASING}`,
     pointerEvents: "none",
+    zIndex: 2,
   };
 
   return createPortal(
@@ -232,11 +256,12 @@ export function ReviewLightbox({ images, startIndex, startRect, onClose }: Revie
             <span
               key={i}
               style={{
-                width: i === currentIdx ? 14 : 5,
-                height: 5,
+                display: "block",
+                width: i === currentIdx ? 18 : 6,
+                height: 6,
                 borderRadius: i === currentIdx ? 3 : "50%",
-                background: i === currentIdx ? "#fff" : "rgba(255,255,255,0.55)",
-                transition: "width 0.2s ease, background 0.2s ease, border-radius 0.2s ease",
+                background: i === currentIdx ? "#fff" : "rgba(255,255,255,0.5)",
+                transition: "width 0.25s ease, background 0.2s ease, border-radius 0.2s ease",
               }}
             />
           ))}

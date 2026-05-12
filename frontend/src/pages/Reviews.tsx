@@ -39,6 +39,11 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
     images: string[];
     startIndex: number;
     rect: DOMRect | null;
+    // Rects ВСЕХ thumbnail'ов в коллаже на момент открытия. Нужно
+    // чтобы FLIP-close возвращался к thumb'у ТЕКУЩЕЙ (свайпнутой)
+    // картинки, а не первой открытой. Для скрытых photos (4+ в
+    // grid'е с +N) item = null → lightbox упадёт на last visible.
+    thumbRects: (DOMRect | null)[];
   } | null>(null);
 
   const refresh = () => {
@@ -118,6 +123,10 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
           const isOwn = r.user_id === userId;
           return (
           <article key={r.id} style={styles.bubbleRow}>
+            {/* Avatar СЛЕВА но bottom-aligned (alignItems: flex-end в
+                bubbleRow). Bubble tail (4px corner) у bottom-left,
+                направлен ровно к avatar — выглядит как «sign» автора
+                под сообщением. */}
             <div style={{ ...styles.av, ...(isOwn ? styles.avOwn : {}) }}>
               {(r.user_name?.[0] || "?").toUpperCase()}
             </div>
@@ -139,7 +148,9 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
               {images.length > 0 && (
                 <PhotoCollage
                   images={images}
-                  onOpen={(idx, rect) => setReviewLightbox({ images, startIndex: idx, rect })}
+                  onOpen={(idx, rect, thumbRects) =>
+                    setReviewLightbox({ images, startIndex: idx, rect, thumbRects })
+                  }
                 />
               )}
 
@@ -182,6 +193,7 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
           images={reviewLightbox.images}
           startIndex={reviewLightbox.startIndex}
           startRect={reviewLightbox.rect}
+          thumbRects={reviewLightbox.thumbRects}
           onClose={() => setReviewLightbox(null)}
         />
       )}
@@ -190,40 +202,73 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
 }
 
 // PhotoCollage — компактная сетка фоток в отзыве.
-// onOpen передаёт thumbRect для FLIP-анимации лайтбокса.
+// onOpen передаёт rect of clicked thumb + thumbRects ВСЕХ thumbs
+// в коллаже (для FLIP-close возврата к свайпнутой картинке).
 // 1 фото — 60% ширины 4:5; 2 — 2 столбца квадратами; 3+ — 3 столбца
 // квадратами + индикатор «+N» на 4-й ячейке если фоток больше 4.
-function PhotoCollage({ images, onOpen }: { images: string[]; onOpen: (idx: number, rect: DOMRect | null) => void }) {
+// Для скрытых фото (4+ в +N case) rect = null → lightbox использует
+// last visible rect для FLIP-close.
+function PhotoCollage({
+  images,
+  onOpen,
+}: {
+  images: string[];
+  onOpen: (idx: number, rect: DOMRect | null, thumbRects: (DOMRect | null)[]) => void;
+}) {
   if (images.length === 0) return null;
+
+  // Захватываем rects ВСЕХ видимых thumbs в коллаже. Querying через
+  // data-thumb-idx внутри ближайшего [data-photo-collage] — единая
+  // точка вместо ref-array boilerplate. Для photos 4+ (скрытые в +N
+  // collage) thumbRect = null → lightbox упадёт на last visible.
+  const captureThumbRects = (originEl: HTMLElement): (DOMRect | null)[] => {
+    const container = originEl.closest<HTMLElement>("[data-photo-collage]") ?? originEl;
+    return images.map((_, i) => {
+      const el = container.querySelector<HTMLElement>(`[data-thumb-idx="${i}"]`);
+      return el?.getBoundingClientRect() ?? null;
+    });
+  };
+
   if (images.length === 1) {
     return (
-      <button
-        type="button"
-        onClick={(e) => {
-          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-          onOpen(0, rect);
-        }}
-        style={collageStyles.singleBtn}
-        aria-label="фото"
-      >
-        <img src={images[0]} alt="" style={collageStyles.singleImg} />
-      </button>
+      <div data-photo-collage>
+        <button
+          type="button"
+          data-thumb-idx={0}
+          onClick={(e) => {
+            const el = e.currentTarget as HTMLElement;
+            const rect = el.getBoundingClientRect();
+            const thumbRects = captureThumbRects(el);
+            onOpen(0, rect, thumbRects);
+          }}
+          style={collageStyles.singleBtn}
+          aria-label="фото"
+        >
+          <img src={images[0]} alt="" style={collageStyles.singleImg} />
+        </button>
+      </div>
     );
   }
   const cols = images.length === 2 ? 2 : 3;
   const visible = images.slice(0, 4);
   const extra = images.length - visible.length;
   return (
-    <div style={{ ...collageStyles.grid, gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+    <div
+      data-photo-collage
+      style={{ ...collageStyles.grid, gridTemplateColumns: `repeat(${cols}, 1fr)` }}
+    >
       {visible.map((src, i) => {
         const isLastVisible = i === visible.length - 1 && extra > 0;
         return (
           <button
             key={i}
             type="button"
+            data-thumb-idx={i}
             onClick={(e) => {
-              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-              onOpen(i, rect);
+              const el = e.currentTarget as HTMLElement;
+              const rect = el.getBoundingClientRect();
+              const thumbRects = captureThumbRects(el);
+              onOpen(i, rect, thumbRects);
             }}
             style={collageStyles.cellBtn}
             aria-label="фото"
@@ -347,42 +392,61 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: 1.4,
     letterSpacing: "-0.01em",
   },
-  list: { display: "flex", flexDirection: "column", gap: 14 },
+  list: { display: "flex", flexDirection: "column", gap: 16 },
   // Chat-bubble layout: avatar плавает слева, bubble справа.
-  // Tail радиуса top-left (4px) направлен к avatar'у — визуально
-  // bubble «говорит» от лица автора. Cohesive с CustomOrderPage,
+  // alignItems: flex-end — avatar bottom-aligned с дном bubble'а
+  // (визуально «подпись» автора под отзывом). Bubble tail (4px corner)
+  // в bottom-left направлен к avatar'у. Cohesive с CustomOrderPage,
   // где такая же логика для bot bubble.
   bubbleRow: {
     display: "flex",
-    alignItems: "flex-start",
+    alignItems: "flex-end",
     gap: 10,
   },
+  // Avatar — современный flat-look с inset-ring (вместо border):
+  // ring рисуется внутри circle, не съедая внешний radius и не
+  // создавая «двойного контура» с bg. Serif initial (Georgia) — в
+  // стилистике серифных rating-цифр в hero-блоке выше.
   av: {
-    width: 38, height: 38, borderRadius: "50%",
-    background: "rgba(165,42,42,0.10)", color: "var(--accent)",
-    fontWeight: 700, fontSize: 14,
-    display: "flex", alignItems: "center", justifyContent: "center",
+    width: 42,
+    height: 42,
+    borderRadius: "50%",
+    background: "rgba(165,42,42,0.10)",
+    color: "var(--accent)",
+    fontWeight: 700,
+    fontSize: 15,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     flexShrink: 0,
     fontFamily: 'Georgia, "Times New Roman", serif',
-    border: "1px solid rgba(165,42,42,0.16)",
-    marginTop: 2,
+    letterSpacing: "0.02em",
+    border: "none",
+    boxShadow: "inset 0 0 0 1.5px rgba(165,42,42,0.18)",
+    // marginBottom 0 — но visually avatar центрирован относительно
+    // bubble bottom edge (alignItems flex-end в bubbleRow).
+    marginBottom: 0,
   },
-  // Own-review avatar: чуть сильнее accent — едва заметный signal
-  // что это «ваш» отзыв (вместе с Изменить-кнопкой ниже).
+  // Own-review avatar: solid accent fill + soft glow + edge-light
+  // inset (внутренний highlight сверху делает avatar «объёмным»
+  // без тяжёлого gradient'а).
   avOwn: {
     background: "var(--accent)",
     color: "#fff",
-    border: "1px solid var(--accent)",
-    boxShadow: "0 2px 8px rgba(165,42,42,0.25)",
+    border: "none",
+    boxShadow:
+      "0 4px 14px rgba(165,42,42,0.32), " +
+      "inset 0 1px 0 rgba(255,255,255,0.18), " +
+      "inset 0 0 0 1px rgba(255,255,255,0.05)",
   },
   bubble: {
     flex: 1,
     minWidth: 0,
     background: "var(--surface)",
     border: "1px solid var(--border)",
-    // Asymmetric radius — tail (4px) top-left → к avatar'у. Остальные
-    // углы 18 для мягкого card-look.
-    borderRadius: "4px 18px 18px 18px",
+    // Asymmetric radius — tail (4px) bottom-left → к avatar'у внизу.
+    // Остальные углы 18 для мягкого card-look.
+    borderRadius: "18px 18px 18px 4px",
     padding: "12px 14px 14px",
     display: "flex",
     flexDirection: "column",
