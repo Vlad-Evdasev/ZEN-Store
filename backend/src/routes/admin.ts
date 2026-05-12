@@ -373,6 +373,86 @@ adminRouter.post("/conversations/:userId/reply", requireAdmin, async (req, res) 
   res.json({ ok: true, message_id: result.messageId, image_url: result.imageUrl });
 });
 
+// ── Комментарии (review + post) — unified admin view ─────────────────
+// Объединяет два источника комментов (отзывы + посты) в одну ленту.
+// Поле kind различает источник; parent_excerpt — короткая выжимка
+// объекта (отзыв-текст или caption поста) чтобы админ видел контекст
+// без перехода на сам отзыв/пост. username берём из bot_users (мог
+// быть подтянут на /start или из user_settings) — фронт строит из
+// него https://t.me/<username> для прямого DM-а автору.
+
+interface AdminCommentRow {
+  kind: "review" | "post";
+  id: number;
+  parent_id: number;
+  parent_excerpt: string | null;
+  user_id: string;
+  user_name: string | null;
+  username: string | null;
+  text: string;
+  image_url: string | null;
+  created_at: string;
+}
+
+adminRouter.get("/comments", requireAdmin, (_req, res) => {
+  const reviewRows = db.prepare(`
+    SELECT
+      'review' AS kind,
+      rc.id AS id,
+      rc.review_id AS parent_id,
+      r.text AS parent_excerpt,
+      rc.user_id AS user_id,
+      rc.user_name AS user_name,
+      bu.username AS username,
+      rc.text AS text,
+      rc.image_url AS image_url,
+      rc.created_at AS created_at
+    FROM review_comments rc
+    LEFT JOIN reviews r ON r.id = rc.review_id
+    LEFT JOIN bot_users bu ON bu.user_id = rc.user_id
+  `).all() as AdminCommentRow[];
+
+  const postRows = db.prepare(`
+    SELECT
+      'post' AS kind,
+      pc.id AS id,
+      pc.post_id AS parent_id,
+      p.caption AS parent_excerpt,
+      pc.user_id AS user_id,
+      pc.user_name AS user_name,
+      bu.username AS username,
+      pc.text AS text,
+      NULL AS image_url,
+      pc.created_at AS created_at
+    FROM post_comments pc
+    LEFT JOIN posts p ON p.id = pc.post_id
+    LEFT JOIN bot_users bu ON bu.user_id = pc.user_id
+  `).all() as AdminCommentRow[];
+
+  const all = [...reviewRows, ...postRows].sort((a, b) => {
+    const ta = new Date(a.created_at).getTime();
+    const tb = new Date(b.created_at).getTime();
+    return tb - ta;
+  });
+  res.json(all);
+});
+
+adminRouter.delete("/comments/:kind/:id", requireAdmin, (req, res) => {
+  const kind = req.params.kind;
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: "Bad id" });
+  let result;
+  if (kind === "review") {
+    result = db.prepare("DELETE FROM review_comments WHERE id = ?").run(id);
+  } else if (kind === "post") {
+    result = db.prepare("DELETE FROM post_comments WHERE id = ?").run(id);
+  } else {
+    return res.status(400).json({ error: "kind must be review or post" });
+  }
+  if (result.changes === 0) return res.status(404).json({ error: "Comment not found" });
+  res.json({ ok: true });
+});
+
 // Heartbeat от WebApp: при первом открытии мини-аппы регистрируем пользователя
 // в bot_users, чтобы он попал в список подписчиков. Без admin-secret — открыто.
 const usersHeartbeatRouter = Router();

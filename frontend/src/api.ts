@@ -1238,6 +1238,47 @@ export async function deleteBroadcastPost(id: number, adminSecret: string): Prom
   }
 }
 
+// ─── Admin comments (unified review + post) ──────────────────────────
+
+export interface AdminComment {
+  kind: "review" | "post";
+  id: number;
+  parent_id: number;
+  parent_excerpt: string | null;
+  user_id: string;
+  user_name: string | null;
+  username: string | null;
+  text: string;
+  image_url: string | null;
+  created_at: string;
+}
+
+export async function getAdminComments(adminSecret: string): Promise<AdminComment[]> {
+  const res = await fetch(`${API_URL}/api/admin/comments`, {
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+  return res.json();
+}
+
+export async function deleteAdminComment(
+  kind: "review" | "post",
+  id: number,
+  adminSecret: string
+): Promise<void> {
+  const res = await fetch(`${API_URL}/api/admin/comments/${kind}/${id}`, {
+    method: "DELETE",
+    headers: { "X-Admin-Secret": adminSecret },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+}
+
 // ─── Engagement API ────────────────────────────────────────────────────
 
 export async function getCategorySubscriptions(userId: string): Promise<string[]> {
