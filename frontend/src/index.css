@@ -1428,6 +1428,49 @@ html[data-theme="light"] .zen-app .product-card-price {
 }
 .zen-pin-card:active { transform: scale(0.985); transition: transform 0.1s ease; }
 
+/* ── Smooth image carousel inside thumb cards ────────────────────────
+   Используется в ProductCard (каталог) и MasonryCard (лента «Вдохновиться»)
+   когда у поста/товара несколько фото. Браузер сам обрабатывает физику
+   свайпа и snap к соседнему слайду — это плавнее любого JS-варианта
+   (мы раньше переключали index одним setState на touchend, и фото
+   мгновенно подменялось без анимации). Контейнер абсолютно позициониро-
+   ван внутри imageWrap (.imageWrap имеет position:relative + aspect-ratio)
+   — это даёт ему фиксированные размеры, чтобы flex-слайды могли быть
+   100% × 100%. */
+.zen-card-image-scroller {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  /* overscroll-behavior отключает bounce/refresh когда юзер свайпает
+     горизонтально за края карусели — иначе на iOS вертикальный
+     pull-to-refresh может срабатывать на горизонтальный жест. */
+  overscroll-behavior-x: contain;
+}
+.zen-card-image-scroller::-webkit-scrollbar { display: none; }
+.zen-card-image-slide {
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+}
+.zen-card-image-slide > img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: none;
+}
+
 /* ── Maintenance screen ────────────────────────────────────────────── */
 .zen-maintenance {
   position: fixed;

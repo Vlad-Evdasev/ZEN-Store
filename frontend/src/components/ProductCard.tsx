@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useLayoutEffect } from "react";
 import { useSettings } from "../context/SettingsContext";
 import { useProductImageIdx, setProductImageIdx } from "../lib/imageIndexStore";
 import type { Product } from "../api";
@@ -29,8 +29,10 @@ interface ProductCardProps {
 export function ProductCard({ product, onClick, inWishlist, onWishlistClick, compact, reviewCount, reviewAvg, fillHeight, descBlockMinHeight, smallDescBlock, sizeVariant = "default", isHidden = false }: ProductCardProps) {
   const { formatPrice } = useSettings();
   const imgWrapRef = useRef<HTMLDivElement>(null);
-  // Свайп по фото в карточке. Индекс шарится через imageIndexStore с
-  // ProductPage'ом — закрытие FLIP лендится в thumb с правильной картинкой.
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  // Свайп по фото в карточке через нативный scroll-snap (см. .zen-card-
+  // image-scroller). Индекс шарится через imageIndexStore с ProductPage —
+  // FLIP-close лендится в thumb с правильной картинкой.
   const imageUrls = (product.image_urls && product.image_urls.length > 0)
     ? product.image_urls
     : (product.image_url ? [product.image_url] : []);
@@ -39,6 +41,21 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
   const isMulti = imageUrls.length > 1;
   const touchStartX = useRef<number | null>(null);
   const touchMoveDx = useRef(0);
+
+  // Sync store → scrollLeft. Если индекс изменился извне (ProductPage
+  // свайпнул другую картинку, закрылся — thumb должен быть на ней,
+  // чтобы FLIP-close лёг ровно). Tolerance > clientWidth/2 — не
+  // прерывать нативный snap, инициированный пальцем юзера в этой
+  // карточке (там scrollLeft уже сам сойдётся в нужный таргет).
+  useLayoutEffect(() => {
+    const el = scrollerRef.current;
+    if (!el || el.clientWidth === 0) return;
+    const target = safeIdx * el.clientWidth;
+    if (Math.abs(el.scrollLeft - target) > el.clientWidth / 2) {
+      el.scrollLeft = target;
+    }
+  }, [safeIdx]);
+
   const handleClick = () => {
     // На iOS Safari порядок touch-click такой: touchstart → blur input →
     // click. К моменту click activeElement УЖЕ body (blur произошёл),
@@ -62,6 +79,9 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
     const rect = imgWrapRef.current?.getBoundingClientRect() ?? null;
     onClick(rect);
   };
+  // touchStart/touchMove — ТОЛЬКО для click-suppression: если юзер
+  // свайпнул карусель (dx>10), не открываем товар по тапу. Сам swipe
+  // обрабатывает браузер через overflow-x: auto + scroll-snap.
   const onTouchStart = (e: React.TouchEvent) => {
     if (!isMulti) return;
     touchStartX.current = e.touches[0].clientX;
@@ -71,32 +91,19 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
     if (!isMulti || touchStartX.current === null) return;
     touchMoveDx.current = e.touches[0].clientX - touchStartX.current;
   };
-  // Круговое переключение: с последней → первая, с первой → последняя.
-  // Симметрично ProductPage (раскрытая карточка) — ожидаемое UX.
-  const cycle = (delta: 1 | -1) => (safeIdx + delta + imageUrls.length) % imageUrls.length;
   const onTouchEnd = () => {
-    if (!isMulti || touchStartX.current === null) {
-      touchStartX.current = null;
-      return;
-    }
-    const dx = touchMoveDx.current;
     touchStartX.current = null;
-    if (Math.abs(dx) > 40) {
-      setProductImageIdx(product.id, cycle(dx < 0 ? 1 : -1));
-    }
   };
-  // Horizontal trackpad swipe (на ноутбуках) — wheel-event с deltaX.
-  // Lock на 400ms чтобы continuous swipe не switch'нул сразу через все.
-  const wheelLockedRef = useRef(false);
-  const onWheel = (e: React.WheelEvent) => {
-    if (!isMulti) return;
-    if (wheelLockedRef.current) return;
-    const ax = Math.abs(e.deltaX);
-    const ay = Math.abs(e.deltaY);
-    if (ax <= ay || ax < 18) return;
-    setProductImageIdx(product.id, cycle(e.deltaX > 0 ? 1 : -1));
-    wheelLockedRef.current = true;
-    window.setTimeout(() => { wheelLockedRef.current = false; }, 400);
+
+  // Detect snap target из текущего scrollLeft. Math.round — ближайший
+  // слайд. Обновляем store чтобы dots и FLIP-open читали актуальный idx.
+  const onScroll = () => {
+    const el = scrollerRef.current;
+    if (!el || el.clientWidth === 0) return;
+    const idx = Math.round(el.scrollLeft / el.clientWidth);
+    if (idx !== safeIdx && idx >= 0 && idx < imageUrls.length) {
+      setProductImageIdx(product.id, idx);
+    }
   };
   const cardStyle = compact
     ? { ...styles.card, ...styles.cardCompact, ...(fillHeight ? styles.cardFillHeight : {}) }
@@ -147,14 +154,27 @@ export function ProductCard({ product, onClick, inWishlist, onWishlistClick, com
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
-        onWheel={onWheel}
       >
-        <img
-          key={safeIdx}
-          src={imageUrls[safeIdx] || product.image_url || "https://via.placeholder.com/200"}
-          alt={product.name}
-          style={styles.image}
-        />
+        {imageUrls.length > 0 ? (
+          <div
+            ref={scrollerRef}
+            className="zen-card-image-scroller"
+            onScroll={onScroll}
+          >
+            {imageUrls.map((src, i) => (
+              <div key={i} className="zen-card-image-slide">
+                <img
+                  src={src}
+                  alt={i === 0 ? product.name : ""}
+                  loading={i === 0 ? "eager" : "lazy"}
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          // Фолбэк когда у товара нет ни image_urls, ни image_url.
+          <img src="https://via.placeholder.com/200" alt={product.name} style={styles.image} />
+        )}
         {isMulti && (
           <div style={styles.dotsRow} aria-hidden>
             {imageUrls.map((_, i) => (

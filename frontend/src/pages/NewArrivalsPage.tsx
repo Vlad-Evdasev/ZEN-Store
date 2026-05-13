@@ -139,6 +139,8 @@ function MasonryCard({ post, onOpen, isHidden = false }: MasonryCardProps) {
   const currentIdx = usePostImageIdx(post.id);
   const safeIdx = Math.min(currentIdx, Math.max(images.length - 1, 0));
   const ref = useRef<HTMLDivElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const scrollerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const touchStartX = useRef<number | null>(null);
   const touchMoveDx = useRef(0);
@@ -153,6 +155,20 @@ function MasonryCard({ post, onOpen, isHidden = false }: MasonryCardProps) {
     return c[firstImage] ?? null;
   })();
   const [liveAspect, setLiveAspect] = useState<number | null>(cachedFirstAspect);
+
+  // Sync store → scrollLeft. Срабатывает когда индекс пришёл «снаружи»
+  // (ExpandedView свайпнул на другую картинку, мы закрылись — thumb
+  // должен лендиться на ту же картинку, чтобы FLIP-close визуально лёг
+  // в правильное место). Tolerance > clientWidth/2 чтобы не прерывать
+  // нативный snap, который инициировал сам юзер пальцем в этой карточке.
+  useLayoutEffect(() => {
+    const el = scrollerRef.current;
+    if (!el || el.clientWidth === 0) return;
+    const target = safeIdx * el.clientWidth;
+    if (Math.abs(el.scrollLeft - target) > el.clientWidth / 2) {
+      el.scrollLeft = target;
+    }
+  }, [safeIdx]);
 
   if (images.length === 0) return null;
 
@@ -169,12 +185,19 @@ function MasonryCard({ post, onOpen, isHidden = false }: MasonryCardProps) {
       return;
     }
     if (Date.now() - lastBlur < 250) return;
-    const rect = imgRef.current?.getBoundingClientRect()
+    // Rect для FLIP-открытия берём от обёртки imageWrap, а не от <img>:
+    // у нас теперь N картинок в горизонтальном scroller, getBoundingClientRect
+    // у конкретного <img> вернёт его offset внутри scroller. Обёртка —
+    // viewport в этот scroller, и её rect это и есть то, что юзер видит.
+    const rect = wrapRef.current?.getBoundingClientRect()
       ?? ref.current?.getBoundingClientRect()
       ?? null;
     onOpen(post, rect, images[safeIdx], safeIdx);
   };
 
+  // touchStart / touchMove оставляем ТОЛЬКО для click-suppression: если
+  // юзер свайпнул карусель (dx>10), не открываем пост по тапу. Сам
+  // свайп теперь обрабатывает браузер через overflow-x: auto + scroll-snap.
   const onTouchStart = (e: React.TouchEvent) => {
     if (!isMulti) return;
     touchStartX.current = e.touches[0].clientX;
@@ -184,30 +207,8 @@ function MasonryCard({ post, onOpen, isHidden = false }: MasonryCardProps) {
     if (!isMulti || touchStartX.current === null) return;
     touchMoveDx.current = e.touches[0].clientX - touchStartX.current;
   };
-  // Круговое переключение.
-  const cycle = (delta: 1 | -1) => (safeIdx + delta + images.length) % images.length;
   const onTouchEnd = () => {
-    if (!isMulti || touchStartX.current === null) {
-      touchStartX.current = null;
-      return;
-    }
-    const dx = touchMoveDx.current;
     touchStartX.current = null;
-    if (Math.abs(dx) > 40) {
-      setPostImageIdx(post.id, cycle(dx < 0 ? 1 : -1));
-    }
-  };
-  // Horizontal trackpad swipe (на ноутбуках). Lock 400ms.
-  const wheelLockedRef = useRef(false);
-  const onWheel = (e: React.WheelEvent) => {
-    if (!isMulti) return;
-    if (wheelLockedRef.current) return;
-    const ax = Math.abs(e.deltaX);
-    const ay = Math.abs(e.deltaY);
-    if (ax <= ay || ax < 18) return;
-    setPostImageIdx(post.id, cycle(e.deltaX > 0 ? 1 : -1));
-    wheelLockedRef.current = true;
-    window.setTimeout(() => { wheelLockedRef.current = false; }, 400);
   };
 
   const handleClickGuarded = (e: React.MouseEvent) => {
@@ -220,14 +221,24 @@ function MasonryCard({ post, onOpen, isHidden = false }: MasonryCardProps) {
     handleClick();
   };
 
+  // Detect snap-target during/после нативного скролла. Math.round
+  // округляет до ближайшего слайда — этого достаточно для dots, и для
+  // того чтобы store отражал выбранную картинку (FLIP-open пойдёт с неё).
+  const onScroll = () => {
+    const el = scrollerRef.current;
+    if (!el || el.clientWidth === 0) return;
+    const idx = Math.round(el.scrollLeft / el.clientWidth);
+    if (idx !== safeIdx && idx >= 0 && idx < images.length) {
+      setPostImageIdx(post.id, idx);
+    }
+  };
+
   const handleImgLoad = () => {
     const img = imgRef.current;
     if (!img || !img.naturalWidth || !img.naturalHeight) return;
     const ratio = img.naturalWidth / img.naturalHeight;
-    rememberAspect(images[safeIdx], ratio);
-    // Aspect фиксируем ТОЛЬКО по первой картинке — все остальные
-    // показываются в том же боксе.
-    if (safeIdx === 0 && Math.abs((liveAspect ?? 0) - ratio) > 0.01) {
+    rememberAspect(images[0], ratio);
+    if (Math.abs((liveAspect ?? 0) - ratio) > 0.01) {
       setLiveAspect(ratio);
     }
   };
@@ -246,20 +257,28 @@ function MasonryCard({ post, onOpen, isHidden = false }: MasonryCardProps) {
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
-      onWheel={onWheel}
       className="zen-pin-card"
       style={cardStyles.card}
     >
-      <div style={{ ...cardStyles.imageWrap, ...aspectStyle }}>
-        <img
-          ref={imgRef}
-          key={safeIdx}
-          src={images[safeIdx]}
-          alt=""
-          loading="lazy"
-          onLoad={handleImgLoad}
-          style={{ ...cardStyles.image, visibility: isHidden ? "hidden" : "visible" }}
-        />
+      <div ref={wrapRef} style={{ ...cardStyles.imageWrap, ...aspectStyle }}>
+        <div
+          ref={scrollerRef}
+          className="zen-card-image-scroller"
+          onScroll={onScroll}
+        >
+          {images.map((src, i) => (
+            <div key={i} className="zen-card-image-slide">
+              <img
+                ref={i === 0 ? imgRef : undefined}
+                src={src}
+                alt=""
+                loading={i === 0 ? "eager" : "lazy"}
+                onLoad={i === 0 ? handleImgLoad : undefined}
+                style={{ visibility: isHidden ? "hidden" : "visible" }}
+              />
+            </div>
+          ))}
+        </div>
         {isMulti && (
           <div style={cardStyles.dotsRow} aria-hidden>
             {images.map((_, i) => (
