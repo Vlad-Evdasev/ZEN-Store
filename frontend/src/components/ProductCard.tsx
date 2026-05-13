@@ -279,10 +279,11 @@ const styles: Record<string, React.CSSProperties> = {
     overflow: "hidden",
     background: "var(--surface-elevated)",
     borderRadius: 12,
-    // touch-action: pan-y — освобождает горизонтальный жест для нашего
-    // swipe-handler. Без этого iOS Safari трактует горизонтальный
-    // touchmove как page-pan и наши touchmove события прерываются.
-    touchAction: "pan-y",
+    // touch-action не задаём: горизонтальный свайп теперь обрабатывает
+    // внутренний .zen-card-image-scroller (overflow-x: auto + scroll-snap),
+    // вертикальный — родительская страница. Раньше стоял "pan-y" чтобы
+    // освободить горизонтальный жест для самописного JS-свайпа, но это
+    // блокирует нативный скролл карусели.
   },
   image: {
     width: "100%",

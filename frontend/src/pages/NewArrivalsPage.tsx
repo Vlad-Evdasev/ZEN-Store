@@ -1546,8 +1546,10 @@ const cardStyles: Record<string, React.CSSProperties> = {
     overflow: "hidden",
     borderRadius: 12,
     background: "rgba(0,0,0,0.04)",
-    // touch-action: pan-y — освобождает горизонтальный жест для swipe.
-    touchAction: "pan-y" as const,
+    // touch-action не задаём: горизонтальный свайп теперь обрабатывает
+    // внутренний .zen-card-image-scroller (overflow-x: auto + scroll-snap),
+    // вертикальный — родительская страница. Раньше тут стоял "pan-y",
+    // что блокировало нативный горизонтальный скролл карусели.
   },
   // Картинка тянется на весь wrap; так как у wrap зафиксирован
   // aspect-ratio, высота резервируется до загрузки картинки.
