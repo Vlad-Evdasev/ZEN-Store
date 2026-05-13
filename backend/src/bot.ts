@@ -759,13 +759,17 @@ bot.command("start", async (ctx) => {
       // что в этой клавиатуре только вторичная навигация.
       keyboard: [
         [
-          // Без иконок — чисто текст, минимализм.
-          { text: "Вдохновиться", web_app: { url: `${WEB_APP_URL}#page=inspire` } },
-          { text: "Заказы", web_app: { url: `${WEB_APP_URL}#page=history` } },
+          // Глифы из Unicode без emoji-presentation: Telegram рендерит их
+          // текстовым шрифтом, поэтому они идут белыми и контурными, в
+          // тон лейблу кнопки. Размер по клиентам слегка плавает — глифы
+          // живут в разных Unicode-блоках, идеального выравнивания на
+          // уровне reply-keyboard API нет.
+          { text: "✺ Вдохновиться", web_app: { url: `${WEB_APP_URL}#page=inspire` } },
+          { text: "⌥ Заказы", web_app: { url: `${WEB_APP_URL}#page=history` } },
         ],
         [
-          { text: "Профиль", web_app: { url: `${WEB_APP_URL}#page=settings` } },
-          { text: "Поддержка", web_app: { url: `${WEB_APP_URL}#page=support` } },
+          { text: "☉ Профиль", web_app: { url: `${WEB_APP_URL}#page=settings` } },
+          { text: "ⓘ Поддержка", web_app: { url: `${WEB_APP_URL}#page=support` } },
         ],
       ],
       is_persistent: true,
