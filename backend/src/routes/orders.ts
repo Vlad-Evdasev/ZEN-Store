@@ -2,6 +2,7 @@ import { Router } from "express";
 import { randomBytes } from "crypto";
 import { db } from "../db/schema.js";
 import { notifyOrderStatusChange, notifyOrderInvoice } from "../bot.js";
+import { requireOwnership } from "../middleware/telegramAuth.js";
 
 const TON_RECEIVE_ADDRESS = process.env.TON_RECEIVE_ADDRESS || "";
 const TON_API_TOKEN = process.env.TON_API_TOKEN || "";
@@ -37,12 +38,16 @@ ordersRouter.get("/admin/all", (req, res) => {
 
 ordersRouter.get("/:userId", (req, res) => {
   const { userId } = req.params;
+  const auth = requireOwnership(req, userId);
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
   const orders = db.prepare("SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC").all(userId);
   res.json(orders);
 });
 
 ordersRouter.post("/:userId", async (req, res) => {
   const { userId } = req.params;
+  const auth = requireOwnership(req, userId);
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
   const { user_name, user_phone, user_username, user_address, items, total } = req.body;
   if (!items || total == null) return res.status(400).json({ error: "items and total required" });
 

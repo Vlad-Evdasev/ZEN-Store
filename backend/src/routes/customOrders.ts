@@ -2,6 +2,7 @@ import { Router } from "express";
 import { randomBytes } from "crypto";
 import { db } from "../db/schema.js";
 import { notifyCustomOrderStatusChange, notifyCustomOrderInvoice } from "../bot.js";
+import { requireOwnership } from "../middleware/telegramAuth.js";
 
 export const customOrdersRouter = Router();
 
@@ -239,6 +240,8 @@ customOrdersRouter.patch("/admin/group/:groupId/mark-paid", (req, res) => {
 customOrdersRouter.post("/", (req, res) => {
   const { user_id, user_name, user_username, user_address, description, size, image_data, image_urls } = req.body;
   if (!user_id) return res.status(400).json({ error: "user_id required" });
+  const auth = requireOwnership(req, user_id);
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
   // Multi-photo: image_urls — JSON массив data URL'ов (до 5).
   // image_data остаётся для backward compat (первая фотка).
   const photos: string[] = Array.isArray(image_urls)
@@ -267,6 +270,8 @@ customOrdersRouter.post("/", (req, res) => {
 
 customOrdersRouter.get("/:userId", (req, res) => {
   const { userId } = req.params;
+  const auth = requireOwnership(req, userId);
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
   // Заявки в статусе 'review' (ожидают подтверждения админа) пользователю не
   // показываем — иначе он увидит их в истории до того, как мы их оформим.
   const rows = db.prepare(

@@ -21,6 +21,7 @@ import {
 } from "./routes/payments.js";
 import { messagesRouter } from "./routes/messages.js";
 import { db } from "./db/schema.js";
+import { attachTelegramUser } from "./middleware/telegramAuth.js";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
@@ -28,6 +29,7 @@ const PORT = Number(process.env.PORT) || 3001;
 app.use(cors({ origin: "*", maxAge: 600 })); // CORS preflight кешируется на 10 минут
 app.use(compression()); // gzip JSON / text — экономит до 70% трафика на orders/posts/products
 app.use(express.json({ limit: "30mb" }));
+app.use(attachTelegramUser); // populate req.tgUserId если есть валидный X-Telegram-Init-Data
 
 app.use("/api/products", productsRouter);
 app.use("/api/stores", storesRouter);

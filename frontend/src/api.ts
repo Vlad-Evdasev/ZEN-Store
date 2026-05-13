@@ -6,6 +6,28 @@ const RETRY_BASE_DELAY_MS = 500;
 // плюс запас на медленные мобильные сети.
 const REQUEST_TIMEOUT_MS = 30_000;
 
+// Подмешивает X-Telegram-Init-Data в исходящий запрос. Бэк верифицирует
+// HMAC-подпись с BOT_TOKEN и достаёт оттуда user_id — это закрывает
+// дыру, когда любой мог подставить чужой user_id в URL/body. Шлём на
+// все запросы (public-эндпоинты header просто игнорируют). Тип Window.Telegram
+// уже задекларирован в telegram.d.ts.
+function withTgAuth(init?: RequestInit): RequestInit | undefined {
+  const initData = typeof window !== "undefined" ? window.Telegram?.WebApp?.initData : "";
+  if (!initData) return init;
+  const existing = init?.headers ?? {};
+  const merged = new Headers(existing as HeadersInit);
+  if (!merged.has("X-Telegram-Init-Data")) merged.set("X-Telegram-Init-Data", initData);
+  return { ...init, headers: merged };
+}
+
+// apiFetch — обёртка над fetch'ем, которая автоматически подмешивает
+// Telegram-auth header. Использовать вместо голого fetch на всех вызовах
+// к нашему API. fetchWithRetry / fetchWrite сами вызывают withTgAuth
+// и не должны идти через apiFetch (иначе двойная обёртка).
+function apiFetch(url: string, options?: RequestInit): Promise<Response> {
+  return fetch(url, withTgAuth(options));
+}
+
 /**
  * fetch с автоматическим retry для GET-запросов чтения.
  * Cold start Railway бэкенда может занимать до 15 секунд.
@@ -17,12 +39,13 @@ const REQUEST_TIMEOUT_MS = 30_000;
  *  3) HTTP 4xx (404 / 401) → возвращаем как есть, ретрай не поможет.
  */
 async function fetchWithRetry(url: string, options?: RequestInit): Promise<Response> {
+  const opts = withTgAuth(options);
   let lastErr: Error | null = null;
   for (let i = 0; i < RETRY_ATTEMPTS; i++) {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
     try {
-      const res = await fetch(url, { ...options, signal: ctrl.signal });
+      const res = await fetch(url, { ...opts, signal: ctrl.signal });
       clearTimeout(timer);
       if (res.ok || (res.status >= 400 && res.status < 500)) return res;
       lastErr = new Error(`HTTP ${res.status} ${res.statusText}`);
@@ -46,11 +69,12 @@ async function fetchWithRetry(url: string, options?: RequestInit): Promise<Respo
  * не повторяем — иначе можно создать дубликаты.
  */
 export async function fetchWrite(url: string, options?: RequestInit): Promise<Response> {
+  const opts = withTgAuth(options);
   const tryOnce = async () => {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
     try {
-      return await fetch(url, { ...options, signal: ctrl.signal });
+      return await fetch(url, { ...opts, signal: ctrl.signal });
     } finally {
       clearTimeout(timer);
     }
@@ -71,7 +95,7 @@ export async function fetchWrite(url: string, options?: RequestInit): Promise<Re
 
 export async function checkApiHealth(): Promise<{ ok: boolean; url: string; error?: string }> {
   try {
-    const res = await fetch(`${API_URL}/api/health`);
+    const res = await apiFetch(`${API_URL}/api/health`);
     const data = res.ok ? await res.json().catch(() => ({})) : {};
     return { ok: res.ok, url: API_URL, error: data.error };
   } catch (e) {
@@ -117,7 +141,7 @@ export async function createCategory(
   data: { code: string; name: string; name_en?: string | null; sort_order?: number },
   adminSecret: string
 ): Promise<Category> {
-  const res = await fetch(`${API_URL}/api/categories`, {
+  const res = await apiFetch(`${API_URL}/api/categories`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
     body: JSON.stringify(data),
@@ -134,7 +158,7 @@ export async function updateCategory(
   data: { name?: string; name_en?: string | null; sort_order?: number },
   adminSecret: string
 ): Promise<Category> {
-  const res = await fetch(`${API_URL}/api/categories/${encodeURIComponent(code)}`, {
+  const res = await apiFetch(`${API_URL}/api/categories/${encodeURIComponent(code)}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
     body: JSON.stringify(data),
@@ -147,7 +171,7 @@ export async function updateCategory(
 }
 
 export async function deleteCategory(code: string, adminSecret: string): Promise<void> {
-  const res = await fetch(`${API_URL}/api/categories/${encodeURIComponent(code)}`, {
+  const res = await apiFetch(`${API_URL}/api/categories/${encodeURIComponent(code)}`, {
     method: "DELETE",
     headers: { "X-Admin-Secret": adminSecret },
   });
@@ -175,7 +199,7 @@ export async function createSupportEntry(
   data: { question: string; answer: string; sort_order?: number },
   adminSecret: string
 ): Promise<SupportEntry> {
-  const res = await fetch(`${API_URL}/api/support`, {
+  const res = await apiFetch(`${API_URL}/api/support`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
     body: JSON.stringify(data),
@@ -192,7 +216,7 @@ export async function updateSupportEntry(
   data: { question?: string; answer?: string; sort_order?: number },
   adminSecret: string
 ): Promise<SupportEntry> {
-  const res = await fetch(`${API_URL}/api/support/${id}`, {
+  const res = await apiFetch(`${API_URL}/api/support/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
     body: JSON.stringify(data),
@@ -205,7 +229,7 @@ export async function updateSupportEntry(
 }
 
 export async function deleteSupportEntry(id: number, adminSecret: string): Promise<void> {
-  const res = await fetch(`${API_URL}/api/support/${id}`, {
+  const res = await apiFetch(`${API_URL}/api/support/${id}`, {
     method: "DELETE",
     headers: { "X-Admin-Secret": adminSecret },
   });
@@ -240,7 +264,7 @@ export async function createStore(
 ) {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (adminSecret) headers["X-Admin-Secret"] = adminSecret;
-  const res = await fetch(`${API_URL}/api/stores`, {
+  const res = await apiFetch(`${API_URL}/api/stores`, {
     method: "POST",
     headers,
     body: JSON.stringify(data),
@@ -259,7 +283,7 @@ export async function updateStore(
 ) {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (adminSecret) headers["X-Admin-Secret"] = adminSecret;
-  const res = await fetch(`${API_URL}/api/stores/${id}`, {
+  const res = await apiFetch(`${API_URL}/api/stores/${id}`, {
     method: "PATCH",
     headers,
     body: JSON.stringify(data),
@@ -274,7 +298,7 @@ export async function updateStore(
 export async function deleteStore(id: number, adminSecret?: string) {
   const headers: Record<string, string> = {};
   if (adminSecret) headers["X-Admin-Secret"] = adminSecret;
-  const res = await fetch(`${API_URL}/api/stores/${id}`, {
+  const res = await apiFetch(`${API_URL}/api/stores/${id}`, {
     method: "DELETE",
     headers,
   });
@@ -386,13 +410,13 @@ export async function deleteProduct(id: number, adminSecret?: string) {
 }
 
 export async function getCart(userId: string): Promise<CartItem[]> {
-  const res = await fetch(`${API_URL}/api/cart/${userId}`);
+  const res = await apiFetch(`${API_URL}/api/cart/${userId}`);
   if (!res.ok) throw new Error("Failed to fetch cart");
   return res.json();
 }
 
 export async function addToCart(userId: string, productId: number, size: string, quantity = 1) {
-  const res = await fetch(`${API_URL}/api/cart/${userId}`, {
+  const res = await apiFetch(`${API_URL}/api/cart/${userId}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ product_id: productId, size, quantity }),
@@ -401,12 +425,12 @@ export async function addToCart(userId: string, productId: number, size: string,
 }
 
 export async function removeFromCart(userId: string, itemId: number) {
-  const res = await fetch(`${API_URL}/api/cart/${userId}/${itemId}`, { method: "DELETE" });
+  const res = await apiFetch(`${API_URL}/api/cart/${userId}/${itemId}`, { method: "DELETE" });
   if (!res.ok) throw new Error("Failed to remove from cart");
 }
 
 export async function getWishlist(userId: string): Promise<number[]> {
-  const res = await fetch(`${API_URL}/api/wishlist/${userId}?_t=${Date.now()}`, {
+  const res = await apiFetch(`${API_URL}/api/wishlist/${userId}?_t=${Date.now()}`, {
     cache: "no-store",
     headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
   });
@@ -415,7 +439,7 @@ export async function getWishlist(userId: string): Promise<number[]> {
 }
 
 export async function addToWishlist(userId: string, productId: number) {
-  const res = await fetch(`${API_URL}/api/wishlist/${userId}`, {
+  const res = await apiFetch(`${API_URL}/api/wishlist/${userId}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ product_id: productId }),
@@ -424,12 +448,12 @@ export async function addToWishlist(userId: string, productId: number) {
 }
 
 export async function removeFromWishlist(userId: string, productId: number) {
-  const res = await fetch(`${API_URL}/api/wishlist/${userId}/${productId}`, { method: "DELETE", cache: "no-store" });
+  const res = await apiFetch(`${API_URL}/api/wishlist/${userId}/${productId}`, { method: "DELETE", cache: "no-store" });
   if (!res.ok) throw new Error("Failed to remove from wishlist");
 }
 
 export async function getSettings(userId: string): Promise<{ lang: string; theme: string; currency: string } | null> {
-  const res = await fetch(`${API_URL}/api/settings/${userId}`);
+  const res = await apiFetch(`${API_URL}/api/settings/${userId}`);
   if (!res.ok) return null;
   const data = await res.json();
   return data;
@@ -456,7 +480,7 @@ export async function getAdminHandle(): Promise<string> {
 }
 
 export async function updateAdminHandle(handle: string, adminSecret: string): Promise<{ handle: string }> {
-  const res = await fetch(`${API_URL}/api/settings/admin-handle`, {
+  const res = await apiFetch(`${API_URL}/api/settings/admin-handle`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
     body: JSON.stringify({ handle }),
@@ -482,7 +506,7 @@ export async function getCartSellerHandle(): Promise<string> {
 }
 
 export async function updateCartSellerHandle(handle: string, adminSecret: string): Promise<{ handle: string }> {
-  const res = await fetch(`${API_URL}/api/settings/cart-seller-handle`, {
+  const res = await apiFetch(`${API_URL}/api/settings/cart-seller-handle`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
     body: JSON.stringify({ handle }),
@@ -498,7 +522,7 @@ export async function updateSettings(
   userId: string,
   data: { lang?: string; theme?: string; currency?: string }
 ) {
-  const res = await fetch(`${API_URL}/api/settings/${userId}`, {
+  const res = await apiFetch(`${API_URL}/api/settings/${userId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -525,7 +549,7 @@ export interface CustomOrderAdmin {
 }
 
 export async function getCustomOrdersAdmin(adminSecret: string): Promise<CustomOrderAdmin[]> {
-  const res = await fetch(`${API_URL}/api/custom-orders/admin/all`, {
+  const res = await apiFetch(`${API_URL}/api/custom-orders/admin/all`, {
     headers: { "X-Admin-Secret": adminSecret },
   });
   if (!res.ok) throw new Error("Failed to fetch custom orders");
@@ -537,7 +561,7 @@ export async function updateCustomOrderStatusAdmin(
   status: "review" | "pending" | "in_transit" | "delivered" | "completed",
   adminSecret: string
 ) {
-  const res = await fetch(`${API_URL}/api/custom-orders/admin/order/${id}/status`, {
+  const res = await apiFetch(`${API_URL}/api/custom-orders/admin/order/${id}/status`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
     body: JSON.stringify({ status }),
@@ -551,7 +575,7 @@ export async function updateCustomOrderContentAdmin(
   data: { description?: string; size?: string; image_data?: string | null },
   adminSecret: string
 ) {
-  const res = await fetch(`${API_URL}/api/custom-orders/admin/order/${id}`, {
+  const res = await apiFetch(`${API_URL}/api/custom-orders/admin/order/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
     body: JSON.stringify(data),
@@ -564,7 +588,7 @@ export async function updateCustomOrderContentAdmin(
 }
 
 export async function deleteCustomOrderAdmin(id: number, adminSecret: string) {
-  const res = await fetch(`${API_URL}/api/custom-orders/admin/order/${id}`, {
+  const res = await apiFetch(`${API_URL}/api/custom-orders/admin/order/${id}`, {
     method: "DELETE",
     headers: { "X-Admin-Secret": adminSecret },
   });
@@ -573,7 +597,7 @@ export async function deleteCustomOrderAdmin(id: number, adminSecret: string) {
 }
 
 export async function duplicateCustomOrderAdmin(id: number, adminSecret: string): Promise<{ ok: true; id: number; group_id: string }> {
-  const res = await fetch(`${API_URL}/api/custom-orders/admin/order/${id}/duplicate`, {
+  const res = await apiFetch(`${API_URL}/api/custom-orders/admin/order/${id}/duplicate`, {
     method: "POST",
     headers: { "X-Admin-Secret": adminSecret },
   });
@@ -585,7 +609,7 @@ export async function duplicateCustomOrderAdmin(id: number, adminSecret: string)
 }
 
 export async function setCustomGroupTotalAdmin(groupId: string, total: number, adminSecret: string) {
-  const res = await fetch(`${API_URL}/api/custom-orders/admin/group/${encodeURIComponent(groupId)}/total`, {
+  const res = await apiFetch(`${API_URL}/api/custom-orders/admin/group/${encodeURIComponent(groupId)}/total`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
     body: JSON.stringify({ total }),
@@ -598,7 +622,7 @@ export async function setCustomGroupTotalAdmin(groupId: string, total: number, a
 }
 
 export async function sendCustomGroupInvoiceAdmin(groupId: string, adminSecret: string) {
-  const res = await fetch(`${API_URL}/api/custom-orders/admin/group/${encodeURIComponent(groupId)}/send-invoice`, {
+  const res = await apiFetch(`${API_URL}/api/custom-orders/admin/group/${encodeURIComponent(groupId)}/send-invoice`, {
     method: "POST",
     headers: { "X-Admin-Secret": adminSecret },
   });
@@ -610,7 +634,7 @@ export async function sendCustomGroupInvoiceAdmin(groupId: string, adminSecret: 
 }
 
 export async function markCustomGroupPaidAdmin(groupId: string, adminSecret: string) {
-  const res = await fetch(`${API_URL}/api/custom-orders/admin/group/${encodeURIComponent(groupId)}/mark-paid`, {
+  const res = await apiFetch(`${API_URL}/api/custom-orders/admin/group/${encodeURIComponent(groupId)}/mark-paid`, {
     method: "PATCH",
     headers: { "X-Admin-Secret": adminSecret },
   });
@@ -633,7 +657,7 @@ export type BotMessageTemplate = {
 };
 
 export async function getBotMessageTemplates(adminSecret: string): Promise<BotMessageTemplate[]> {
-  const res = await fetch(`${API_URL}/api/messages/templates`, {
+  const res = await apiFetch(`${API_URL}/api/messages/templates`, {
     headers: { "X-Admin-Secret": adminSecret },
   });
   if (!res.ok) {
@@ -648,7 +672,7 @@ export async function updateBotMessageTemplate(
   patch: { title?: string; emoji?: string; body?: string; is_active?: boolean },
   adminSecret: string
 ): Promise<void> {
-  const res = await fetch(`${API_URL}/api/messages/templates/${encodeURIComponent(templateId)}`, {
+  const res = await apiFetch(`${API_URL}/api/messages/templates/${encodeURIComponent(templateId)}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
     body: JSON.stringify(patch),
@@ -663,7 +687,7 @@ export async function submitCustomOrder(
   userId: string,
   data: { user_name?: string; user_username?: string; user_address?: string; description: string; size: string; image_data?: string | null; image_urls?: string[] }
 ) {
-  const res = await fetch(`${API_URL}/api/custom-orders`, {
+  const res = await apiFetch(`${API_URL}/api/custom-orders`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ user_id: userId, ...data }),
@@ -709,7 +733,7 @@ export interface ReviewComment {
 }
 
 export async function getReviews(): Promise<Review[]> {
-  const res = await fetch(`${API_URL}/api/reviews?_t=${Date.now()}`);
+  const res = await apiFetch(`${API_URL}/api/reviews?_t=${Date.now()}`);
   if (!res.ok) throw new Error("Failed to fetch reviews");
   return res.json();
 }
@@ -718,7 +742,7 @@ export async function addReview(
   userId: string,
   data: { user_name?: string; rating?: number; text: string; image_urls?: string[] }
 ) {
-  const res = await fetch(`${API_URL}/api/reviews`, {
+  const res = await apiFetch(`${API_URL}/api/reviews`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ user_id: userId, ...data }),
@@ -731,7 +755,7 @@ export async function updateReview(
   userId: string,
   data: { rating?: number; text: string; image_urls?: string[] }
 ) {
-  const res = await fetch(`${API_URL}/api/reviews/${reviewId}`, {
+  const res = await apiFetch(`${API_URL}/api/reviews/${reviewId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ user_id: userId, ...data }),
@@ -747,7 +771,7 @@ export async function addReviewComment(
   userId: string,
   data: { user_name?: string; text: string; image_url?: string | null }
 ) {
-  const res = await fetch(`${API_URL}/api/reviews/${reviewId}/comments`, {
+  const res = await apiFetch(`${API_URL}/api/reviews/${reviewId}/comments`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ user_id: userId, ...data }),
@@ -773,7 +797,7 @@ export interface Order {
 }
 
 export async function markOrderPaid(orderId: number, adminSecret: string): Promise<void> {
-  const res = await fetch(`${API_URL}/api/payments/admin/order/${orderId}/mark-paid`, {
+  const res = await apiFetch(`${API_URL}/api/payments/admin/order/${orderId}/mark-paid`, {
     method: "POST",
     headers: { "X-Admin-Secret": adminSecret },
   });
@@ -793,7 +817,7 @@ export async function sendOrderInvoice(orderId: number, adminSecret: string): Pr
 }
 
 export async function markOrderRefunded(orderId: number, adminSecret: string): Promise<void> {
-  const res = await fetch(`${API_URL}/api/payments/admin/order/${orderId}/mark-refunded`, {
+  const res = await apiFetch(`${API_URL}/api/payments/admin/order/${orderId}/mark-refunded`, {
     method: "POST",
     headers: { "X-Admin-Secret": adminSecret },
   });
@@ -801,13 +825,13 @@ export async function markOrderRefunded(orderId: number, adminSecret: string): P
 }
 
 export async function getOrders(userId: string): Promise<Order[]> {
-  const res = await fetch(`${API_URL}/api/orders/${userId}`);
+  const res = await apiFetch(`${API_URL}/api/orders/${userId}`);
   if (!res.ok) throw new Error("Failed to fetch orders");
   return res.json();
 }
 
 export async function getOrdersAdmin(adminSecret: string): Promise<Order[]> {
-  const res = await fetch(`${API_URL}/api/orders/admin/all`, {
+  const res = await apiFetch(`${API_URL}/api/orders/admin/all`, {
     headers: { "X-Admin-Secret": adminSecret },
   });
   if (!res.ok) throw new Error("Failed to fetch orders");
@@ -819,7 +843,7 @@ export async function updateOrderStatus(
   status: "pending" | "in_transit" | "delivered" | "completed",
   adminSecret: string
 ) {
-  const res = await fetch(`${API_URL}/api/orders/order/${orderId}/status`, {
+  const res = await apiFetch(`${API_URL}/api/orders/order/${orderId}/status`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
     body: JSON.stringify({ status }),
@@ -829,7 +853,7 @@ export async function updateOrderStatus(
 }
 
 export async function deleteOrderAdmin(orderId: number, adminSecret: string) {
-  const res = await fetch(`${API_URL}/api/orders/order/${orderId}`, {
+  const res = await apiFetch(`${API_URL}/api/orders/order/${orderId}`, {
     method: "DELETE",
     headers: { "X-Admin-Secret": adminSecret },
   });
@@ -868,7 +892,7 @@ export interface ProductReview {
 }
 
 export async function getProductReviews(productId: number): Promise<ProductReview[]> {
-  const res = await fetch(`${API_URL}/api/products/${productId}/reviews`);
+  const res = await apiFetch(`${API_URL}/api/products/${productId}/reviews`);
   if (!res.ok) throw new Error("Failed to fetch product reviews");
   return res.json();
 }
@@ -876,7 +900,7 @@ export async function getProductReviews(productId: number): Promise<ProductRevie
 export type ProductReviewStats = Record<number, { count: number; avg: number }>;
 
 export async function getProductReviewStats(): Promise<ProductReviewStats> {
-  const res = await fetch(`${API_URL}/api/products/reviews/stats`);
+  const res = await apiFetch(`${API_URL}/api/products/reviews/stats`);
   if (!res.ok) return {};
   return res.json();
 }
@@ -886,7 +910,7 @@ export async function addProductReview(
   userId: string,
   data: { user_name?: string; rating?: number; text: string }
 ) {
-  const res = await fetch(`${API_URL}/api/products/${productId}/reviews`, {
+  const res = await apiFetch(`${API_URL}/api/products/${productId}/reviews`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ user_id: userId, ...data }),
@@ -903,7 +927,7 @@ export interface CurrencyRateMeta {
 }
 
 export async function getCurrencyRateAdmin(adminSecret: string): Promise<CurrencyRateMeta> {
-  const res = await fetch(`${API_URL}/api/admin/currency-rate`, {
+  const res = await apiFetch(`${API_URL}/api/admin/currency-rate`, {
     headers: { "X-Admin-Secret": adminSecret },
   });
   if (!res.ok) throw new Error("Failed to fetch currency rate");
@@ -911,7 +935,7 @@ export async function getCurrencyRateAdmin(adminSecret: string): Promise<Currenc
 }
 
 export async function updateCurrencyRateAdmin(adminSecret: string, rate: number): Promise<CurrencyRateMeta> {
-  const res = await fetch(`${API_URL}/api/admin/currency-rate`, {
+  const res = await apiFetch(`${API_URL}/api/admin/currency-rate`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
     body: JSON.stringify({ rate }),
@@ -921,7 +945,7 @@ export async function updateCurrencyRateAdmin(adminSecret: string, rate: number)
 }
 
 export async function refreshCurrencyRateFromNbrb(adminSecret: string): Promise<CurrencyRateMeta> {
-  const res = await fetch(`${API_URL}/api/admin/currency-rate/refresh`, {
+  const res = await apiFetch(`${API_URL}/api/admin/currency-rate/refresh`, {
     method: "POST",
     headers: { "X-Admin-Secret": adminSecret },
   });
@@ -933,7 +957,7 @@ export async function refreshCurrencyRateFromNbrb(adminSecret: string): Promise<
 }
 
 export async function setCurrencyRateAuto(enabled: boolean, adminSecret: string): Promise<CurrencyRateMeta> {
-  const res = await fetch(`${API_URL}/api/admin/currency-rate/auto`, {
+  const res = await apiFetch(`${API_URL}/api/admin/currency-rate/auto`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
     body: JSON.stringify({ enabled }),
@@ -964,7 +988,7 @@ export interface Post {
 
 export async function getPosts(userId?: string): Promise<Post[]> {
   const url = userId ? `${API_URL}/api/posts?user_id=${encodeURIComponent(userId)}` : `${API_URL}/api/posts`;
-  const res = await fetch(url);
+  const res = await apiFetch(url);
   if (!res.ok) throw new Error("Failed to fetch posts");
   return res.json();
 }
@@ -976,13 +1000,13 @@ export async function getRelatedPosts(postId: number, userId?: string): Promise<
   const url = userId
     ? `${API_URL}/api/posts/${postId}/related?user_id=${encodeURIComponent(userId)}`
     : `${API_URL}/api/posts/${postId}/related`;
-  const res = await fetch(url);
+  const res = await apiFetch(url);
   if (!res.ok) throw new Error("Failed to fetch related posts");
   return res.json();
 }
 
 export async function togglePostLike(postId: number, userId: string): Promise<{ liked: boolean; likes_count: number }> {
-  const res = await fetch(`${API_URL}/api/posts/${postId}/like`, {
+  const res = await apiFetch(`${API_URL}/api/posts/${postId}/like`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ user_id: userId }),
@@ -995,7 +1019,7 @@ export async function createPost(
   data: { caption?: string | null; image_url?: string | null; image_data?: string | null; images?: string[]; product_id?: number | null; product_url?: string | null; category?: string | null },
   adminSecret: string
 ): Promise<{ id: number; ok: boolean }> {
-  const res = await fetch(`${API_URL}/api/posts`, {
+  const res = await apiFetch(`${API_URL}/api/posts`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
     body: JSON.stringify(data),
@@ -1012,7 +1036,7 @@ export async function updatePost(
   data: { caption?: string | null; image_url?: string | null; image_data?: string | null; images?: string[]; product_id?: number | null; product_url?: string | null; category?: string | null },
   adminSecret: string
 ): Promise<{ ok: boolean }> {
-  const res = await fetch(`${API_URL}/api/posts/${id}`, {
+  const res = await apiFetch(`${API_URL}/api/posts/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
     body: JSON.stringify(data),
@@ -1025,7 +1049,7 @@ export async function updatePost(
 }
 
 export async function deletePost(id: number, adminSecret: string): Promise<void> {
-  const res = await fetch(`${API_URL}/api/posts/${id}`, {
+  const res = await apiFetch(`${API_URL}/api/posts/${id}`, {
     method: "DELETE",
     headers: { "X-Admin-Secret": adminSecret },
   });
@@ -1038,7 +1062,7 @@ export async function deletePost(id: number, adminSecret: string): Promise<void>
 export async function botHeartbeat(userId: string, name?: string, username?: string): Promise<void> {
   if (!userId) return;
   try {
-    await fetch(`${API_URL}/api/users/heartbeat`, {
+    await apiFetch(`${API_URL}/api/users/heartbeat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ user_id: userId, name, username }),
@@ -1070,7 +1094,7 @@ export interface BotMessage {
 }
 
 export async function getConversations(adminSecret: string): Promise<BotConversation[]> {
-  const res = await fetch(`${API_URL}/api/admin/conversations`, {
+  const res = await apiFetch(`${API_URL}/api/admin/conversations`, {
     headers: { "X-Admin-Secret": adminSecret },
   });
   if (!res.ok) {
@@ -1081,7 +1105,7 @@ export async function getConversations(adminSecret: string): Promise<BotConversa
 }
 
 export async function getConversationsUnreadCount(adminSecret: string): Promise<{ count: number }> {
-  const res = await fetch(`${API_URL}/api/admin/conversations/unread-count`, {
+  const res = await apiFetch(`${API_URL}/api/admin/conversations/unread-count`, {
     headers: { "X-Admin-Secret": adminSecret },
   });
   if (!res.ok) return { count: 0 };
@@ -1089,7 +1113,7 @@ export async function getConversationsUnreadCount(adminSecret: string): Promise<
 }
 
 export async function getConversationMessages(userId: string, adminSecret: string): Promise<BotMessage[]> {
-  const res = await fetch(`${API_URL}/api/admin/conversations/${encodeURIComponent(userId)}/messages`, {
+  const res = await apiFetch(`${API_URL}/api/admin/conversations/${encodeURIComponent(userId)}/messages`, {
     headers: { "X-Admin-Secret": adminSecret },
   });
   if (!res.ok) {
@@ -1100,7 +1124,7 @@ export async function getConversationMessages(userId: string, adminSecret: strin
 }
 
 export async function markConversationRead(userId: string, adminSecret: string): Promise<void> {
-  await fetch(`${API_URL}/api/admin/conversations/${encodeURIComponent(userId)}/read`, {
+  await apiFetch(`${API_URL}/api/admin/conversations/${encodeURIComponent(userId)}/read`, {
     method: "POST",
     headers: { "X-Admin-Secret": adminSecret },
   });
@@ -1111,7 +1135,7 @@ export async function replyToConversation(
   data: { text?: string; image_url?: string | null },
   adminSecret: string
 ): Promise<{ ok: true; message_id: number; image_url: string | null }> {
-  const res = await fetch(`${API_URL}/api/admin/conversations/${encodeURIComponent(userId)}/reply`, {
+  const res = await apiFetch(`${API_URL}/api/admin/conversations/${encodeURIComponent(userId)}/reply`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
     body: JSON.stringify(data),
@@ -1137,7 +1161,7 @@ export interface BroadcastPost {
 }
 
 export async function getBotUsersCount(adminSecret: string): Promise<{ count: number }> {
-  const res = await fetch(`${API_URL}/api/admin/broadcast/users-count`, {
+  const res = await apiFetch(`${API_URL}/api/admin/broadcast/users-count`, {
     headers: { "X-Admin-Secret": adminSecret },
   });
   if (!res.ok) {
@@ -1151,7 +1175,7 @@ export async function sendBroadcast(
   data: { text: string; image_urls?: string[] },
   adminSecret: string
 ): Promise<BroadcastPost> {
-  const res = await fetch(`${API_URL}/api/admin/broadcast`, {
+  const res = await apiFetch(`${API_URL}/api/admin/broadcast`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
     body: JSON.stringify(data),
@@ -1164,7 +1188,7 @@ export async function sendBroadcast(
 }
 
 export async function getBroadcasts(adminSecret: string): Promise<BroadcastPost[]> {
-  const res = await fetch(`${API_URL}/api/admin/broadcasts`, {
+  const res = await apiFetch(`${API_URL}/api/admin/broadcasts`, {
     headers: { "X-Admin-Secret": adminSecret },
   });
   if (!res.ok) {
@@ -1179,7 +1203,7 @@ export async function updateBroadcast(
   data: { text: string; image_urls?: string[] },
   adminSecret: string
 ): Promise<BroadcastPost> {
-  const res = await fetch(`${API_URL}/api/admin/broadcasts/${id}`, {
+  const res = await apiFetch(`${API_URL}/api/admin/broadcasts/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
     body: JSON.stringify(data),
@@ -1192,7 +1216,7 @@ export async function updateBroadcast(
 }
 
 export async function deleteBroadcastPost(id: number, adminSecret: string): Promise<void> {
-  const res = await fetch(`${API_URL}/api/admin/broadcasts/${id}`, {
+  const res = await apiFetch(`${API_URL}/api/admin/broadcasts/${id}`, {
     method: "DELETE",
     headers: { "X-Admin-Secret": adminSecret },
   });
@@ -1228,7 +1252,7 @@ export interface AdminReview {
 }
 
 export async function getAdminReviews(adminSecret: string): Promise<AdminReview[]> {
-  const res = await fetch(`${API_URL}/api/admin/reviews`, {
+  const res = await apiFetch(`${API_URL}/api/admin/reviews`, {
     headers: { "X-Admin-Secret": adminSecret },
   });
   if (!res.ok) {
@@ -1239,7 +1263,7 @@ export async function getAdminReviews(adminSecret: string): Promise<AdminReview[
 }
 
 export async function deleteAdminReview(id: number, adminSecret: string): Promise<void> {
-  const res = await fetch(`${API_URL}/api/admin/reviews/${id}`, {
+  const res = await apiFetch(`${API_URL}/api/admin/reviews/${id}`, {
     method: "DELETE",
     headers: { "X-Admin-Secret": adminSecret },
   });
@@ -1250,7 +1274,7 @@ export async function deleteAdminReview(id: number, adminSecret: string): Promis
 }
 
 export async function deleteAdminReviewComment(id: number, adminSecret: string): Promise<void> {
-  const res = await fetch(`${API_URL}/api/admin/reviews/comments/${id}`, {
+  const res = await apiFetch(`${API_URL}/api/admin/reviews/comments/${id}`, {
     method: "DELETE",
     headers: { "X-Admin-Secret": adminSecret },
   });
@@ -1275,7 +1299,7 @@ export interface BotAnalytics {
 }
 
 export async function getBotAnalytics(adminSecret: string): Promise<BotAnalytics> {
-  const res = await fetch(`${API_URL}/api/engagement/analytics`, {
+  const res = await apiFetch(`${API_URL}/api/engagement/analytics`, {
     headers: { "X-Admin-Secret": adminSecret },
   });
   if (!res.ok) throw new Error("Failed to fetch analytics");
@@ -1309,7 +1333,7 @@ export async function createTonCheckout(data: {
   items: CartItem[];
   total: number;
 }): Promise<TonCheckoutResponse> {
-  const res = await fetch(`${API_URL}/api/payments/ton/checkout`, {
+  const res = await apiFetch(`${API_URL}/api/payments/ton/checkout`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -1329,7 +1353,7 @@ export interface TonPaymentStatus {
 }
 
 export async function getTonPaymentStatus(orderId: number): Promise<TonPaymentStatus> {
-  const res = await fetch(`${API_URL}/api/payments/ton/status/${orderId}`);
+  const res = await apiFetch(`${API_URL}/api/payments/ton/status/${orderId}`);
   if (!res.ok) throw new Error("Failed to fetch payment status");
   return res.json();
 }
@@ -1337,7 +1361,7 @@ export async function getTonPaymentStatus(orderId: number): Promise<TonPaymentSt
 export async function verifyTonPayment(
   orderId: number
 ): Promise<{ ok: boolean; payment_status: string; reason?: string; tx_hash?: string }> {
-  const res = await fetch(`${API_URL}/api/payments/ton/verify/${orderId}`, {
+  const res = await apiFetch(`${API_URL}/api/payments/ton/verify/${orderId}`, {
     method: "POST",
   });
   // 202 — не ошибка, просто транзакция ещё не пришла
@@ -1352,7 +1376,7 @@ export async function verifyTonPayment(
 }
 
 export async function cancelTonPayment(orderId: number): Promise<void> {
-  await fetch(`${API_URL}/api/payments/ton/cancel/${orderId}`, { method: "POST" });
+  await apiFetch(`${API_URL}/api/payments/ton/cancel/${orderId}`, { method: "POST" });
 }
 
 export interface TonRate {
@@ -1366,7 +1390,7 @@ export interface TonRate {
 export async function getTonRate(usd?: number): Promise<TonRate> {
   const url = new URL(`${API_URL}/api/payments/ton/rate`);
   if (usd != null) url.searchParams.set("usd", String(usd));
-  const res = await fetch(url.toString());
+  const res = await apiFetch(url.toString());
   if (!res.ok) throw new Error("Failed to fetch TON rate");
   return res.json();
 }
@@ -1394,13 +1418,13 @@ export async function getMaintenanceStatus(userId: string): Promise<MaintenanceS
   const url = userId
     ? `${API_URL}/api/maintenance/status?user_id=${encodeURIComponent(userId)}`
     : `${API_URL}/api/maintenance/status`;
-  const res = await fetch(url);
+  const res = await apiFetch(url);
   if (!res.ok) throw new Error("Failed to fetch maintenance status");
   return res.json();
 }
 
 export async function getMaintenanceAdmin(adminSecret: string): Promise<MaintenanceAdminState> {
-  const res = await fetch(`${API_URL}/api/maintenance/admin`, {
+  const res = await apiFetch(`${API_URL}/api/maintenance/admin`, {
     headers: { "X-Admin-Secret": adminSecret },
   });
   if (!res.ok) throw new Error("Failed to fetch maintenance admin");
@@ -1443,7 +1467,7 @@ export async function searchMaintenanceUsers(q: string, adminSecret: string): Pr
   const url = q
     ? `${API_URL}/api/maintenance/admin/search-users?q=${encodeURIComponent(q)}`
     : `${API_URL}/api/maintenance/admin/search-users`;
-  const res = await fetch(url, { headers: { "X-Admin-Secret": adminSecret } });
+  const res = await apiFetch(url, { headers: { "X-Admin-Secret": adminSecret } });
   if (!res.ok) throw new Error("Failed to search users");
   return res.json();
 }

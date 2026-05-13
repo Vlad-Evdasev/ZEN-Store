@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { db } from "../db/schema.js";
+import { requireOwnership } from "../middleware/telegramAuth.js";
 
 export const settingsRouter = Router();
 
@@ -58,6 +59,8 @@ settingsRouter.patch("/cart-seller-handle", (req, res) => {
 
 settingsRouter.get("/:userId", (req, res) => {
   const { userId } = req.params;
+  const auth = requireOwnership(req, userId);
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
   const row = db.prepare("SELECT lang, theme, currency FROM user_settings WHERE user_id = ?").get(userId) as
     | { lang: string; theme: string; currency: string }
     | undefined;
@@ -70,6 +73,8 @@ settingsRouter.get("/:userId", (req, res) => {
 
 settingsRouter.patch("/:userId", (req, res) => {
   const { userId } = req.params;
+  const auth = requireOwnership(req, userId);
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
   const { lang, theme, currency } = req.body;
   db.prepare(
     `INSERT INTO user_settings (user_id, lang, theme, currency, updated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)

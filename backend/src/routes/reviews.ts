@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { db } from "../db/schema.js";
+import { requireOwnership } from "../middleware/telegramAuth.js";
 
 export const reviewsRouter = Router();
 
@@ -37,6 +38,8 @@ reviewsRouter.get("/", (_req, res) => {
 reviewsRouter.post("/", (req, res) => {
   const { user_id, user_name, rating, text, image_urls } = req.body;
   if (!user_id || !text) return res.status(400).json({ error: "user_id and text required" });
+  const auth = requireOwnership(req, user_id);
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
   const name = user_name || "Гость";
   const r = Number(rating) || 5;
   const finalRating = Math.min(5, Math.max(1, r));
@@ -63,6 +66,8 @@ reviewsRouter.patch("/:id", (req, res) => {
   const id = parseInt(req.params.id, 10);
   const { user_id, rating, text, image_urls } = req.body;
   if (!user_id || !text) return res.status(400).json({ error: "user_id and text required" });
+  const auth = requireOwnership(req, user_id);
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
   const existing = db.prepare("SELECT user_id FROM reviews WHERE id = ?").get(id) as { user_id: string } | undefined;
   if (!existing) return res.status(404).json({ error: "Review not found" });
   if (existing.user_id !== String(user_id)) return res.status(403).json({ error: "Not your review" });
@@ -89,6 +94,8 @@ reviewsRouter.post("/:reviewId/comments", (req, res) => {
   if (!user_id || (!safeText.trim() && !safeImage)) {
     return res.status(400).json({ error: "user_id and text or image required" });
   }
+  const auth = requireOwnership(req, user_id);
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
   const name = user_name || "Гость";
 
   db.prepare(

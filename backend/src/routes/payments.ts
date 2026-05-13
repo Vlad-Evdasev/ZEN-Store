@@ -2,6 +2,7 @@ import { Router, type Request, type Response, type NextFunction } from "express"
 import { randomBytes } from "crypto";
 import { db } from "../db/schema.js";
 import { notifyOrderPaid } from "../bot.js";
+import { requireOwnership } from "../middleware/telegramAuth.js";
 
 // ─── Конфигурация ─────────────────────────────────────────────────────
 // TON_RECEIVE_ADDRESS — наш приёмный адрес (raw или EQ-формат).
@@ -108,6 +109,8 @@ paymentsRouter.post("/ton/checkout", async (req, res) => {
   if (!userId || !items || !Number.isFinite(total) || total <= 0) {
     return res.status(400).json({ error: "user_id, items, total required" });
   }
+  const auth = requireOwnership(req, userId);
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
 
   let rate: number;
   try {
@@ -301,9 +304,11 @@ paymentsRouter.post("/ton/verify/:orderId", async (req, res) => {
 paymentsRouter.post("/ton/cancel/:orderId", (req, res) => {
   const id = Number(req.params.orderId);
   const order = db
-    .prepare("SELECT id, payment_status, payment_payload FROM orders WHERE id = ?")
-    .get(id) as { id: number; payment_status: string; payment_payload: string | null } | undefined;
+    .prepare("SELECT id, user_id, payment_status, payment_payload FROM orders WHERE id = ?")
+    .get(id) as { id: number; user_id: string; payment_status: string; payment_payload: string | null } | undefined;
   if (!order) return res.status(404).json({ error: "Order not found" });
+  const auth = requireOwnership(req, order.user_id);
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
   if (order.payment_status === "paid") {
     return res.status(400).json({ error: "Оплаченный ордер нельзя отменить через эндпойнт" });
   }
