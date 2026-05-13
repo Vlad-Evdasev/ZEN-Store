@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import compression from "compression";
+import rateLimit from "express-rate-limit";
 import { productsRouter } from "./routes/products.js";
 import { storesRouter } from "./routes/stores.js";
 import { cartRouter } from "./routes/cart.js";
@@ -28,8 +29,25 @@ const PORT = Number(process.env.PORT) || 3001;
 
 app.use(cors({ origin: "*", maxAge: 600 })); // CORS preflight кешируется на 10 минут
 app.use(compression()); // gzip JSON / text — экономит до 70% трафика на orders/posts/products
-app.use(express.json({ limit: "30mb" }));
+// JSON body limit: 8 MB. Раньше было 30 MB — это позволяло слать
+// 30-мегабайтные запросы по одному в секунду и съесть всю память
+// контейнера на Railway. Клиент даунскейлит фотки до ~400КБ; альбом
+// из 10 фоток помещается в 8 МБ с большим запасом.
+app.use(express.json({ limit: "8mb" }));
 app.use(attachTelegramUser); // populate req.tgUserId если есть валидный X-Telegram-Init-Data
+
+// Brute-force защита логина в админку. /api/admin/verify раньше можно
+// было долбить без ограничений — для коротких паролей это означало
+// возможность подобрать ADMIN_SECRET. 8 попыток в минуту на IP — даёт
+// человеку «опечататься», но убивает скрипты-перебиратели.
+const adminVerifyLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Слишком много попыток. Попробуй через минуту." },
+});
+app.use("/api/admin/verify", adminVerifyLimiter);
 
 app.use("/api/products", productsRouter);
 app.use("/api/stores", storesRouter);
