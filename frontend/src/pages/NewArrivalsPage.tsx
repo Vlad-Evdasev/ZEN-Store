@@ -254,17 +254,23 @@ function MasonryCard({ post, onOpen, isHidden = false }: MasonryCardProps) {
       tabIndex={0}
       onClick={handleClickGuarded}
       onKeyDown={(e) => { if (e.key === "Enter") handleClick(); }}
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
       className="zen-pin-card"
       style={cardStyles.card}
     >
+      {/* touch-handlers и onScroll живут НА СКРОЛЛЕРЕ — раньше они висели
+          на outer-card, и в этом контексте iOS Telegram WebApp не давал
+          нативному snap-скроллеру внутри получать touchmove (видимо
+          событие задерживалось на React-обёртке outer-card с onClick).
+          На самом скроллере handlers локальны, click-guard читает dx
+          ровно так же. */}
       <div ref={wrapRef} style={{ ...cardStyles.imageWrap, ...aspectStyle }}>
         <div
           ref={scrollerRef}
           className="zen-card-image-scroller"
           onScroll={onScroll}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
         >
           {images.map((src, i) => (
             <div key={i} className="zen-card-image-slide">
