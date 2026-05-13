@@ -318,6 +318,11 @@ interface ExpandedViewProps {
    *  корректная, scrollTop успешно восстанавливается без мигания
    *  «сверху → правильное место». */
   related: Post[];
+  /** True пока parent ждёт ответ getRelatedPosts (нет записи в relatedMap
+   *  для этого post.id). Используется чтобы рисовать skeleton-сетку
+   *  вместо пустого пространства — иначе юзер видит «нет рекомендаций»
+   *  и не понимает, что данные ещё в пути. */
+  relatedLoading: boolean;
   /** id постов, чьи thumb-картинки должны быть скрыты в related-сетке
    *  (потому что они сейчас в полёте: открыты в ExpandedView или
    *  анимируются обратно в outgoing-слое). Без этого зритель видит
@@ -386,7 +391,7 @@ function computeSheetAnim({
 
 function ExpandedView({
   post, startRect, startSrc, startIndex, userId, lang,
-  fadeOnClose, isBackNav, initialScrollTop, forceClose, forwardOut, related, hiddenIds, registerClose,
+  fadeOnClose, isBackNav, initialScrollTop, forceClose, forwardOut, related, relatedLoading, hiddenIds, registerClose,
   onStartClose, onClose, onPinToggle, onShare, onOpenRelated,
 }: ExpandedViewProps) {
   const images = getPostImages(post);
@@ -855,7 +860,7 @@ function ExpandedView({
                 </div>
               )}
 
-              {related.length > 0 && (
+              {related.length > 0 ? (
                 <div style={{ ...expandedStyles.relatedWrap, ...contentStyle }}>
                   <PinMasonry
                     items={related.map((rp) => (
@@ -868,7 +873,20 @@ function ExpandedView({
                     ))}
                   />
                 </div>
-              )}
+              ) : relatedLoading ? (
+                // Skeleton-сетка пока ждём ответ getRelatedPosts. Без неё
+                // юзер видит чистое пустое пространство под caption-ом и
+                // думает «рекомендаций нет, всё сломалось». 6 placeholder'ов
+                // достаточно чтобы заполнить экран сразу после FLIP-open
+                // и дать sheet-у нужную overflow-высоту для скролла.
+                <div style={{ ...expandedStyles.relatedWrap, ...contentStyle }}>
+                  <PinMasonry
+                    items={Array.from({ length: 6 }, (_, i) => (
+                      <SkeletonCard key={`sk-${i}`} index={i} />
+                    ))}
+                  />
+                </div>
+              ) : null}
             </>
           );
         })()}
@@ -1284,6 +1302,7 @@ export function NewArrivalsPage({
             isBackNav={false}
             forwardOut={true}
             related={relatedMap[forwardOutgoingItem.post.id] ?? []}
+            relatedLoading={relatedMap[forwardOutgoingItem.post.id] === undefined}
             hiddenIds={hiddenPostIds}
             onStartClose={() => {}}
             initialScrollTop={forwardOutgoingItem.scrollTop}
@@ -1308,6 +1327,7 @@ export function NewArrivalsPage({
           fadeOnClose={stack.length > 0}
           isBackNav={!!expanded.isBackNav}
           related={relatedMap[expanded.post.id] ?? []}
+          relatedLoading={relatedMap[expanded.post.id] === undefined}
           hiddenIds={hiddenPostIds}
           registerClose={(fn) => { closeRequestRef.current = fn; }}
           onStartClose={handleStartClose}
@@ -1362,6 +1382,7 @@ export function NewArrivalsPage({
             isBackNav={false}
             forceClose={true}
             related={relatedMap[outgoingItem.post.id] ?? []}
+            relatedLoading={relatedMap[outgoingItem.post.id] === undefined}
             hiddenIds={hiddenPostIds}
             onStartClose={() => {}}
             initialScrollTop={outgoingItem.scrollTop}
