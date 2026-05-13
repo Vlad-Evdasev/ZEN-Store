@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../db/schema.js";
-import type { Post, PostComment } from "../types.js";
+import type { Post } from "../types.js";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET || "";
 const MAX_POST_IMAGES = 10;
@@ -291,50 +291,8 @@ postsRouter.delete("/:id/like", (req, res) => {
   return res.json({ liked: false, likes_count: count });
 });
 
-postsRouter.get("/:id/comments", (req, res) => {
-  const postId = parseInt(req.params.id, 10);
-  const comments = db
-    .prepare("SELECT * FROM post_comments WHERE post_id = ? ORDER BY created_at ASC")
-    .all(postId) as PostComment[];
-  return res.json(comments);
-});
-
-postsRouter.post("/:id/comments", (req, res) => {
-  const postId = parseInt(req.params.id, 10);
-  const { user_id, user_name, text } = req.body;
-  if (!user_id || !text) return res.status(400).json({ error: "user_id and text required" });
-
-  const existing = db.prepare("SELECT id FROM posts WHERE id = ?").get(postId);
-  if (!existing) return res.status(404).json({ error: "Post not found" });
-
-  const name = user_name || null;
-  try {
-    const result = db
-      .prepare(
-        "INSERT INTO post_comments (post_id, user_id, user_name, text) VALUES (?, ?, ?, ?)"
-      )
-      .run(postId, user_id, name, String(text));
-
-    const comment = db
-      .prepare("SELECT * FROM post_comments WHERE id = ?")
-      .get(result.lastInsertRowid) as PostComment;
-
-    return res.status(201).json(comment);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Database error";
-    return res.status(500).json({ error: msg });
-  }
-});
-
-postsRouter.delete("/:id/comments/:commentId", (req, res) => {
-  const secret = req.headers["x-admin-secret"] as string | undefined;
-  if (!checkAdmin(secret)) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
-  const commentId = parseInt(req.params.commentId, 10);
-  const result = db.prepare("DELETE FROM post_comments WHERE id = ?").run(commentId);
-  if (result.changes === 0) return res.status(404).json({ error: "Comment not found" });
-
-  return res.json({ ok: true });
-});
+// Комментарии под постами были задизайнены, но в UI так и не выкатились —
+// frontend никогда не вызывал /:id/comments. Роуты удалены за ненадобностью.
+// Таблица post_comments в схеме остаётся (на случай если когда-нибудь
+// фича вернётся; и чтобы существующие counters/cleanup в delete-post
+// продолжали работать).

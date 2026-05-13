@@ -962,15 +962,6 @@ export interface Post {
   user_liked: boolean;
 }
 
-export interface PostComment {
-  id: number;
-  post_id: number;
-  user_id: string;
-  user_name: string | null;
-  text: string;
-  created_at: string;
-}
-
 export async function getPosts(userId?: string): Promise<Post[]> {
   const url = userId ? `${API_URL}/api/posts?user_id=${encodeURIComponent(userId)}` : `${API_URL}/api/posts`;
   const res = await fetch(url);
@@ -997,22 +988,6 @@ export async function togglePostLike(postId: number, userId: string): Promise<{ 
     body: JSON.stringify({ user_id: userId }),
   });
   if (!res.ok) throw new Error("Failed to toggle like");
-  return res.json();
-}
-
-export async function getPostComments(postId: number): Promise<PostComment[]> {
-  const res = await fetch(`${API_URL}/api/posts/${postId}/comments`);
-  if (!res.ok) throw new Error("Failed to fetch comments");
-  return res.json();
-}
-
-export async function addPostComment(postId: number, userId: string, userName: string, text: string): Promise<PostComment> {
-  const res = await fetch(`${API_URL}/api/posts/${postId}/comments`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_id: userId, user_name: userName, text }),
-  });
-  if (!res.ok) throw new Error("Failed to add comment");
   return res.json();
 }
 
@@ -1051,17 +1026,6 @@ export async function updatePost(
 
 export async function deletePost(id: number, adminSecret: string): Promise<void> {
   const res = await fetch(`${API_URL}/api/posts/${id}`, {
-    method: "DELETE",
-    headers: { "X-Admin-Secret": adminSecret },
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { error?: string }).error || res.statusText);
-  }
-}
-
-export async function deletePostComment(postId: number, commentId: number, adminSecret: string): Promise<void> {
-  const res = await fetch(`${API_URL}/api/posts/${postId}/comments/${commentId}`, {
     method: "DELETE",
     headers: { "X-Admin-Secret": adminSecret },
   });
@@ -1296,75 +1260,7 @@ export async function deleteAdminReviewComment(id: number, adminSecret: string):
   }
 }
 
-// ─── Engagement API ────────────────────────────────────────────────────
-
-export async function getCategorySubscriptions(userId: string): Promise<string[]> {
-  const res = await fetchWithRetry(`${API_URL}/api/engagement/subscriptions/${userId}`);
-  if (!res.ok) throw new Error("Failed to fetch subscriptions");
-  return res.json();
-}
-
-export async function subscribeToCategory(userId: string, categoryCode: string): Promise<void> {
-  const res = await fetch(`${API_URL}/api/engagement/subscriptions/${userId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ category_code: categoryCode }),
-  });
-  if (!res.ok) throw new Error("Failed to subscribe");
-}
-
-export async function unsubscribeFromCategory(userId: string, categoryCode: string): Promise<void> {
-  const res = await fetch(
-    `${API_URL}/api/engagement/subscriptions/${userId}/${encodeURIComponent(categoryCode)}`,
-    { method: "DELETE" }
-  );
-  if (!res.ok) throw new Error("Failed to unsubscribe");
-}
-
-export interface DropItem {
-  id: number;
-  title: string;
-  description: string | null;
-  product_ids: number[];
-  drop_at: string;
-  live_sent_at: string | null;
-  created_at: string;
-}
-
-export async function getDrops(): Promise<DropItem[]> {
-  const res = await fetchWithRetry(`${API_URL}/api/engagement/drops`);
-  if (!res.ok) throw new Error("Failed to fetch drops");
-  return res.json();
-}
-
-export async function createDrop(
-  data: { title: string; description?: string; product_ids?: number[]; drop_at: string },
-  adminSecret: string
-): Promise<void> {
-  const res = await fetch(`${API_URL}/api/engagement/drops`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { error?: string }).error || res.statusText);
-  }
-}
-
-export async function deleteDrop(id: number, adminSecret: string): Promise<void> {
-  const res = await fetch(`${API_URL}/api/engagement/drops/${id}`, {
-    method: "DELETE",
-    headers: { "X-Admin-Secret": adminSecret },
-  });
-  if (!res.ok) throw new Error("Failed to delete drop");
-}
-
-export async function getTogetherProducts(productId: number): Promise<{ product_ids: number[] }> {
-  const res = await fetchWithRetry(`${API_URL}/api/engagement/together/${productId}`);
-  if (!res.ok) throw new Error("Failed to fetch together products");
-  return res.json();
-}
+// ─── Bot analytics (HomeTab dashboard) ───────────────────────────────
 
 export interface BotAnalytics {
   dau: number;

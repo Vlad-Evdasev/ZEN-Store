@@ -429,65 +429,6 @@ export async function notifyCustomOrderStatusChange(userId: string | number, cus
   await sendStatusNotification(userId, cfg, customOrderId, getCustomOrderName(customOrderId));
 }
 
-// ── Cart abandonment reminder ────────────────────────────────────────────
-// Cron-таск: каждый час смотрит cart_items старше 24h без активного заказа,
-// шлёт юзеру напоминание (но не чаще 1 раза в 7 дней на юзера).
-
-export async function notifyCartAbandonment(userId: string | number, itemsCount: number, total: number): Promise<void> {
-  const text =
-    `<b>Твоя корзина ждёт</b>\n\n` +
-    `${itemsCount} ${itemsCount === 1 ? "вещь" : itemsCount < 5 ? "вещи" : "вещей"} на сумму <b>${total} $</b>. ` +
-    `Готов оформить?`;
-  try {
-    await bot.api.sendMessage(userId, text, {
-      parse_mode: "HTML",
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: "Открыть корзину", web_app: { url: `${WEB_APP_URL}#page=cart` } }],
-        ],
-      },
-    });
-  } catch (e) {
-    const err = e instanceof Error ? e.message : String(e);
-    if (isUserBlocked(err)) markBotUserBlocked(userId);
-  }
-}
-
-// ── New product in subscribed category ───────────────────────────────────
-
-export async function notifyNewArrival(
-  userId: string | number,
-  productName: string,
-  productId: number,
-  categoryName: string,
-  imageUrl: string | null
-): Promise<void> {
-  const text =
-    `<b>Новинка в категории «${categoryName}»</b>\n\n` +
-    `${productName} — только что добавили в каталог. Залетай первым.`;
-  try {
-    if (imageUrl) {
-      await bot.api.sendPhoto(userId, toPhotoSource(imageUrl), {
-        caption: text,
-        parse_mode: "HTML",
-        reply_markup: {
-          inline_keyboard: [[{ text: "Открыть каталог", web_app: { url: `${WEB_APP_URL}#product=${productId}` } }]],
-        },
-      });
-    } else {
-      await bot.api.sendMessage(userId, text, {
-        parse_mode: "HTML",
-        reply_markup: {
-          inline_keyboard: [[{ text: "Открыть каталог", web_app: { url: WEB_APP_URL } }]],
-        },
-      });
-    }
-  } catch (e) {
-    const err = e instanceof Error ? e.message : String(e);
-    if (isUserBlocked(err)) markBotUserBlocked(userId);
-  }
-}
-
 // ── Order invoice notification ──────────────────────────────────────
 // Одно красивое сообщение: фото первого товара + caption с резюме +
 // inline-кнопка «Оплатить» (https://app.tonkeeper.com/transfer/...
@@ -716,48 +657,6 @@ export async function notifyOrderPaid(
     const err = e instanceof Error ? e.message : String(e);
     if (isUserBlocked(err)) markBotUserBlocked(userId);
     console.error("notifyOrderPaid failed:", err);
-  }
-}
-
-// ── Drop teaser ──────────────────────────────────────────────────────
-
-export async function notifyDrop(
-  userId: string | number,
-  title: string,
-  description: string,
-  phase: "24h" | "1h" | "5min" | "live",
-  dropTime: number
-): Promise<void> {
-  let header = "";
-  switch (phase) {
-    case "24h":
-      header = `<b>Drop через 24 часа: ${escapeHtml(title)}</b>`;
-      break;
-    case "1h":
-      header = `<b>Drop через 1 час: ${escapeHtml(title)}</b>`;
-      break;
-    case "5min":
-      header = `<b>5 минут до дропа: ${escapeHtml(title)}</b>`;
-      break;
-    case "live":
-      header = `<b>${escapeHtml(title)} — LIVE сейчас</b>`;
-      break;
-  }
-  const tail =
-    phase === "live"
-      ? "Залетай в каталог — первые получают первые слоты."
-      : `Старт: ${new Date(dropTime).toLocaleString("ru-RU")}.`;
-  const text = `${header}\n\n${description ? escapeHtml(description) + "\n\n" : ""}${tail}`;
-  try {
-    await bot.api.sendMessage(userId, text, {
-      parse_mode: "HTML",
-      reply_markup: {
-        inline_keyboard: [[{ text: "Открыть каталог", web_app: { url: WEB_APP_URL } }]],
-      },
-    });
-  } catch (e) {
-    const err = e instanceof Error ? e.message : String(e);
-    if (isUserBlocked(err)) markBotUserBlocked(userId);
   }
 }
 

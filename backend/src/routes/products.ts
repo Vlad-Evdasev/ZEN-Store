@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { db } from "../db/schema.js";
 import type { Product } from "../types.js";
-import { notifyNewArrival } from "../bot.js";
 
 const MAX_IMAGES = 5;
 type ProductRow = Product & { images?: string | null };
@@ -69,36 +68,12 @@ productsRouter.post("/", (req, res) => {
       "INSERT INTO products (store_id, name, description, price, image_url, images, category, sizes, brand) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
     ).run(sid, name, description ?? "", Number(price), firstUrl, imagesJson, cat, sz, brandVal);
     const row = db.prepare("SELECT last_insert_rowid() as id").get() as { id: number };
-    // Пинг подписчикам новинок в этой категории — асинхронно, ошибки молча.
-    notifySubscribersOfNewProduct(row.id, name, cat, firstUrl).catch(() => {});
     return res.status(201).json({ id: row.id, ok: true });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Database error";
     return res.status(500).json({ error: `Ошибка БД: ${msg}` });
   }
 });
-
-async function notifySubscribersOfNewProduct(
-  productId: number,
-  productName: string,
-  categoryCode: string,
-  imageUrl: string | null
-): Promise<void> {
-  const cat = db
-    .prepare("SELECT name FROM categories WHERE code = ?")
-    .get(categoryCode) as { name: string } | undefined;
-  const categoryName = cat?.name ?? categoryCode;
-  const subs = db
-    .prepare("SELECT user_id FROM category_subscriptions WHERE category_code = ?")
-    .all(categoryCode) as { user_id: string }[];
-  for (const s of subs) {
-    try {
-      await notifyNewArrival(s.user_id, productName, productId, categoryName, imageUrl);
-    } catch {}
-    // лёгкий troттлинг: 50 мс между сообщениями
-    await new Promise((r) => setTimeout(r, 50));
-  }
-}
 
 productsRouter.patch("/:id", (req, res) => {
   const secret = req.headers["x-admin-secret"] as string | undefined;

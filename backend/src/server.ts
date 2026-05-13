@@ -14,11 +14,7 @@ import { adminRouter, usersHeartbeatRouter, runCurrencyRateAutoRefresh } from ".
 import { categoriesRouter } from "./routes/categories.js";
 import { postsRouter } from "./routes/posts.js";
 import { supportRouter } from "./routes/support.js";
-import {
-  engagementRouter,
-  runCartAbandonmentSweep,
-  runDropTeaserSweep,
-} from "./routes/engagement.js";
+import { engagementRouter } from "./routes/engagement.js";
 import {
   paymentsRouter,
   runPaymentExpirySweep,
@@ -66,24 +62,12 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
   res.status(500).json({ error: err instanceof Error ? err.message : "Internal server error" });
 });
 
-// Cron-задачи: cart-abandonment sweep + drop teasers + payment expiry.
-// Запускаем сразу при старте, потом каждый час. Лёгкий setInterval — не для
-// production-cron, но достаточно для одного процесса бэкэнда.
+// Cron-задачи: payment expiry + currency rate refresh.
+// Лёгкий setInterval — не для production-cron, но достаточно для
+// одного процесса бэкэнда.
 function startCronJobs() {
   const HOUR = 60 * 60 * 1000;
   const tick = async () => {
-    try {
-      const r = await runCartAbandonmentSweep();
-      if (r.sent > 0) console.log(`[cron] cart-abandon sweep: sent=${r.sent}, skipped=${r.skipped}`);
-    } catch (e) {
-      console.error("[cron] cart-abandon failed:", e);
-    }
-    try {
-      const r = await runDropTeaserSweep();
-      if (r.sent > 0) console.log(`[cron] drop-teaser sweep: sent=${r.sent}`);
-    } catch (e) {
-      console.error("[cron] drop-teaser failed:", e);
-    }
     try {
       runPaymentExpirySweep();
     } catch (e) {
