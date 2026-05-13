@@ -517,17 +517,34 @@ export interface OrderItemForInvoice {
 // позиция — bold, остальные — обычные строки без «+» префикса; раньше
 // «+» путал — выглядел как «item ещё не добавлен», а не как «вторая
 // позиция»). Дальше — сумма (USD + TON), CTA, контакт админа.
+//
+// payInlineUrl != null → встраиваем «Оплатить» как HTML-ссылку прямо
+// в текст (нужно для альбомов: media-groups не поддерживают inline-
+// keyboard, поэтому без HTML-линка нет кликабельного CTA). null →
+// предполагается inline-кнопка под сообщением, в caption пишем
+// традиционный призыв «Жми "Оплатить"».
 function buildInvoiceCaption(
   itemLines: string[],
   total: number,
-  ton: { amountTon: number; rateUsd: number } | null
+  ton: { amountTon: number; rateUsd: number } | null,
+  payInlineUrl: string | null
 ): string {
   const lines: string[] = [...itemLines, ""];
   if (ton) {
     lines.push(`<b>${total} $</b>  ≈ ${ton.amountTon.toFixed(2)} TON`);
     lines.push(`Курс ${ton.rateUsd.toFixed(2)} $`);
     lines.push("");
-    lines.push("Жми <b>«Оплатить»</b> — кошелёк откроется с готовой суммой и адресом, останется только подтвердить транзакцию.");
+    if (payInlineUrl) {
+      // CTA внутри текста — bold-link «Оплатить». Tap по нему открывает
+      // тот же Tonkeeper deep-link, что и кнопка под сообщением.
+      lines.push(
+        `<a href="${payInlineUrl}"><b>Оплатить →</b></a> — кошелёк откроется с готовой суммой и адресом, останется только подтвердить транзакцию.`
+      );
+    } else {
+      lines.push(
+        "Жми <b>«Оплатить»</b> — кошелёк откроется с готовой суммой и адресом, останется только подтвердить транзакцию."
+      );
+    }
   } else {
     lines.push(`<b>${total} $</b>`);
   }
@@ -537,51 +554,57 @@ function buildInvoiceCaption(
   return lines.join("\n");
 }
 
-// Шлёт инвойс с фото-альбомом и кнопкой «Оплатить» под ним. Альбомы
-// (sendMediaGroup) не поддерживают inline_keyboard — поэтому при 2+ фото
-// шлём двумя сообщениями: сначала альбом без caption, следом — текст с
-// caption + кнопкой. Один photo / без фото → одно сообщение, как и было.
+// Шлёт инвойс одним сообщением:
+//   0 фото → sendMessage с caption + Pay-кнопкой
+//   1 фото → sendPhoto с caption + Pay-кнопкой
+//   2+ фото → sendMediaGroup, caption на первом фото, Pay-ссылка
+//             встроена в текст (media-group не принимает inline_keyboard).
+// Раньше для 2+ фото уходило два bubble'а (альбом отдельно, текст с
+// кнопкой отдельно) — пользователь видел в чате две карточки и
+// просил «склейте в одну».
 async function sendInvoiceMessage(
   userId: string | number,
   photos: string[],
-  caption: string,
+  itemLines: string[],
+  total: number,
+  ton: { amountTon: number; rateUsd: number } | null,
   payUrl: string | null
 ): Promise<void> {
-  const replyMarkup = payUrl
-    ? { inline_keyboard: [[{ text: "Оплатить", url: payUrl }]] }
-    : undefined;
   const validPhotos = photos.filter((u) => !!u && u.trim().length > 0).slice(0, MAX_IMAGES);
 
-  if (validPhotos.length === 0) {
-    await bot.api.sendMessage(userId, caption, {
-      parse_mode: "HTML",
-      link_preview_options: { is_disabled: true },
-      reply_markup: replyMarkup,
-    });
+  if (validPhotos.length <= 1) {
+    // Есть inline-кнопка → CTA в caption без HTML-ссылки.
+    const caption = buildInvoiceCaption(itemLines, total, ton, null);
+    const replyMarkup = payUrl
+      ? { inline_keyboard: [[{ text: "Оплатить", url: payUrl }]] }
+      : undefined;
+    if (validPhotos.length === 0) {
+      await bot.api.sendMessage(userId, caption, {
+        parse_mode: "HTML",
+        link_preview_options: { is_disabled: true },
+        reply_markup: replyMarkup,
+      });
+    } else {
+      await bot.api.sendPhoto(userId, toPhotoSource(validPhotos[0]), {
+        caption,
+        parse_mode: "HTML",
+        reply_markup: replyMarkup,
+      });
+    }
     return;
   }
-  if (validPhotos.length === 1) {
-    await bot.api.sendPhoto(userId, toPhotoSource(validPhotos[0]), {
-      caption,
-      parse_mode: "HTML",
-      reply_markup: replyMarkup,
-    });
-    return;
-  }
-  // 2+ фото: альбом отдельным сообщением, потом текст с кнопкой.
-  // Caption внутрь альбома не вкладываем — на проде если у альбома
-  // вырубают превью или клиент схлопывает, юзер потерял бы и список,
-  // и кнопку. Текст следом — гарантированно видимый bubble + button.
-  const media: ChannelMediaPhoto[] = validPhotos.map((src) => ({
-    type: "photo",
-    media: toPhotoSource(src),
-  }));
-  await bot.api.sendMediaGroup(userId, media);
-  await bot.api.sendMessage(userId, caption, {
-    parse_mode: "HTML",
-    link_preview_options: { is_disabled: true },
-    reply_markup: replyMarkup,
+
+  // 2+ фото: альбом с caption на первом фото; CTA встроен HTML-ссылкой.
+  const caption = buildInvoiceCaption(itemLines, total, ton, payUrl);
+  const media: ChannelMediaPhoto[] = validPhotos.map((src, i) => {
+    const item: ChannelMediaPhoto = { type: "photo", media: toPhotoSource(src) };
+    if (i === 0) {
+      item.caption = caption;
+      item.parse_mode = "HTML";
+    }
+    return item;
   });
+  await bot.api.sendMediaGroup(userId, media);
 }
 
 export async function notifyOrderInvoice(
@@ -601,8 +624,6 @@ export async function notifyOrderInvoice(
     return i === 0 ? `<b>${name}</b>${sz}${qty}` : `${name}${sz}${qty}`;
   });
 
-  const caption = buildInvoiceCaption(itemLines, total, ton);
-
   // Универсальная Tonkeeper-ссылка вместо ton://. Работает на desktop
   // и mobile: на устройствах с Tonkeeper установленным — deep-link в
   // приложение, без — открывается web-flow Tonkeeper.
@@ -617,7 +638,7 @@ export async function notifyOrderInvoice(
     .filter((u) => !!u && u.trim().length > 0);
 
   try {
-    await sendInvoiceMessage(userId, photos, caption, payUrl);
+    await sendInvoiceMessage(userId, photos, itemLines, total, ton, payUrl);
   } catch (e) {
     const err = e instanceof Error ? e.message : String(e);
     if (isUserBlocked(err)) markBotUserBlocked(userId);
@@ -643,8 +664,6 @@ export async function notifyCustomOrderInvoice(
     return i === 0 ? `<b>${name}</b>${sz}` : `${name}${sz}`;
   });
 
-  const caption = buildInvoiceCaption(itemLines, total, ton);
-
   const payUrl = ton
     ? `https://app.tonkeeper.com/transfer/${ton.receiveAddress}` +
       `?amount=${ton.amountNano}` +
@@ -656,7 +675,7 @@ export async function notifyCustomOrderInvoice(
     .filter((u) => !!u && u.trim().length > 0);
 
   try {
-    await sendInvoiceMessage(userId, photos, caption, payUrl);
+    await sendInvoiceMessage(userId, photos, itemLines, total, ton, payUrl);
   } catch (e) {
     const err = e instanceof Error ? e.message : String(e);
     if (isUserBlocked(err)) markBotUserBlocked(userId);
