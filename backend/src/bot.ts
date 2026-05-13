@@ -15,15 +15,6 @@ export const bot = new Bot(token);
 
 const WEB_APP_URL = process.env.WEB_APP_URL || "https://your-mini-app-url.vercel.app";
 
-// Лейблы reply-keyboard кнопок. Вынесены в константы, потому что фигурируют
-// дважды: один раз в reply_markup внутри /start (рендерим клавиатуру) и
-// второй раз ниже в bot.hears() (ловим тап). Если поправить здесь — оба
-// места останутся в синхроне.
-const REPLY_KB_INSPIRE = "✺ Вдохновиться";
-const REPLY_KB_HISTORY = "⌥ Заказы";
-const REPLY_KB_SETTINGS = "☉ Профиль";
-const REPLY_KB_SUPPORT = "ⓘ Поддержка";
-
 const MAX_IMAGES = 10;
 const SEND_DELAY_MS = 40; // ~25 msg/sec, под лимитами Telegram
 
@@ -759,33 +750,13 @@ bot.command("start", async (ctx) => {
   await ctx.reply(lines.join("\n"), {
     parse_mode: "HTML",
     link_preview_options: { is_disabled: true },
-    reply_markup: {
-      // Persistent reply-keyboard под полем ввода. Кнопки шлют ТЕКСТ —
-      // ниже на каждый текст висит bot.hears(), который отвечает inline-
-      // кнопкой web_app с нужным #page=. Прямой web_app в reply-keyboard
-      // не подходит: Telegram запускает такие WebApp без initData
-      // (https://core.telegram.org/bots/webapps), поэтому подпись на
-      // бэке не проверяется и /api/cart, custom-orders и т.п. падают
-      // под TG_AUTH_STRICT=1. У inline-кнопок initData есть в полном
-      // объёме — auth работает as expected.
-      keyboard: [
-        [
-          // Глифы из Unicode без emoji-presentation: Telegram рендерит их
-          // текстовым шрифтом, поэтому они идут белыми и контурными, в
-          // тон лейблу кнопки. Размер по клиентам слегка плавает — глифы
-          // живут в разных Unicode-блоках, идеального выравнивания на
-          // уровне reply-keyboard API нет.
-          { text: REPLY_KB_INSPIRE },
-          { text: REPLY_KB_HISTORY },
-        ],
-        [
-          { text: REPLY_KB_SETTINGS },
-          { text: REPLY_KB_SUPPORT },
-        ],
-      ],
-      is_persistent: true,
-      resize_keyboard: true,
-    },
+    // Активно убираем reply-keyboard, если она осталась у юзера после
+    // прошлых версий /start. Каталог открывается через menu_button
+    // «Shop» — он передаёт WebApp полный signed initData. Прямой
+    // web_app в reply-keyboard работал бы без initData (см.
+    // https://core.telegram.org/bots/webapps) и ломал requireOwnership
+    // под TG_AUTH_STRICT=1.
+    reply_markup: { remove_keyboard: true },
   });
 });
 
@@ -948,30 +919,6 @@ bot.command("help", async (ctx) => {
     }
   );
 });
-
-// Reply-keyboard shortcuts — те же лейблы, что нарисованы в /start. Кнопка
-// в reply-keyboard шлёт ТОЛЬКО текст; ловим его здесь и отвечаем сообщением
-// с одной inline-кнопкой web_app, открывающей нужную #page=. Inline-кнопка
-// даёт WebApp полный initData, поэтому requireOwnership() на бэке проходит.
-// Эти hears обязательно идут ДО bot.on("message:text") ниже — иначе тап по
-// кнопке утечёт в админ-чат как входящее сообщение от юзера.
-const REPLY_KB_SHORTCUTS: ReadonlyArray<{ label: string; page: string }> = [
-  { label: REPLY_KB_INSPIRE, page: "inspire" },
-  { label: REPLY_KB_HISTORY, page: "history" },
-  { label: REPLY_KB_SETTINGS, page: "settings" },
-  { label: REPLY_KB_SUPPORT, page: "support" },
-];
-for (const { label, page } of REPLY_KB_SHORTCUTS) {
-  bot.hears(label, async (ctx) => {
-    await ctx.reply("Открой:", {
-      reply_markup: {
-        inline_keyboard: [[
-          { text: label, web_app: { url: `${WEB_APP_URL}#page=${page}` } },
-        ]],
-      },
-    });
-  });
-}
 
 // Любое НЕ-командное текстовое сообщение от пользователя — ловим в админ-чат.
 // Команды (/start, /shop) идут отдельными хендлерами выше и не сохраняются как
