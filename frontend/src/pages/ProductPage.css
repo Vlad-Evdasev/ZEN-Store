@@ -75,11 +75,15 @@
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   -ms-overflow-style: none;
   overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
+  /* scroll-behavior НЕ smooth — el.scrollLeft = X (синхронизация store)
+     анимировался бы плавно, во время анимации onScroll фиксировал
+     промежуточные значения и зацикливал «туда-сюда». Юзерский snap
+     браузер всё равно анимирует сам. */
 }
 .product-v2__gallery::-webkit-scrollbar { display: none; }
 .product-v2__gallery-slide {

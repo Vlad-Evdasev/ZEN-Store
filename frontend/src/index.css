@@ -1444,7 +1444,6 @@ html[data-theme="light"] .zen-app .product-card-price {
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -1452,6 +1451,14 @@ html[data-theme="light"] .zen-app .product-card-price {
      горизонтально за края карусели — иначе на iOS вертикальный
      pull-to-refresh может срабатывать на горизонтальный жест. */
   overscroll-behavior-x: contain;
+  /* Явно разрешаем оба направления — на случай если у предка где-то
+     осталось pan-y, которое блокировало бы наш горизонтальный snap. */
+  touch-action: pan-x pan-y;
+  /* scroll-behavior: smooth НЕ ставим — иначе el.scrollLeft = X (наша
+     синхронизация store→скроллер) анимируется плавно, и пока анимация
+     идёт, onScroll стреляет промежуточными значениями → setCurrentIdx
+     → новая синхронизация → бесконечный цикл «туда-сюда» картинок.
+     Юзерский snap всё равно анимируется браузером сам. */
 }
 .zen-card-image-scroller::-webkit-scrollbar { display: none; }
 .zen-card-image-slide {
@@ -1482,13 +1489,14 @@ html[data-theme="light"] .zen-app .product-card-price {
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   -ms-overflow-style: none;
   overscroll-behavior-x: contain;
   width: 100%;
   will-change: transform;
+  touch-action: pan-x pan-y;
+  /* scroll-behavior НЕ smooth — см. комментарий в .zen-card-image-scroller. */
 }
 .zen-post-image-scroller::-webkit-scrollbar { display: none; }
 .zen-post-image-scroller > .zen-card-image-slide > img {
