@@ -58,9 +58,12 @@ export function ProductPage({
   // в полный размер позади маленькой FLIP-картинки → выглядит как
   // огромный скелетон. С FLIP контейнера всё растёт ОДНИМ блоком.
   const heroRef = useRef<HTMLDivElement>(null);
-  const touchStartX = useRef(0);
-  const touchStartY = useRef(0);
-  const wheelLockedRef = useRef(false);
+  // Скроллер хранит горизонтальный snap-карусель из всех картинок товара.
+  // Раньше было overlay-стеком из opacity-слоёв с JS touchEnd-cycle, и
+  // свайп выглядел рваным: палец двигался, картинка стояла, на отпускании
+  // мгновенно подменялась. Теперь нативный scroll-snap — тянется за пальцем,
+  // мягко садится на соседний слайд.
+  const scrollerRef = useRef<HTMLDivElement>(null);
 
   // Phase управляет анимациями overlay-sheet:
   //  - opening: image FLIP-анимируется из thumbRect → fullscreen
@@ -193,37 +196,31 @@ export function ProductPage({
     return s;
   }, [cartItems, product?.id, optimisticSizes]);
 
-  const goPrevImage = () => setImageIndex((i) => (i === 0 ? imageUrls.length - 1 : i - 1));
-  const goNextImage = () => setImageIndex((i) => (i === imageUrls.length - 1 ? 0 : i + 1));
+  // Sync store → scrollLeft. На mount устанавливает позицию скроллера
+  // на выбранный imageIndex (если юзер свайпнул thumb в каталоге, мы
+  // открываем сразу на этой картинке). На обновление imageIndex извне
+  // (например, по тапу на dot-индикатор) тоже подтягивает. Tolerance
+  // > clientWidth/2 — не прерывать нативный snap, который юзер сейчас
+  // инициировал пальцем (store обновится сам через onScroll).
+  useLayoutEffect(() => {
+    const el = scrollerRef.current;
+    if (!el || el.clientWidth === 0) return;
+    const target = imageIndex * el.clientWidth;
+    if (Math.abs(el.scrollLeft - target) > el.clientWidth / 2) {
+      el.scrollLeft = target;
+    }
+  }, [imageIndex]);
 
-  const handleGalleryTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
-  };
-  const handleGalleryTouchEnd = (e: React.TouchEvent) => {
-    if (imageUrls.length <= 1) return;
-    const endX = e.changedTouches[0].clientX;
-    const endY = e.changedTouches[0].clientY;
-    const dx = endX - touchStartX.current;
-    const dy = endY - touchStartY.current;
-    if (Math.abs(dx) <= Math.abs(dy)) return;
-    const minSwipe = 50;
-    if (dx > minSwipe) goPrevImage();
-    else if (dx < -minSwipe) goNextImage();
-  };
-
-  const handleGalleryWheel = (e: React.WheelEvent) => {
-    if (imageUrls.length <= 1) return;
-    if (wheelLockedRef.current) return;
-    const ax = Math.abs(e.deltaX);
-    const ay = Math.abs(e.deltaY);
-    if (ax <= ay || ax < 18) return;
-    if (e.deltaX > 0) goNextImage();
-    else goPrevImage();
-    wheelLockedRef.current = true;
-    window.setTimeout(() => {
-      wheelLockedRef.current = false;
-    }, 400);
+  // Detect snap-target из текущего scrollLeft. Math.round — ближайший
+  // слайд. Обновляем store, чтобы dot-индикатор переключился на лету,
+  // и FLIP-close знал, в какой thumb лендиться.
+  const onScroll = () => {
+    const el = scrollerRef.current;
+    if (!el || el.clientWidth === 0) return;
+    const idx = Math.round(el.scrollLeft / el.clientWidth);
+    if (idx !== imageIndex && idx >= 0 && idx < imageUrls.length) {
+      setImageIndex(idx);
+    }
   };
 
   // requestClose: зеркало open — container FLIP-back в thumb position +
@@ -364,16 +361,14 @@ export function ProductPage({
             />
           ) : (
             <div
+              ref={scrollerRef}
               className="product-v2__gallery"
-              onTouchStart={handleGalleryTouchStart}
-              onTouchEnd={handleGalleryTouchEnd}
-              onWheel={handleGalleryWheel}
+              onScroll={onScroll}
             >
               {imageUrls.map((url, i) => (
                 <div
                   key={`${product.id}-${i}`}
-                  className="product-v2__gallery-layer"
-                  style={{ opacity: i === imageIndex ? 1 : 0, pointerEvents: i === imageIndex ? "auto" : "none" }}
+                  className="product-v2__gallery-slide"
                 >
                   <img
                     src={url}

@@ -1471,6 +1471,35 @@ html[data-theme="light"] .zen-app .product-card-price {
   pointer-events: none;
 }
 
+/* Тот же snap-карусель, но для раскрытого поста («Вдохновиться» → expanded
+   ExpandedView). Отличие: position: relative + width 100% + aspect-ratio
+   через inline-стиль — родитель (imageArea) не задаёт размеры, как это
+   делает imageWrap у thumb-карточек. FLIP-анимация открытия применяется
+   к этому контейнеру (scrollerRef в ExpandedView). */
+.zen-post-image-scroller {
+  position: relative;
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  overscroll-behavior-x: contain;
+  width: 100%;
+  will-change: transform;
+}
+.zen-post-image-scroller::-webkit-scrollbar { display: none; }
+.zen-post-image-scroller > .zen-card-image-slide > img {
+  /* В раскрытом посте картинка показывается целиком (а не cover) —
+     соотношение сторон scroller'а равно соотношению первой картинки,
+     поэтому первая садится без letterbox. Для других картинок с
+     отличающимся aspect — cover, чтобы высота поста не прыгала при
+     свайпе. */
+  object-fit: cover;
+}
+
 /* ── Maintenance screen ────────────────────────────────────────────── */
 .zen-maintenance {
   position: fixed;

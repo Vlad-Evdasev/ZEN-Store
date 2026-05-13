@@ -409,7 +409,7 @@ function computeSheetAnim({
 }
 
 function ExpandedView({
-  post, startRect, startSrc, startIndex, userId, lang,
+  post, startRect, startIndex, userId, lang,
   fadeOnClose, isBackNav, initialScrollTop, forceClose, forwardOut, related, relatedLoading, hiddenIds, registerClose,
   onStartClose, onClose, onPinToggle, onShare, onOpenRelated,
 }: ExpandedViewProps) {
@@ -475,12 +475,16 @@ function ExpandedView({
   const [contentReady, setContentReady] = useState<boolean>(
     forceClose ? false : (isBackNav || forwardOut || false)
   );
-  const touchStartX = useRef<number | null>(null);
-  const touchStartY = useRef<number | null>(null);
-  const touchMoveDx = useRef(0);
-  const touchMoveDy = useRef(0);
-  const dragDirection = useRef<"horizontal" | "vertical" | null>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
+  // scrollerRef — горизонтальный snap-карусель из всех картинок поста.
+  // Раньше тут был один <img> с key={currentIdx}, который перемонтировался
+  // на свайпе → юзер видел резкий «прыг» картинки без drag-feedback.
+  // Теперь FLIP-анимация открытия/закрытия трансформирует именно этот
+  // scroller (а не отдельный img-элемент), внутри — native scroll-snap.
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  // imageRef — на первую <img> внутри scroller, нужен только чтобы FLIP-
+  // open подождал её загрузки перед применением transform (иначе на
+  // не-кешированной картинке размеры hero ещё 0 → FLIP не сработает).
   const imageRef = useRef<HTMLImageElement>(null);
 
   // Флаг: успешно ли восстановили scrollTop. После того как related-сетка
@@ -499,6 +503,33 @@ function ExpandedView({
     // Если контент ещё не дорос — useLayoutEffect перезапустится при
     // следующем изменении related (deps), и попробует снова.
   }, [related, initialScrollTop]);
+
+  // Sync store → scrollLeft карусели картинок. Срабатывает на mount
+  // (стартовая картинка = startIndex, чтобы FLIP-open лёг ровно на ту,
+  // что юзер видел в thumb) и при программном переключении (tap на dot).
+  // Tolerance > clientWidth/2 — не прерывать нативный snap, инициированный
+  // пальцем юзера (store обновится сам через onScroll ниже).
+  useLayoutEffect(() => {
+    const el = scrollerRef.current;
+    if (!el || el.clientWidth === 0) return;
+    const target = currentIdx * el.clientWidth;
+    if (Math.abs(el.scrollLeft - target) > el.clientWidth / 2) {
+      el.scrollLeft = target;
+    }
+  }, [currentIdx]);
+
+  // Detect snap-target из текущего scrollLeft. Округляем до ближайшего
+  // слайда — этого достаточно для dots и для того чтобы store содержал
+  // правильный idx (нужно для FLIP-close: thumb лендится в нужную картинку
+  // карусели каталога / inspire-сетки).
+  const onScrollerScroll = () => {
+    const el = scrollerRef.current;
+    if (!el || el.clientWidth === 0) return;
+    const idx = Math.round(el.scrollLeft / el.clientWidth);
+    if (idx !== currentIdx && idx >= 0 && idx < images.length) {
+      setCurrentIdx(idx);
+    }
+  };
 
   const reqVersion = useRef(0);
 
@@ -523,27 +554,34 @@ function ExpandedView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // forceClose: outgoing-слой при back-nav. Image FLIP-возвращается в
+  // forceClose: outgoing-слой при back-nav. Scroller FLIP-возвращается в
   // startRect (thumb в related-сетке предыдущего поста), параллельно
   // sheet bg плавно fades to transparent (через CSS class
   // zen-sheet-force-close). По завершении 520ms onClose() размонтирует.
   // Под выезжающим уже виден previous expanded в phase=open.
+  // FLIP теперь трансформирует scroller-контейнер (а не отдельный <img>),
+  // потому что картинки внутри — это горизонтальный snap-карусель.
   useLayoutEffect(() => {
     if (!forceClose) return;
-    const img = imageRef.current;
-    if (img && startRect) {
+    const el = scrollerRef.current;
+    if (el && startRect) {
       const apply = () => {
-        const final = img.getBoundingClientRect();
+        const final = el.getBoundingClientRect();
         if (final.width === 0 || final.height === 0) return;
         const dx = startRect.left - final.left;
         const dy = startRect.top - final.top;
         const sx = startRect.width / Math.max(final.width, 1);
         const sy = startRect.height / Math.max(final.height, 1);
-        img.style.transformOrigin = "top left";
-        img.style.transition = "transform 520ms cubic-bezier(0.45, 0, 0.55, 1)";
-        img.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
+        el.style.transformOrigin = "top left";
+        el.style.transition = "transform 520ms cubic-bezier(0.45, 0, 0.55, 1)";
+        el.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
       };
-      if (img.complete && img.naturalWidth > 0) {
+      // Ждём первой картинки только если она ещё не загружена — иначе
+      // getBoundingClientRect у scroller может вернуть 0×0 (aspect-ratio
+      // ещё не применился). Кэш-хит обычно есть, потому что thumb уже
+      // показывал эту же картинку.
+      const img = imageRef.current;
+      if (!img || (img.complete && img.naturalWidth > 0)) {
         apply();
       } else {
         const onLoad = () => { img.removeEventListener("load", onLoad); apply(); };
@@ -556,35 +594,36 @@ function ExpandedView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // FLIP-open: при наличии thumb-rect картинка стартует в его координатах,
-  // CSS-transition плавно переносит её в финальные размеры.
+  // FLIP-open: при наличии thumb-rect scroller стартует в его координатах,
+  // CSS-transition плавно переносит его в финальные размеры.
   // Пропускаем эту логику если phase уже стартует в "open" (isBackNav,
   // forceClose, forwardOut) — там никакой opening-анимации не нужно.
   useLayoutEffect(() => {
     if (forceClose || isBackNav || forwardOut) return; // mount уже в phase=open
-    const img = imageRef.current;
-    if (!img || !startRect) {
+    const el = scrollerRef.current;
+    if (!el || !startRect) {
       requestAnimationFrame(() => setPhase("open"));
       return;
     }
     const apply = () => {
-      const final = img.getBoundingClientRect();
+      const final = el.getBoundingClientRect();
       if (final.width === 0 || final.height === 0) return;
       const dx = startRect.left - final.left;
       const dy = startRect.top - final.top;
       const sx = startRect.width / final.width;
       const sy = startRect.height / final.height;
-      img.style.transformOrigin = "top left";
-      img.style.transition = "none";
-      img.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
-      void img.offsetWidth;
+      el.style.transformOrigin = "top left";
+      el.style.transition = "none";
+      el.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
+      void el.offsetWidth;
       // ease-in-out 520ms — картинка плавно ускоряется в начале и
       // мягко тормозит в конце, как настоящий «приближение».
-      img.style.transition = "transform 520ms cubic-bezier(0.45, 0, 0.55, 1)";
-      img.style.transform = "translate3d(0, 0, 0) scale(1, 1)";
+      el.style.transition = "transform 520ms cubic-bezier(0.45, 0, 0.55, 1)";
+      el.style.transform = "translate3d(0, 0, 0) scale(1, 1)";
       setPhase("open");
     };
-    if (img.complete && img.naturalWidth > 0) {
+    const img = imageRef.current;
+    if (!img || (img.complete && img.naturalWidth > 0)) {
       apply();
     } else {
       const onLoad = () => {
@@ -622,18 +661,18 @@ function ExpandedView({
       return;
     }
 
-    // MAIN FINAL CLOSE (stack=0): FLIP-close с image-морфом обратно в
+    // MAIN FINAL CLOSE (stack=0): FLIP-close с scroller-морфом обратно в
     // thumb-rect + sheet/backdrop fade-out 520ms ease-in-out.
-    const img = imageRef.current;
-    if (img && startRect) {
-      const final = img.getBoundingClientRect();
+    const el = scrollerRef.current;
+    if (el && startRect) {
+      const final = el.getBoundingClientRect();
       const dx = startRect.left - final.left;
       const dy = startRect.top - final.top;
       const sx = startRect.width / Math.max(final.width, 1);
       const sy = startRect.height / Math.max(final.height, 1);
-      img.style.transformOrigin = "top left";
-      img.style.transition = "transform 520ms cubic-bezier(0.45, 0, 0.55, 1)";
-      img.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
+      el.style.transformOrigin = "top left";
+      el.style.transition = "transform 520ms cubic-bezier(0.45, 0, 0.55, 1)";
+      el.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
     }
     setPhase("closing");
     setTimeout(onClose, 520);
@@ -684,54 +723,10 @@ function ExpandedView({
     onShare(post);
   };
 
-  const onTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
-    touchMoveDx.current = 0;
-    touchMoveDy.current = 0;
-    dragDirection.current = null;
-  };
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (touchStartX.current === null || touchStartY.current === null) return;
-    const dx = e.touches[0].clientX - touchStartX.current;
-    const dy = e.touches[0].clientY - touchStartY.current;
-    touchMoveDx.current = dx;
-    touchMoveDy.current = dy;
-    if (dragDirection.current === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
-      dragDirection.current = Math.abs(dx) > Math.abs(dy) ? "horizontal" : "vertical";
-    }
-    // ВЕРТИКАЛЬНЫЙ pull-to-close отключён — пост закрывается ТОЛЬКО
-    // по кнопке назад. Скролл выше начала контента — нормальный native
-    // overscroll-bounce без сворачивания диалога.
-  };
-  const onTouchEnd = () => {
-    const dx = touchMoveDx.current;
-    const dir = dragDirection.current;
-    touchStartX.current = null;
-    touchStartY.current = null;
-    touchMoveDx.current = 0;
-    touchMoveDy.current = 0;
-    dragDirection.current = null;
-
-    // Только horizontal-swipe для переключения фоток в multi-image посте.
-    // Vertical больше не закрывает диалог (см. onTouchMove выше).
-    // Круговое переключение: с последней → первая, с первой → последняя.
-    if (dir === "horizontal" && Math.abs(dx) > 60 && images.length > 1) {
-      setCurrentIdx((prev) => (prev + (dx < 0 ? 1 : -1) + images.length) % images.length);
-    }
-  };
-  // Horizontal trackpad swipe для desktop. Lock 400ms между переключениями.
-  const wheelLockedRef = useRef(false);
-  const onWheel = (e: React.WheelEvent) => {
-    if (images.length <= 1) return;
-    if (wheelLockedRef.current) return;
-    const ax = Math.abs(e.deltaX);
-    const ay = Math.abs(e.deltaY);
-    if (ax <= ay || ax < 18) return;
-    setCurrentIdx((prev) => (prev + (e.deltaX > 0 ? 1 : -1) + images.length) % images.length);
-    wheelLockedRef.current = true;
-    window.setTimeout(() => { wheelLockedRef.current = false; }, 400);
-  };
+  // Горизонтальный свайп между картинками поста — теперь нативный через
+  // scroll-snap (см. scrollerRef + onScrollerScroll). Pull-to-close
+  // вертикальный жест давно отключён (закрытие только по back-кнопке).
+  // Соответственно onTouchStart/Move/End и onWheel-цикл с галереи сняты.
 
   // Backdrop теперь НЕ используется как дим-слой (это делает sheet bg).
   // Pull-to-close убран — backdrop просто 0 при opening/closing/forceClose,
@@ -762,9 +757,6 @@ function ExpandedView({
       <div
         ref={sheetRef}
         onClick={(e) => e.stopPropagation()}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
         // Три CSS-keyframe-варианта (бьют inline computeSheetAnim):
         //  - forceClose:                sheet bg fade-out (image отдельно JS-FLIP)
         //  - forwardOut:                scale 1→1.08 + opacity 1→0 (previous уходит)
@@ -803,25 +795,34 @@ function ExpandedView({
                   попадала в стек ExpandedView (z-index 1100) и не
                   оказалась под хедером (z-index 1300 при overlay). */}
 
-              <div
-                style={expandedStyles.imageArea}
-                onWheel={onWheel}
-              >
-                <img
-                  ref={imageRef}
-                  key={currentIdx}
-                  src={images[currentIdx] ?? startSrc}
-                  alt=""
-                  loading="eager"
-                  decoding="sync"
+              <div style={expandedStyles.imageArea}>
+                <div
+                  ref={scrollerRef}
+                  className="zen-post-image-scroller"
+                  onScroll={onScrollerScroll}
                   style={{
-                    ...expandedStyles.image,
-                    // Все картинки в посте показываются в боксе первой
-                    // (cover crop). Высота не «прыгает» при свайпе.
-                    ...(firstImageAspect ? { aspectRatio: `${firstImageAspect}`, height: "auto", objectFit: "cover" as const } : null),
+                    // aspect-ratio равен соотношению первой картинки —
+                    // высота поста не «прыгает» при свайпе на картинки с
+                    // другим aspect (object-fit: cover в .zen-post-image-
+                    // scroller обрежет их под этот размер).
+                    aspectRatio: firstImageAspect ? `${firstImageAspect}` : "3 / 4",
+                    borderRadius: 18,
+                    willChange: "transform",
                   }}
-                  draggable={false}
-                />
+                >
+                  {images.map((src, i) => (
+                    <div key={i} className="zen-card-image-slide">
+                      <img
+                        ref={i === 0 ? imageRef : undefined}
+                        src={src}
+                        alt=""
+                        loading={i === 0 ? "eager" : "lazy"}
+                        decoding={i === 0 ? "sync" : "async"}
+                        draggable={false}
+                      />
+                    </div>
+                  ))}
+                </div>
                 {images.length > 1 && (
                   <div style={{ ...expandedStyles.dotsRow, ...contentStyle }} aria-hidden>
                     {images.map((_, i) => (
