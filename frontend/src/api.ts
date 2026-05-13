@@ -995,12 +995,15 @@ export async function getPosts(userId?: string): Promise<Post[]> {
 
 // Похожие посты — той же категории, рандомизированный порядок, до 24 шт.
 // Используется в expanded view ленты «Вдохновиться» как Pinterest-style
-// «больше как этот».
+// «больше как этот». Через fetchWithRetry — иначе одиночный network blip
+// или Railway cold-start (≤15s) пробивал .catch() в NewArrivalsPage,
+// related-сетка оставалась пустой, и юзеру приходилось закрывать-открывать
+// пост, чтобы триггернуть новый запрос.
 export async function getRelatedPosts(postId: number, userId?: string): Promise<Post[]> {
   const url = userId
     ? `${API_URL}/api/posts/${postId}/related?user_id=${encodeURIComponent(userId)}`
     : `${API_URL}/api/posts/${postId}/related`;
-  const res = await apiFetch(url);
+  const res = await fetchWithRetry(url);
   if (!res.ok) throw new Error("Failed to fetch related posts");
   return res.json();
 }

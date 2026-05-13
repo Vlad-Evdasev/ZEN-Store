@@ -981,15 +981,21 @@ export function NewArrivalsPage({
   const scrollMemory = useRef<Record<FilterTab, number>>({ all: 0, liked: 0 });
 
   // Префетч related для текущего expanded (если ещё не в кэше).
+  // НЕ отменяем in-flight запрос на close: иначе если юзер закрыл пост
+  // раньше, чем сервер ответил (медленный cold-start, плохая сеть), результат
+  // выкидывался и кэш для этого id оставался пустым — при повторном
+  // открытии тапа related не было, и нужен был ещё один re-open чтобы
+  // запустить fresh fetch. Теперь дожидаемся ответа и кладём в кэш всегда,
+  // даже если карточка уже закрыта — повторный open получит related мгновенно.
+  // setRelatedMap через функциональный апдейт, чтобы race двух параллельных
+  // fetch'ей для одного id не затирал друг друга.
   useEffect(() => {
     if (!expanded) return;
-    if (relatedMap[expanded.post.id]) return;
-    let cancelled = false;
-    getRelatedPosts(expanded.post.id, userId).then((r) => {
-      if (cancelled) return;
-      setRelatedMap((m) => ({ ...m, [expanded.post.id]: r }));
-    }).catch(() => {});
-    return () => { cancelled = true; };
+    const postId = expanded.post.id;
+    if (relatedMap[postId]) return;
+    getRelatedPosts(postId, userId)
+      .then((r) => setRelatedMap((m) => (m[postId] ? m : { ...m, [postId]: r })))
+      .catch(() => {});
   }, [expanded, userId, relatedMap]);
 
   useEffect(() => {
