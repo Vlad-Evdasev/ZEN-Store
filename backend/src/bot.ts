@@ -298,18 +298,20 @@ export async function replyAsBot(
 // {name} = название заказа (первая позиция). Мы ушли от номеров #ID
 // в пушах — везде показываем по имени товара / заявки. Для backward-compat
 // {id} тоже подставляется (если кто-то редактировал template и оставил его).
+// Emoji-поле сохранено в типе, но пустые строки — мы убрали все эмоджи
+// из текста пушей; стиль теперь чистый и спокойный без визуального шума.
 const ORDER_STATUS_TEXT: Record<string, { emoji: string; title: string; sub?: string }> = {
-  pending: { emoji: "✅", title: "Заказ «{name}» оформлен", sub: "Мы получили запрос — скоро свяжемся для уточнения деталей." },
-  in_transit: { emoji: "🚚", title: "Заказ «{name}» в пути", sub: "Уже едет к тебе. Отслеживай статус в /track." },
-  delivered: { emoji: "📦", title: "Заказ «{name}» доставлен", sub: "Забирай! Если что-то не так — пиши, поможем." },
-  completed: { emoji: "💚", title: "Заказ «{name}» завершён", sub: "Спасибо за покупку! Будем рады видеть тебя снова 🤍" },
+  pending: { emoji: "", title: "Заказ «{name}» оформлен", sub: "Мы получили запрос — скоро свяжемся для уточнения деталей." },
+  in_transit: { emoji: "", title: "Заказ «{name}» в пути", sub: "Уже едет к тебе. Отслеживай статус в /track." },
+  delivered: { emoji: "", title: "Заказ «{name}» доставлен", sub: "Забирай! Если что-то не так — пиши, поможем." },
+  completed: { emoji: "", title: "Заказ «{name}» завершён", sub: "Спасибо за покупку! Будем рады видеть тебя снова." },
 };
 
 const CUSTOM_STATUS_TEXT: Record<string, { emoji: string; title: string; sub?: string }> = {
-  pending: { emoji: "✅", title: "Заявка «{name}» одобрена", sub: "Принята в работу. Свяжемся для уточнений." },
-  in_transit: { emoji: "🚚", title: "Заявка «{name}» в пути", sub: "Уже едет к тебе." },
-  delivered: { emoji: "📦", title: "Заявка «{name}» доставлена", sub: "Забирай!" },
-  completed: { emoji: "💚", title: "Заявка «{name}» завершена", sub: "Спасибо!" },
+  pending: { emoji: "", title: "Заявка «{name}» одобрена", sub: "Принята в работу. Свяжемся для уточнений." },
+  in_transit: { emoji: "", title: "Заявка «{name}» в пути", sub: "Уже едет к тебе." },
+  delivered: { emoji: "", title: "Заявка «{name}» доставлена", sub: "Забирай!" },
+  completed: { emoji: "", title: "Заявка «{name}» завершена", sub: "Спасибо!" },
 };
 
 // Загружает шаблон из bot_message_templates, либо возвращает fallback.
@@ -354,7 +356,11 @@ async function sendStatusNotification(
 ): Promise<void> {
   const title = fillPlaceholders(cfg.title, id, name);
   const sub = cfg.sub ? fillPlaceholders(cfg.sub, id, name) : "";
-  const text = `${cfg.emoji} <b>${title}</b>${sub ? `\n\n${sub}` : ""}`;
+  // cfg.emoji раньше префиксировал заголовок (✅/🚚/📦/💚). Убрали —
+  // если template из БД ещё несёт эмоджи, рисуем с пробелом, иначе
+  // сразу заголовок. Пустая строка → нет лишнего пробела.
+  const prefix = cfg.emoji ? `${cfg.emoji} ` : "";
+  const text = `${prefix}<b>${title}</b>${sub ? `\n\n${sub}` : ""}`;
   try {
     await bot.api.sendMessage(userId, text, {
       parse_mode: "HTML",
@@ -429,7 +435,7 @@ export async function notifyCustomOrderStatusChange(userId: string | number, cus
 
 export async function notifyCartAbandonment(userId: string | number, itemsCount: number, total: number): Promise<void> {
   const text =
-    `🛒 <b>Твоя корзина ждёт</b>\n\n` +
+    `<b>Твоя корзина ждёт</b>\n\n` +
     `${itemsCount} ${itemsCount === 1 ? "вещь" : itemsCount < 5 ? "вещи" : "вещей"} на сумму <b>${total} $</b>. ` +
     `Готов оформить?`;
   try {
@@ -437,7 +443,7 @@ export async function notifyCartAbandonment(userId: string | number, itemsCount:
       parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: [
-          [{ text: "🛍 Открыть корзину", web_app: { url: `${WEB_APP_URL}#page=cart` } }],
+          [{ text: "Открыть корзину", web_app: { url: `${WEB_APP_URL}#page=cart` } }],
         ],
       },
     });
@@ -457,7 +463,7 @@ export async function notifyNewArrival(
   imageUrl: string | null
 ): Promise<void> {
   const text =
-    `🔥 <b>Новинка в категории «${categoryName}»</b>\n\n` +
+    `<b>Новинка в категории «${categoryName}»</b>\n\n` +
     `${productName} — только что добавили в каталог. Залетай первым.`;
   try {
     if (imageUrl) {
@@ -465,14 +471,14 @@ export async function notifyNewArrival(
         caption: text,
         parse_mode: "HTML",
         reply_markup: {
-          inline_keyboard: [[{ text: "🛍 Открыть каталог", web_app: { url: `${WEB_APP_URL}#product=${productId}` } }]],
+          inline_keyboard: [[{ text: "Открыть каталог", web_app: { url: `${WEB_APP_URL}#product=${productId}` } }]],
         },
       });
     } else {
       await bot.api.sendMessage(userId, text, {
         parse_mode: "HTML",
         reply_markup: {
-          inline_keyboard: [[{ text: "🛍 Открыть каталог", web_app: { url: WEB_APP_URL } }]],
+          inline_keyboard: [[{ text: "Открыть каталог", web_app: { url: WEB_APP_URL } }]],
         },
       });
     }
@@ -706,16 +712,16 @@ export async function notifyDrop(
   let header = "";
   switch (phase) {
     case "24h":
-      header = `🔥 <b>Drop через 24 часа: ${escapeHtml(title)}</b>`;
+      header = `<b>Drop через 24 часа: ${escapeHtml(title)}</b>`;
       break;
     case "1h":
-      header = `⏰ <b>Drop через 1 час: ${escapeHtml(title)}</b>`;
+      header = `<b>Drop через 1 час: ${escapeHtml(title)}</b>`;
       break;
     case "5min":
-      header = `🚨 <b>5 минут до дропа: ${escapeHtml(title)}</b>`;
+      header = `<b>5 минут до дропа: ${escapeHtml(title)}</b>`;
       break;
     case "live":
-      header = `⚡ <b>${escapeHtml(title)} — LIVE сейчас</b>`;
+      header = `<b>${escapeHtml(title)} — LIVE сейчас</b>`;
       break;
   }
   const tail =
@@ -727,7 +733,7 @@ export async function notifyDrop(
     await bot.api.sendMessage(userId, text, {
       parse_mode: "HTML",
       reply_markup: {
-        inline_keyboard: [[{ text: "🛍 Открыть каталог", web_app: { url: WEB_APP_URL } }]],
+        inline_keyboard: [[{ text: "Открыть каталог", web_app: { url: WEB_APP_URL } }]],
       },
     });
   } catch (e) {
@@ -899,10 +905,10 @@ bot.command("track", async (ctx) => {
     )
     .get(String(userId)) as { id: number; status: string; created_at: string } | undefined;
   if (!order && !custom) {
-    await ctx.reply("📭 У тебя нет активных заказов.\n\nТапни <b>«Открыть каталог»</b>, чтобы оформить первый.", {
+    await ctx.reply("У тебя нет активных заказов.\n\nТапни <b>«Открыть каталог»</b>, чтобы оформить первый.", {
       parse_mode: "HTML",
       reply_markup: {
-        inline_keyboard: [[{ text: "🛍 Открыть каталог", web_app: { url: WEB_APP_URL } }]],
+        inline_keyboard: [[{ text: "Открыть каталог", web_app: { url: WEB_APP_URL } }]],
       },
     });
     return;
@@ -911,7 +917,7 @@ bot.command("track", async (ctx) => {
   if (order) {
     const cfg = ORDER_STATUS_TEXT[order.status];
     lines.push(
-      `${cfg?.emoji ?? "📦"} Заказ #${order.id} — <b>${cfg?.title.replace("{id}", String(order.id)) ?? order.status}</b>`,
+      `Заказ #${order.id} — <b>${cfg?.title.replace("{id}", String(order.id)) ?? order.status}</b>`,
       `Сумма: ${order.total} $ · от ${new Date(order.created_at).toLocaleDateString("ru")}`,
       ""
     );
@@ -919,14 +925,14 @@ bot.command("track", async (ctx) => {
   if (custom) {
     const cfg = CUSTOM_STATUS_TEXT[custom.status];
     lines.push(
-      `${cfg?.emoji ?? "✨"} Кастом #${custom.id} — <b>${cfg?.title.replace("{id}", String(custom.id)) ?? custom.status}</b>`,
+      `Кастом #${custom.id} — <b>${cfg?.title.replace("{id}", String(custom.id)) ?? custom.status}</b>`,
       `от ${new Date(custom.created_at).toLocaleDateString("ru")}`
     );
   }
   await ctx.reply(lines.join("\n"), {
     parse_mode: "HTML",
     reply_markup: {
-      inline_keyboard: [[{ text: "📜 История", web_app: { url: `${WEB_APP_URL}#page=history` } }]],
+      inline_keyboard: [[{ text: "История", web_app: { url: `${WEB_APP_URL}#page=history` } }]],
     },
   });
 });
@@ -947,14 +953,14 @@ bot.command("profile", async (ctx) => {
   const totalCount = ordersCount.c + customsCount.c;
   const text =
     `<b>Твой профиль</b>\n\n` +
-    `📦 Заказов: <b>${totalCount}</b> (каталог: ${ordersCount.c}, кастом: ${customsCount.c})\n` +
-    `💵 Потрачено: <b>${totalSpent.t} $</b>`;
+    `Заказов: <b>${totalCount}</b> (каталог: ${ordersCount.c}, кастом: ${customsCount.c})\n` +
+    `Потрачено: <b>${totalSpent.t} $</b>`;
   await ctx.reply(text, {
     parse_mode: "HTML",
     reply_markup: {
       inline_keyboard: [
-        [{ text: "🛍 Открыть RAW", web_app: { url: WEB_APP_URL } }],
-        [{ text: "📜 История", web_app: { url: `${WEB_APP_URL}#page=history` } }],
+        [{ text: "Открыть RAW", web_app: { url: WEB_APP_URL } }],
+        [{ text: "История", web_app: { url: `${WEB_APP_URL}#page=history` } }],
       ],
     },
   });
@@ -981,15 +987,15 @@ bot.command("size", async (ctx) => {
   }
   const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
   if (sorted.length === 0) {
-    await ctx.reply("📐 У тебя ещё нет заказов — мы не знаем твой размер.\n\nЗакажи первую вещь, и в следующий раз я запомню.", {
-      reply_markup: { inline_keyboard: [[{ text: "🛍 Открыть каталог", web_app: { url: WEB_APP_URL } }]] },
+    await ctx.reply("У тебя ещё нет заказов — мы не знаем твой размер.\n\nЗакажи первую вещь, и в следующий раз я запомню.", {
+      reply_markup: { inline_keyboard: [[{ text: "Открыть каталог", web_app: { url: WEB_APP_URL } }]] },
     });
     return;
   }
   const main = sorted[0];
   const others = sorted.slice(1, 3).map(([s, n]) => `${s} (×${n})`);
   const text =
-    `📐 <b>Твой размер: ${main[0]}</b>\n\n` +
+    `<b>Твой размер: ${main[0]}</b>\n\n` +
     `Заказывал ${main[1]} ${main[1] === 1 ? "раз" : "раза"}.` +
     (others.length ? `\n\nТакже встречались: ${others.join(", ")}` : "");
   await ctx.reply(text, { parse_mode: "HTML" });
@@ -998,13 +1004,13 @@ bot.command("size", async (ctx) => {
 // /help — открыть страницу поддержки в WebApp
 bot.command("help", async (ctx) => {
   await ctx.reply(
-    "❓ <b>Нужна помощь?</b>\n\n" +
+    "<b>Нужна помощь?</b>\n\n" +
       "Открой раздел <b>Поддержка</b> в приложении — там самые частые вопросы.\n" +
       "Или просто напиши сюда — мы всегда на связи.",
     {
       parse_mode: "HTML",
       reply_markup: {
-        inline_keyboard: [[{ text: "💬 Открыть поддержку", web_app: { url: `${WEB_APP_URL}#page=support` } }]],
+        inline_keyboard: [[{ text: "Открыть поддержку", web_app: { url: `${WEB_APP_URL}#page=support` } }]],
       },
     }
   );

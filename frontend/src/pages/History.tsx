@@ -199,12 +199,12 @@ function CatalogItemCard({
         <div style={styles.pendingPaymentBanner}>
           <div style={styles.pendingPaymentText}>
             <span style={styles.pendingPaymentTitle}>
-              {lang === "ru" ? "⏳ Ожидает оплату" : "⏳ Awaiting payment"}
+              {lang === "ru" ? "Ожидает оплату" : "Awaiting payment"}
             </span>
             <span style={styles.pendingPaymentHint}>
               {lang === "ru"
-                ? "TON-транзакция не подтверждена. Если ты передумал — отмени."
-                : "TON transaction not confirmed. Cancel if you've changed your mind."}
+                ? "Оплата ещё не подтверждена. Если ты передумал — отмени."
+                : "Payment not confirmed yet. Cancel if you've changed your mind."}
             </span>
           </div>
           {onCancelPending && (

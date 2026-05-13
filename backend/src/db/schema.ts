@@ -586,15 +586,15 @@ if (tplCount.c === 0) {
   // показываем название (первая позиция / описание).
   const defaults: Array<[string, string, string, string, string]> = [
     ["welcome", "start", "Приветствие /start", "", "{hi}, ты в <b>RAW</b>.\n\nБез посредников. Только то, что носим сами."],
-    ["order_pending", "order_status", "Заказ оформлен", "✅", "Заказ «{name}» оформлен\n\nМы получили запрос — скоро свяжемся для уточнения деталей."],
-    ["order_in_transit", "order_status", "Заказ в пути", "🚚", "Заказ «{name}» в пути\n\nУже едет к тебе. Отслеживай статус в /track."],
-    ["order_delivered", "order_status", "Заказ доставлен", "📦", "Заказ «{name}» доставлен\n\nЗабирай! Если что-то не так — пиши, поможем."],
-    ["order_completed", "order_status", "Заказ завершён", "💚", "Заказ «{name}» завершён\n\nСпасибо за покупку! Будем рады видеть тебя снова 🤍"],
-    ["custom_pending", "custom_status", "Кастом одобрен", "✅", "Заявка «{name}» одобрена\n\nПринята в работу. Свяжемся для уточнений."],
-    ["custom_in_transit", "custom_status", "Кастом в пути", "🚚", "Заявка «{name}» в пути\n\nУже едет к тебе."],
-    ["custom_delivered", "custom_status", "Кастом доставлен", "📦", "Заявка «{name}» доставлена\n\nЗабирай!"],
-    ["custom_completed", "custom_status", "Кастом завершён", "💚", "Заявка «{name}» завершена\n\nСпасибо!"],
-    ["payment_received", "payment", "Оплата подтверждена", "💚", "Оплата подтверждена\n{item}\n\nЗаказ ушёл в сборку. Когда отправим — пришлём трек-номер."],
+    ["order_pending", "order_status", "Заказ оформлен", "", "Заказ «{name}» оформлен\n\nМы получили запрос — скоро свяжемся для уточнения деталей."],
+    ["order_in_transit", "order_status", "Заказ в пути", "", "Заказ «{name}» в пути\n\nУже едет к тебе. Отслеживай статус в /track."],
+    ["order_delivered", "order_status", "Заказ доставлен", "", "Заказ «{name}» доставлен\n\nЗабирай! Если что-то не так — пиши, поможем."],
+    ["order_completed", "order_status", "Заказ завершён", "", "Заказ «{name}» завершён\n\nСпасибо за покупку! Будем рады видеть тебя снова."],
+    ["custom_pending", "custom_status", "Кастом одобрен", "", "Заявка «{name}» одобрена\n\nПринята в работу. Свяжемся для уточнений."],
+    ["custom_in_transit", "custom_status", "Кастом в пути", "", "Заявка «{name}» в пути\n\nУже едет к тебе."],
+    ["custom_delivered", "custom_status", "Кастом доставлен", "", "Заявка «{name}» доставлена\n\nЗабирай!"],
+    ["custom_completed", "custom_status", "Кастом завершён", "", "Заявка «{name}» завершена\n\nСпасибо!"],
+    ["payment_received", "payment", "Оплата подтверждена", "", "Оплата подтверждена\n{item}\n\nЗаказ ушёл в сборку. Когда отправим — пришлём трек-номер."],
   ];
   for (const tpl of defaults) insertTpl.run(...tpl);
 }
@@ -627,5 +627,26 @@ try {
   db.prepare(
     "UPDATE bot_message_templates SET body = REPLACE(body, '#{id}', '«{name}»') " +
       "WHERE category IN ('order_status', 'custom_status')"
+  ).run();
+} catch {}
+
+// Migration: убираем эмоджи из дефолтных шаблонов. Ранние сиды клали
+// ✅/🚚/📦/💚 в emoji-колонку и иногда в body (например 🤍 в completed).
+// Чистим только default-теxты, чтобы не затирать админ-кастомизации.
+try {
+  const defaultBodyMatches: Array<[string, string]> = [
+    ["order_completed", "Заказ «{name}» завершён\n\nСпасибо за покупку! Будем рады видеть тебя снова 🤍"],
+  ];
+  for (const [tid, oldBody] of defaultBodyMatches) {
+    const newBody = oldBody.replace(/\s*🤍\s*$/u, "").trimEnd();
+    db.prepare(
+      "UPDATE bot_message_templates SET body = ? WHERE template_id = ? AND body = ?"
+    ).run(newBody, tid, oldBody);
+  }
+  // Стираем emoji-колонку у статус-шаблонов и payment_received. Если
+  // админ хочет вернуть эмоджи — впишет вручную, default теперь пустой.
+  db.prepare(
+    "UPDATE bot_message_templates SET emoji = '' " +
+      "WHERE category IN ('order_status', 'custom_status', 'payment')"
   ).run();
 } catch {}
