@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useTelegram } from "./hooks/useTelegram";
 import { TelegramAuth } from "./components/TelegramAuth";
 import { useWishlist } from "./hooks/useWishlist";
-import { getProducts, getStores, getCategories, getCart, botHeartbeat, getMaintenanceStatus, getCartSellerHandle, type Product, type Store, type Category, type CartItem } from "./api";
+import { getProducts, getStores, getCategories, getCart, botHeartbeat, getMaintenanceStatus, getAdminHandle, type Product, type Store, type Category, type CartItem } from "./api";
 import { MaintenancePage } from "./pages/MaintenancePage";
 import { Catalog } from "./pages/Catalog";
 import { Cart } from "./pages/Cart";
@@ -107,9 +107,10 @@ function readInitialNav(): InitialNav {
   return { page: "catalog" };
 }
 
-// Фолбэк-ссылка продавца (если API ещё не ответил). В норме перебивается
-// значением из app_settings.cart_seller_handle, который админ редактирует
-// в админке. ENV-переменная остаётся для совместимости со старыми деплоями.
+// Фолбэк-ссылка для кнопки «Написать продавцу» в корзине (если API ещё
+// не ответил). В норме перебивается значением admin_tg_handle из
+// app_settings (правится в админке). Кнопка ведёт на админский контакт,
+// а не на отдельного "seller" — продавцом в корзине занимается админ.
 const SELLER_LINK_FALLBACK = import.meta.env.VITE_SELLER_LINK || "";
 
 const headerIconSize = 26;
@@ -180,24 +181,25 @@ function App() {
   // Если кэш сработал — рисуем товары сразу, фон-обновление не показываем.
   const [productsLoading, setProductsLoading] = useState<boolean>(() => (loadCache<Product[]>("products") ?? []).length === 0);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  // Контакт продавца для кнопки «Написать продавцу» после оформления
-  // заказа из корзины. Тянем из app_settings (можно менять в админке).
-  // Кэшируем в localStorage, чтобы при повторных открытиях не было
-  // flash'а старого значения. Фолбэк — VITE_SELLER_LINK либо t.me/krot_eno.
+  // Контакт для кнопки «Написать продавцу» после оформления заказа из
+  // корзины — ведёт на админский handle из app_settings (правится в
+  // админке). Раньше был отдельный «cart_seller_handle», но продавцом
+  // для каталог-заказов всегда выступает админ — отдельная переменная
+  // только путала.
   const [sellerLink, setSellerLink] = useState<string>(() => {
     try {
-      const cached = localStorage.getItem("zen-cart-seller-handle");
+      const cached = localStorage.getItem("zen-contact-handle");
       if (cached) return `https://t.me/${cached}`;
     } catch {}
     return SELLER_LINK_FALLBACK;
   });
   useEffect(() => {
     let cancelled = false;
-    getCartSellerHandle()
+    getAdminHandle()
       .then((h) => {
         if (cancelled || !h) return;
         setSellerLink(`https://t.me/${h}`);
-        try { localStorage.setItem("zen-cart-seller-handle", h); } catch {}
+        try { localStorage.setItem("zen-contact-handle", h); } catch {}
       })
       .catch(() => {});
     return () => { cancelled = true; };

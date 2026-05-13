@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { submitCustomOrder, getAdminHandle } from "../api";
+import { submitCustomOrder, getCartSellerHandle } from "../api";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 
@@ -49,12 +49,14 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
   const MAX_PHOTOS = 5;
   const [customSubmitting, setCustomSubmitting] = useState(false);
   const [customSuccess, setCustomSuccess] = useState(false);
-  // Handle админа: lazy-инициализация из localStorage кэша, чтобы при
-  // повторных открытиях формы НЕ было flash'а 'krot_eno' → актуальное
-  // значение. На первом запуске (нет кэша) показываем пусто и подтянем
-  // с бэка, чтобы старое значение не мелькало.
+  // Handle продавца для bot-bubble «Ответим от @…». Отдельная настройка
+  // от admin_tg_handle: для заявок не из каталога админ может назначить
+  // конкретного продавца, который и будет отвечать. Lazy-инициализация
+  // из localStorage кэша, чтобы при повторных открытиях формы НЕ было
+  // flash'а 'krot_eno' → актуальное значение. На первом запуске (нет
+  // кэша) показываем пусто и подтянем с бэка, чтобы старое не мелькало.
   const [sellerHandle, setSellerHandle] = useState<string | null>(() => {
-    try { return localStorage.getItem("zen-admin-handle") || null; } catch { return null; }
+    try { return localStorage.getItem("zen-seller-handle") || null; } catch { return null; }
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -69,11 +71,11 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
 
   useEffect(() => {
     let cancelled = false;
-    getAdminHandle()
+    getCartSellerHandle()
       .then((h) => {
         if (cancelled) return;
         setSellerHandle(h);
-        try { localStorage.setItem("zen-admin-handle", h); } catch {}
+        try { localStorage.setItem("zen-seller-handle", h); } catch {}
       })
       .catch(() => {});
     return () => { cancelled = true; };

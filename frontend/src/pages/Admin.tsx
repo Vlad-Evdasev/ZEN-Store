@@ -1742,9 +1742,12 @@ function CurrencyRateTab({ adminSecret }: { adminSecret: string }) {
   );
 }
 
-// Контакт продавца для кнопки «Написать продавцу» после оформления
-// заказа из корзины. Хранится в app_settings.cart_seller_handle.
-// Отдельный от admin_tg_handle — продавец может меняться независимо.
+// Контакт продавца для bubble «Ответим от @…» на вкладке «Заказ не
+// из каталога». Хранится в app_settings.cart_seller_handle (имя ключа
+// исторически осталось с предыдущей итерации — переименовывать DB-row
+// смысла нет, важна только семантика в UI). Отдельный от admin_tg_handle:
+// продавцом для кастомных заявок может быть назначен кто-то отличный
+// от админа.
 function CartSellerHandleSection({ adminSecret }: { adminSecret: string }) {
   const [handle, setHandle] = useState("");
   const [original, setOriginal] = useState("");
@@ -1768,8 +1771,9 @@ function CartSellerHandleSection({ adminSecret }: { adminSecret: string }) {
       setOriginal(raw);
       setHandle(raw);
       setMessage("Продавец обновлён");
-      // Сбрасываем кэш на фронте, чтобы кнопка в корзине сразу подтянула новое.
-      try { localStorage.setItem("zen-cart-seller-handle", raw); } catch {}
+      // Сбрасываем кэш на фронте, чтобы при следующем открытии вкладки
+      // «Заказ не из каталога» сразу подтянулось новое значение.
+      try { localStorage.setItem("zen-seller-handle", raw); } catch {}
     } catch (e) {
       setMessage("Ошибка: " + (e instanceof Error ? e.message : ""));
     } finally {
@@ -1779,7 +1783,7 @@ function CartSellerHandleSection({ adminSecret }: { adminSecret: string }) {
   return (
     <section className="admin-card" style={{ marginTop: 16 }}>
       <div className="admin-card-head">
-        <h3>Продавец (кнопка в корзине)</h3>
+        <h3>Продавец (заявки не из каталога)</h3>
         <span className="admin-card-head-meta">Telegram</span>
       </div>
       <form onSubmit={handleSave} className="admin-card-body" style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
@@ -1800,8 +1804,8 @@ function CartSellerHandleSection({ adminSecret }: { adminSecret: string }) {
       </form>
       {message && <p style={{ ...styles.message, padding: "0 18px 14px" }}>{message}</p>}
       <div style={{ padding: "0 18px 16px", fontSize: 12, color: "var(--muted)", lineHeight: 1.55 }}>
-        На кого ведёт кнопка «Написать продавцу» после оформления заказа из корзины.
-        Меняется без redeploy — если продавец сменился, просто впиши новый @.
+        Чей @-handle подставляется в bubble «Ответим от @…» на форме «Заказ не из каталога».
+        Меняется без redeploy — если продавца сменили, просто впиши новый @.
       </div>
     </section>
   );
@@ -1862,8 +1866,8 @@ function AdminHandleSection({ adminSecret }: { adminSecret: string }) {
       </form>
       {message && <p style={{ ...styles.message, padding: "0 18px 14px" }}>{message}</p>}
       <div style={{ padding: "0 18px 16px", fontSize: 12, color: "var(--muted)", lineHeight: 1.55 }}>
-        Этот handle подставляется в форму «Заказ не из каталога» («Ответим от @…»),
-        инвойсы и hi-сообщения бота. Меняется без redeploy.
+        Этот handle подставляется в инвойсы и пуш-сообщения бота, а также в кнопку
+        «Написать продавцу» после оформления заказа из корзины. Меняется без redeploy.
       </div>
     </section>
   );
