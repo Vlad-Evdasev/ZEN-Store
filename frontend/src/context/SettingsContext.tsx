@@ -49,6 +49,22 @@ const SettingsContext = createContext<{
 
 const CURRENCY_SYMBOLS: Record<Currency, string> = { USD: "$", BYN: "Br" };
 const DEFAULT_BYN_RATE = 3.2;
+// Кешируем последний полученный USD→BYN курс в localStorage, иначе при
+// каждом cold-старте цены сначала отрисовывались по hardcoded 3.2, а через
+// ~секунду «прыгали» к актуальному. Теперь стартуем с последнего известного
+// (обычно ≈ совпадает с актуальным) и в фоне обновляем.
+const BYN_RATE_CACHE_KEY = "zen-byn-rate";
+function loadBynRateCache(): number | null {
+  try {
+    const raw = localStorage.getItem(BYN_RATE_CACHE_KEY);
+    if (!raw) return null;
+    const n = parseFloat(raw);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  } catch { return null; }
+}
+function saveBynRateCache(rate: number): void {
+  try { localStorage.setItem(BYN_RATE_CACHE_KEY, String(rate)); } catch {}
+}
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<Settings>(() => {
@@ -58,10 +74,15 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }
     return s;
   });
-  const [currencyRateByn, setCurrencyRateByn] = useState<number>(DEFAULT_BYN_RATE);
+  const [currencyRateByn, setCurrencyRateByn] = useState<number>(() => loadBynRateCache() ?? DEFAULT_BYN_RATE);
 
   useEffect(() => {
-    getCurrencyRate().then(({ rate }) => setCurrencyRateByn(rate)).catch(() => {});
+    getCurrencyRate()
+      .then(({ rate }) => {
+        setCurrencyRateByn(rate);
+        saveBynRateCache(rate);
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
