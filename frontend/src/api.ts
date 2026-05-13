@@ -1156,6 +1156,10 @@ export interface BroadcastPost {
   recipients_count: number;
   sent_count: number;
   failed_count: number;
+  /** 'sending' пока фоновая отправка идёт, 'done' когда закончили,
+   *  'failed' если упало с ошибкой ещё до итерации. Поллер фронта
+   *  обновляется по этому полю. */
+  status: "sending" | "done" | "failed";
   created_at: string;
   sample_message_id: number | null;
 }

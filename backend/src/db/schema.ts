@@ -222,6 +222,8 @@ try { db.exec("ALTER TABLE bot_messages ADD COLUMN image_url TEXT"); } catch {}
 // История рассылок от бота к подписчикам (и опциональным каналам).
 // recipients = JSON [{ user_id, message_ids, error? }]; image_urls = JSON
 // массив исходных src (включая data: для restore при edit).
+// status: 'sending' (фоновая отправка идёт) | 'done' (закончили) |
+// 'failed' (упало с ошибкой ещё до итерации по recipients).
 try {
   db.exec(`
     CREATE TABLE IF NOT EXISTS broadcasts (
@@ -233,11 +235,13 @@ try {
       recipients TEXT NOT NULL DEFAULT '[]',
       sent_count INTEGER NOT NULL DEFAULT 0,
       failed_count INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'done',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       deleted_at DATETIME
     )
   `);
 } catch {}
+try { db.exec("ALTER TABLE broadcasts ADD COLUMN status TEXT NOT NULL DEFAULT 'done'"); } catch {}
 
 // Add store_id to products if missing (migration)
 try {

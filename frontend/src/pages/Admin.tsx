@@ -2323,6 +2323,18 @@ function ChannelTab({ adminSecret, products }: { adminSecret: string; products: 
   };
   useEffect(loadHistory, [adminSecret]);
 
+  // Если в истории есть хоть одна рассылка в статусе 'sending', опрашиваем
+  // бэк каждые 3 секунды — пока счётчики не докрутятся и status не перейдёт
+  // в 'done'. Без поллинга админ видел бы «Отправляется…» до ручного F5.
+  const hasSending = history.some((p) => p.status === "sending");
+  useEffect(() => {
+    if (!hasSending) return;
+    const t = setInterval(() => {
+      getBroadcasts(adminSecret).then(setHistory).catch(() => {});
+    }, 3000);
+    return () => clearInterval(t);
+  }, [hasSending, adminSecret]);
+
   const refreshUsersCount = () => {
     getBotUsersCount(adminSecret)
       .then(({ count }) => setUsersCount(count))
@@ -2418,9 +2430,10 @@ function ChannelTab({ adminSecret, products }: { adminSecret: string; products: 
         setHistory((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
         setMessage({ kind: "ok", text: `Обновлено у ${updated.sent_count} подписчик(ов)` });
       } else {
-        const sent = await sendBroadcast({ text, image_urls: images }, adminSecret);
-        const failedHint = sent.failed_count > 0 ? ` · ${sent.failed_count} не доставлено (заблокировали бота)` : "";
-        setMessage({ kind: "ok", text: `Разослано ${sent.sent_count} подписчик(ам)${failedHint}` });
+        await sendBroadcast({ text, image_urls: images }, adminSecret);
+        // Backend отвечает 202 и шлёт в фоне — счётчики появятся
+        // через несколько секунд при следующем рефреше истории ниже.
+        setMessage({ kind: "ok", text: "Рассылка запущена. Прогресс — в истории ниже." });
         loadHistory();
         refreshUsersCount();
       }
@@ -2624,7 +2637,13 @@ function ChannelTab({ adminSecret, products }: { adminSecret: string; products: 
                 <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6, display: "flex", gap: 10, flexWrap: "wrap" }}>
                   <span>{relTime(p.created_at)}</span>
                   {p.images_count > 0 && <span>📷 {p.images_count}</span>}
-                  <span>📤 {p.sent_count}</span>
+                  {p.status === "sending" ? (
+                    <span style={{ color: "var(--accent)", fontWeight: 600 }}>Отправляется…</span>
+                  ) : p.status === "failed" ? (
+                    <span style={{ color: "#c62828", fontWeight: 600 }}>Ошибка отправки</span>
+                  ) : (
+                    <span>📤 {p.sent_count}</span>
+                  )}
                   {p.failed_count > 0 && <span style={{ color: "#c62828" }}>⚠ {p.failed_count}</span>}
                   {p.sample_message_id != null && <span>msg #{p.sample_message_id}</span>}
                 </div>

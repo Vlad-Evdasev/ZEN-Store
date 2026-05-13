@@ -140,6 +140,7 @@ type BroadcastRow = {
   recipients: string;
   sent_count: number;
   failed_count: number;
+  status: string;
   created_at: string;
   deleted_at: string | null;
 };
@@ -177,6 +178,7 @@ function rowToBroadcast(row: BroadcastRow) {
     recipients_count: recipients.length,
     sent_count: row.sent_count,
     failed_count: row.failed_count,
+    status: row.status || "done",
     created_at: row.created_at,
     // первое успешное message_id для отображения «msg #N»
     sample_message_id: recipients.find((r) => r.message_ids.length > 0)?.message_ids[0] ?? null,
@@ -201,22 +203,49 @@ adminRouter.post("/broadcast", requireAdmin, async (req, res) => {
   if (recipients.length === 0) {
     return res.status(400).json({ error: "Нет подписчиков для рассылки." });
   }
-  const result = await broadcastToUsers(text, images, recipients);
+
+  // Async-flow: вставляем запись со status='sending' и отвечаем 202 сразу.
+  // Раньше рассылка к 1000 юзеров занимала ~40с (40ms throttle на юзера) —
+  // это вылазило за HTTP-таймауты прокси и админ видел ошибку, хотя на
+  // деле сообщения уходили. Теперь background-промис докручивает счётчики
+  // и status='done', фронт через polling в истории видит как наполняется.
   const firstHttp = images.find((s) => /^https?:\/\//i.test(s)) ?? null;
   const insert = db.prepare(
-    "INSERT INTO broadcasts (text, image_urls, images_count, first_image_url, recipients, sent_count, failed_count) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    "INSERT INTO broadcasts (text, image_urls, images_count, first_image_url, recipients, sent_count, failed_count, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
   );
   const info = insert.run(
     text || null,
     JSON.stringify(images),
     images.length,
     firstHttp,
-    JSON.stringify(result.recipients),
-    result.sent_count,
-    result.failed_count,
+    JSON.stringify([]),
+    0,
+    0,
+    "sending",
   );
-  const created = db.prepare("SELECT * FROM broadcasts WHERE id = ?").get(Number(info.lastInsertRowid)) as BroadcastRow;
-  res.json(rowToBroadcast(created));
+  const id = Number(info.lastInsertRowid);
+  const created = db.prepare("SELECT * FROM broadcasts WHERE id = ?").get(id) as BroadcastRow;
+  res.status(202).json(rowToBroadcast(created));
+
+  // Fire-and-forget. setImmediate чтобы express успел флашнуть ответ
+  // до начала тяжёлой работы.
+  setImmediate(() => {
+    broadcastToUsers(text, images, recipients)
+      .then((result) => {
+        db.prepare(
+          "UPDATE broadcasts SET recipients = ?, sent_count = ?, failed_count = ?, status = 'done' WHERE id = ?"
+        ).run(
+          JSON.stringify(result.recipients),
+          result.sent_count,
+          result.failed_count,
+          id,
+        );
+      })
+      .catch((err) => {
+        console.error(`[broadcast ${id}] send failed:`, err);
+        db.prepare("UPDATE broadcasts SET status = 'failed' WHERE id = ?").run(id);
+      });
+  });
 });
 
 adminRouter.get("/broadcasts", requireAdmin, (_req, res) => {
