@@ -360,7 +360,7 @@ async function sendStatusNotification(
       parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: [
-          [{ text: "Открыть историю", web_app: { url: WEB_APP_URL } }],
+          [{ text: "Открыть историю", web_app: { url: `${WEB_APP_URL}#page=history` } }],
         ],
       },
     });
@@ -437,7 +437,7 @@ export async function notifyCartAbandonment(userId: string | number, itemsCount:
       parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: [
-          [{ text: "🛍 Открыть корзину", web_app: { url: WEB_APP_URL } }],
+          [{ text: "🛍 Открыть корзину", web_app: { url: `${WEB_APP_URL}#page=cart` } }],
         ],
       },
     });
@@ -507,29 +507,16 @@ export interface OrderItemForInvoice {
   image_url?: string | null;
 }
 
-export async function notifyOrderInvoice(
-  userId: string | number,
-  orderId: number,
-  items: OrderItemForInvoice[],
+// Собирает caption для инвойса. Items идут как ровный список (первая
+// позиция — bold, остальные — обычные строки без «+» префикса; раньше
+// «+» путал — выглядел как «item ещё не добавлен», а не как «вторая
+// позиция»). Дальше — сумма (USD + TON), CTA, контакт админа.
+function buildInvoiceCaption(
+  itemLines: string[],
   total: number,
-  ton: { receiveAddress: string; amountNano: string; payload: string; amountTon: number; rateUsd: number } | null
-): Promise<void> {
-  // Собираем тело сообщения. Ведём с названия товара (главный визуальный
-  // якорь), а номер заказа/админа уносим в подвал — фокус на покупке,
-  // а не на «бухгалтерии».
-  const lines: string[] = [];
-  const [first, ...rest] = items;
-  if (first) {
-    const sz = first.size ? `  ·  ${escapeHtml(first.size)}` : "";
-    const qty = (first.quantity ?? 1) > 1 ? `  ·  ×${first.quantity}` : "";
-    lines.push(`<b>${escapeHtml(first.name || "Товар")}</b>${sz}${qty}`);
-  }
-  for (const it of rest) {
-    const sz = it.size ? `  ·  ${escapeHtml(it.size)}` : "";
-    const qty = (it.quantity ?? 1) > 1 ? `  ·  ×${it.quantity}` : "";
-    lines.push(`+ ${escapeHtml(it.name || "Товар")}${sz}${qty}`);
-  }
-  lines.push("");
+  ton: { amountTon: number; rateUsd: number } | null
+): string {
+  const lines: string[] = [...itemLines, ""];
   if (ton) {
     lines.push(`<b>${total} $</b>  ≈ ${ton.amountTon.toFixed(2)} TON`);
     lines.push(`Курс ${ton.rateUsd.toFixed(2)} $`);
@@ -539,9 +526,76 @@ export async function notifyOrderInvoice(
     lines.push(`<b>${total} $</b>`);
   }
   lines.push("");
-  lines.push((() => { const h = adminHandle(); return `<a href="https://t.me/${h}">@${h}</a>`; })());
+  const h = adminHandle();
+  lines.push(`<a href="https://t.me/${h}">@${h}</a>`);
+  return lines.join("\n");
+}
 
-  const caption = lines.join("\n");
+// Шлёт инвойс с фото-альбомом и кнопкой «Оплатить» под ним. Альбомы
+// (sendMediaGroup) не поддерживают inline_keyboard — поэтому при 2+ фото
+// шлём двумя сообщениями: сначала альбом без caption, следом — текст с
+// caption + кнопкой. Один photo / без фото → одно сообщение, как и было.
+async function sendInvoiceMessage(
+  userId: string | number,
+  photos: string[],
+  caption: string,
+  payUrl: string | null
+): Promise<void> {
+  const replyMarkup = payUrl
+    ? { inline_keyboard: [[{ text: "Оплатить", url: payUrl }]] }
+    : undefined;
+  const validPhotos = photos.filter((u) => !!u && u.trim().length > 0).slice(0, MAX_IMAGES);
+
+  if (validPhotos.length === 0) {
+    await bot.api.sendMessage(userId, caption, {
+      parse_mode: "HTML",
+      link_preview_options: { is_disabled: true },
+      reply_markup: replyMarkup,
+    });
+    return;
+  }
+  if (validPhotos.length === 1) {
+    await bot.api.sendPhoto(userId, toPhotoSource(validPhotos[0]), {
+      caption,
+      parse_mode: "HTML",
+      reply_markup: replyMarkup,
+    });
+    return;
+  }
+  // 2+ фото: альбом отдельным сообщением, потом текст с кнопкой.
+  // Caption внутрь альбома не вкладываем — на проде если у альбома
+  // вырубают превью или клиент схлопывает, юзер потерял бы и список,
+  // и кнопку. Текст следом — гарантированно видимый bubble + button.
+  const media: ChannelMediaPhoto[] = validPhotos.map((src) => ({
+    type: "photo",
+    media: toPhotoSource(src),
+  }));
+  await bot.api.sendMediaGroup(userId, media);
+  await bot.api.sendMessage(userId, caption, {
+    parse_mode: "HTML",
+    link_preview_options: { is_disabled: true },
+    reply_markup: replyMarkup,
+  });
+}
+
+export async function notifyOrderInvoice(
+  userId: string | number,
+  orderId: number,
+  items: OrderItemForInvoice[],
+  total: number,
+  ton: { receiveAddress: string; amountNano: string; payload: string; amountTon: number; rateUsd: number } | null
+): Promise<void> {
+  // Первый item bold (визуальный якорь), остальные — обычные строки.
+  // Никаких «+» префиксов: фотки уже в альбоме сверху, читателю понятно,
+  // что это просто список позиций.
+  const itemLines = items.map((it, i) => {
+    const sz = it.size ? `  ·  ${escapeHtml(it.size)}` : "";
+    const qty = (it.quantity ?? 1) > 1 ? `  ·  ×${it.quantity}` : "";
+    const name = escapeHtml(it.name || "Товар");
+    return i === 0 ? `<b>${name}</b>${sz}${qty}` : `${name}${sz}${qty}`;
+  });
+
+  const caption = buildInvoiceCaption(itemLines, total, ton);
 
   // Универсальная Tonkeeper-ссылка вместо ton://. Работает на desktop
   // и mobile: на устройствах с Tonkeeper установленным — deep-link в
@@ -552,30 +606,12 @@ export async function notifyOrderInvoice(
       `&text=${encodeURIComponent(ton.payload)}`
     : null;
 
-  const replyMarkup = payUrl
-    ? { inline_keyboard: [[{ text: "Оплатить", url: payUrl }]] }
-    : undefined;
-
-  // Берём первое фото для главной карточки (sendPhoto поддерживает
-  // и caption, и reply_markup — поэтому одно сообщение).
-  const firstPhoto = items
-    .map((i) => i.image_url)
-    .find((u): u is string => !!u && u.trim().length > 0);
+  const photos = items
+    .map((i) => i.image_url || "")
+    .filter((u) => !!u && u.trim().length > 0);
 
   try {
-    if (firstPhoto) {
-      await bot.api.sendPhoto(userId, toPhotoSource(firstPhoto), {
-        caption,
-        parse_mode: "HTML",
-        reply_markup: replyMarkup,
-      });
-    } else {
-      await bot.api.sendMessage(userId, caption, {
-        parse_mode: "HTML",
-        link_preview_options: { is_disabled: true },
-        reply_markup: replyMarkup,
-      });
-    }
+    await sendInvoiceMessage(userId, photos, caption, payUrl);
   } catch (e) {
     const err = e instanceof Error ? e.message : String(e);
     if (isUserBlocked(err)) markBotUserBlocked(userId);
@@ -584,10 +620,9 @@ export async function notifyOrderInvoice(
 }
 
 // Invoice для custom_order группы — multi-item заявка не из каталога.
-// Симметрично notifyOrderInvoice (catalog): первый item с фото-якорем,
-// остальные «+ Item N», сумма в USD + TON, кнопка «Оплатить» под
-// сообщением. Без TON-параметров кнопка не рисуется (fallback на ручные
-// реквизиты от админа в чате).
+// Симметрично notifyOrderInvoice (catalog): альбом всех фоток + список
+// позиций (без «+» префикса) + USD/TON-сумма + кнопка «Оплатить». Без
+// TON-параметров кнопка не рисуется (fallback на ручные реквизиты).
 export async function notifyCustomOrderInvoice(
   userId: string | number,
   groupId: string,
@@ -595,31 +630,14 @@ export async function notifyCustomOrderInvoice(
   total: number,
   ton: { receiveAddress: string; amountNano: string; payload: string; amountTon: number; rateUsd: number } | null
 ): Promise<void> {
-  const lines: string[] = [];
-  const [first, ...rest] = items;
-  if (first) {
-    const desc = (first.description || "").trim() || "Заявка не из каталога";
-    const sz = first.size ? `  ·  ${escapeHtml(first.size)}` : "";
-    lines.push(`<b>${escapeHtml(desc)}</b>${sz}`);
-  }
-  for (const it of rest) {
-    const desc = (it.description || "").trim() || "Доп. позиция";
+  const itemLines = items.map((it, i) => {
+    const desc = (it.description || "").trim() || (i === 0 ? "Заявка не из каталога" : "Доп. позиция");
     const sz = it.size ? `  ·  ${escapeHtml(it.size)}` : "";
-    lines.push(`+ ${escapeHtml(desc)}${sz}`);
-  }
-  lines.push("");
-  if (ton) {
-    lines.push(`<b>${total} $</b>  ≈ ${ton.amountTon.toFixed(2)} TON`);
-    lines.push(`Курс ${ton.rateUsd.toFixed(2)} $`);
-    lines.push("");
-    lines.push("Жми <b>«Оплатить»</b> — кошелёк откроется с готовой суммой и адресом, останется только подтвердить транзакцию.");
-  } else {
-    lines.push(`<b>${total} $</b>`);
-  }
-  lines.push("");
-  lines.push((() => { const h = adminHandle(); return `<a href="https://t.me/${h}">@${h}</a>`; })());
+    const name = escapeHtml(desc);
+    return i === 0 ? `<b>${name}</b>${sz}` : `${name}${sz}`;
+  });
 
-  const caption = lines.join("\n");
+  const caption = buildInvoiceCaption(itemLines, total, ton);
 
   const payUrl = ton
     ? `https://app.tonkeeper.com/transfer/${ton.receiveAddress}` +
@@ -627,29 +645,12 @@ export async function notifyCustomOrderInvoice(
       `&text=${encodeURIComponent(ton.payload)}`
     : null;
 
-  const replyMarkup = payUrl
-    ? { inline_keyboard: [[{ text: "Оплатить", url: payUrl }]] }
-    : undefined;
-
-  // Берём первое фото из группы (image_data hex/data: URL).
-  const firstPhoto = items
-    .map((i) => i.image_data)
-    .find((u): u is string => !!u && u.trim().length > 0);
+  const photos = items
+    .map((i) => i.image_data || "")
+    .filter((u) => !!u && u.trim().length > 0);
 
   try {
-    if (firstPhoto) {
-      await bot.api.sendPhoto(userId, toPhotoSource(firstPhoto), {
-        caption,
-        parse_mode: "HTML",
-        reply_markup: replyMarkup,
-      });
-    } else {
-      await bot.api.sendMessage(userId, caption, {
-        parse_mode: "HTML",
-        link_preview_options: { is_disabled: true },
-        reply_markup: replyMarkup,
-      });
-    }
+    await sendInvoiceMessage(userId, photos, caption, payUrl);
   } catch (e) {
     const err = e instanceof Error ? e.message : String(e);
     if (isUserBlocked(err)) markBotUserBlocked(userId);
@@ -682,7 +683,7 @@ export async function notifyOrderPaid(
       link_preview_options: { is_disabled: true },
       reply_markup: {
         inline_keyboard: [
-          [{ text: "Открыть историю", web_app: { url: WEB_APP_URL } }],
+          [{ text: "Открыть историю", web_app: { url: `${WEB_APP_URL}#page=history` } }],
         ],
       },
     });
@@ -925,7 +926,7 @@ bot.command("track", async (ctx) => {
   await ctx.reply(lines.join("\n"), {
     parse_mode: "HTML",
     reply_markup: {
-      inline_keyboard: [[{ text: "📜 История", web_app: { url: WEB_APP_URL } }]],
+      inline_keyboard: [[{ text: "📜 История", web_app: { url: `${WEB_APP_URL}#page=history` } }]],
     },
   });
 });
@@ -953,7 +954,7 @@ bot.command("profile", async (ctx) => {
     reply_markup: {
       inline_keyboard: [
         [{ text: "🛍 Открыть RAW", web_app: { url: WEB_APP_URL } }],
-        [{ text: "📜 История", web_app: { url: WEB_APP_URL } }],
+        [{ text: "📜 История", web_app: { url: `${WEB_APP_URL}#page=history` } }],
       ],
     },
   });
@@ -1003,7 +1004,7 @@ bot.command("help", async (ctx) => {
     {
       parse_mode: "HTML",
       reply_markup: {
-        inline_keyboard: [[{ text: "💬 Открыть поддержку", web_app: { url: WEB_APP_URL } }]],
+        inline_keyboard: [[{ text: "💬 Открыть поддержку", web_app: { url: `${WEB_APP_URL}#page=support` } }]],
       },
     }
   );
