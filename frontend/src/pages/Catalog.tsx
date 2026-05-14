@@ -380,7 +380,10 @@ export function Catalog({
   return (
     <div style={styles.wrap}>
       <div style={styles.introBubbleRow}>
-        <div style={styles.introBubble}>{t(lang, "catalogIntroBubble")}</div>
+        <div style={styles.introBubble}>
+          <div style={styles.introBubbleTitle}>{t(lang, "catalogIntroTitle")}</div>
+          <div style={styles.introBubbleSubtitle}>{t(lang, "catalogIntroSubtitle")}</div>
+        </div>
       </div>
       {!hideStores && displayStores.length > 0 && (
         <div style={styles.storesRowWrap}>
@@ -577,10 +580,14 @@ const styles: Record<string, React.CSSProperties> = {
   // Intro-бабл под полем поиска — сообщает, что товары физически в
   // наличии. Стилистически такой же как приветственный бабл во вкладке
   // «Вдохновиться»: var(--surface) фон, var(--border) рамка, мягкая
-  // тень, ровный borderRadius 16 (без tail-corner — аватара рядом нет).
+  // тень, ровный borderRadius 16, заголовок bold + сабтайтл muted.
+  // marginBottom выровнен с естественным top-gap (main.padding-top
+  // 72px + search-row top 68 + height 50 + section margin-top 8 ≈ 24px
+  // visible space над баблом), чтобы юзер видел одинаковый отступ
+  // сверху и снизу.
   introBubbleRow: {
     display: "flex",
-    marginBottom: 12,
+    marginBottom: 24,
   },
   introBubble: {
     background: "var(--surface)",
@@ -588,10 +595,20 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 16,
     padding: "10px 13px",
     maxWidth: "86%",
-    fontSize: 13.5,
-    lineHeight: 1.4,
-    color: "var(--text)",
     boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
+  },
+  introBubbleTitle: {
+    fontSize: 14,
+    fontWeight: 600,
+    lineHeight: 1.2,
+    letterSpacing: "-0.01em",
+    color: "var(--text)",
+  },
+  introBubbleSubtitle: {
+    fontSize: 12,
+    color: "var(--muted)",
+    marginTop: 3,
+    lineHeight: 1.4,
   },
   storesRowWrap: {
     display: "flex",
