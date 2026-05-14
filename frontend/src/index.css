@@ -2136,13 +2136,18 @@ body.zen-review-lightbox-open .zen-bottom-nav {
   }
 }
 
-/* Секция каталога: отступ сверху */
+/* Секция каталога: без верхнего margin'а — intro-бабл внутри Catalog
+   уже задаёт собственный compact-отступ (~12px) до поля поиска через
+   marginTop/marginBottom на introBubbleRow. Раньше тут стояло 8px,
+   и при попытке симметрично сжать оба отступа пришлось бы тянуть
+   бабл наверх отрицательным margin'ом — он заезжал в shelf-gradient
+   у фиксированного поля поиска (z-index 1249) и его верх просвечивал. */
 .zen-app .zen-catalog-section {
-  margin-top: 8px;
+  margin-top: 0;
 }
 @media (min-width: 1024px) {
   .zen-app .zen-catalog-section {
-    margin-top: 16px;
+    margin-top: 0;
   }
 }
 

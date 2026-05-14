@@ -581,15 +581,12 @@ const styles: Record<string, React.CSSProperties> = {
   // наличии. Стилистически такой же как приветственный бабл во вкладке
   // «Вдохновиться»: var(--surface) фон, var(--border) рамка, мягкая
   // тень, ровный borderRadius 16, заголовок bold + сабтайтл muted.
-  // Естественный top-gap до search-row ~24px (main.padding-top 72 +
-  // section margin-top 8 минус footprint search-row внутри padding).
-  // Чтобы и сверху и снизу был одинаковый компактный отступ (~12px),
-  // подтягиваем бабл вверх отрицательным marginTop, а к карточкам
-  // оставляем marginBottom такого же визуального размера.
+  // section.margin-top убран в 0 (см. CSS), верхний gap до search-row
+  // получается ~16px из main.padding-top минус footprint поля поиска.
+  // marginBottom 16 — чтобы низ до карточек был такой же.
   introBubbleRow: {
     display: "flex",
-    marginTop: -12,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   introBubble: {
     background: "var(--surface)",
