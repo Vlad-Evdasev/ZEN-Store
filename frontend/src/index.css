@@ -1514,21 +1514,15 @@ html[data-theme="light"] .zen-app .product-card-price {
   object-fit: cover;
 }
 
-/* ReviewLightbox — fullscreen viewer для фото отзывов. Использует тот же
-   scroll-snap скелет, но: (а) фото должно показываться целиком (contain,
-   не cover), потому что это lightbox, и (б) каждая картинка свободно
-   позиционируется внутри своего слайда (centered с padding). */
-.zen-review-lightbox-scroller > .zen-card-image-slide {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+/* ReviewLightbox — увеличенный viewer для фото отзывов.
+   Aspect-ratio скроллера задаётся inline и матчит thumb-источник (1:1
+   для multi-collage, 4:5 для single-photo), а картинка внутри слайда
+   обрезается тем же object-fit: cover, что и в thumb'е. Это даёт
+   бесшовный FLIP: для глаза превью просто растягивается до большого
+   размера без смены crop'а или появления letterbox-полос. Border-radius
+   мягче, чтобы пенный bg overlay не «бил» острым углом. */
 .zen-review-lightbox-scroller > .zen-card-image-slide > img {
-  width: auto;
-  height: auto;
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   border-radius: 12px;
 }
 

@@ -167,19 +167,15 @@ export function ReviewLightbox({ images, startIndex, startRect, thumbRects, onCl
       const sx = closeRect.width / Math.max(final.width, 1);
       const sy = closeRect.height / Math.max(final.height, 1);
       el.style.transformOrigin = "top left";
-      // Параллельно к transform: фейдим opacity 1→0 за последние ~120ms.
-      // Лайтбокс показывает фото целиком (object-fit: contain, с letterbox
-      // под отличающийся aspect), а thumb в коллаже — cover (cropped).
-      // Без opacity-фейда в самом конце анимации картинка «прыгает»
-      // между этими двумя crop-режимами в момент unmount — юзер видит
-      // мигание. С фейдом скроллер уходит в прозрачность ровно к концу
-      // close-анимации, и зритель видит уже thumb внизу.
-      const fadeDelay = Math.max(ANIM - 120, 0);
-      el.style.transition =
-        `transform ${ANIM}ms ${EASING}, ` +
-        `opacity 120ms ${EASING} ${fadeDelay}ms`;
+      // Только transform, без opacity-фейда: scroller и thumb теперь
+      // имеют одинаковый aspect-ratio и одинаковый object-fit: cover,
+      // поэтому в момент unmount юзер видит ровно тот же crop в том же
+      // месте — никакого визуального скачка между состояниями. (Раньше
+      // тут был fade в последние 120ms чтобы скрыть переход между
+      // contain-letterbox и cover-cropped, но это создавало небольшое
+      // «тусение» картинки в конце анимации.)
+      el.style.transition = `transform ${ANIM}ms ${EASING}`;
       el.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
-      el.style.opacity = "0";
     }
     setTimeout(onClose, ANIM);
   }, [phase, startRect, thumbRects, currentIdx, onClose]);
@@ -246,23 +242,30 @@ export function ReviewLightbox({ images, startIndex, startRect, thumbRects, onCl
     transition: phase === "opening" ? "none" : `background-color ${ANIM}ms ${EASING}`,
     zIndex: 1100,
     display: "flex",
-    alignItems: "stretch",
-    justifyContent: "stretch",
+    alignItems: "center",
+    justifyContent: "center",
     padding: 16,
     cursor: "zoom-out",
   };
 
-  // scroll-snap карусель: full-screen контейнер с N слайдами по 100%
-  // ширины. Раньше тут был один <img key={currentIdx}>, который ремоунтился
-  // при свайпе и менялся мгновенно — пальцу не за что было «потянуть».
-  // Теперь браузер тянет содержимое за палец и сам мягко сажает на
-  // соседний слайд.
+  // Скроллер берёт aspect-ratio из тампбейла-источника, чтобы FLIP-open
+  // и FLIP-close выглядели бесшовно (раньше thumb был 1:1 / 4:5 с
+  // object-fit: cover, а scroller — на весь экран с object-fit: contain,
+  // и юзер видел резкое переключение между «обрезанным квадратом» и
+  // «полной картинкой с letterbox» в момент открытия и закрытия). Теперь
+  // и thumb и slide имеют одинаковую форму + одинаковый cover-crop, FLIP
+  // проходит как простое масштабирование одного и того же изображения.
+  // max-width/height 100% — чтобы скроллер вписался в overlay (минус
+  // padding 16); aspect-ratio сам определит вторую сторону.
+  const thumbAspect = startRect && startRect.height > 0
+    ? startRect.width / startRect.height
+    : null;
   const scrollerStyle: React.CSSProperties = {
-    flex: 1,
-    minWidth: 0,
-    minHeight: 0,
-    width: "100%",
-    height: "100%",
+    width: "auto",
+    height: "auto",
+    maxWidth: "100%",
+    maxHeight: "100%",
+    aspectRatio: thumbAspect ? `${thumbAspect}` : undefined,
     willChange: "transform",
   };
 
