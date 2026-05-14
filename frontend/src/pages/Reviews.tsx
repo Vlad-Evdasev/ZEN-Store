@@ -36,6 +36,10 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [reviewLightbox, setReviewLightbox] = useState<{
+    /** id отзыва, чьи фото мы сейчас смотрим. Нужен PhotoCollage'у,
+     *  чтобы спрятать thumb открытой фотки (видим только летящую
+     *  FLIP-картинку — как в каталоге / inspire-ленте). */
+    reviewId: number;
     images: string[];
     startIndex: number;
     rect: DOMRect | null;
@@ -45,6 +49,10 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
     // grid'е с +N) item = null → lightbox упадёт на last visible.
     thumbRects: (DOMRect | null)[];
   } | null>(null);
+  // Индекс фотки, которую сейчас видит юзер внутри лайтбокса (меняется
+  // при свайпе). Сохраняем здесь, чтобы PhotoCollage знал какой именно
+  // thumb прятать на каждый момент. На close возвращается к null.
+  const [lightboxCurrentIdx, setLightboxCurrentIdx] = useState<number | null>(null);
 
   const refresh = () => {
     setLoading(true);
@@ -163,9 +171,11 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
               {images.length > 0 && (
                 <PhotoCollage
                   images={images}
-                  onOpen={(idx, rect, thumbRects) =>
-                    setReviewLightbox({ images, startIndex: idx, rect, thumbRects })
-                  }
+                  hiddenIdx={reviewLightbox?.reviewId === r.id ? lightboxCurrentIdx : null}
+                  onOpen={(idx, rect, thumbRects) => {
+                    setReviewLightbox({ reviewId: r.id, images, startIndex: idx, rect, thumbRects });
+                    setLightboxCurrentIdx(idx);
+                  }}
                 />
               )}
 
@@ -209,7 +219,11 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
           startIndex={reviewLightbox.startIndex}
           startRect={reviewLightbox.rect}
           thumbRects={reviewLightbox.thumbRects}
-          onClose={() => setReviewLightbox(null)}
+          onIndexChange={setLightboxCurrentIdx}
+          onClose={() => {
+            setReviewLightbox(null);
+            setLightboxCurrentIdx(null);
+          }}
         />
       )}
     </div>
@@ -225,9 +239,15 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
 // last visible rect для FLIP-close.
 function PhotoCollage({
   images,
+  hiddenIdx,
   onOpen,
 }: {
   images: string[];
+  /** Индекс thumb'а, который сейчас видит юзер в открытом лайтбоксе.
+   *  Этот thumb рендерится с visibility: hidden — место остаётся (для
+   *  FLIP-close target rect), но картинка не показывается. Так юзер
+   *  видит только летящую FLIP-картинку, а не «двойник» под ней. */
+  hiddenIdx: number | null;
   onOpen: (idx: number, rect: DOMRect | null, thumbRects: (DOMRect | null)[]) => void;
 }) {
   if (images.length === 0) return null;
@@ -259,7 +279,11 @@ function PhotoCollage({
           style={collageStyles.singleBtn}
           aria-label="фото"
         >
-          <img src={images[0]} alt="" style={collageStyles.singleImg} />
+          <img
+            src={images[0]}
+            alt=""
+            style={{ ...collageStyles.singleImg, visibility: hiddenIdx === 0 ? "hidden" : "visible" }}
+          />
         </button>
       </div>
     );
@@ -288,7 +312,11 @@ function PhotoCollage({
             style={collageStyles.cellBtn}
             aria-label="фото"
           >
-            <img src={src} alt="" style={collageStyles.cellImg} />
+            <img
+              src={src}
+              alt=""
+              style={{ ...collageStyles.cellImg, visibility: hiddenIdx === i ? "hidden" : "visible" }}
+            />
             {isLastVisible && (
               <span style={collageStyles.extraOverlay}>+{extra}</span>
             )}

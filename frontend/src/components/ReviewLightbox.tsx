@@ -12,6 +12,11 @@ interface ReviewLightboxProps {
    *  обратно в thumb N, а не в thumb с которого открыли. Для скрытых
    *  фото (4+ в +N case) item = null → fallback на last visible. */
   thumbRects?: (DOMRect | null)[];
+  /** Парент трекает текущий видимый индекс, чтобы скрывать thumb этой
+   *  фотки в коллаже (visibility: hidden) — иначе во время FLIP-open
+   *  видны сразу два экземпляра картинки: летящий и оригинал в коллаже.
+   *  Зовётся на mount (startIndex) и каждый раз при свайпе. */
+  onIndexChange?: (idx: number) => void;
   onClose: () => void;
 }
 
@@ -25,7 +30,7 @@ const EASING = "cubic-bezier(0.45, 0, 0.55, 1)";
  * touchend, фото мгновенно подменялось без drag-feedback). FLIP-close
  * обратно в thumbRect того изображения которое сейчас видно.
  */
-export function ReviewLightbox({ images, startIndex, startRect, thumbRects, onClose }: ReviewLightboxProps) {
+export function ReviewLightbox({ images, startIndex, startRect, thumbRects, onIndexChange, onClose }: ReviewLightboxProps) {
   const [currentIdx, setCurrentIdx] = useState(Math.min(startIndex, Math.max(images.length - 1, 0)));
   const [phase, setPhase] = useState<"opening" | "open" | "closing">("opening");
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -141,6 +146,13 @@ export function ReviewLightbox({ images, startIndex, startRect, thumbRects, onCl
     if (images.length <= 1) return;
     setCurrentIdx((prev) => (prev + delta + images.length) % images.length);
   }, [images.length]);
+
+  // Сообщаем парент-компоненту текущий идекс, чтобы он спрятал нужный
+  // thumb в коллаже на время лайтбокса. Включая mount (с startIndex)
+  // и каждый свайп через scroll-snap. На close парент сам сбросит null.
+  useEffect(() => {
+    onIndexChange?.(currentIdx);
+  }, [currentIdx, onIndexChange]);
 
   const requestClose = useCallback(() => {
     if (phase === "closing") return;
