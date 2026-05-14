@@ -1530,9 +1530,11 @@ html[data-theme="light"] .zen-app .product-card-price {
    (1100), чтобы FLIP-картинка проходила «за плюсиком» всю анимацию
    открытия и закрытия, а не только в финальном open-фрейме. Этот
    паттерн уже используется для хедера/nav в Inspire ExpandedView
-   (классы zen-inspire-header-up / zen-inspire-overlay-on). */
+   (классы zen-inspire-header-up / zen-inspire-overlay-on).
+   !important — потому что у кнопки в Reviews.tsx стоит inline-стиль
+   с zIndex: 30, который по специфичности перебивает класс-селектор. */
 body.zen-review-lightbox-open .zen-reviews-fab {
-  z-index: 1300;
+  z-index: 1300 !important;
 }
 
 /* ── Maintenance screen ────────────────────────────────────────────── */

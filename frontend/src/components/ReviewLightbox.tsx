@@ -33,6 +33,13 @@ const EASING = "cubic-bezier(0.45, 0, 0.55, 1)";
 export function ReviewLightbox({ images, startIndex, startRect, thumbRects, onIndexChange, onClose }: ReviewLightboxProps) {
   const [currentIdx, setCurrentIdx] = useState(Math.min(startIndex, Math.max(images.length - 1, 0)));
   const [phase, setPhase] = useState<"opening" | "open" | "closing">("opening");
+  // contentReady — становится true ПОСЛЕ окончания FLIP-open (через
+  // setTimeout(ANIM) ниже). До этого момента dots невидимы. Раньше они
+  // были привязаны к phase === "open", а phase меняется СРАЗУ когда
+  // запускается transform-transition — то есть в самом начале FLIP, а не
+  // в конце. Юзер видел dots появляющимися параллельно с растущей
+  // картинкой; теперь они появляются только когда картинка уже остановилась.
+  const [contentReady, setContentReady] = useState(false);
   const scrollerRef = useRef<HTMLDivElement>(null);
   // imageRef — на первую <img> для load-check перед FLIP. Если первое
   // фото ещё не закэшировано браузером, без этого guard'а
@@ -138,6 +145,13 @@ export function ReviewLightbox({ images, startIndex, startRect, thumbRects, onIn
     setCurrentIdx((prev) => (prev + delta + images.length) % images.length);
   }, [images.length]);
 
+  // dots — показываем после того как FLIP-open завершился. На close
+  // мгновенно скрываем (через requestClose ниже выставляется contentReady=false).
+  useEffect(() => {
+    const t = setTimeout(() => setContentReady(true), ANIM);
+    return () => clearTimeout(t);
+  }, []);
+
   // Сообщаем парент-компоненту текущий идекс, чтобы он спрятал нужный
   // thumb в коллаже на время лайтбокса. Включая mount (с startIndex)
   // и каждый свайп через scroll-snap. На close парент сам сбросит null.
@@ -148,6 +162,9 @@ export function ReviewLightbox({ images, startIndex, startRect, thumbRects, onIn
   const requestClose = useCallback(() => {
     if (phase === "closing") return;
     setPhase("closing");
+    // Сразу прячем dots, чтобы они не плыли вместе с уменьшающейся
+    // картинкой; transition: 0s в стиле даёт мгновенный fade-out.
+    setContentReady(false);
     const el = scrollerRef.current;
     // FLIP-close target: rect TEКУЩЕЙ свайпнутой картинки, не той с
     // которой открыли. Если thumbRects переданы и items[currentIdx]
@@ -258,6 +275,8 @@ export function ReviewLightbox({ images, startIndex, startRect, thumbRects, onIn
   // не overlay'а). Раньше точки висели снизу overlay'а (над bottom-nav'ом)
   // и выглядели оторванными от фото. Теперь как в ExpandedView постов
   // «Вдохновиться» — точки нативно на изображении, чуть отступают от низа.
+  // contentReady гарантирует, что dots появляются после FLIP-open, не
+  // плывут параллельно с растущей картинкой. На close fade-out instant.
   const dotsStyle: React.CSSProperties = {
     position: "absolute",
     bottom: 14,
@@ -271,8 +290,8 @@ export function ReviewLightbox({ images, startIndex, startRect, thumbRects, onIn
     background: "rgba(0,0,0,0.45)",
     backdropFilter: "blur(10px)",
     WebkitBackdropFilter: "blur(10px)",
-    opacity: phase === "open" && images.length > 1 ? 1 : 0,
-    transition: `opacity ${ANIM}ms ${EASING}`,
+    opacity: contentReady && images.length > 1 ? 1 : 0,
+    transition: contentReady ? `opacity 240ms ${EASING}` : "opacity 0s",
     pointerEvents: "none",
     zIndex: 2,
   };
