@@ -436,6 +436,13 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
               <button
                 type="submit"
                 disabled={!canSend}
+                // preventFocusSteal на mousedown/touchstart — иначе на
+                // iOS Telegram WebApp тап по send-кнопке сначала
+                // блюрит textarea (клавиатура схлопывается), и до
+                // click'а очередь не доходит — заявка не уходит.
+                // Тот же приём, что и на paperclip / ✕ выше.
+                onMouseDown={preventFocusSteal}
+                onTouchStart={preventFocusSteal}
                 style={{
                   ...styles.composerSendBtn,
                   ...(canSend ? {} : styles.composerSendBtnDisabled),
