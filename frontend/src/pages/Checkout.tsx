@@ -143,20 +143,6 @@ export function Checkout({ userId, userName, onBack, onDone, onOrderSuccess, onC
       <div style={styles.successWrap}>
         <div style={styles.successInner}>
           <div style={styles.bubbleRow}>
-            <div style={styles.avatar}>
-              <span style={styles.avatarLetter}>R</span>
-              <span style={styles.avatarCheck} aria-hidden="true">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M5 12.5l4.2 4.2L19 7"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </span>
-            </div>
             <div style={styles.bubbleMain}>
               <div style={styles.bubbleTitle}>
                 {lang === "ru" ? "Заказ оформлен" : "Order placed"}
@@ -1196,7 +1182,7 @@ const styles: Record<string, React.CSSProperties> = {
   bubbleMain: {
     background: "var(--surface)",
     border: "1px solid var(--border)",
-    borderRadius: "18px 18px 18px 4px",
+    borderRadius: 18,
     padding: "12px 16px 14px",
     maxWidth: "86%",
     boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
