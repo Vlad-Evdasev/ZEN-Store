@@ -229,6 +229,13 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
       setCustomDesc("");
       setCustomPhotos([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
+      // На iOS Telegram WebApp blur события у textarea при unmount-е
+      // (форма уходит, success-экран приходит) часто не доезжает до
+      // нашего handleBlur, и body.zen-input-focused остаётся висеть.
+      // Это прячет BottomNavBar в App.tsx через CSS — после клика на
+      // «сделать новую заявку» footer не возвращался. Снимаем класс
+      // вручную здесь в момент перехода в success.
+      document.body.classList.remove("zen-input-focused");
     } catch (err) {
       console.error(err);
     } finally {
@@ -288,7 +295,14 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
               <p style={styles.successHint}>{t(lang, "customOrderSubtitle")}</p>
               <button
                 type="button"
-                onClick={() => setCustomSuccess(false)}
+                onClick={() => {
+                  // Подстраховка: body.zen-input-focused может всё ещё
+                  // висеть с момента submit'а (если handleBlur не
+                  // успел сработать при unmount-е textarea). Снимаем
+                  // тут чтобы footer гарантированно вернулся на форму.
+                  document.body.classList.remove("zen-input-focused");
+                  setCustomSuccess(false);
+                }}
                 style={styles.newBtn}
               >
                 <span style={styles.newBtnIcon} aria-hidden>↻</span>
