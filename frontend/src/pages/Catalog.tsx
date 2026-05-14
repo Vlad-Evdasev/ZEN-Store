@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import type { Product, Store, Category, ProductReviewStats } from "../api";
-import { getProductReviewStats } from "../api";
+import { getProductReviewStats, getAdminHandle } from "../api";
 import { FilterIcon } from "../components/FilterIcon";
 import { SearchIcon } from "../components/SearchIcon";
 import { ProductCard } from "../components/ProductCard";
@@ -74,6 +74,23 @@ export function Catalog({
   const selectedCategories = selectedCategoriesProp ?? internalCategories;
   const setSelectedCategories = onSelectedCategoriesChange ?? setInternalCategories;
   const [reviewStats, setReviewStats] = useState<ProductReviewStats>({});
+  // Хэндл админа для intro-бабла — «Если есть вопросы, ответит @…».
+  // Lazy init из localStorage cache (App.tsx уже пишет туда после
+  // первого getAdminHandle()), чтобы не было flash'а пустоты.
+  const [adminHandle, setAdminHandle] = useState<string | null>(() => {
+    try { return localStorage.getItem("zen-contact-handle") || null; } catch { return null; }
+  });
+  useEffect(() => {
+    let cancelled = false;
+    getAdminHandle()
+      .then((h) => {
+        if (cancelled || !h) return;
+        setAdminHandle(h);
+        try { localStorage.setItem("zen-contact-handle", h); } catch {}
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filtersClosing, setFiltersClosing] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState<string>("all");
@@ -383,6 +400,26 @@ export function Catalog({
         <div style={styles.introBubble}>
           <div style={styles.introBubbleTitle}>{t(lang, "catalogIntroTitle")}</div>
           <div style={styles.introBubbleSubtitle}>{t(lang, "catalogIntroSubtitle")}</div>
+          {/* Hint с пунктирной линией и @username админа — такой же
+              паттерн как в bot-bubble на CustomOrderPage. Рендерим
+              всегда, но visibility: hidden пока handle не загружен,
+              чтобы бабл не вырастал post-fetch. */}
+          <div
+            style={{
+              ...styles.introBubbleHint,
+              visibility: adminHandle ? "visible" : "hidden",
+            }}
+          >
+            {t(lang, "catalogIntroReplyFrom")}{" "}
+            <a
+              href={adminHandle ? `https://t.me/${adminHandle}` : "#"}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={styles.introBubbleHintLink}
+            >
+              {adminHandle ? `@${adminHandle}` : "@krot_eno"}
+            </a>
+          </div>
         </div>
       </div>
       {!hideStores && displayStores.length > 0 && (
@@ -608,6 +645,22 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--muted)",
     marginTop: 3,
     lineHeight: 1.4,
+  },
+  // Hint в bot-бабле — отделён пунктирной полосой сверху, такой же
+  // паттерн как в CustomOrderPage / botBubbleHint.
+  introBubbleHint: {
+    fontSize: 11.5,
+    color: "var(--muted)",
+    marginTop: 8,
+    paddingTop: 8,
+    borderTop: "1px dashed var(--border)",
+    lineHeight: 1.4,
+    letterSpacing: "0.01em",
+  },
+  introBubbleHintLink: {
+    color: "var(--accent)",
+    textDecoration: "none",
+    fontWeight: 500,
   },
   storesRowWrap: {
     display: "flex",
