@@ -47,13 +47,37 @@ export function ReviewLightbox({ images, startIndex, startRect, thumbRects, onCl
   // и nav остаются ВИДИМЫ (как в catalog product page) — просто на
   // z-index 1300 (выше overlay 1100), чтобы image при FLIP «уходила
   // под них», а не накрывала их. Никакого visibility:hidden.
+  //
+  // position: fixed на body — единственный надёжный способ заблокировать
+  // скролл страницы под лайтбоксом на iOS. overflow: hidden один тут не
+  // помогает: pull-down-to-close жест попутно тащил страницу отзывов
+  // вниз. Сохраняем scrollY и восстанавливаем при размонтировании.
   useEffect(() => {
-    const prevOverflow = document.body.style.overflow;
+    const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+    const prev = {
+      position: document.body.style.position,
+      top: document.body.style.top,
+      left: document.body.style.left,
+      right: document.body.style.right,
+      width: document.body.style.width,
+      overflow: document.body.style.overflow,
+    };
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
     document.body.style.overflow = "hidden";
     document.body.classList.add("zen-review-lightbox-open");
     return () => {
-      document.body.style.overflow = prevOverflow;
+      document.body.style.position = prev.position;
+      document.body.style.top = prev.top;
+      document.body.style.left = prev.left;
+      document.body.style.right = prev.right;
+      document.body.style.width = prev.width;
+      document.body.style.overflow = prev.overflow;
       document.body.classList.remove("zen-review-lightbox-open");
+      window.scrollTo(0, scrollY);
     };
   }, []);
 
@@ -143,8 +167,19 @@ export function ReviewLightbox({ images, startIndex, startRect, thumbRects, onCl
       const sx = closeRect.width / Math.max(final.width, 1);
       const sy = closeRect.height / Math.max(final.height, 1);
       el.style.transformOrigin = "top left";
-      el.style.transition = `transform ${ANIM}ms ${EASING}`;
+      // Параллельно к transform: фейдим opacity 1→0 за последние ~120ms.
+      // Лайтбокс показывает фото целиком (object-fit: contain, с letterbox
+      // под отличающийся aspect), а thumb в коллаже — cover (cropped).
+      // Без opacity-фейда в самом конце анимации картинка «прыгает»
+      // между этими двумя crop-режимами в момент unmount — юзер видит
+      // мигание. С фейдом скроллер уходит в прозрачность ровно к концу
+      // close-анимации, и зритель видит уже thumb внизу.
+      const fadeDelay = Math.max(ANIM - 120, 0);
+      el.style.transition =
+        `transform ${ANIM}ms ${EASING}, ` +
+        `opacity 120ms ${EASING} ${fadeDelay}ms`;
       el.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})`;
+      el.style.opacity = "0";
     }
     setTimeout(onClose, ANIM);
   }, [phase, startRect, thumbRects, currentIdx, onClose]);
