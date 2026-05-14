@@ -1426,7 +1426,13 @@ html[data-theme="light"] .zen-app .product-card-price {
   display: block;
   /* margin между карточками управляется через flex gap родителя. */
 }
-.zen-pin-card:active { transform: scale(0.985); transition: transform 0.1s ease; }
+/* :active с scale-down раньше давал тапу приятную «press-back» обратную
+   связь, но на iOS Telegram WebApp эта transform-анимация на внешней
+   карточке (.zen-pin-card) перехватывала touchmove и блокировала нативный
+   scroll-snap внутри изображённой карусели — свайп фоток на телефоне
+   просто не работал. У сестринской ProductCard такого правила нет, и
+   там карусель ездит как надо. Убираем feedback ради функционирующего
+   свайпа — мы не теряем ничего критичного. */
 
 /* ── Smooth image carousel inside thumb cards ────────────────────────
    Используется в ProductCard (каталог) и MasonryCard (лента «Вдохновиться»)
