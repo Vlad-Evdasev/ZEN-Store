@@ -458,7 +458,6 @@ export function CustomOrderPage({ userId, userName, firstName }: CustomOrderPage
 function BotBubble({ children }: { children: React.ReactNode }) {
   return (
     <div style={styles.botBubbleRow}>
-      <div style={styles.botAvatar}>R</div>
       <div style={styles.botBubble}>{children}</div>
     </div>
   );
@@ -592,7 +591,10 @@ const styles: Record<string, React.CSSProperties> = {
   botBubble: {
     background: "var(--surface)",
     border: "1px solid var(--border)",
-    borderRadius: "16px 16px 16px 4px",
+    // Все четыре угла одинаковые — раньше bottom-left был 4px (tail к
+    // R-аватару слева), но сам аватар убрали, и асимметричный угол
+    // выглядел оторвано.
+    borderRadius: 16,
     padding: "10px 13px",
     fontSize: 13.5,
     lineHeight: 1.45,

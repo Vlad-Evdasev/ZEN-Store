@@ -464,7 +464,6 @@ function EmptyState({
 }) {
   return (
     <div style={styles.emptyBubbleRow}>
-      <div style={styles.emptyAvatar}>R</div>
       <div style={styles.emptyBubble}>
         <div style={styles.emptyBubbleTitle}>
           {t(lang, "historyEmptyHeadline")}
@@ -796,7 +795,7 @@ const styles: Record<string, React.CSSProperties> = {
   emptyBubble: {
     background: "var(--surface)",
     border: "1px solid var(--border)",
-    borderRadius: "16px 16px 16px 4px",
+    borderRadius: 16,
     padding: "12px 14px",
     maxWidth: "86%",
     boxShadow: "0 2px 10px rgba(0,0,0,0.04)",

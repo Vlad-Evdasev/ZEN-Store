@@ -523,7 +523,6 @@ export function NewReviewSheet({ open, submitting, error, initial, onClose, onSu
 
           {/* Bot bubble — friendly explainer / edit hint */}
           <div style={styles.botBubbleRow} onClick={stopPropClick}>
-            <div style={styles.botAvatar}>R</div>
             <div style={styles.botBubble}>{botPrompt(lang, isEdit)}</div>
           </div>
 
@@ -748,7 +747,7 @@ const styles: Record<string, React.CSSProperties> = {
   botBubble: {
     background: "var(--surface)",
     border: "1px solid var(--border)",
-    borderRadius: "16px 16px 16px 4px",
+    borderRadius: 16,
     padding: "9px 13px",
     fontSize: 13.5,
     lineHeight: 1.4,

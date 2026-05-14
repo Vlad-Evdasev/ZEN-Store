@@ -1274,7 +1274,6 @@ export function NewArrivalsPage({
     <div style={pageStyles.wrap} className="zen-inspire-page">
       <div style={pageStyles.headerArea}>
         <div style={pageStyles.bubbleRow}>
-          <div style={pageStyles.avatar}>R</div>
           <div style={pageStyles.bubbleMain}>
             <div style={pageStyles.bubbleTitle}>{t(lang, "postsInspireTitle")}</div>
             <div style={pageStyles.bubbleSubtitle}>{t(lang, "postsInspireSubtitle")}</div>
@@ -1460,7 +1459,7 @@ const pageStyles: Record<string, React.CSSProperties> = {
   bubbleMain: {
     background: "var(--surface)",
     border: "1px solid var(--border)",
-    borderRadius: "16px 16px 16px 4px",
+    borderRadius: 16,
     padding: "10px 13px",
     maxWidth: "86%",
     boxShadow: "0 2px 10px rgba(0,0,0,0.04)",

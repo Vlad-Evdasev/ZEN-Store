@@ -114,7 +114,6 @@ function QuestionBubble({ text }: { text: string }) {
 function AnswerBubble({ children }: { children: ReactNode }) {
   return (
     <div style={styles.answerRow}>
-      <div style={styles.avatar}>R</div>
       <div style={styles.answerBubble}>{children}</div>
     </div>
   );
@@ -168,7 +167,9 @@ const styles: Record<string, React.CSSProperties> = {
     background: "color-mix(in srgb, var(--accent) 10%, var(--surface))",
     color: "var(--text)",
     border: "1px solid color-mix(in srgb, var(--accent) 20%, var(--border))",
-    borderRadius: "16px 16px 4px 16px",
+    // Все углы одинаковые — раньше bottom-right был 4px (tail к юзер-
+    // аватару справа), но аватаров в чате не осталось.
+    borderRadius: 16,
     padding: "10px 14px",
     maxWidth: "86%",
     fontSize: 14.5,
@@ -200,7 +201,7 @@ const styles: Record<string, React.CSSProperties> = {
   answerBubble: {
     background: "var(--surface)",
     border: "1px solid var(--border)",
-    borderRadius: "16px 16px 16px 4px",
+    borderRadius: 16,
     padding: "12px 14px",
     maxWidth: "86%",
     boxShadow: "0 2px 10px rgba(0,0,0,0.04)",

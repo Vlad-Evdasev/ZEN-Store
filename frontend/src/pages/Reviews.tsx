@@ -131,7 +131,6 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
 
       {reviews.length === 0 && (
         <div style={styles.emptyBubbleRow}>
-          <div style={styles.emptyAvatar}>R</div>
           <div style={styles.emptyBubble}>
             <div style={styles.emptyBubbleText}>
               {t(lang, "reviewsEmptyFirst")}
@@ -146,13 +145,6 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
           const isOwn = r.user_id === userId;
           return (
           <article key={r.id} style={styles.bubbleRow}>
-            {/* Avatar СЛЕВА но bottom-aligned (alignItems: flex-end в
-                bubbleRow). Bubble tail (4px corner) у bottom-left,
-                направлен ровно к avatar — выглядит как «sign» автора
-                под сообщением. */}
-            <div style={{ ...styles.av, ...(isOwn ? styles.avOwn : {}) }}>
-              {(r.user_name?.[0] || "?").toUpperCase()}
-            </div>
             <div style={styles.bubble}>
               <header style={styles.cardHead}>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -425,7 +417,7 @@ const styles: Record<string, React.CSSProperties> = {
   emptyBubble: {
     background: "var(--surface)",
     border: "1px solid var(--border)",
-    borderRadius: "16px 16px 16px 4px",
+    borderRadius: 16,
     padding: "10px 13px",
     maxWidth: "86%",
     boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
@@ -486,9 +478,9 @@ const styles: Record<string, React.CSSProperties> = {
     minWidth: 0,
     background: "var(--surface)",
     border: "1px solid var(--border)",
-    // Asymmetric radius — tail (4px) bottom-left → к avatar'у внизу.
-    // Остальные углы 18 для мягкого card-look.
-    borderRadius: "18px 18px 18px 4px",
+    // Все углы 18px — avatar убрали, и tail-corner 4px бы выглядел
+    // оторванным.
+    borderRadius: 18,
     padding: "12px 14px 14px",
     display: "flex",
     flexDirection: "column",
