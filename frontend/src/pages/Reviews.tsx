@@ -194,6 +194,7 @@ export function Reviews({ userId, firstName }: ReviewsProps) {
       <button
         type="button"
         onClick={() => setSheetOpen(true)}
+        className="zen-reviews-fab"
         style={styles.fab}
         aria-label={t(lang, "reviewsFabNew")}
       >

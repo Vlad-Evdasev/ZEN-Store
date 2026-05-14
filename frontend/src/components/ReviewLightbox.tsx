@@ -226,38 +226,41 @@ export function ReviewLightbox({ images, startIndex, startRect, thumbRects, onIn
     cursor: "zoom-out",
   };
 
-  // Скроллер берёт aspect-ratio из тампбейла-источника, чтобы FLIP-open
+  // Wrapper берёт aspect-ratio из тампбейла-источника, чтобы FLIP-open
   // и FLIP-close выглядели бесшовно (раньше thumb был 1:1 / 4:5 с
   // object-fit: cover, а scroller — на весь экран с object-fit: contain,
   // и юзер видел резкое переключение между «обрезанным квадратом» и
   // «полной картинкой с letterbox» в момент открытия и закрытия). Теперь
   // и thumb и slide имеют одинаковую форму + одинаковый cover-crop, FLIP
   // проходит как простое масштабирование одного и того же изображения.
-  // max-width/height 100% — чтобы скроллер вписался в overlay (минус
-  // padding 16); aspect-ratio сам определит вторую сторону.
+  // max-width/height 100% — чтобы wrapper вписался в overlay (минус
+  // padding 16); aspect-ratio сам определит вторую сторону. Внутри wrapper'а
+  // — scroller (100% × 100%) и dots с position: absolute (привязаны к
+  // нижнему краю картинки, а не overlay).
   const thumbAspect = startRect && startRect.height > 0
     ? startRect.width / startRect.height
     : null;
-  const scrollerStyle: React.CSSProperties = {
+  const wrapperStyle: React.CSSProperties = {
+    position: "relative",
     width: "auto",
     height: "auto",
     maxWidth: "100%",
     maxHeight: "100%",
     aspectRatio: thumbAspect ? `${thumbAspect}` : undefined,
+  };
+  const scrollerStyle: React.CSSProperties = {
+    width: "100%",
+    height: "100%",
     willChange: "transform",
   };
 
-  // Dots indicator — match catalog product gallery (.product-v2__gallery-dots).
-  // Darker bg + larger active dot для лучшей видимости на чёрном backdrop'е.
-  //
-  // Bottom-offset: 64px (.zen-bottom-nav height) + 20px gap + safe-area.
-  // Bottom-nav (z-index 1250/1300) рендерится ПОВЕРХ overlay (1100) — это
-  // by design для FLIP-эффекта «image проходит за nav». Если оставить
-  // dots на bottom: 28 — они уходят под nav и не видны. Поэтому
-  // поднимаем их РОВНО над nav'ом.
+  // Dots indicator — на нижнем краю самой картинки (внутри wrapper'а,
+  // не overlay'а). Раньше точки висели снизу overlay'а (над bottom-nav'ом)
+  // и выглядели оторванными от фото. Теперь как в ExpandedView постов
+  // «Вдохновиться» — точки нативно на изображении, чуть отступают от низа.
   const dotsStyle: React.CSSProperties = {
     position: "absolute",
-    bottom: "calc(64px + 20px + env(safe-area-inset-bottom))",
+    bottom: 14,
     left: "50%",
     transform: "translateX(-50%)",
     display: "flex",
@@ -279,43 +282,45 @@ export function ReviewLightbox({ images, startIndex, startRect, thumbRects, onIn
       style={overlayStyle}
       onClick={requestClose}
     >
-      <div
-        ref={scrollerRef}
-        className="zen-post-image-scroller zen-review-lightbox-scroller"
-        style={scrollerStyle}
-        onScroll={onScrollerScroll}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {images.map((src, i) => (
-          <div key={i} className="zen-card-image-slide zen-review-lightbox-slide">
-            <img
-              ref={i === 0 ? imageRef : undefined}
-              src={src}
-              alt=""
-              draggable={false}
-              loading={i === 0 ? "eager" : "lazy"}
-              decoding={i === 0 ? "sync" : "async"}
-            />
-          </div>
-        ))}
-      </div>
-      {images.length > 1 && (
-        <div style={dotsStyle} aria-hidden>
-          {images.map((_, i) => (
-            <span
-              key={i}
-              style={{
-                display: "block",
-                width: i === currentIdx ? 18 : 6,
-                height: 6,
-                borderRadius: i === currentIdx ? 3 : "50%",
-                background: i === currentIdx ? "#fff" : "rgba(255,255,255,0.5)",
-                transition: "width 0.25s ease, background 0.2s ease, border-radius 0.2s ease",
-              }}
-            />
+      <div style={wrapperStyle}>
+        <div
+          ref={scrollerRef}
+          className="zen-post-image-scroller zen-review-lightbox-scroller"
+          style={scrollerStyle}
+          onScroll={onScrollerScroll}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {images.map((src, i) => (
+            <div key={i} className="zen-card-image-slide zen-review-lightbox-slide">
+              <img
+                ref={i === 0 ? imageRef : undefined}
+                src={src}
+                alt=""
+                draggable={false}
+                loading={i === 0 ? "eager" : "lazy"}
+                decoding={i === 0 ? "sync" : "async"}
+              />
+            </div>
           ))}
         </div>
-      )}
+        {images.length > 1 && (
+          <div style={dotsStyle} aria-hidden>
+            {images.map((_, i) => (
+              <span
+                key={i}
+                style={{
+                  display: "block",
+                  width: i === currentIdx ? 18 : 6,
+                  height: 6,
+                  borderRadius: i === currentIdx ? 3 : "50%",
+                  background: i === currentIdx ? "#fff" : "rgba(255,255,255,0.5)",
+                  transition: "width 0.25s ease, background 0.2s ease, border-radius 0.2s ease",
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>,
     document.body
   );

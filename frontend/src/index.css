@@ -1526,6 +1526,15 @@ html[data-theme="light"] .zen-app .product-card-price {
   border-radius: 12px;
 }
 
+/* Пока открыт лайтбокс отзыва — поднимаем FAB-плюсик выше overlay
+   (1100), чтобы FLIP-картинка проходила «за плюсиком» всю анимацию
+   открытия и закрытия, а не только в финальном open-фрейме. Этот
+   паттерн уже используется для хедера/nav в Inspire ExpandedView
+   (классы zen-inspire-header-up / zen-inspire-overlay-on). */
+body.zen-review-lightbox-open .zen-reviews-fab {
+  z-index: 1300;
+}
+
 /* ── Maintenance screen ────────────────────────────────────────────── */
 .zen-maintenance {
   position: fixed;
