@@ -379,6 +379,9 @@ export function Catalog({
 
   return (
     <div style={styles.wrap}>
+      <div style={styles.introBubbleRow}>
+        <div style={styles.introBubble}>{t(lang, "catalogIntroBubble")}</div>
+      </div>
       {!hideStores && displayStores.length > 0 && (
         <div style={styles.storesRowWrap}>
           <button
@@ -571,6 +574,25 @@ export function Catalog({
 
 const styles: Record<string, React.CSSProperties> = {
   wrap: { paddingTop: 0, paddingBottom: 24, overflowX: "hidden", minWidth: 0 },
+  // Intro-бабл под полем поиска — сообщает, что товары физически в
+  // наличии. Стилистически такой же как приветственный бабл во вкладке
+  // «Вдохновиться»: var(--surface) фон, var(--border) рамка, мягкая
+  // тень, ровный borderRadius 16 (без tail-corner — аватара рядом нет).
+  introBubbleRow: {
+    display: "flex",
+    marginBottom: 12,
+  },
+  introBubble: {
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: 16,
+    padding: "10px 13px",
+    maxWidth: "86%",
+    fontSize: 13.5,
+    lineHeight: 1.4,
+    color: "var(--text)",
+    boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
+  },
   storesRowWrap: {
     display: "flex",
     alignItems: "center",
