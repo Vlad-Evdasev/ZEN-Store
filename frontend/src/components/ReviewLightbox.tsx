@@ -33,6 +33,15 @@ export function ReviewLightbox({ images, startIndex, startRect, thumbRects, onCl
   // фото ещё не закэшировано браузером, без этого guard'а
   // getBoundingClientRect на scroller может вернуть 0×0.
   const imageRef = useRef<HTMLImageElement>(null);
+  // Pull-down-to-close: трекаем cumulative dy на overlay-уровне.
+  // События пробулькивают от скроллера → onTouchMove получает каждое
+  // движение пальца. Горизонтальный жест уходит в нативный scroll-snap
+  // параллельно, мы его не трогаем. Если в конце vertical-down > 80px
+  // и он доминирует над horizontal — закрываем.
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const touchDx = useRef(0);
+  const touchDy = useRef(0);
 
   // Body-scroll lock + body class для z-index хедера/футера. Header
   // и nav остаются ВИДИМЫ (как в catalog product page) — просто на
@@ -163,6 +172,31 @@ export function ReviewLightbox({ images, startIndex, startRect, thumbRects, onCl
     }
   };
 
+  const onOverlayTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    touchDx.current = 0;
+    touchDy.current = 0;
+  };
+  const onOverlayTouchMove = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    touchDx.current = e.touches[0].clientX - touchStartX.current;
+    touchDy.current = e.touches[0].clientY - touchStartY.current;
+  };
+  const onOverlayTouchEnd = () => {
+    const dx = touchDx.current;
+    const dy = touchDy.current;
+    touchStartX.current = null;
+    touchStartY.current = null;
+    touchDx.current = 0;
+    touchDy.current = 0;
+    // Pull-down-to-close: только если вертикаль вниз доминирует и > 80px.
+    // Горизонтальный жест уходит в нативный scroll-snap и сюда не лезет.
+    if (dy > 80 && Math.abs(dy) > Math.abs(dx)) {
+      requestClose();
+    }
+  };
+
   if (typeof document === "undefined") return null;
 
   // z-index 1100: ВЫШЕ default header (10) и nav (30), НО body class
@@ -228,6 +262,9 @@ export function ReviewLightbox({ images, startIndex, startRect, thumbRects, onCl
     <div
       style={overlayStyle}
       onClick={requestClose}
+      onTouchStart={onOverlayTouchStart}
+      onTouchMove={onOverlayTouchMove}
+      onTouchEnd={onOverlayTouchEnd}
     >
       <div
         ref={scrollerRef}
