@@ -150,7 +150,7 @@ function HeaderIconCart() {
 function LogoMark({ onClick, label }: { onClick: () => void; label: string }) {
   return (
     <button type="button" onClick={onClick} className="zen-logo-mark" style={styles.logoMark} aria-label={label}>
-      <span style={styles.logoMarkLetter}>R</span>
+      <span style={styles.logoMarkLetter}>L</span>
     </button>
   );
 }
