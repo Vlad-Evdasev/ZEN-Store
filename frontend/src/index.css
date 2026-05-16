@@ -19,18 +19,18 @@
   --font-size-body: 15px;
   /* Тёмная тема: тёплый почти-чёрный + бронзовые тона —
      в стилистике лого с ящерицей (warm-deep, не OLED-чёрный). */
-  --bg: #0b0907;
-  --bg-rgb: 11, 9, 7;
-  --surface: #14110c;
-  --surface-elevated: #221c14;
-  --border: #2c2517;
+  --bg: #1a1409;
+  --bg-rgb: 26, 20, 9;
+  --surface: #221b10;
+  --surface-elevated: #2e2616;
+  --border: #3a301d;
   --text: #ece4d1;
   --muted: #a89c83;
   --accent: #b8704a;
   --accent-hover: #d68a5e;
   --accent-dim: #7a4a2e;
-  --header-bg: #0b0907;
-  --card-desc-bg: rgba(20,17,12,0.92);
+  --header-bg: #1a1409;
+  --card-desc-bg: rgba(34,27,16,0.92);
   --card-desc-bleed: 2px;
   --card-desc-outer: none;
 }
