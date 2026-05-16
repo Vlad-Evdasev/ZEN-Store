@@ -147,7 +147,7 @@ function HeaderIconCart() {
   );
 }
 
-function LizardMark({ size = 38 }: { size?: number }) {
+function LizardMark({ size = 44 }: { size?: number }) {
   return (
     <svg
       viewBox="0 0 100 100"
