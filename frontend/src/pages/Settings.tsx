@@ -24,7 +24,7 @@ export function Settings(_props: SettingsProps) {
           onClick={() => setTheme("dark")}
           style={{ ...styles.themeCard, ...(settings.theme === "dark" ? styles.themeCardActive : {}) }}
         >
-          <span style={{ ...styles.themePreview, background: "#1a1409" }}>
+          <span style={{ ...styles.themePreview, background: "#1a1a1a" }}>
             <span style={styles.themePreviewAccent} />
             <span style={styles.themePreviewBody} />
           </span>
