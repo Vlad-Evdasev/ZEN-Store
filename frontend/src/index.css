@@ -3285,14 +3285,13 @@ header .zen-header-hamburger svg {
   background: var(--surface-elevated);
 }
 
-/* Логотип-монограмма: мягкая заливка при нажатии */
+/* Логотип-ящерица: лёгкое осветление цвета при нажатии */
 .zen-app .zen-logo-mark {
   -webkit-tap-highlight-color: transparent;
 }
 .zen-app .zen-logo-mark:active {
-  background: var(--accent) !important;
-  color: #fff !important;
-  border-color: var(--accent) !important;
+  color: var(--accent-hover) !important;
+  opacity: 0.85;
 }
 
 /* Фокус для доступности: только ссылки и инпуты (кнопки — без обводки глобально) */

@@ -147,10 +147,39 @@ function HeaderIconCart() {
   );
 }
 
+function LizardMark({ size = 38 }: { size?: number }) {
+  return (
+    <svg
+      viewBox="0 0 100 100"
+      width={size}
+      height={size}
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+      style={{ display: "block" }}
+    >
+      <g fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+        {/* Broken circle: two arcs, gaps at upper-right (snout) and lower-left (tail) */}
+        <path strokeWidth="2.2" d="M 79 38 A 32 32 0 0 1 28 73" />
+        <path strokeWidth="2.2" d="M 21 62 A 32 32 0 0 1 72 27" />
+        {/* Legs with splayed toes */}
+        <path strokeWidth="1.6" d="M 62 30 L 76 22 M 76 22 L 80 22 M 76 22 L 80 24 M 76 22 L 78 19" />
+        <path strokeWidth="1.6" d="M 58 30 L 44 22 M 44 22 L 40 22 M 44 22 L 40 24 M 44 22 L 42 19" />
+        <path strokeWidth="1.6" d="M 56 56 L 72 58 M 72 58 L 76 56 M 72 58 L 76 60 M 72 58 L 78 58" />
+        <path strokeWidth="1.6" d="M 50 60 L 34 64 M 34 64 L 30 62 M 34 64 L 30 66 M 34 64 L 28 64" />
+      </g>
+      {/* Body + head + tail as one filled silhouette */}
+      <path
+        fill="currentColor"
+        d="M 60 18 C 67 18 70 24 66 32 C 63 38 60 44 58 50 C 56 56 53 62 49 67 C 45 73 40 78 34 79 C 27 79 25 73 29 69 C 33 66 38 67 37 72 C 39 69 43 67 47 65 C 52 62 55 56 56 50 C 58 42 58 32 56 24 C 56 20 58 18 60 18 Z"
+      />
+    </svg>
+  );
+}
+
 function LogoMark({ onClick, label }: { onClick: () => void; label: string }) {
   return (
     <button type="button" onClick={onClick} className="zen-logo-mark" style={styles.logoMark} aria-label={label}>
-      <span style={styles.logoMarkLetter}>L</span>
+      <LizardMark />
     </button>
   );
 }
@@ -874,25 +903,16 @@ const styles: Record<string, React.CSSProperties> = {
     width: 44,
     height: 44,
     borderRadius: "50%",
-    border: "1.25px solid var(--text)",
+    border: "none",
     background: "transparent",
-    color: "var(--text)",
+    color: "var(--accent)",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
     padding: 0,
     pointerEvents: "auto",
-    transition: "background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease",
-  },
-  logoMarkLetter: {
-    fontFamily: "Unbounded, sans-serif",
-    fontSize: 17,
-    fontWeight: 700,
-    letterSpacing: "-0.02em",
-    lineHeight: 1,
-    display: "block",
-    marginTop: 1,
+    transition: "color 0.2s ease, opacity 0.2s ease",
   },
   headerDot: {
     position: "absolute",
