@@ -46,8 +46,8 @@ export function useTelegram() {
     tg.ready();
     tg.expand();
     tg.disableVerticalSwipes?.();
-    tg.setBackgroundColor?.("#000000");
-    tg.setHeaderColor?.("#000000");
+    tg.setBackgroundColor?.("#0b0907");
+    tg.setHeaderColor?.("#0b0907");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

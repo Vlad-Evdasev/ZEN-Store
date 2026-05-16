@@ -23,7 +23,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: "100vw",
     height: "100vh",
     minHeight: "100dvh",
-    background: "#000000",
+    background: "#0b0907",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
