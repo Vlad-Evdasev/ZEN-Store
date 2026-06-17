@@ -17,13 +17,15 @@ import { NewArrivalsPage } from "./pages/NewArrivalsPage";
 import { CustomOrderPage } from "./pages/CustomOrderPage";
 import { Settings } from "./pages/Settings";
 import { History } from "./pages/History";
+import { Wallet } from "./pages/Wallet";
+import { CargoOrders } from "./pages/CargoOrders";
 import { BottomNavBar } from "./components/BottomNavBar";
 import { HeaderArcMenu } from "./components/HeaderArcMenu";
 import { SettingsSync } from "./components/SettingsSync";
 import { useSettings } from "./context/SettingsContext";
 import { t } from "./i18n";
 
-type Page = "catalog" | "cart" | "product" | "checkout" | "reviews" | "favorites" | "newArrivals" | "customOrder" | "settings" | "history" | "support";
+type Page = "catalog" | "cart" | "product" | "checkout" | "reviews" | "favorites" | "newArrivals" | "customOrder" | "settings" | "history" | "support" | "wallet" | "cargoOrders";
 
 /**
  * Deep-linking из бота. URL вида `https://app.com/#page=history` ведёт
@@ -143,6 +145,16 @@ function HeaderIconCart() {
       <path d="M4.5 8L19.5 8L18 20H6Z" />
       <path d="M9 8C9 5.5 10.3 4 12 4C13.7 4 15 5.5 15 8" />
       <circle cx="12" cy="12.5" r="0.9" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function HeaderIconWallet() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
+      <path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H18a2 2 0 0 1 2 2v1H5.5A2.5 2.5 0 0 1 3 7.5z" />
+      <path d="M3 7.5V17a2 2 0 0 0 2 2h14a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1" />
+      <circle cx="16.5" cy="13" r="1.2" fill="currentColor" stroke="none" />
     </svg>
   );
 }
@@ -570,6 +582,14 @@ function App() {
     setMenuOpen(false);
     setPage("support");
   };
+  const openWallet = () => {
+    setMenuOpen(false);
+    setPage("wallet");
+  };
+  const openCargoOrders = () => {
+    setMenuOpen(false);
+    setPage("cargoOrders");
+  };
 
   const refreshCartCount = () => {
     getCart(userId || "")
@@ -639,6 +659,9 @@ function App() {
           <LogoMark onClick={openCatalog} label="На главную" />
         </div>
         <div style={styles.headerRight}>
+          <button onClick={openWallet} className="zen-header-icon-btn" style={styles.headerIconBtn} aria-label={t(lang, "wallet")}>
+            <HeaderIconWallet />
+          </button>
           <button onClick={openFavorites} className="zen-header-icon-btn" style={styles.headerIconBtn} aria-label={t(lang, "favorites")}>
             <HeaderIconFavorites />
             {favoritesCount > 0 && <span style={styles.headerDot} aria-hidden />}
@@ -726,6 +749,8 @@ function App() {
           />
         )}
         {page === "settings" && <Settings onBack={openCatalog} userId={userId} />}
+        {page === "wallet" && <Wallet userId={userId || ""} onBack={openCatalog} onOrders={openCargoOrders} />}
+        {page === "cargoOrders" && <CargoOrders userId={userId || ""} onBack={openCatalog} onTopup={openWallet} />}
         {page === "history" && (
           <History
             userId={userId}
@@ -750,7 +775,7 @@ function App() {
         </div>
       </main>
 
-      {(["catalog", "customOrder", "newArrivals", "support", "history", "settings", "reviews", "favorites", "cart"] as Page[]).includes(page) && (
+      {(["catalog", "customOrder", "newArrivals", "support", "history", "settings", "reviews", "favorites", "cart", "wallet", "cargoOrders"] as Page[]).includes(page) && (
         <BottomNavBar
           activeTab={
             page === "customOrder"
@@ -783,6 +808,7 @@ function App() {
         userId={userId}
         inWishlist={hasInWishlist(productOverlay.id)}
         onToggleWishlist={() => toggleWishlist(productOverlay.id)}
+        onOrderViaCargo={openCargoOrders}
       />
     )}
     </div>

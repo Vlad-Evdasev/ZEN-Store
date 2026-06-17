@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react";
+import { TopupsTab } from "./admin/TopupsTab";
+import { CargoOrdersTab } from "./admin/CargoOrdersTab";
 import {
   createProduct,
   updateProduct,
@@ -147,7 +149,7 @@ function telegramChatLink(username?: string | null, userId?: string): string {
   return "#";
 }
 
-type Tab = "home" | "products" | "categories" | "orders" | "customOrders" | "currencyRate" | "posts" | "channel" | "chats" | "support" | "analytics" | "maintenance" | "messages" | "reviews";
+type Tab = "home" | "products" | "categories" | "orders" | "customOrders" | "cargo" | "topups" | "currencyRate" | "posts" | "channel" | "chats" | "support" | "analytics" | "maintenance" | "messages" | "reviews";
 
 /** Хедер-eyebrow в topbar: показывает раздел в стиле «OPS / ORDERS». */
 function tabEyebrow(tab: Tab): string {
@@ -166,6 +168,8 @@ function tabEyebrow(tab: Tab): string {
     case "maintenance": return "SYSTEM / MAINTENANCE";
     case "messages": return "MARKETING / PUSH";
     case "reviews": return "CONTENT / REVIEWS";
+    case "cargo": return "OPS / CARGO";
+    case "topups": return "OPS / TOP-UPS";
   }
 }
 
@@ -348,6 +352,12 @@ export function Admin() {
           <button type="button" onClick={() => setTabAndReset("customOrders")} className={`admin-nav-btn ${tab === "customOrders" ? "active" : ""}`}>
             <NavIcon tab="customOrders" /> Заявки не из каталога
           </button>
+          <button type="button" onClick={() => setTabAndReset("cargo")} className={`admin-nav-btn ${tab === "cargo" ? "active" : ""}`}>
+            <NavIcon tab="orders" /> Заказы карго
+          </button>
+          <button type="button" onClick={() => setTabAndReset("topups")} className={`admin-nav-btn ${tab === "topups" ? "active" : ""}`}>
+            <NavIcon tab="currencyRate" /> Пополнения
+          </button>
           <button type="button" onClick={() => setTabAndReset("chats")} className={`admin-nav-btn ${tab === "chats" ? "active" : ""}`}>
             <NavIcon tab="chats" />
             <span style={{ flex: 1 }}>Чаты</span>
@@ -469,6 +479,14 @@ export function Admin() {
 
       {tab === "customOrders" && (
         <CustomOrdersTab adminSecret={adminSecret} />
+      )}
+
+      {tab === "cargo" && (
+        <CargoOrdersTab adminSecret={adminSecret} />
+      )}
+
+      {tab === "topups" && (
+        <TopupsTab adminSecret={adminSecret} />
       )}
 
       {tab === "currencyRate" && (

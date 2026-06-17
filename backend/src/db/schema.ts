@@ -654,3 +654,105 @@ try {
       "WHERE category IN ('order_status', 'custom_status', 'payment')"
   ).run();
 } catch {}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Кошелёк (баланс в CNY) + заказы карго — фича cargo-wallet
+//
+// Деньги — целые числа: CNY в фэнях (1¥=100), BYN в копейках. Баланс юзера =
+// SUM(amount_fen) по wallet_transactions (append-only ledger). Любое движение
+// средств — отдельная проводка, idempotency_key защищает от двойного списания.
+// ──────────────────────────────────────────────────────────────────────────
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS wallet_transactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      type TEXT NOT NULL,                 -- topup | order_payment | commission | cargo_fee | refund | adjustment
+      amount_fen INTEGER NOT NULL,        -- знаковое: +зачисление, -списание
+      balance_after_fen INTEGER NOT NULL,
+      ref_type TEXT,                      -- topup_request | cargo_order | manual
+      ref_id INTEGER,
+      idempotency_key TEXT UNIQUE,
+      note TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  db.exec("CREATE INDEX IF NOT EXISTS idx_wtx_user ON wallet_transactions(user_id, id)");
+} catch {}
+
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS topup_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      amount_fen INTEGER NOT NULL,
+      amount_local INTEGER NOT NULL,
+      local_currency TEXT NOT NULL DEFAULT 'BYN',
+      rate REAL NOT NULL,                 -- BYN за 1 CNY на момент заявки
+      provider TEXT NOT NULL DEFAULT 'manual',
+      provider_ref TEXT,
+      status TEXT NOT NULL DEFAULT 'pending', -- pending | processing | completed | rejected | failed
+      note TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  db.exec("CREATE INDEX IF NOT EXISTS idx_topup_user ON topup_requests(user_id, id)");
+} catch {}
+
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS cargo_orders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      source TEXT NOT NULL DEFAULT 'link',   -- link | catalog
+      product_id INTEGER,
+      product_url TEXT,
+      title TEXT,
+      options TEXT,
+      quantity INTEGER NOT NULL DEFAULT 1,
+      image_data TEXT,
+      price_fen INTEGER,
+      commission_fen INTEGER,
+      cargo_fee_fen INTEGER,
+      weight_g INTEGER,
+      track_no TEXT,
+      status TEXT NOT NULL DEFAULT 'new',
+      admin_note TEXT,
+      user_name TEXT,
+      user_username TEXT,
+      user_phone TEXT,
+      user_address TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  db.exec("CREATE INDEX IF NOT EXISTS idx_cargo_user ON cargo_orders(user_id, id)");
+} catch {}
+
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS cargo_order_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id INTEGER NOT NULL,
+      status TEXT NOT NULL,
+      note TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (order_id) REFERENCES cargo_orders(id)
+    )
+  `);
+  db.exec("CREATE INDEX IF NOT EXISTS idx_cargo_hist ON cargo_order_history(order_id, id)");
+} catch {}
+
+// Настройки кошелька/комиссии (app_settings создаётся выше по файлу)
+try {
+  const insertWalletSetting = db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES (?, ?)");
+  const walletDefaults: [string, string][] = [
+    ["cny_byn_rate", "0.46"],     // BYN за 1 CNY (с наценкой)
+    ["topup_min_cny", "50"],      // минимальная сумма пополнения, юаней
+    ["topup_pay_to", ""],         // реквизиты для ручной оплаты
+    ["topup_instructions", "Переведите указанную сумму на реквизиты ниже и нажмите «Я оплатил». Баланс пополнится после подтверждения оператором."],
+    ["commission_percent", "2"],  // комиссия сервиса, % от стоимости товара
+  ];
+  for (const [k, v] of walletDefaults) insertWalletSetting.run(k, v);
+} catch {}

@@ -21,6 +21,8 @@ import {
   runPaymentExpirySweep,
 } from "./routes/payments.js";
 import { messagesRouter } from "./routes/messages.js";
+import { walletRouter } from "./routes/wallet.js";
+import { cargoOrdersRouter } from "./routes/cargoOrders.js";
 import { db } from "./db/schema.js";
 import { attachTelegramUser } from "./middleware/telegramAuth.js";
 
@@ -66,6 +68,8 @@ app.use("/api/support", supportRouter);
 app.use("/api/engagement", engagementRouter);
 app.use("/api/payments", paymentsRouter);
 app.use("/api/messages", messagesRouter);
+app.use("/api/wallet", walletRouter);
+app.use("/api/cargo-orders", cargoOrdersRouter);
 
 app.get("/api/health", (_req, res) => {
   try {

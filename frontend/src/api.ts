@@ -1478,3 +1478,272 @@ export async function searchMaintenanceUsers(q: string, adminSecret: string): Pr
   if (!res.ok) throw new Error("Failed to search users");
   return res.json();
 }
+
+// ════════════════════════════════════════════════════════════════════════
+// Кошелёк (баланс в CNY) + заказы карго — фича cargo-wallet
+// Суммы CNY — в фэнях (1¥=100), локальные — в копейках. Пользовательские
+// вызовы идут через apiFetch/fetchWrite (auto X-Telegram-Init-Data),
+// админские — через fetch с X-Admin-Secret.
+// ════════════════════════════════════════════════════════════════════════
+
+export type WalletTxType =
+  | "topup" | "order_payment" | "commission" | "cargo_fee" | "refund" | "adjustment";
+
+export interface WalletTransaction {
+  id: number;
+  user_id: string;
+  type: WalletTxType;
+  amount_fen: number;
+  balance_after_fen: number;
+  ref_type: string | null;
+  ref_id: number | null;
+  note: string | null;
+  created_at: string;
+}
+
+export interface WalletState {
+  balance_fen: number;
+  transactions: WalletTransaction[];
+}
+
+export interface TopupConfig {
+  cny_byn_rate: number;
+  topup_min_cny: number;
+}
+
+export type TopupStatus = "pending" | "processing" | "completed" | "rejected" | "failed";
+
+export interface TopupRequest {
+  id: number;
+  user_id: string;
+  amount_fen: number;
+  amount_local: number;
+  local_currency: string;
+  rate: number;
+  provider: string;
+  provider_ref: string | null;
+  status: TopupStatus;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TopupInstructions {
+  provider: string;
+  instructions: string;
+  payTo: string | null;
+  providerRef: string | null;
+  autoConfirm: boolean;
+}
+
+export async function getWallet(userId: string): Promise<WalletState> {
+  const res = await apiFetch(`${API_URL}/api/wallet/${userId}?_t=${Date.now()}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to fetch wallet");
+  return res.json();
+}
+
+export async function getTopupConfig(): Promise<TopupConfig> {
+  const res = await fetchWithRetry(`${API_URL}/api/wallet/config`);
+  if (!res.ok) return { cny_byn_rate: 0.46, topup_min_cny: 50 };
+  return res.json();
+}
+
+export async function getTopups(userId: string): Promise<TopupRequest[]> {
+  const res = await apiFetch(`${API_URL}/api/wallet/${userId}/topups?_t=${Date.now()}`, { cache: "no-store" });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function createTopup(
+  userId: string,
+  amountCny: number
+): Promise<{ request: TopupRequest; instructions: TopupInstructions }> {
+  const res = await fetchWrite(`${API_URL}/api/wallet/${userId}/topups`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ amount_cny: amountCny }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+  return res.json();
+}
+
+export async function getTopupsAdmin(adminSecret: string, status?: TopupStatus): Promise<TopupRequest[]> {
+  const qs = status ? `?status=${status}` : "";
+  const res = await fetch(`${API_URL}/api/wallet/admin/topups${qs}`, { headers: { "X-Admin-Secret": adminSecret } });
+  if (!res.ok) throw new Error("Failed to fetch top-ups");
+  return res.json();
+}
+
+export async function confirmTopupAdmin(id: number, adminSecret: string): Promise<{ ok: boolean; balance_fen: number }> {
+  const res = await fetch(`${API_URL}/api/wallet/admin/topups/${id}/confirm`, { method: "POST", headers: { "X-Admin-Secret": adminSecret } });
+  if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error((err as { error?: string }).error || res.statusText); }
+  return res.json();
+}
+
+export async function rejectTopupAdmin(id: number, adminSecret: string): Promise<{ ok: boolean }> {
+  const res = await fetch(`${API_URL}/api/wallet/admin/topups/${id}/reject`, { method: "POST", headers: { "X-Admin-Secret": adminSecret } });
+  if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error((err as { error?: string }).error || res.statusText); }
+  return res.json();
+}
+
+export interface WalletConfigAdmin {
+  cny_byn_rate: number;
+  topup_min_cny: number;
+  topup_pay_to: string;
+  topup_instructions: string;
+}
+
+export async function getWalletConfigAdmin(adminSecret: string): Promise<WalletConfigAdmin> {
+  const res = await fetch(`${API_URL}/api/wallet/admin/config`, { headers: { "X-Admin-Secret": adminSecret } });
+  if (!res.ok) throw new Error("Failed to fetch wallet config");
+  return res.json();
+}
+
+export async function updateWalletConfigAdmin(adminSecret: string, data: Partial<WalletConfigAdmin>): Promise<WalletConfigAdmin> {
+  const res = await fetch(`${API_URL}/api/wallet/admin/config`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error((err as { error?: string }).error || res.statusText); }
+  return res.json();
+}
+
+export type CargoSource = "link" | "catalog";
+export type CargoStatus =
+  | "new" | "quoted" | "paid" | "purchasing" | "at_warehouse" | "shipped" | "delivered" | "cancelled";
+
+export interface CargoOrder {
+  id: number;
+  user_id: string;
+  source: CargoSource;
+  product_id: number | null;
+  product_url: string | null;
+  title: string | null;
+  options: string | null;
+  quantity: number;
+  image_data: string | null;
+  price_fen: number | null;
+  commission_fen: number | null;
+  cargo_fee_fen: number | null;
+  weight_g: number | null;
+  track_no: string | null;
+  status: CargoStatus;
+  admin_note: string | null;
+  user_name: string | null;
+  user_username: string | null;
+  user_phone: string | null;
+  user_address: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CargoOrderHistoryItem {
+  id: number;
+  status: CargoStatus;
+  note: string | null;
+  created_at: string;
+}
+
+export interface CargoOrderDetail extends CargoOrder {
+  history: CargoOrderHistoryItem[];
+  balance_fen?: number;
+  refunded_fen?: number;
+}
+
+export interface CreateCargoOrderInput {
+  source: CargoSource;
+  product_id?: number;
+  product_url?: string;
+  title?: string;
+  options?: string;
+  quantity?: number;
+  image_data?: string | null;
+  user_name?: string;
+  user_username?: string;
+  user_phone?: string;
+  user_address?: string;
+}
+
+async function cargoJson(res: Response): Promise<CargoOrderDetail> {
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || res.statusText);
+  }
+  return res.json();
+}
+
+export async function getCargoOrders(userId: string): Promise<CargoOrder[]> {
+  const res = await apiFetch(`${API_URL}/api/cargo-orders/${userId}?_t=${Date.now()}`, { cache: "no-store" });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function getCargoOrder(userId: string, id: number): Promise<CargoOrderDetail> {
+  return cargoJson(await apiFetch(`${API_URL}/api/cargo-orders/${userId}/${id}`));
+}
+
+export async function createCargoOrder(userId: string, data: CreateCargoOrderInput): Promise<CargoOrderDetail> {
+  return cargoJson(await fetchWrite(`${API_URL}/api/cargo-orders/${userId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  }));
+}
+
+export async function payCargoGoods(userId: string, id: number): Promise<CargoOrderDetail> {
+  return cargoJson(await fetchWrite(`${API_URL}/api/cargo-orders/${userId}/${id}/pay-goods`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",
+  }));
+}
+
+export async function payCargoShipping(userId: string, id: number): Promise<CargoOrderDetail> {
+  return cargoJson(await fetchWrite(`${API_URL}/api/cargo-orders/${userId}/${id}/pay-cargo`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",
+  }));
+}
+
+export async function cancelCargoOrder(userId: string, id: number): Promise<CargoOrderDetail> {
+  return cargoJson(await fetchWrite(`${API_URL}/api/cargo-orders/${userId}/${id}/cancel`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",
+  }));
+}
+
+export async function getCargoOrdersAdmin(adminSecret: string, status?: CargoStatus): Promise<CargoOrder[]> {
+  const qs = status ? `?status=${status}` : "";
+  const res = await fetch(`${API_URL}/api/cargo-orders/admin/all${qs}`, { headers: { "X-Admin-Secret": adminSecret } });
+  if (!res.ok) throw new Error("Failed to fetch cargo orders");
+  return res.json();
+}
+
+async function cargoAdmin(path: string, body: unknown, adminSecret: string): Promise<CargoOrderDetail> {
+  return cargoJson(await fetch(`${API_URL}/api/cargo-orders/admin/${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
+    body: JSON.stringify(body ?? {}),
+  }));
+}
+
+export function quoteCargoOrder(id: number, priceCny: number, adminSecret: string) {
+  return cargoAdmin(`${id}/quote`, { price_cny: priceCny }, adminSecret);
+}
+
+export function warehouseCargoOrder(id: number, data: { weight_g: number; cargo_fee_cny: number }, adminSecret: string) {
+  return cargoAdmin(`${id}/warehouse`, data, adminSecret);
+}
+
+export function advanceCargoOrder(id: number, data: { status: "purchasing" | "delivered"; track_no?: string; note?: string }, adminSecret: string) {
+  return cargoAdmin(`${id}/status`, data, adminSecret);
+}
+
+export function cancelCargoOrderAdmin(id: number, note: string, adminSecret: string) {
+  return cargoAdmin(`${id}/cancel`, { note }, adminSecret);
+}
+
+export async function deleteCargoOrderAdmin(id: number, adminSecret: string): Promise<void> {
+  const res = await fetch(`${API_URL}/api/cargo-orders/admin/${id}`, { method: "DELETE", headers: { "X-Admin-Secret": adminSecret } });
+  if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error((err as { error?: string }).error || res.statusText); }
+}

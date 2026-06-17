@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
-import { addToCart, type Product, type CartItem } from "../api";
+import { addToCart, createCargoOrder, type Product, type CartItem } from "../api";
 import { useSettings } from "../context/SettingsContext";
 import { useProductImageIdx, setProductImageIdx } from "../lib/imageIndexStore";
 import { t } from "../i18n";
@@ -19,6 +19,7 @@ interface ProductPageProps {
   userId: string;
   inWishlist: boolean;
   onToggleWishlist: () => void;
+  onOrderViaCargo?: () => void;
 }
 
 const ANIM_DURATION = 520; // ms — синхронно с inspire-postом для единого ощущения
@@ -33,12 +34,14 @@ export function ProductPage({
   userId,
   inWishlist,
   onToggleWishlist,
+  onOrderViaCargo,
 }: ProductPageProps) {
   const { formatPrice, settings } = useSettings();
   const lang = settings.lang;
   const [chosenSize, setChosenSize] = useState<string>("");
   const productIdRef = useRef<number | null>(null);
   const [adding, setAdding] = useState(false);
+  const [ordering, setOrdering] = useState(false);
   const [optimisticSizes, setOptimisticSizes] = useState<Set<string>>(new Set());
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
@@ -292,6 +295,24 @@ export function ProductPage({
     }
   };
 
+  const handleOrderCargo = async () => {
+    if (!product || ordering) return;
+    setOrdering(true);
+    try {
+      await createCargoOrder(userId, {
+        source: "catalog",
+        product_id: product.id,
+        title: product.name,
+        options: size ? `${t(lang, "size")}: ${size}` : undefined,
+      });
+      onOrderViaCargo?.();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Error");
+    } finally {
+      setOrdering(false);
+    }
+  };
+
   const hasLongDesc = (product.description?.length ?? 0) > 140;
 
   // Sheet bg fade: opening — transparent, open — opaque, closing —
@@ -519,6 +540,29 @@ export function ProductPage({
               </button>
             )}
           </div>
+          {onOrderViaCargo && (
+            <button
+              type="button"
+              onClick={handleOrderCargo}
+              disabled={ordering}
+              style={{
+                width: "100%",
+                marginTop: 10,
+                padding: "13px 0",
+                borderRadius: 12,
+                background: "transparent",
+                border: "1.5px solid var(--accent)",
+                color: "var(--accent)",
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: ordering ? "default" : "pointer",
+                fontFamily: "inherit",
+                opacity: ordering ? 0.5 : 1,
+              }}
+            >
+              {ordering ? "…" : t(lang, "cargoOrderViaCargo")}
+            </button>
+          )}
         </div>
 
         {showSizeGuide && (
