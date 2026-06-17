@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo, useRef, useCallback, useLayoutEffect } from "react";
+import { useState, useEffect, useRef, useCallback, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
-import { addToCart, createCargoOrder, type Product, type CartItem } from "../api";
+import { createCargoOrder, type Product } from "../api";
 import { useSettings } from "../context/SettingsContext";
 import { useProductImageIdx, setProductImageIdx } from "../lib/imageIndexStore";
 import { t } from "../i18n";
@@ -8,29 +8,23 @@ import "./ProductPage.css";
 
 interface ProductPageProps {
   product: Product | undefined;
-  cartItems: CartItem[];
   /** rect картинки-thumbnail в caталоге — нужен для FLIP-анимации
    *  открытия (hero растёт ИЗ этого прямоугольника на весь экран)
    *  и закрытия (hero сворачивается ОБРАТНО в этот же прямоугольник). */
   thumbRect: DOMRect | null;
   onBack: () => void;
-  onCart: () => void;
-  onAddedToCart?: () => void;
   userId: string;
   inWishlist: boolean;
   onToggleWishlist: () => void;
   onOrderViaCargo?: () => void;
 }
 
-const ANIM_DURATION = 520; // ms — синхронно с inspire-postом для единого ощущения
+const ANIM_DURATION = 520; // ms — синхронно с inspire-постом для единого ощущения
 
 export function ProductPage({
   product,
-  cartItems,
   thumbRect,
   onBack,
-  onCart,
-  onAddedToCart,
   userId,
   inWishlist,
   onToggleWishlist,
@@ -40,9 +34,7 @@ export function ProductPage({
   const lang = settings.lang;
   const [chosenSize, setChosenSize] = useState<string>("");
   const productIdRef = useRef<number | null>(null);
-  const [adding, setAdding] = useState(false);
   const [ordering, setOrdering] = useState(false);
-  const [optimisticSizes, setOptimisticSizes] = useState<Set<string>>(new Set());
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
   // imageIndex шарится через imageIndexStore с ProductCard'ом — иначе
@@ -83,7 +75,6 @@ export function ProductPage({
   if (product && productIdRef.current !== product.id) {
     productIdRef.current = product.id;
     if (chosenSize !== "") setChosenSize("");
-    if (optimisticSizes.size > 0) setOptimisticSizes(new Set());
   }
 
   const size = chosenSize || sizes[0] || "";
@@ -188,17 +179,6 @@ export function ProductPage({
     return () => clearTimeout(tm);
   }, []);
 
-  const cartSizes = useMemo(() => {
-    const s = new Set<string>();
-    if (product) {
-      for (const i of cartItems) {
-        if (i.product_id === product.id && i.size) s.add(i.size);
-      }
-    }
-    optimisticSizes.forEach((x) => s.add(x));
-    return s;
-  }, [cartItems, product?.id, optimisticSizes]);
-
   // Sync store → scrollLeft. На mount устанавливает позицию скроллера
   // на выбранный imageIndex (если юзер свайпнул thumb в каталоге, мы
   // открываем сразу на этой картинке). На обновление imageIndex извне
@@ -274,26 +254,6 @@ export function ProductPage({
   if (!product) {
     return null;
   }
-
-  const isInCartForSize = !!size && cartSizes.has(size);
-
-  const handleAdd = async () => {
-    if (!size || isInCartForSize) return;
-    setAdding(true);
-    try {
-      await addToCart(userId, product.id, size);
-      setOptimisticSizes((prev) => {
-        const next = new Set(prev);
-        next.add(size);
-        return next;
-      });
-      onAddedToCart?.();
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setAdding(false);
-    }
-  };
 
   const handleOrderCargo = async () => {
     if (!product || ordering) return;
@@ -501,68 +461,29 @@ export function ProductPage({
                 </span>
               )}
             </div>
-            {isInCartForSize ? (
-              <button
-                type="button"
-                onClick={onCart}
-                className="zen-bag-checkout-btn zen-bag-checkout-btn--success"
-                aria-label={t(lang, "goToCart")}
-              >
-                <span className="zen-bag-checkout-label">{t(lang, "goToCart")}</span>
-                <span className="zen-bag-checkout-arrow" aria-hidden="true">
-                  <svg viewBox="0 0 24 24">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                </span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleAdd}
-                disabled={adding || !size}
-                className={`zen-bag-checkout-btn${adding || !size ? " zen-bag-checkout-btn--disabled" : ""}`}
-                aria-label={t(lang, "addToCart")}
-              >
-                <span className="zen-bag-checkout-label">
-                  {adding ? (lang === "ru" ? "Добавляем..." : "Adding...") : t(lang, "addToCart")}
-                </span>
-                <span className="zen-bag-checkout-arrow" aria-hidden="true">
-                  {adding ? (
-                    <svg viewBox="0 0 24 24" className="zen-bag-checkout-spinner">
-                      <circle cx="12" cy="12" r="9" />
-                    </svg>
-                  ) : (
-                    <svg viewBox="0 0 24 24">
-                      <path d="M5 12h14M13 6l6 6-6 6" />
-                    </svg>
-                  )}
-                </span>
-              </button>
-            )}
-          </div>
-          {onOrderViaCargo && (
             <button
               type="button"
               onClick={handleOrderCargo}
               disabled={ordering}
-              style={{
-                width: "100%",
-                marginTop: 10,
-                padding: "13px 0",
-                borderRadius: 12,
-                background: "transparent",
-                border: "1.5px solid var(--accent)",
-                color: "var(--accent)",
-                fontSize: 14,
-                fontWeight: 700,
-                cursor: ordering ? "default" : "pointer",
-                fontFamily: "inherit",
-                opacity: ordering ? 0.5 : 1,
-              }}
+              className={`zen-bag-checkout-btn${ordering ? " zen-bag-checkout-btn--disabled" : ""}`}
+              aria-label={t(lang, "cargoOrderViaCargo")}
             >
-              {ordering ? "…" : t(lang, "cargoOrderViaCargo")}
+              <span className="zen-bag-checkout-label">
+                {ordering ? (lang === "ru" ? "Создаём..." : "Creating...") : t(lang, "cargoOrderViaCargo")}
+              </span>
+              <span className="zen-bag-checkout-arrow" aria-hidden="true">
+                {ordering ? (
+                  <svg viewBox="0 0 24 24" className="zen-bag-checkout-spinner">
+                    <circle cx="12" cy="12" r="9" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24">
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                )}
+              </span>
             </button>
-          )}
+          </div>
         </div>
 
         {showSizeGuide && (

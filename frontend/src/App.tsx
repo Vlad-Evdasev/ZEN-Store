@@ -1,16 +1,12 @@
-import { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTelegram } from "./hooks/useTelegram";
 import { TelegramAuth } from "./components/TelegramAuth";
 import { useWishlist } from "./hooks/useWishlist";
-import { getProducts, getStores, getCategories, getCart, botHeartbeat, getMaintenanceStatus, getAdminHandle, type Product, type Store, type Category, type CartItem } from "./api";
+import { getProducts, getStores, getCategories, botHeartbeat, getMaintenanceStatus, getAdminHandle, type Product, type Store, type Category } from "./api";
 import { MaintenancePage } from "./pages/MaintenancePage";
 import { Catalog } from "./pages/Catalog";
-import { Cart } from "./pages/Cart";
 import { Favorites } from "./pages/Favorites";
 import { ProductPage } from "./pages/ProductPage";
-// Checkout грузим лениво — он тянет @ton/core (~600KB). Админ-бандлу
-// и обычному просмотру каталога TON-зависимости вообще не нужны.
-const Checkout = lazy(() => import("./pages/Checkout").then((m) => ({ default: m.Checkout })));
 import { Support } from "./pages/Support";
 import { Reviews } from "./pages/Reviews";
 import { NewArrivalsPage } from "./pages/NewArrivalsPage";
@@ -25,7 +21,7 @@ import { SettingsSync } from "./components/SettingsSync";
 import { useSettings } from "./context/SettingsContext";
 import { t } from "./i18n";
 
-type Page = "catalog" | "cart" | "product" | "checkout" | "reviews" | "favorites" | "newArrivals" | "customOrder" | "settings" | "history" | "support" | "wallet" | "cargoOrders";
+type Page = "catalog" | "product" | "reviews" | "favorites" | "newArrivals" | "customOrder" | "settings" | "history" | "support" | "wallet" | "cargoOrders";
 
 /**
  * Deep-linking из бота. URL вида `https://app.com/#page=history` ведёт
@@ -89,7 +85,6 @@ function readInitialNav(): InitialNav {
   const target = m?.[1];
   const valid: Record<string, Page> = {
     catalog: "catalog",
-    cart: "cart",
     favorites: "favorites",
     history: "history",
     profile: "settings",
@@ -106,14 +101,13 @@ function readInitialNav(): InitialNav {
     } catch {}
     return { page: valid[target] };
   }
-  return { page: "catalog" };
+  return { page: "newArrivals" };
 }
 
 // Фолбэк-ссылка для кнопки «Написать продавцу» в корзине (если API ещё
 // не ответил). В норме перебивается значением admin_tg_handle из
 // app_settings (правится в админке). Кнопка ведёт на админский контакт,
 // а не на отдельного "seller" — продавцом в корзине занимается админ.
-const SELLER_LINK_FALLBACK = import.meta.env.VITE_SELLER_LINK || "";
 
 const headerIconSize = 26;
 const headerIconStyle: React.CSSProperties = { width: headerIconSize, height: headerIconSize, flexShrink: 0, color: "currentColor", display: "block" };
@@ -132,19 +126,6 @@ function HeaderIconFavorites() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
       <path d="M12 20.3s-7.5-4.6-9.3-9.2C1.4 7.6 3.6 4 7 4c2 0 3.7 1.1 5 2.8C13.3 5.1 15 4 17 4c3.4 0 5.6 3.6 4.3 7.1-1.8 4.6-9.3 9.2-9.3 9.2z" />
-    </svg>
-  );
-}
-
-function HeaderIconCart() {
-  // Luxury handbag silhouette: трапеция (Birkin/Kelly geometry) +
-  // элегантная bezier-handle + clasp dot. Y-bounds (4 → 20) совпадают
-  // с favorites heart (4 → 20.3), визуально центрируются одинаково.
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
-      <path d="M4.5 8L19.5 8L18 20H6Z" />
-      <path d="M9 8C9 5.5 10.3 4 12 4C13.7 4 15 5.5 15 8" />
-      <circle cx="12" cy="12.5" r="0.9" fill="currentColor" stroke="none" />
     </svg>
   );
 }
@@ -192,31 +173,21 @@ function App() {
   // Loading=true только пока кэша нет И первый запрос ещё в полёте.
   // Если кэш сработал — рисуем товары сразу, фон-обновление не показываем.
   const [productsLoading, setProductsLoading] = useState<boolean>(() => (loadCache<Product[]>("products") ?? []).length === 0);
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
   // Контакт для кнопки «Написать продавцу» после оформления заказа из
   // корзины — ведёт на админский handle из app_settings (правится в
   // админке). Раньше был отдельный «cart_seller_handle», но продавцом
   // для каталог-заказов всегда выступает админ — отдельная переменная
   // только путала.
-  const [sellerLink, setSellerLink] = useState<string>(() => {
-    try {
-      const cached = localStorage.getItem("zen-contact-handle");
-      if (cached) return `https://t.me/${cached}`;
-    } catch {}
-    return SELLER_LINK_FALLBACK;
-  });
   useEffect(() => {
     let cancelled = false;
     getAdminHandle()
       .then((h) => {
         if (cancelled || !h) return;
-        setSellerLink(`https://t.me/${h}`);
         try { localStorage.setItem("zen-contact-handle", h); } catch {}
       })
       .catch(() => {});
     return () => { cancelled = true; };
   }, []);
-  const cartCount = cartItems.reduce((a, i) => a + i.quantity, 0);
   // Кол-во избранного — только те id, что соответствуют реально
   // существующим товарам. Иначе точка-индикатор на сердечке висит,
   // даже если все wishlist-товары были удалены на бэке.
@@ -493,10 +464,6 @@ function App() {
     };
     loadCategories();
 
-    getCart(userId || "").then((items) => {
-      if (!cancelled) setCartItems(items);
-    }).catch(() => {});
-
     if (userId) {
       const username = userName ? userName.replace(/^@/, "") : undefined;
       botHeartbeat(userId, firstName || undefined, username);
@@ -558,10 +525,6 @@ function App() {
     setProductOverlay(null);
   };
 
-  const openCart = () => {
-    setMenuOpen(false);
-    setPage("cart");
-  };
   const openReviews = () => {
     setMenuOpen(false);
     setPage("reviews");
@@ -591,17 +554,10 @@ function App() {
     setPage("cargoOrders");
   };
 
-  const refreshCartCount = () => {
-    getCart(userId || "")
-      .then((items) => setCartItems(items))
-      .catch(() => {});
-  };
   const openCatalog = () => {
     setPage("catalog");
     setProductOverlay(null);
   };
-
-  const openCheckout = () => setPage("checkout");
 
   const needsAuth = !isInTelegram && !userId;
   if (needsAuth) {
@@ -666,16 +622,12 @@ function App() {
             <HeaderIconFavorites />
             {favoritesCount > 0 && <span style={styles.headerDot} aria-hidden />}
           </button>
-          <button onClick={openCart} className="zen-header-icon-btn" style={styles.headerIconBtn} aria-label={t(lang, "cart")}>
-            <HeaderIconCart />
-            {cartCount > 0 && <span style={styles.headerDot} aria-hidden />}
-          </button>
         </div>
       </header>
       <div style={styles.headerSpacer} aria-hidden />
 
       <main ref={mainScrollRef} className={page === "catalog" ? "zen-main--catalog" : page === "favorites" ? "zen-main--edge" : page === "newArrivals" ? "zen-main--inspire" : undefined} style={page === "support" ? { ...styles.main, paddingBottom: 0 } : styles.main}>
-        <div key={page} className={page === "cart" || page === "favorites" ? "zen-page-enter" : ""} style={page === "newArrivals" ? { ...styles.mainContent, height: "100%" } : styles.mainContent}>
+        <div key={page} className={page === "favorites" ? "zen-page-enter" : ""} style={page === "newArrivals" ? { ...styles.mainContent, height: "100%" } : styles.mainContent}>
         {page === "catalog" && (
           <>
             <section className="zen-catalog-section" aria-label={t(lang, "catalogPreviewTitle")}>
@@ -718,28 +670,6 @@ function App() {
             (см. блок ниже после <BottomNavBar>), поверх любой текущей
             страницы. Текущая страница (catalog/favorites/cart) остаётся
             mounted, плавно затемняется через body-class. */}
-        {page === "cart" && (
-          <Cart
-            userId={userId}
-            onBack={openCatalog}
-            onCheckout={openCheckout}
-            onCartChange={refreshCartCount}
-            onProductClick={(id, rect) => openProduct(id, "cart", rect)}
-          />
-        )}
-        {page === "checkout" && (
-          <Suspense fallback={<div style={{ padding: 32, textAlign: "center", color: "var(--muted)" }}>{t(lang, "loading")}</div>}>
-            <Checkout
-              userId={userId}
-              userName={userName}
-              onBack={openCart}
-              onDone={openCatalog}
-              onOrderSuccess={refreshCartCount}
-              onCartChange={refreshCartCount}
-              sellerLink={sellerLink}
-            />
-          </Suspense>
-        )}
         {page === "support" && <Support />}
         {page === "reviews" && (
           <Reviews
@@ -775,20 +705,20 @@ function App() {
         </div>
       </main>
 
-      {(["catalog", "customOrder", "newArrivals", "support", "history", "settings", "reviews", "favorites", "cart", "wallet", "cargoOrders"] as Page[]).includes(page) && (
+      {(["catalog", "newArrivals", "support", "history", "settings", "reviews", "favorites", "wallet", "cargoOrders"] as Page[]).includes(page) && (
         <BottomNavBar
           activeTab={
-            page === "customOrder"
-              ? "custom"
-              : page === "newArrivals"
-                ? "arrivals"
-                : page === "catalog"
-                  ? "catalog"
+            page === "newArrivals"
+              ? "feed"
+              : page === "catalog"
+                ? "catalog"
+                : page === "cargoOrders"
+                  ? "orders"
                   : "none"
           }
+          onFeed={() => setPage("newArrivals")}
           onCatalog={() => setPage("catalog")}
-          onCustomOrder={() => setPage("customOrder")}
-          onArrivals={() => setPage("newArrivals")}
+          onOrders={openCargoOrders}
         />
       )}
     </div>
@@ -800,11 +730,8 @@ function App() {
       <ProductPage
         key={productOverlay.id}
         product={products.find((p) => p.id === productOverlay.id)}
-        cartItems={cartItems}
         thumbRect={productOverlay.thumbRect}
         onBack={goBackFromProduct}
-        onCart={openCart}
-        onAddedToCart={refreshCartCount}
         userId={userId}
         inWishlist={hasInWishlist(productOverlay.id)}
         onToggleWishlist={() => toggleWishlist(productOverlay.id)}

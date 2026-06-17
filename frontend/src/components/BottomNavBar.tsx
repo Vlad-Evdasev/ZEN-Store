@@ -1,120 +1,21 @@
 import React from "react";
 
 interface BottomNavBarProps {
-  activeTab: "catalog" | "custom" | "arrivals" | "none";
+  activeTab: "feed" | "catalog" | "orders" | "none";
+  onFeed: () => void;
   onCatalog: () => void;
-  onCustomOrder: () => void;
-  onArrivals: () => void;
+  onOrders: () => void;
 }
 
 interface IconProps {
   active: boolean;
 }
 
-/* Каталог — стопка карточек (deck): современная bento-метафора
-   коллекции. Задняя карточка повёрнута и приглушена, передняя
-   заливается в активе.                                              */
-function CatalogIcon({ active }: IconProps) {
+/* Лента «Вдохновиться» — 4-конечная спарк-звезда с малой искрой
+   (метафора «смотри, что заказывают»). */
+function FeedIcon({ active }: IconProps) {
   return (
-    <svg
-      width="26"
-      height="26"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-      style={{ transition: "transform 0.25s ease" }}
-    >
-      {/* задняя карточка — повёрнута на 10°, тонкая обводка */}
-      <rect
-        x="7"
-        y="3"
-        width="13"
-        height="13.5"
-        rx="2.4"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        transform="rotate(10 13.5 9.75)"
-        opacity="0.55"
-      />
-      {/* передняя карточка — только обводка; в активе цвет берётся
-         из currentColor (accent), толщина чуть больше для веса.     */}
-      <rect
-        x="3.5"
-        y="6.8"
-        width="13.5"
-        height="14"
-        rx="2.5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={active ? 2 : 1.7}
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-/* Custom Order — глобус с пунктирным экватором: сфера + меридиан-
-   эллипс + пунктирная линия экватора. Легче и воздушнее сплошной
-   версии. Метафора «привезём со всего мира то, чего нет в каталоге». */
-function CustomOrderIcon({ active }: IconProps) {
-  const sw = active ? 2 : 1.7;
-  return (
-    <svg
-      width="26"
-      height="26"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-      style={{ transition: "transform 0.25s ease" }}
-    >
-      {/* сфера */}
-      <circle
-        cx="12"
-        cy="12"
-        r="8.5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={sw}
-      />
-      {/* меридиан — вертикальный эллипс */}
-      <ellipse
-        cx="12"
-        cy="12"
-        rx="3.6"
-        ry="8.5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={sw}
-      />
-      {/* экватор пунктиром */}
-      <line
-        x1="3.5"
-        y1="12"
-        x2="20.5"
-        y2="12"
-        stroke="currentColor"
-        strokeWidth={sw}
-        strokeLinecap="round"
-        strokeDasharray="2 2.5"
-      />
-    </svg>
-  );
-}
-
-/* Новинки — 4-конечная «спарк-звезда» с акцентной малой искрой
-   (метафора «just dropped», как в Apple Intelligence).             */
-function ArrivalsIcon({ active }: IconProps) {
-  return (
-    <svg
-      width="26"
-      height="26"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-      style={{ transition: "transform 0.25s ease" }}
-    >
-      {/* большая искра с вогнутыми сторонами */}
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ transition: "transform 0.25s ease" }}>
       <path
         d="M11 3 C11.4 7.7 13.3 9.6 18 10 C13.3 10.4 11.4 12.3 11 17 C10.6 12.3 8.7 10.4 4 10 C8.7 9.6 10.6 7.7 11 3 Z"
         fill={active ? "currentColor" : "none"}
@@ -122,7 +23,6 @@ function ArrivalsIcon({ active }: IconProps) {
         strokeWidth={active ? 0 : 1.7}
         strokeLinejoin="round"
       />
-      {/* малая акцентная искра */}
       <path
         d="M18 16 C18.2 18.1 19 18.9 21 19 C19 19.1 18.2 19.9 18 22 C17.8 19.9 17 19.1 15 19 C17 18.9 17.8 18.1 18 16 Z"
         fill={active ? "currentColor" : "none"}
@@ -134,11 +34,29 @@ function ArrivalsIcon({ active }: IconProps) {
   );
 }
 
-export function BottomNavBar({ activeTab, onCatalog, onCustomOrder, onArrivals }: BottomNavBarProps) {
-  const isCatalog = activeTab === "catalog";
-  const isCustom = activeTab === "custom";
-  const isArrivals = activeTab === "arrivals";
+/* Подборки — стопка карточек (deck). */
+function CatalogIcon({ active }: IconProps) {
+  return (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ transition: "transform 0.25s ease" }}>
+      <rect x="7" y="3" width="13" height="13.5" rx="2.4" fill="none" stroke="currentColor" strokeWidth="1.5" transform="rotate(10 13.5 9.75)" opacity="0.55" />
+      <rect x="3.5" y="6.8" width="13.5" height="14" rx="2.5" fill="none" stroke="currentColor" strokeWidth={active ? 2 : 1.7} strokeLinejoin="round" />
+    </svg>
+  );
+}
 
+/* Заказы — посылка/коробка карго: верхняя грань + диагональ шва. */
+function OrdersIcon({ active }: IconProps) {
+  const sw = active ? 2 : 1.7;
+  return (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ transition: "transform 0.25s ease" }}>
+      <path d="M12 2.6l8 4.2v9.4l-8 4.2-8-4.2V6.8z" fill="none" stroke="currentColor" strokeWidth={sw} strokeLinejoin="round" />
+      <path d="M4 6.9l8 4.2 8-4.2" fill="none" stroke="currentColor" strokeWidth={sw} strokeLinejoin="round" />
+      <line x1="12" y1="11.1" x2="12" y2="20.4" stroke="currentColor" strokeWidth={sw} />
+    </svg>
+  );
+}
+
+export function BottomNavBar({ activeTab, onFeed, onCatalog, onOrders }: BottomNavBarProps) {
   const renderItem = (
     onClick: () => void,
     isActive: boolean,
@@ -175,9 +93,9 @@ export function BottomNavBar({ activeTab, onCatalog, onCustomOrder, onArrivals }
 
   return (
     <nav className="zen-bottom-nav" style={styles.nav}>
-      {renderItem(onCatalog, isCatalog, "Каталог", CatalogIcon)}
-      {renderItem(onCustomOrder, isCustom, "Заказать не из каталога", CustomOrderIcon)}
-      {renderItem(onArrivals, isArrivals, "Товары которые мы привезли", ArrivalsIcon)}
+      {renderItem(onFeed, activeTab === "feed", "Лента", FeedIcon)}
+      {renderItem(onCatalog, activeTab === "catalog", "Подборки", CatalogIcon)}
+      {renderItem(onOrders, activeTab === "orders", "Мои заказы", OrdersIcon)}
     </nav>
   );
 }
@@ -195,9 +113,6 @@ const styles: Record<string, React.CSSProperties> = {
     height: 64,
     borderTop: "1px solid var(--border)",
     background: "var(--bg)",
-    // z-index 1250 — выше overlay (1100), outgoing (1200), но ниже
-    // хедера (1300) и back-кнопки (1400). Карточка товара/поста при
-    // open/close НЕ заходит на этот футер, а проходит ПОД ним.
     zIndex: 1250,
   },
   btn: {
