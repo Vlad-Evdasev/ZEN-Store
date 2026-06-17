@@ -169,7 +169,6 @@ function App() {
   // Кол-во избранного — только те id, что соответствуют реально
   // существующим товарам. Иначе точка-индикатор на сердечке висит,
   // даже если все wishlist-товары были удалены на бэке.
-  const favoritesCount = products.filter((p) => wishlistIds.has(p.id)).length;
   // cargoCreate — открывать ли форму «Заказать по ссылке» сразу при заходе
   // на экран заказов (таб «Заказать» vs «Мои заказы» — одна страница).
   const [cargoCreate, setCargoCreate] = useState(false);
@@ -519,8 +518,7 @@ function App() {
     <div className="zen-app" style={styles.app}>
       <SettingsSync />
       <header style={styles.header}>
-        <div style={styles.headerLeft} className="zen-header-left" aria-hidden />
-        <div style={styles.headerCenter}>
+        <div style={styles.headerLeft} className="zen-header-left">
           <LogoMark onClick={openHome} label="На главную" />
         </div>
         <div style={styles.headerRight}>
@@ -529,7 +527,6 @@ function App() {
           </button>
           <button onClick={openProfile} className="zen-header-icon-btn" style={styles.headerIconBtn} aria-label={t(lang, "profile")}>
             <span style={styles.profileAvatar}>{(firstName || "U").slice(0, 1).toUpperCase()}</span>
-            {favoritesCount > 0 && <span style={styles.headerDot} aria-hidden />}
           </button>
         </div>
       </header>
@@ -614,12 +611,11 @@ function App() {
             page === "newArrivals"
               ? "feed"
               : page === "cargoOrders"
-                ? (cargoCreate ? "create" : "orders")
+                ? "create"
                 : "none"
           }
           onFeed={() => setPage("newArrivals")}
           onCreate={openCreateOrder}
-          onOrders={openCargoOrders}
         />
       )}
     </div>

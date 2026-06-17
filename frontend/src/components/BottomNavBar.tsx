@@ -1,10 +1,9 @@
 import React from "react";
 
 interface BottomNavBarProps {
-  activeTab: "feed" | "create" | "orders" | "none";
+  activeTab: "feed" | "create" | "none";
   onFeed: () => void;
   onCreate: () => void;
-  onOrders: () => void;
 }
 
 interface IconProps {
@@ -49,19 +48,7 @@ function CreateIcon({ active }: IconProps) {
   );
 }
 
-/* Заказы — посылка/коробка карго: верхняя грань + диагональ шва. */
-function OrdersIcon({ active }: IconProps) {
-  const sw = active ? 2 : 1.7;
-  return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ transition: "transform 0.25s ease" }}>
-      <path d="M12 2.6l8 4.2v9.4l-8 4.2-8-4.2V6.8z" fill="none" stroke="currentColor" strokeWidth={sw} strokeLinejoin="round" />
-      <path d="M4 6.9l8 4.2 8-4.2" fill="none" stroke="currentColor" strokeWidth={sw} strokeLinejoin="round" />
-      <line x1="12" y1="11.1" x2="12" y2="20.4" stroke="currentColor" strokeWidth={sw} />
-    </svg>
-  );
-}
-
-export function BottomNavBar({ activeTab, onFeed, onCreate, onOrders }: BottomNavBarProps) {
+export function BottomNavBar({ activeTab, onFeed, onCreate }: BottomNavBarProps) {
   const renderItem = (
     onClick: () => void,
     isActive: boolean,
@@ -100,7 +87,6 @@ export function BottomNavBar({ activeTab, onFeed, onCreate, onOrders }: BottomNa
     <nav className="zen-bottom-nav" style={styles.nav}>
       {renderItem(onFeed, activeTab === "feed", "Вдохновиться", FeedIcon)}
       {renderItem(onCreate, activeTab === "create", "Заказать", CreateIcon)}
-      {renderItem(onOrders, activeTab === "orders", "Мои заказы", OrdersIcon)}
     </nav>
   );
 }

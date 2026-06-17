@@ -43,6 +43,15 @@ const STATUS_LABEL_KEY: Record<TopupStatus, string> = {
   failed: "walletStatusFailed",
 };
 
+function LockIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0, marginTop: 1 }}>
+      <rect x="5" y="11" width="14" height="10" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </svg>
+  );
+}
+
 export function Wallet({ userId, onBack }: WalletProps) {
   const { settings } = useSettings();
   const lang = settings.lang;
@@ -149,10 +158,10 @@ export function Wallet({ userId, onBack }: WalletProps) {
           onClick={submit}
           style={{ ...styles.cta, ...(!amountValid || submitting ? styles.ctaDisabled : {}) }}
         >
-          🔒 {t(lang, "walletTopupBtn")}{amountValid ? ` · $${amountNum}` : ""}
+          {t(lang, "walletTopupBtn")}{amountValid ? ` · $${amountNum}` : ""}
         </button>
         <div style={styles.secureNote}>
-          <span aria-hidden>🛡</span>
+          <LockIcon />
           <span>{t(lang, "walletSecureNote")}</span>
         </div>
       </div>
@@ -210,7 +219,7 @@ export function Wallet({ userId, onBack }: WalletProps) {
                 <div style={styles.payToValue}>{instructions.payTo}</div>
               </div>
             )}
-            <div style={styles.secureNote}><span aria-hidden>🛡</span><span>{t(lang, "walletSecureNote")}</span></div>
+            <div style={styles.secureNote}><LockIcon /><span>{t(lang, "walletSecureNote")}</span></div>
             <button type="button" style={{ ...styles.cta, marginTop: 14 }} onClick={() => setInstructions(null)}>
               {t(lang, "walletDone")}
             </button>
