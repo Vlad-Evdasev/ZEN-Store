@@ -1,9 +1,9 @@
 import React from "react";
 
 interface BottomNavBarProps {
-  activeTab: "feed" | "catalog" | "orders" | "none";
+  activeTab: "feed" | "create" | "orders" | "none";
   onFeed: () => void;
-  onCatalog: () => void;
+  onCreate: () => void;
   onOrders: () => void;
 }
 
@@ -34,12 +34,17 @@ function FeedIcon({ active }: IconProps) {
   );
 }
 
-/* Подборки — стопка карточек (deck). */
-function CatalogIcon({ active }: IconProps) {
+/* Заказать — звено цепи (ссылка) в круге: «вставь ссылку — закажем». */
+function CreateIcon({ active }: IconProps) {
+  const sw = active ? 2 : 1.7;
   return (
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ transition: "transform 0.25s ease" }}>
-      <rect x="7" y="3" width="13" height="13.5" rx="2.4" fill="none" stroke="currentColor" strokeWidth="1.5" transform="rotate(10 13.5 9.75)" opacity="0.55" />
-      <rect x="3.5" y="6.8" width="13.5" height="14" rx="2.5" fill="none" stroke="currentColor" strokeWidth={active ? 2 : 1.7} strokeLinejoin="round" />
+      <circle cx="12" cy="12" r="9.2" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth={active ? 0 : sw} />
+      <g stroke={active ? "var(--bg)" : "currentColor"} strokeWidth="1.7" strokeLinecap="round">
+        <path d="M10.6 13.4l2.8-2.8" />
+        <path d="M9.4 11.4l-.7.7a1.9 1.9 0 002.7 2.7l.7-.7" />
+        <path d="M14.6 12.6l.7-.7a1.9 1.9 0 00-2.7-2.7l-.7.7" />
+      </g>
     </svg>
   );
 }
@@ -56,7 +61,7 @@ function OrdersIcon({ active }: IconProps) {
   );
 }
 
-export function BottomNavBar({ activeTab, onFeed, onCatalog, onOrders }: BottomNavBarProps) {
+export function BottomNavBar({ activeTab, onFeed, onCreate, onOrders }: BottomNavBarProps) {
   const renderItem = (
     onClick: () => void,
     isActive: boolean,
@@ -93,8 +98,8 @@ export function BottomNavBar({ activeTab, onFeed, onCatalog, onOrders }: BottomN
 
   return (
     <nav className="zen-bottom-nav" style={styles.nav}>
-      {renderItem(onFeed, activeTab === "feed", "Лента", FeedIcon)}
-      {renderItem(onCatalog, activeTab === "catalog", "Подборки", CatalogIcon)}
+      {renderItem(onFeed, activeTab === "feed", "Вдохновиться", FeedIcon)}
+      {renderItem(onCreate, activeTab === "create", "Заказать", CreateIcon)}
       {renderItem(onOrders, activeTab === "orders", "Мои заказы", OrdersIcon)}
     </nav>
   );

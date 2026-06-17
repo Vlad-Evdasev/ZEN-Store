@@ -9,8 +9,7 @@ import {
   type WalletConfigAdmin,
 } from "../../api";
 
-const fmtCny = (fen: number) => `¥${(fen / 100).toLocaleString("ru-RU", { maximumFractionDigits: 2 })}`;
-const fmtByn = (kop: number) => `${(kop / 100).toFixed(2)} BYN`;
+const fmtUsd = (cents: number) => `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const STATUS_RU: Record<string, string> = {
   pending: "Ожидает",
@@ -80,12 +79,9 @@ export function TopupsTab({ adminSecret }: { adminSecret: string }) {
       <h2 style={S.h}>Настройки пополнения</h2>
       {cfg && (
         <div style={S.card}>
-          <label style={S.lbl}>Курс: BYN за 1 ¥</label>
-          <input style={S.inp} type="number" step="0.01" value={cfg.cny_byn_rate}
-            onChange={(e) => setCfg({ ...cfg, cny_byn_rate: Number(e.target.value) })} />
-          <label style={S.lbl}>Минимум пополнения, ¥</label>
-          <input style={S.inp} type="number" value={cfg.topup_min_cny}
-            onChange={(e) => setCfg({ ...cfg, topup_min_cny: Number(e.target.value) })} />
+          <label style={S.lbl}>Минимум пополнения, $</label>
+          <input style={S.inp} type="number" value={cfg.topup_min_usd}
+            onChange={(e) => setCfg({ ...cfg, topup_min_usd: Number(e.target.value) })} />
           <label style={S.lbl}>Реквизиты для оплаты (карта/телефон)</label>
           <input style={S.inp} value={cfg.topup_pay_to}
             onChange={(e) => setCfg({ ...cfg, topup_pay_to: e.target.value })} />
@@ -102,8 +98,8 @@ export function TopupsTab({ adminSecret }: { adminSecret: string }) {
         <div key={r.id} style={S.card}>
           <div style={S.rowBetween}>
             <div>
-              <div style={S.big}>{fmtCny(r.amount_fen)}</div>
-              <div style={S.muted}>#{r.id} · {fmtByn(r.amount_local)} · user {r.user_id}</div>
+              <div style={S.big}>{fmtUsd(r.amount_fen)}</div>
+              <div style={S.muted}>#{r.id} · user {r.user_id}</div>
               <div style={S.muted}>{r.created_at}</div>
             </div>
             <span style={S.badge}>{STATUS_RU[r.status] || r.status}</span>
@@ -122,7 +118,7 @@ export function TopupsTab({ adminSecret }: { adminSecret: string }) {
       <h2 style={S.h}>История ({rest.length})</h2>
       {rest.map((r) => (
         <div key={r.id} style={S.histRow}>
-          <span>#{r.id} · {fmtCny(r.amount_fen)} · user {r.user_id}</span>
+          <span>#{r.id} · {fmtUsd(r.amount_fen)} · user {r.user_id}</span>
           <span style={S.muted}>{STATUS_RU[r.status] || r.status}</span>
         </div>
       ))}

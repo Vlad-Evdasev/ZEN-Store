@@ -17,10 +17,11 @@ interface CargoOrdersProps {
   userId: string;
   onBack: () => void;
   onTopup: () => void;
+  initialFormOpen?: boolean;
 }
 
-function fmtCny(fen: number): string {
-  return `¥${(fen / 100).toLocaleString("ru-RU", { maximumFractionDigits: 2 })}`;
+function fmtUsd(cents: number): string {
+  return `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 const STATUS_KEY: Record<CargoStatus, string> = {
@@ -41,7 +42,7 @@ function statusColor(status: CargoStatus): string {
   return "var(--text)";
 }
 
-export function CargoOrders({ userId, onBack, onTopup }: CargoOrdersProps) {
+export function CargoOrders({ userId, onBack, onTopup, initialFormOpen = false }: CargoOrdersProps) {
   const { settings } = useSettings();
   const lang = settings.lang;
 
@@ -50,7 +51,7 @@ export function CargoOrders({ userId, onBack, onTopup }: CargoOrdersProps) {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<number | null>(null);
 
-  const [formOpen, setFormOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(initialFormOpen);
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
   const [options, setOptions] = useState("");
@@ -164,14 +165,14 @@ export function CargoOrders({ userId, onBack, onTopup }: CargoOrdersProps) {
               {/* Суммы */}
               {o.price_fen != null && (
                 <div style={styles.sums}>
-                  <div style={styles.sumRow}><span style={styles.muted}>{t(lang, "cargoGoods")}</span><span>{fmtCny(o.price_fen)}</span></div>
+                  <div style={styles.sumRow}><span style={styles.muted}>{t(lang, "cargoGoods")}</span><span>{fmtUsd(o.price_fen)}</span></div>
                   {o.commission_fen != null && (
-                    <div style={styles.sumRow}><span style={styles.muted}>{t(lang, "cargoCommission")}</span><span>{fmtCny(o.commission_fen)}</span></div>
+                    <div style={styles.sumRow}><span style={styles.muted}>{t(lang, "cargoCommission")}</span><span>{fmtUsd(o.commission_fen)}</span></div>
                   )}
                   {o.cargo_fee_fen != null && (
                     <div style={styles.sumRow}>
                       <span style={styles.muted}>{t(lang, "cargoShippingFee")}{o.weight_g ? ` · ${o.weight_g} ${t(lang, "cargoWeight").toLowerCase()}` : ""}</span>
-                      <span>{fmtCny(o.cargo_fee_fen)}</span>
+                      <span>{fmtUsd(o.cargo_fee_fen)}</span>
                     </div>
                   )}
                 </div>
@@ -191,7 +192,7 @@ export function CargoOrders({ userId, onBack, onTopup }: CargoOrdersProps) {
                     onClick={() => (goodsAfford ? act(o.id, () => payCargoGoods(userId, o.id)) : onTopup())}
                     style={styles.cta}
                   >
-                    {goodsAfford ? `${t(lang, "cargoPayGoods")} · ${fmtCny(goodsTotal)}` : t(lang, "walletTopupBtn")}
+                    {goodsAfford ? `${t(lang, "cargoPayGoods")} · ${fmtUsd(goodsTotal)}` : t(lang, "walletTopupBtn")}
                   </button>
                 </>
               )}
@@ -204,7 +205,7 @@ export function CargoOrders({ userId, onBack, onTopup }: CargoOrdersProps) {
                     onClick={() => (cargoAfford ? act(o.id, () => payCargoShipping(userId, o.id)) : onTopup())}
                     style={styles.cta}
                   >
-                    {cargoAfford ? `${t(lang, "cargoPayShipping")} · ${fmtCny(o.cargo_fee_fen!)}` : t(lang, "walletTopupBtn")}
+                    {cargoAfford ? `${t(lang, "cargoPayShipping")} · ${fmtUsd(o.cargo_fee_fen!)}` : t(lang, "walletTopupBtn")}
                   </button>
                 </>
               )}

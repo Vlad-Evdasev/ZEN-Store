@@ -2,9 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { useTelegram } from "./hooks/useTelegram";
 import { TelegramAuth } from "./components/TelegramAuth";
 import { useWishlist } from "./hooks/useWishlist";
-import { getProducts, getStores, getCategories, botHeartbeat, getMaintenanceStatus, getAdminHandle, type Product, type Store, type Category } from "./api";
+import { getProducts, botHeartbeat, getMaintenanceStatus, getAdminHandle, type Product } from "./api";
 import { MaintenancePage } from "./pages/MaintenancePage";
-import { Catalog } from "./pages/Catalog";
 import { Favorites } from "./pages/Favorites";
 import { ProductPage } from "./pages/ProductPage";
 import { Support } from "./pages/Support";
@@ -13,15 +12,15 @@ import { NewArrivalsPage } from "./pages/NewArrivalsPage";
 import { CustomOrderPage } from "./pages/CustomOrderPage";
 import { Settings } from "./pages/Settings";
 import { History } from "./pages/History";
+import { Profile } from "./pages/Profile";
 import { Wallet } from "./pages/Wallet";
 import { CargoOrders } from "./pages/CargoOrders";
 import { BottomNavBar } from "./components/BottomNavBar";
-import { HeaderArcMenu } from "./components/HeaderArcMenu";
 import { SettingsSync } from "./components/SettingsSync";
 import { useSettings } from "./context/SettingsContext";
 import { t } from "./i18n";
 
-type Page = "catalog" | "product" | "reviews" | "favorites" | "newArrivals" | "customOrder" | "settings" | "history" | "support" | "wallet" | "cargoOrders";
+type Page = "product" | "reviews" | "favorites" | "newArrivals" | "customOrder" | "settings" | "history" | "support" | "wallet" | "cargoOrders" | "profile";
 
 /**
  * Deep-linking из бота. URL вида `https://app.com/#page=history` ведёт
@@ -59,7 +58,7 @@ interface InitialNav {
 }
 
 function readInitialNav(): InitialNav {
-  if (typeof window === "undefined") return { page: "catalog" };
+  if (typeof window === "undefined") return { page: "newArrivals" };
   const hash = window.location.hash || "";
 
   // 1) Telegram start_param из mini-app deep-link
@@ -84,7 +83,6 @@ function readInitialNav(): InitialNav {
   const m = hash.match(/[#&]page=([a-zA-Z]+)/);
   const target = m?.[1];
   const valid: Record<string, Page> = {
-    catalog: "catalog",
     favorites: "favorites",
     history: "history",
     profile: "settings",
@@ -111,24 +109,6 @@ function readInitialNav(): InitialNav {
 
 const headerIconSize = 26;
 const headerIconStyle: React.CSSProperties = { width: headerIconSize, height: headerIconSize, flexShrink: 0, color: "currentColor", display: "block" };
-
-function HeaderIconHamburger() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
-      <line x1="5" y1="7" x2="17" y2="7" />
-      <line x1="4" y1="12" x2="20" y2="12" />
-      <line x1="7" y1="17" x2="19" y2="17" />
-    </svg>
-  );
-}
-
-function HeaderIconFavorites() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={headerIconStyle} aria-hidden>
-      <path d="M12 20.3s-7.5-4.6-9.3-9.2C1.4 7.6 3.6 4 7 4c2 0 3.7 1.1 5 2.8C13.3 5.1 15 4 17 4c3.4 0 5.6 3.6 4.3 7.1-1.8 4.6-9.3 9.2-9.3 9.2z" />
-    </svg>
-  );
-}
 
 function HeaderIconWallet() {
   return (
@@ -168,8 +148,6 @@ function App() {
   // момент клика, нужны для FLIP-open и FLIP-close-back.
   const [productOverlay, setProductOverlay] = useState<{ id: number; thumbRect: DOMRect | null } | null>(null);
   const [products, setProducts] = useState<Product[]>(() => loadCache<Product[]>("products") ?? []);
-  const [stores, setStores] = useState<Store[]>(() => loadCache<Store[]>("stores") ?? []);
-  const [categories, setCategories] = useState<Category[]>(() => loadCache<Category[]>("categories") ?? []);
   // Loading=true только пока кэша нет И первый запрос ещё в полёте.
   // Если кэш сработал — рисуем товары сразу, фон-обновление не показываем.
   const [productsLoading, setProductsLoading] = useState<boolean>(() => (loadCache<Product[]>("products") ?? []).length === 0);
@@ -192,11 +170,11 @@ function App() {
   // существующим товарам. Иначе точка-индикатор на сердечке висит,
   // даже если все wishlist-товары были удалены на бэке.
   const favoritesCount = products.filter((p) => wishlistIds.has(p.id)).length;
-  const [menuOpen, setMenuOpen] = useState(false);
-  const hamburgerRef = useRef<HTMLButtonElement | null>(null);
+  // cargoCreate — открывать ли форму «Заказать по ссылке» сразу при заходе
+  // на экран заказов (таб «Заказать» vs «Мои заказы» — одна страница).
+  const [cargoCreate, setCargoCreate] = useState(false);
   // productReturnTo больше НЕ нужен — оверлейная ProductPage не меняет
   // page, поэтому возврат «к предыдущему» — это просто закрытие оверлея.
-  const [catalogSelectedCategories, setCatalogSelectedCategories] = useState<Set<string>>(() => new Set(["all"]));
   const mainScrollRef = useRef<HTMLElement | null>(null);
   const savedScrollTopRef = useRef(0);
 
@@ -434,35 +412,6 @@ function App() {
       })
       .catch(console.error)
       .finally(() => { if (!cancelled) setProductsLoading(false); });
-    getStores()
-      .then((s) => {
-        if (cancelled) return;
-        setStores(s);
-        saveCache("stores", s);
-      })
-      .catch(console.error);
-    const loadCategories = () => {
-      getCategories()
-        .then((cats) => {
-          if (cancelled) return;
-          setCategories(cats);
-          saveCache("categories", cats);
-        })
-        .catch((e) => {
-          console.error("Categories load failed:", e);
-          if (cancelled) return;
-          setTimeout(() => {
-            getCategories()
-              .then((cats) => {
-                if (cancelled) return;
-                setCategories(cats);
-                saveCache("categories", cats);
-              })
-              .catch(() => {});
-          }, 2000);
-        });
-    };
-    loadCategories();
 
     if (userId) {
       const username = userName ? userName.replace(/^@/, "") : undefined;
@@ -472,7 +421,7 @@ function App() {
     return () => { cancelled = true; };
   }, [userId, firstName, userName]);
 
-  const scrollableCatalogPages: Page[] = ["catalog", "newArrivals"];
+  const scrollableCatalogPages: Page[] = ["newArrivals"];
   useEffect(() => {
     const scrollToTop = () => {
       window.scrollTo(0, 0);
@@ -525,37 +474,24 @@ function App() {
     setProductOverlay(null);
   };
 
-  const openReviews = () => {
-    setMenuOpen(false);
-    setPage("reviews");
-  };
-  const openFavorites = () => {
-    setMenuOpen(false);
-    setPage("favorites");
-  };
-  const openSettings = () => {
-    setMenuOpen(false);
-    setPage("settings");
-  };
-  const openHistory = () => {
-    setMenuOpen(false);
-    setPage("history");
-  };
-  const openSupport = () => {
-    setMenuOpen(false);
-    setPage("support");
-  };
-  const openWallet = () => {
-    setMenuOpen(false);
-    setPage("wallet");
-  };
+  const openReviews = () => setPage("reviews");
+  const openFavorites = () => setPage("favorites");
+  const openSettings = () => setPage("settings");
+  const openHistory = () => setPage("history");
+  const openSupport = () => setPage("support");
+  const openWallet = () => setPage("wallet");
+  const openProfile = () => setPage("profile");
   const openCargoOrders = () => {
-    setMenuOpen(false);
+    setCargoCreate(false);
+    setPage("cargoOrders");
+  };
+  const openCreateOrder = () => {
+    setCargoCreate(true);
     setPage("cargoOrders");
   };
 
-  const openCatalog = () => {
-    setPage("catalog");
+  const openHome = () => {
+    setPage("newArrivals");
     setProductOverlay(null);
   };
 
@@ -583,76 +519,28 @@ function App() {
     <div className="zen-app" style={styles.app}>
       <SettingsSync />
       <header style={styles.header}>
-        <div style={styles.headerLeft} className="zen-header-left">
-          <button
-            ref={hamburgerRef}
-            type="button"
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="zen-header-hamburger"
-            style={{
-              ...styles.hamburger,
-              color: menuOpen ? "var(--accent)" : "var(--text)",
-              transform: menuOpen ? "rotate(90deg)" : "rotate(0deg)",
-              transition: "transform 350ms cubic-bezier(0.22, 1, 0.36, 1), color 350ms ease",
-            }}
-            aria-label="Меню"
-            aria-expanded={menuOpen}
-          >
-            <HeaderIconHamburger />
-          </button>
-          <HeaderArcMenu
-            open={menuOpen}
-            lang={lang}
-            anchorRef={hamburgerRef}
-            onClose={() => setMenuOpen(false)}
-            onSupport={openSupport}
-            onHistory={openHistory}
-            onReviews={openReviews}
-            onSettings={openSettings}
-          />
-        </div>
+        <div style={styles.headerLeft} className="zen-header-left" aria-hidden />
         <div style={styles.headerCenter}>
-          <LogoMark onClick={openCatalog} label="На главную" />
+          <LogoMark onClick={openHome} label="На главную" />
         </div>
         <div style={styles.headerRight}>
           <button onClick={openWallet} className="zen-header-icon-btn" style={styles.headerIconBtn} aria-label={t(lang, "wallet")}>
             <HeaderIconWallet />
           </button>
-          <button onClick={openFavorites} className="zen-header-icon-btn" style={styles.headerIconBtn} aria-label={t(lang, "favorites")}>
-            <HeaderIconFavorites />
+          <button onClick={openProfile} className="zen-header-icon-btn" style={styles.headerIconBtn} aria-label={t(lang, "profile")}>
+            <span style={styles.profileAvatar}>{(firstName || "U").slice(0, 1).toUpperCase()}</span>
             {favoritesCount > 0 && <span style={styles.headerDot} aria-hidden />}
           </button>
         </div>
       </header>
       <div style={styles.headerSpacer} aria-hidden />
 
-      <main ref={mainScrollRef} className={page === "catalog" ? "zen-main--catalog" : page === "favorites" ? "zen-main--edge" : page === "newArrivals" ? "zen-main--inspire" : undefined} style={page === "support" ? { ...styles.main, paddingBottom: 0 } : styles.main}>
+      <main ref={mainScrollRef} className={page === "favorites" ? "zen-main--edge" : page === "newArrivals" ? "zen-main--inspire" : undefined} style={page === "support" ? { ...styles.main, paddingBottom: 0 } : styles.main}>
         <div key={page} className={page === "favorites" ? "zen-page-enter" : ""} style={page === "newArrivals" ? { ...styles.mainContent, height: "100%" } : styles.mainContent}>
-        {page === "catalog" && (
-          <>
-            <section className="zen-catalog-section" aria-label={t(lang, "catalogPreviewTitle")}>
-              <Catalog
-                products={products}
-                productsLoading={productsLoading}
-                stores={stores}
-                categories={categories}
-                selectedCategories={catalogSelectedCategories}
-                onSelectedCategoriesChange={setCatalogSelectedCategories}
-                onProductClick={(id, rect) => openProduct(id, "catalog", rect)}
-                onStoreClick={() => {}}
-                wishlistIds={wishlistIds}
-                onToggleWishlist={toggleWishlist}
-                hideStores
-                showPriceFilter
-                hiddenProductId={productOverlay?.id ?? null}
-              />
-            </section>
-          </>
-        )}
         {page === "newArrivals" && (
           <NewArrivalsPage
             userId={userId || ""}
-            onBack={openCatalog}
+            onBack={openHome}
             initialPostId={pendingPostId}
             onInitialPostHandled={() => setPendingPostId(null)}
           />
@@ -662,7 +550,7 @@ function App() {
             userId={userId || ""}
             userName={userName}
             firstName={firstName}
-            onBack={openCatalog}
+            onBack={openHome}
           />
         )}
         {/* ProductPage больше НЕ рендерится здесь как conditional page —
@@ -675,20 +563,35 @@ function App() {
           <Reviews
             userId={userId}
             firstName={firstName}
-            onBack={openCatalog}
+            onBack={openHome}
           />
         )}
-        {page === "settings" && <Settings onBack={openCatalog} userId={userId} />}
-        {page === "wallet" && <Wallet userId={userId || ""} onBack={openCatalog} onOrders={openCargoOrders} />}
-        {page === "cargoOrders" && <CargoOrders userId={userId || ""} onBack={openCatalog} onTopup={openWallet} />}
+        {page === "settings" && <Settings onBack={openHome} userId={userId} />}
+        {page === "wallet" && <Wallet userId={userId || ""} onBack={openHome} />}
+        {page === "cargoOrders" && <CargoOrders userId={userId || ""} onBack={openHome} onTopup={openWallet} initialFormOpen={cargoCreate} />}
+        {page === "profile" && (
+          <Profile
+            userId={userId || ""}
+            userName={userName}
+            firstName={firstName}
+            onBack={openHome}
+            onWallet={openWallet}
+            onOrders={openCargoOrders}
+            onFavorites={openFavorites}
+            onHistory={openHistory}
+            onReviews={openReviews}
+            onSupport={openSupport}
+            onSettings={openSettings}
+          />
+        )}
         {page === "history" && (
           <History
             userId={userId}
-            onBack={openCatalog}
+            onBack={openHome}
             products={products}
             wishlistIds={wishlistIds}
             onToggleWishlist={toggleWishlist}
-            onOpenCatalog={openCatalog}
+            onOpenCatalog={openHome}
           />
         )}
         {page === "favorites" && (
@@ -698,26 +601,24 @@ function App() {
             wishlistIds={wishlistIds}
             onProductClick={(id, rect) => openProduct(id, "favorites", rect)}
             onToggleWishlist={toggleWishlist}
-            onBack={openCatalog}
+            onBack={openHome}
             hiddenProductId={productOverlay?.id ?? null}
           />
         )}
         </div>
       </main>
 
-      {(["catalog", "newArrivals", "support", "history", "settings", "reviews", "favorites", "wallet", "cargoOrders"] as Page[]).includes(page) && (
+      {(["newArrivals", "support", "history", "settings", "reviews", "favorites", "wallet", "cargoOrders", "profile"] as Page[]).includes(page) && (
         <BottomNavBar
           activeTab={
             page === "newArrivals"
               ? "feed"
-              : page === "catalog"
-                ? "catalog"
-                : page === "cargoOrders"
-                  ? "orders"
-                  : "none"
+              : page === "cargoOrders"
+                ? (cargoCreate ? "create" : "orders")
+                : "none"
           }
           onFeed={() => setPage("newArrivals")}
-          onCatalog={() => setPage("catalog")}
+          onCreate={openCreateOrder}
           onOrders={openCargoOrders}
         />
       )}
@@ -846,6 +747,19 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: 1,
     display: "block",
     marginTop: 1,
+  },
+  profileAvatar: {
+    width: 30,
+    height: 30,
+    borderRadius: "50%",
+    background: "var(--accent)",
+    color: "#fff",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 14,
+    fontWeight: 700,
+    fontFamily: "Unbounded, sans-serif",
   },
   headerDot: {
     position: "absolute",

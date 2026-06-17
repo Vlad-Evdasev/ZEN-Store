@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../i18n";
 import { BackButton } from "../components/BackButton";
@@ -17,20 +17,13 @@ import {
 interface WalletProps {
   userId: string;
   onBack: () => void;
-  onOrders: () => void;
 }
 
-const PRESETS = [100, 300, 500, 1000];
+const PRESETS = [10, 25, 50, 100];
 
-/** Formats fen (1 CNY = 100 fen) as a ¥ amount. */
-function fmtCny(fen: number): string {
-  const yuan = fen / 100;
-  return `¥${yuan.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}`;
-}
-
-/** Formats local minor units (kopecks) as a BYN amount. */
-function fmtByn(kopecks: number): string {
-  return `${(kopecks / 100).toFixed(2)} BYN`;
+/** Formats integer USD cents as a $ amount. */
+function fmtUsd(cents: number): string {
+  return `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 const TX_LABEL_KEY: Record<WalletTxType, string> = {
@@ -50,33 +43,30 @@ const STATUS_LABEL_KEY: Record<TopupStatus, string> = {
   failed: "walletStatusFailed",
 };
 
-export function Wallet({ userId, onBack, onOrders }: WalletProps) {
+export function Wallet({ userId, onBack }: WalletProps) {
   const { settings } = useSettings();
   const lang = settings.lang;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [balanceFen, setBalanceFen] = useState(0);
+  const [balanceCents, setBalanceCents] = useState(0);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [topups, setTopups] = useState<TopupRequest[]>([]);
 
-  const [rate, setRate] = useState(0.46);
-  const [minCny, setMinCny] = useState(50);
+  const [minUsd, setMinUsd] = useState(10);
   const [amount, setAmount] = useState<string>("");
 
   const [submitting, setSubmitting] = useState(false);
-  const [instructions, setInstructions] = useState<(TopupInstructions & { amountLocal: number; amountCny: number }) | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [instructions, setInstructions] = useState<(TopupInstructions & { amountCents: number }) | null>(null);
 
   const load = async () => {
     if (!userId) return;
     setError(false);
     try {
       const [w, cfg, tps] = await Promise.all([getWallet(userId), getTopupConfig(), getTopups(userId)]);
-      setBalanceFen(w.balance_fen);
+      setBalanceCents(w.balance_fen);
       setTransactions(w.transactions);
-      setRate(cfg.cny_byn_rate);
-      setMinCny(cfg.topup_min_cny);
+      setMinUsd(cfg.topup_min_usd);
       setTopups(tps);
     } catch {
       setError(true);
@@ -91,12 +81,7 @@ export function Wallet({ userId, onBack, onOrders }: WalletProps) {
   }, [userId]);
 
   const amountNum = Number(amount);
-  const amountValid = Number.isInteger(amountNum) && amountNum >= minCny;
-  const bynToPay = useMemo(
-    () => (amountValid ? Math.round(amountNum * rate * 100) : 0),
-    [amountValid, amountNum, rate]
-  );
-
+  const amountValid = Number.isInteger(amountNum) && amountNum >= minUsd;
   const pendingTopups = topups.filter((tp) => tp.status === "pending" || tp.status === "processing");
 
   const submit = async () => {
@@ -104,7 +89,7 @@ export function Wallet({ userId, onBack, onOrders }: WalletProps) {
     setSubmitting(true);
     try {
       const { instructions: instr } = await createTopup(userId, amountNum);
-      setInstructions({ ...instr, amountLocal: bynToPay, amountCny: amountNum });
+      setInstructions({ ...instr, amountCents: amountNum * 100 });
       setAmount("");
       await load();
     } catch (e) {
@@ -114,30 +99,15 @@ export function Wallet({ userId, onBack, onOrders }: WalletProps) {
     }
   };
 
-  const copyPayTo = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      /* clipboard может быть недоступен — игнорируем */
-    }
-  };
-
   return (
     <div style={styles.wrap}>
       <BackButton onClick={onBack} label={t(lang, "back")} />
       <h2 className="zen-page-title" style={styles.title}>{t(lang, "wallet")}</h2>
 
-      {/* Баланс */}
       <div style={styles.balanceCard}>
         <span style={styles.balanceLabel}>{t(lang, "walletBalance")}</span>
-        <span style={styles.balanceValue}>{loading ? "…" : fmtCny(balanceFen)}</span>
+        <span style={styles.balanceValue}>{loading ? "…" : fmtUsd(balanceCents)}</span>
       </div>
-
-      <button type="button" style={styles.ordersLink} onClick={onOrders}>
-        {t(lang, "cargoOrders")} ›
-      </button>
 
       {error && (
         <div style={styles.errorBox}>
@@ -148,7 +118,6 @@ export function Wallet({ userId, onBack, onOrders }: WalletProps) {
         </div>
       )}
 
-      {/* Пополнение */}
       <p style={styles.kicker}>{t(lang, "walletTopupTitle")}</p>
       <div style={styles.card}>
         <div style={styles.presetRow}>
@@ -159,7 +128,7 @@ export function Wallet({ userId, onBack, onOrders }: WalletProps) {
               onClick={() => setAmount(String(p))}
               style={{ ...styles.preset, ...(amount === String(p) ? styles.presetActive : {}) }}
             >
-              ¥{p}
+              ${p}
             </button>
           ))}
         </div>
@@ -167,28 +136,27 @@ export function Wallet({ userId, onBack, onOrders }: WalletProps) {
         <input
           type="number"
           inputMode="numeric"
-          min={minCny}
+          min={minUsd}
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          placeholder={String(minCny)}
+          placeholder={String(minUsd)}
           style={styles.input}
         />
-        <div style={styles.payRow}>
-          <span style={styles.muted}>{t(lang, "walletYouPay")}</span>
-          <span style={styles.payValue}>{amountValid ? fmtByn(bynToPay) : "—"}</span>
-        </div>
-        <p style={styles.hint}>{t(lang, "walletMin").replace("{n}", String(minCny))}</p>
+        <p style={styles.hint}>{t(lang, "walletMin").replace("{n}", String(minUsd))}</p>
         <button
           type="button"
           disabled={!amountValid || submitting}
           onClick={submit}
           style={{ ...styles.cta, ...(!amountValid || submitting ? styles.ctaDisabled : {}) }}
         >
-          {t(lang, "walletTopupBtn")}
+          🔒 {t(lang, "walletTopupBtn")}{amountValid ? ` · $${amountNum}` : ""}
         </button>
+        <div style={styles.secureNote}>
+          <span aria-hidden>🛡</span>
+          <span>{t(lang, "walletSecureNote")}</span>
+        </div>
       </div>
 
-      {/* Ожидающие подтверждения заявки */}
       {pendingTopups.length > 0 && (
         <>
           <p style={styles.kicker}>{t(lang, "walletPendingTitle")}</p>
@@ -196,8 +164,8 @@ export function Wallet({ userId, onBack, onOrders }: WalletProps) {
             {pendingTopups.map((tp) => (
               <div key={tp.id} style={styles.txRow}>
                 <div>
-                  <div style={styles.txTitle}>{fmtCny(tp.amount_fen)}</div>
-                  <div style={styles.txSub}>{fmtByn(tp.amount_local)} · {t(lang, STATUS_LABEL_KEY[tp.status])}</div>
+                  <div style={styles.txTitle}>{fmtUsd(tp.amount_fen)}</div>
+                  <div style={styles.txSub}>{t(lang, STATUS_LABEL_KEY[tp.status])}</div>
                 </div>
                 <span style={styles.badgePending}>{t(lang, STATUS_LABEL_KEY[tp.status])}</span>
               </div>
@@ -206,7 +174,6 @@ export function Wallet({ userId, onBack, onOrders }: WalletProps) {
         </>
       )}
 
-      {/* История операций */}
       <p style={styles.kicker}>{t(lang, "walletHistory")}</p>
       <div style={styles.card}>
         {transactions.length === 0 ? (
@@ -221,7 +188,7 @@ export function Wallet({ userId, onBack, onOrders }: WalletProps) {
                   <div style={styles.txSub}>{new Date(tx.created_at + "Z").toLocaleString(lang === "en" ? "en-GB" : "ru-RU")}</div>
                 </div>
                 <span style={{ ...styles.txAmount, color: credit ? "#1a8f4c" : "var(--text)" }}>
-                  {credit ? "+" : "−"}{fmtCny(Math.abs(tx.amount_fen))}
+                  {credit ? "+" : "−"}{fmtUsd(Math.abs(tx.amount_fen))}
                 </span>
               </div>
             );
@@ -229,28 +196,22 @@ export function Wallet({ userId, onBack, onOrders }: WalletProps) {
         )}
       </div>
 
-      {/* Модалка с реквизитами после создания заявки */}
       {instructions && (
         <div style={styles.overlay} onClick={() => setInstructions(null)}>
           <div style={styles.sheet} onClick={(e) => e.stopPropagation()}>
             <h3 style={styles.sheetTitle}>{t(lang, "walletInstructionsTitle")}</h3>
             <div style={styles.amountSummary}>
-              <span style={styles.payValue}>{fmtByn(instructions.amountLocal)}</span>
-              <span style={styles.muted}>≈ ¥{instructions.amountCny}</span>
+              <span style={styles.payValue}>{fmtUsd(instructions.amountCents)}</span>
             </div>
             <p style={styles.instrText}>{instructions.instructions}</p>
             {instructions.payTo && (
               <div style={styles.payToBox}>
-                <div>
-                  <div style={styles.muted}>{t(lang, "walletPayTo")}</div>
-                  <div style={styles.payToValue}>{instructions.payTo}</div>
-                </div>
-                <button type="button" style={styles.copyBtn} onClick={() => copyPayTo(instructions.payTo!)}>
-                  {copied ? t(lang, "walletCopied") : t(lang, "walletCopy")}
-                </button>
+                <div style={styles.muted}>{t(lang, "walletPayTo")}</div>
+                <div style={styles.payToValue}>{instructions.payTo}</div>
               </div>
             )}
-            <button type="button" style={styles.cta} onClick={() => setInstructions(null)}>
+            <div style={styles.secureNote}><span aria-hidden>🛡</span><span>{t(lang, "walletSecureNote")}</span></div>
+            <button type="button" style={{ ...styles.cta, marginTop: 14 }} onClick={() => setInstructions(null)}>
               {t(lang, "walletDone")}
             </button>
           </div>
@@ -271,20 +232,6 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: 6,
-  },
-  ordersLink: {
-    width: "100%",
-    marginTop: 10,
-    padding: "12px 14px",
-    borderRadius: 12,
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    color: "var(--text)",
-    fontSize: 14,
-    fontWeight: 700,
-    textAlign: "left",
-    cursor: "pointer",
-    fontFamily: "inherit",
   },
   balanceLabel: { fontSize: 12, opacity: 0.85, textTransform: "uppercase", letterSpacing: "0.08em" },
   balanceValue: { fontSize: 34, fontWeight: 800, fontFamily: "Unbounded, sans-serif", lineHeight: 1 },
@@ -319,12 +266,7 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: "0.08em",
     margin: "20px 0 10px",
   },
-  card: {
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: 14,
-    padding: 14,
-  },
+  card: { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: 14 },
   presetRow: { display: "flex", gap: 8, marginBottom: 14 },
   preset: {
     flex: 1,
@@ -351,9 +293,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 16,
     fontFamily: "inherit",
   },
-  payRow: { display: "flex", justifyContent: "space-between", alignItems: "center", margin: "14px 0 4px" },
-  payValue: { fontSize: 18, fontWeight: 800, color: "var(--text)" },
-  hint: { fontSize: 11, color: "var(--muted)", margin: "0 0 14px" },
+  hint: { fontSize: 11, color: "var(--muted)", margin: "10px 0 14px" },
   cta: {
     width: "100%",
     padding: "13px 0",
@@ -367,6 +307,15 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "inherit",
   },
   ctaDisabled: { opacity: 0.45, cursor: "not-allowed" },
+  secureNote: {
+    display: "flex",
+    gap: 8,
+    alignItems: "flex-start",
+    marginTop: 10,
+    fontSize: 12,
+    color: "var(--muted)",
+    lineHeight: 1.4,
+  },
   txRow: {
     display: "flex",
     justifyContent: "space-between",
@@ -395,7 +344,6 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "flex-end",
     justifyContent: "center",
     zIndex: 2000,
-    padding: 0,
   },
   sheet: {
     width: "100%",
@@ -408,29 +356,14 @@ const styles: Record<string, React.CSSProperties> = {
   },
   sheetTitle: { fontSize: 18, fontWeight: 800, margin: "0 0 14px", color: "var(--text)" },
   amountSummary: { display: "flex", alignItems: "baseline", gap: 10, marginBottom: 14 },
+  payValue: { fontSize: 22, fontWeight: 800, color: "var(--text)" },
   instrText: { fontSize: 13, lineHeight: 1.5, color: "var(--text)", margin: "0 0 14px", whiteSpace: "pre-wrap" },
   payToBox: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 10,
     padding: "12px 14px",
     borderRadius: 12,
     background: "var(--surface)",
     border: "1px solid var(--border)",
-    marginBottom: 16,
+    marginBottom: 6,
   },
   payToValue: { fontSize: 15, fontWeight: 700, color: "var(--text)", marginTop: 2, wordBreak: "break-all" },
-  copyBtn: {
-    flexShrink: 0,
-    background: "none",
-    border: "1px solid var(--accent)",
-    color: "var(--accent)",
-    borderRadius: 999,
-    padding: "7px 14px",
-    fontSize: 12,
-    fontWeight: 700,
-    cursor: "pointer",
-    fontFamily: "inherit",
-  },
 };

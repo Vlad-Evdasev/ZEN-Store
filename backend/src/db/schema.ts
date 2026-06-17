@@ -748,10 +748,9 @@ try {
 try {
   const insertWalletSetting = db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES (?, ?)");
   const walletDefaults: [string, string][] = [
-    ["cny_byn_rate", "0.46"],     // BYN за 1 CNY (с наценкой)
-    ["topup_min_cny", "50"],      // минимальная сумма пополнения, юаней
-    ["topup_pay_to", ""],         // реквизиты для ручной оплаты
-    ["topup_instructions", "Переведите указанную сумму на реквизиты ниже и нажмите «Я оплатил». Баланс пополнится после подтверждения оператором."],
+    ["topup_min_usd", "10"],      // минимальная сумма пополнения, $
+    ["topup_pay_to", ""],         // реквизиты для ручной оплаты (fallback)
+    ["topup_instructions", "Оплатите через защищённый платёжный шлюз. Баланс пополнится после подтверждения оплаты."],
     ["commission_percent", "2"],  // комиссия сервиса, % от стоимости товара
   ];
   for (const [k, v] of walletDefaults) insertWalletSetting.run(k, v);

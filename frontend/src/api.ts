@@ -1507,8 +1507,7 @@ export interface WalletState {
 }
 
 export interface TopupConfig {
-  cny_byn_rate: number;
-  topup_min_cny: number;
+  topup_min_usd: number;
 }
 
 export type TopupStatus = "pending" | "processing" | "completed" | "rejected" | "failed";
@@ -1544,7 +1543,7 @@ export async function getWallet(userId: string): Promise<WalletState> {
 
 export async function getTopupConfig(): Promise<TopupConfig> {
   const res = await fetchWithRetry(`${API_URL}/api/wallet/config`);
-  if (!res.ok) return { cny_byn_rate: 0.46, topup_min_cny: 50 };
+  if (!res.ok) return { topup_min_usd: 10 };
   return res.json();
 }
 
@@ -1556,12 +1555,12 @@ export async function getTopups(userId: string): Promise<TopupRequest[]> {
 
 export async function createTopup(
   userId: string,
-  amountCny: number
+  amountUsd: number
 ): Promise<{ request: TopupRequest; instructions: TopupInstructions }> {
   const res = await fetchWrite(`${API_URL}/api/wallet/${userId}/topups`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ amount_cny: amountCny }),
+    body: JSON.stringify({ amount_usd: amountUsd }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -1590,8 +1589,7 @@ export async function rejectTopupAdmin(id: number, adminSecret: string): Promise
 }
 
 export interface WalletConfigAdmin {
-  cny_byn_rate: number;
-  topup_min_cny: number;
+  topup_min_usd: number;
   topup_pay_to: string;
   topup_instructions: string;
 }
@@ -1727,11 +1725,11 @@ async function cargoAdmin(path: string, body: unknown, adminSecret: string): Pro
   }));
 }
 
-export function quoteCargoOrder(id: number, priceCny: number, adminSecret: string) {
-  return cargoAdmin(`${id}/quote`, { price_cny: priceCny }, adminSecret);
+export function quoteCargoOrder(id: number, priceUsd: number, adminSecret: string) {
+  return cargoAdmin(`${id}/quote`, { price_usd: priceUsd }, adminSecret);
 }
 
-export function warehouseCargoOrder(id: number, data: { weight_g: number; cargo_fee_cny: number }, adminSecret: string) {
+export function warehouseCargoOrder(id: number, data: { weight_g: number; cargo_fee_usd: number }, adminSecret: string) {
   return cargoAdmin(`${id}/warehouse`, data, adminSecret);
 }
 

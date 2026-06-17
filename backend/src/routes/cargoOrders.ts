@@ -8,7 +8,7 @@ import { getBalanceFen, postEntry, sumDebitsForRef, LedgerError } from "../walle
 
 export const cargoOrdersRouter = Router();
 
-const MAX_PRICE_CNY = 1_000_000;
+const MAX_PRICE_USD = 1_000_000;
 const MAX_WEIGHT_G = 2_000_000;
 
 interface CargoOrder {
@@ -81,21 +81,21 @@ cargoOrdersRouter.post("/admin/:id/quote", requireAdmin, (req, res) => {
     return res.status(409).json({ error: "Quote allowed only for new/quoted orders" });
   }
 
-  const priceCny = Number(req.body?.price_cny);
-  if (!Number.isInteger(priceCny) || priceCny <= 0 || priceCny > MAX_PRICE_CNY) {
-    return res.status(400).json({ error: "invalid price_cny" });
+  const priceUsd = Number(req.body?.price_usd);
+  if (!Number.isInteger(priceUsd) || priceUsd <= 0 || priceUsd > MAX_PRICE_USD) {
+    return res.status(400).json({ error: "invalid price_usd" });
   }
-  const priceFen = priceCny * 100;
+  const priceCents = priceUsd * 100;
   const percent = getAppSettingNumber("commission_percent", 2);
-  const commissionFen = Math.round((priceFen * percent) / 100);
+  const commissionCents = Math.round((priceCents * percent) / 100);
 
   db.prepare("UPDATE cargo_orders SET price_fen = ?, commission_fen = ?, admin_note = ? WHERE id = ?").run(
-    priceFen,
-    commissionFen,
+    priceCents,
+    commissionCents,
     trimOrNull(req.body?.admin_note, LIMITS.ORDER_TEXT),
     id
   );
-  setStatus(id, "quoted", `Оценка: ¥${priceCny} + комиссия ${percent}%`);
+  setStatus(id, "quoted", `Оценка: $${priceUsd} + комиссия ${percent}%`);
   res.json({ ...getOrder(id)!, history: getHistory(id) });
 });
 
@@ -109,20 +109,20 @@ cargoOrdersRouter.post("/admin/:id/warehouse", requireAdmin, (req, res) => {
   }
 
   const weightG = Number(req.body?.weight_g);
-  const cargoFeeCny = Number(req.body?.cargo_fee_cny);
+  const cargoFeeUsd = Number(req.body?.cargo_fee_usd);
   if (!Number.isInteger(weightG) || weightG <= 0 || weightG > MAX_WEIGHT_G) {
     return res.status(400).json({ error: "invalid weight_g" });
   }
-  if (!Number.isInteger(cargoFeeCny) || cargoFeeCny <= 0 || cargoFeeCny > MAX_PRICE_CNY) {
-    return res.status(400).json({ error: "invalid cargo_fee_cny" });
+  if (!Number.isInteger(cargoFeeUsd) || cargoFeeUsd <= 0 || cargoFeeUsd > MAX_PRICE_USD) {
+    return res.status(400).json({ error: "invalid cargo_fee_usd" });
   }
 
   db.prepare("UPDATE cargo_orders SET weight_g = ?, cargo_fee_fen = ? WHERE id = ?").run(
     weightG,
-    cargoFeeCny * 100,
+    cargoFeeUsd * 100,
     id
   );
-  setStatus(id, "at_warehouse", `Вес ${weightG} г · доставка ¥${cargoFeeCny}`);
+  setStatus(id, "at_warehouse", `Вес ${weightG} г · доставка $${cargoFeeUsd}`);
   res.json({ ...getOrder(id)!, history: getHistory(id) });
 });
 

@@ -8,7 +8,7 @@ import { getBalanceFen, listTransactions, postEntry, LedgerError } from "../wall
 
 export const walletRouter = Router();
 
-const MAX_TOPUP_CNY = 100_000; // юаней за одну заявку — потолок против опечаток
+const MAX_TOPUP_USD = 100_000; // $ за одну заявку — потолок против опечаток
 
 interface TopupRow {
   id: number;
@@ -27,10 +27,7 @@ interface TopupRow {
 
 // ── Публичная конфигурация пополнения (курс + минимум) ──────────────────────
 walletRouter.get("/config", (_req, res) => {
-  res.json({
-    cny_byn_rate: getAppSettingNumber("cny_byn_rate", 0.46),
-    topup_min_cny: getAppSettingNumber("topup_min_cny", 50),
-  });
+  res.json({ topup_min_usd: getAppSettingNumber("topup_min_usd", 10) });
 });
 
 // ── Админ: заявки на пополнение ─────────────────────────────────────────────
@@ -90,25 +87,19 @@ walletRouter.post("/admin/topups/:id/reject", requireAdmin, (req, res) => {
 // ── Админ: курс и реквизиты ─────────────────────────────────────────────────
 walletRouter.get("/admin/config", requireAdmin, (_req, res) => {
   res.json({
-    cny_byn_rate: getAppSettingNumber("cny_byn_rate", 0.46),
-    topup_min_cny: getAppSettingNumber("topup_min_cny", 50),
+    topup_min_usd: getAppSettingNumber("topup_min_usd", 10),
     topup_pay_to: getAppSetting("topup_pay_to") || "",
     topup_instructions: getAppSetting("topup_instructions") || "",
   });
 });
 
 walletRouter.patch("/admin/config", requireAdmin, (req, res) => {
-  const { cny_byn_rate, topup_min_cny, topup_pay_to, topup_instructions } = req.body ?? {};
+  const { topup_min_usd, topup_pay_to, topup_instructions } = req.body ?? {};
 
-  if (cny_byn_rate !== undefined) {
-    const r = Number(cny_byn_rate);
-    if (!Number.isFinite(r) || r <= 0 || r > 1000) return res.status(400).json({ error: "invalid cny_byn_rate" });
-    setAppSetting("cny_byn_rate", String(r));
-  }
-  if (topup_min_cny !== undefined) {
-    const m = Number(topup_min_cny);
-    if (!Number.isInteger(m) || m < 1 || m > MAX_TOPUP_CNY) return res.status(400).json({ error: "invalid topup_min_cny" });
-    setAppSetting("topup_min_cny", String(m));
+  if (topup_min_usd !== undefined) {
+    const m = Number(topup_min_usd);
+    if (!Number.isInteger(m) || m < 1 || m > MAX_TOPUP_USD) return res.status(400).json({ error: "invalid topup_min_usd" });
+    setAppSetting("topup_min_usd", String(m));
   }
   if (topup_pay_to !== undefined) {
     setAppSetting("topup_pay_to", String(topup_pay_to).slice(0, 500));
@@ -118,8 +109,7 @@ walletRouter.patch("/admin/config", requireAdmin, (req, res) => {
   }
 
   res.json({
-    cny_byn_rate: getAppSettingNumber("cny_byn_rate", 0.46),
-    topup_min_cny: getAppSettingNumber("topup_min_cny", 50),
+    topup_min_usd: getAppSettingNumber("topup_min_usd", 10),
     topup_pay_to: getAppSetting("topup_pay_to") || "",
     topup_instructions: getAppSetting("topup_instructions") || "",
   });
@@ -159,32 +149,31 @@ walletRouter.post("/:userId/topups", async (req, res) => {
   const auth = requireOwnership(req, userId);
   if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
 
-  const amountCny = Number(req.body?.amount_cny);
-  const minCny = getAppSettingNumber("topup_min_cny", 50);
+  const amountUsd = Number(req.body?.amount_usd);
+  const minUsd = getAppSettingNumber("topup_min_usd", 10);
 
-  if (!Number.isInteger(amountCny) || amountCny < minCny || amountCny > MAX_TOPUP_CNY) {
-    return res.status(400).json({ error: `amount_cny must be an integer between ${minCny} and ${MAX_TOPUP_CNY}` });
+  if (!Number.isInteger(amountUsd) || amountUsd < minUsd || amountUsd > MAX_TOPUP_USD) {
+    return res.status(400).json({ error: `amount_usd must be an integer between ${minUsd} and ${MAX_TOPUP_USD}` });
   }
 
-  const rate = getAppSettingNumber("cny_byn_rate", 0.46);
-  const amountFen = amountCny * 100;
-  const amountLocal = Math.round(amountCny * rate * 100); // копейки BYN
+  // Деньги в центах USD. amount_local == amount_fen (валюта USD), rate = 1.
+  const amountCents = amountUsd * 100;
 
   const info = db
     .prepare(
       `INSERT INTO topup_requests (user_id, amount_fen, amount_local, local_currency, rate, provider, status)
-       VALUES (?, ?, ?, 'BYN', ?, 'manual', 'pending')`
+       VALUES (?, ?, ?, 'USD', 1, 'manual', 'pending')`
     )
-    .run(userId, amountFen, amountLocal, rate);
+    .run(userId, amountCents, amountCents);
   const topupId = Number(info.lastInsertRowid);
 
   const provider = getProvider("manual");
   const instructions = await provider.createTopup({
     topupId,
     userId,
-    amountFen,
-    amountLocal,
-    localCurrency: "BYN",
+    amountFen: amountCents,
+    amountLocal: amountCents,
+    localCurrency: "USD",
   });
 
   if (instructions.providerRef) {

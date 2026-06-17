@@ -10,7 +10,7 @@ import {
   type CargoStatus,
 } from "../../api";
 
-const fmtCny = (fen: number) => `¥${(fen / 100).toLocaleString("ru-RU", { maximumFractionDigits: 2 })}`;
+const fmtUsd = (cents: number) => `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const STATUS_RU: Record<CargoStatus, string> = {
   new: "Новый",
@@ -103,9 +103,9 @@ export function CargoOrdersTab({ adminSecret }: { adminSecret: string }) {
 
             {o.price_fen != null && (
               <div style={S.sums}>
-                Товар {fmtCny(o.price_fen)}
-                {o.commission_fen != null && ` · комиссия ${fmtCny(o.commission_fen)}`}
-                {o.cargo_fee_fen != null && ` · доставка ${fmtCny(o.cargo_fee_fen)}`}
+                Товар {fmtUsd(o.price_fen)}
+                {o.commission_fen != null && ` · комиссия ${fmtUsd(o.commission_fen)}`}
+                {o.cargo_fee_fen != null && ` · доставка ${fmtUsd(o.cargo_fee_fen)}`}
                 {o.weight_g != null && ` · ${o.weight_g} г`}
                 {o.track_no && ` · трек ${o.track_no}`}
               </div>
@@ -114,7 +114,7 @@ export function CargoOrdersTab({ adminSecret }: { adminSecret: string }) {
             {/* Оценка */}
             {(o.status === "new" || o.status === "quoted") && (
               <div style={S.actionRow}>
-                <input style={S.inp} type="number" placeholder="Цена товара, ¥"
+                <input style={S.inp} type="number" placeholder="Цена товара, $"
                   value={price[o.id] ?? ""} onChange={(e) => setPrice({ ...price, [o.id]: e.target.value })} />
                 <button style={S.btn} disabled={b} onClick={() => act(o.id, () => quoteCargoOrder(o.id, parseInt(price[o.id], 10), adminSecret))}>
                   Оценить
@@ -136,8 +136,8 @@ export function CargoOrdersTab({ adminSecret }: { adminSecret: string }) {
             {(o.status === "paid" || o.status === "purchasing") && (
               <div style={S.actionRow}>
                 <input style={S.inp} type="number" placeholder="Вес, г" value={weight[o.id] ?? ""} onChange={(e) => setWeight({ ...weight, [o.id]: e.target.value })} />
-                <input style={S.inp} type="number" placeholder="Доставка, ¥" value={fee[o.id] ?? ""} onChange={(e) => setFee({ ...fee, [o.id]: e.target.value })} />
-                <button style={S.btn} disabled={b} onClick={() => act(o.id, () => warehouseCargoOrder(o.id, { weight_g: parseInt(weight[o.id], 10), cargo_fee_cny: parseInt(fee[o.id], 10) }, adminSecret))}>
+                <input style={S.inp} type="number" placeholder="Доставка, $" value={fee[o.id] ?? ""} onChange={(e) => setFee({ ...fee, [o.id]: e.target.value })} />
+                <button style={S.btn} disabled={b} onClick={() => act(o.id, () => warehouseCargoOrder(o.id, { weight_g: parseInt(weight[o.id], 10), cargo_fee_usd: parseInt(fee[o.id], 10) }, adminSecret))}>
                   На склад
                 </button>
               </div>
